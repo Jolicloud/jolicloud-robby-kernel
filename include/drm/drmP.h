@@ -1100,6 +1100,8 @@ extern int drm_init(struct drm_driver *driver);
 extern void drm_exit(struct drm_driver *driver);
 extern int drm_ioctl(struct inode *inode, struct file *filp,
 		     unsigned int cmd, unsigned long arg);
+extern long drm_unlocked_ioctl(struct file *filp,
+			       unsigned int cmd, unsigned long arg);
 extern long drm_compat_ioctl(struct file *filp,
 			     unsigned int cmd, unsigned long arg);
 extern int drm_lastclose(struct drm_device *dev);

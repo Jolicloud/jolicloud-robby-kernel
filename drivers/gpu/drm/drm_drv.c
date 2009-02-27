@@ -410,6 +410,12 @@ static int drm_version(struct drm_device *dev, void *data,
 int drm_ioctl(struct inode *inode, struct file *filp,
 	      unsigned int cmd, unsigned long arg)
 {
+	return drm_unlocked_ioctl(filp, cmd, arg);
+}
+EXPORT_SYMBOL(drm_ioctl);
+
+long drm_unlocked_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+{
 	struct drm_file *file_priv = filp->private_data;
 	struct drm_device *dev = file_priv->minor->dev;
 	struct drm_ioctl_desc *ioctl;
@@ -491,8 +497,7 @@ int drm_ioctl(struct inode *inode, struct file *filp,
 		DRM_DEBUG("ret = %x\n", retcode);
 	return retcode;
 }
-
-EXPORT_SYMBOL(drm_ioctl);
+EXPORT_SYMBOL(drm_unlocked_ioctl);
 
 struct drm_local_map *drm_getsarea(struct drm_device *dev)
 {
