@@ -1,0 +1,9 @@
+config DRM_PSB
+	tristate "Intel Poulsbo/Moorestown DRM support"
+	depends on DRM && PCI
+	select FB_CFB_COPYAREA
+	select FB_CFB_FILLRECT
+	select FB_CFB_IMAGEBLIT
+	help
+	  Choose this option if you have a Poulsbo or Moorestown platform.
+	  If M is selected the module will be called psb.

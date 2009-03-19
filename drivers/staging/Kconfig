@@ -113,6 +113,8 @@ source "drivers/staging/heci/Kconfig"
 
 source "drivers/staging/line6/Kconfig"
 
+source "drivers/staging/psb/Kconfig"
+
 source "drivers/gpu/drm/radeon/Kconfig"
 
 source "drivers/staging/octeon/Kconfig"
