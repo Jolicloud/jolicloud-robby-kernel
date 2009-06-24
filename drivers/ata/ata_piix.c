@@ -607,6 +607,17 @@ static const struct ich_laptop ich_laptop[] = {
 	{ 0x266F, 0x1025, 0x0066 },	/* ICH6 on ACER Aspire 1694WLMi */
 	{ 0x2653, 0x1043, 0x82D8 },	/* ICH6M on Asus Eee 701 */
 	{ 0x27df, 0x104d, 0x900e },	/* ICH7 on Sony TZ-90 */
+	{ 0x27C4, 0x1043, 0x830F },	/* ICH7 on Asus Eee 901->1002ha */
+	{ 0x27C4, 0x1043, 0x82D1 },	/* ICH7 on Asus Eeetop */
+	{ 0x27C4, 0x1043, 0x1347 },	/* ICH7 on Asus Eeebox b202 */
+	{ 0x27C4, 0x1025, 0x015B },	/* ICH7 on Acer Aspire One */
+	{ 0x27C4, 0x144D, 0xCA00 },	/* ICH7 on Samsung NC-10 */
+	{ 0x811A, 0x1509, 0x5001 },	/* SCH on Chelsea */
+	{ 0x27DF, 0x1028, 0x02B0 },	/* ICH7 on Dell Mini 9 */
+	{ 0x27DF, 0x1028, 0x02B1 },	/* ICH7 on Dell Mini 12 */
+	{ 0x27DF, 0x152D, 0x0778 },	/* ICH7 on Natick */
+	{ 0x27DF, 0x103C, 0x361A },	/* ICH7 on HP Mini 1000 */
+	{ 0x27DF, 0x17AA, 0x3810 },	/* ICH7 on Lenovo S10e */
 	/* end marker */
 	{ 0, }
 };
