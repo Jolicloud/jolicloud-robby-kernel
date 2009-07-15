@@ -22,7 +22,7 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: wl_linux.h,v 1.22.2.3 2009/02/27 02:04:03 Exp $
+ * $Id: wl_linux.h,v 1.22.2.3.4.1 2009/06/18 22:40:13 Exp $
  */
 
 #ifndef _wl_linux_h_
@@ -85,10 +85,14 @@ struct wl_info {
 	bool		resched;	
 	uint32		pci_psstate[16];	
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 14)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
+	struct lib80211_crypto_ops *tkipmodops;
+#else
 	struct ieee80211_crypto_ops *tkipmodops;	
+#endif
 	struct ieee80211_tkip_data  *tkip_ucast_data;
 	struct ieee80211_tkip_data  *tkip_bcast_data;
-#endif
+#endif 
 
 	uint	stats_id;		
 

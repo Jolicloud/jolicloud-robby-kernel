@@ -22,7 +22,7 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: wl_iw.c,v 1.63.2.25.4.4 2009/04/20 19:22:00 Exp $
+ * $Id: wl_iw.c,v 1.63.2.25.4.5 2009/06/18 22:40:12 Exp $
  */
 
 #define LINUX_PORT
@@ -66,6 +66,12 @@ extern struct iw_statistics *wl_get_wireless_stats(struct net_device *dev);
 #define IW_IOCTL_IDX(cmd)	((cmd) - SIOCIWFIRST)
 #define IW_EVENT_IDX(cmd)	((cmd) - IWEVFIRST)
 #endif 
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
+#define IW_DEV_IF(dev)        ((wl_iw_t *)netdev_priv(dev))
+#else
+#define IW_DEV_IF(dev)        ((wl_iw_t *)dev->priv)
+#endif
 
 static void swap_key_from_BE(
 	        wl_wsec_key_t *key
@@ -610,7 +616,7 @@ wl_iw_set_spy(
 	char *extra
 )
 {
-	wl_iw_t *iw = dev->priv;
+	wl_iw_t *iw = IW_DEV_IF(dev);
 	struct sockaddr *addr = (struct sockaddr *) extra;
 	int i;
 
@@ -635,7 +641,7 @@ wl_iw_get_spy(
 	char *extra
 )
 {
-	wl_iw_t *iw = dev->priv;
+	wl_iw_t *iw = IW_DEV_IF(dev);
 	struct sockaddr *addr = (struct sockaddr *) extra;
 	struct iw_quality *qual = (struct iw_quality *) &addr[iw->spy_num];
 	int i;
@@ -1110,8 +1116,7 @@ wl_iw_set_nick(
 	char *extra
 )
 {
-	wl_iw_t *iw = dev->priv;
-
+	wl_iw_t *iw = IW_DEV_IF(dev);
 	WL_TRACE(("%s: SIOCSIWNICKN\n", dev->name));
 
 	if (!extra)
@@ -1134,8 +1139,7 @@ wl_iw_get_nick(
 	char *extra
 )
 {
-	wl_iw_t *iw = dev->priv;
-
+	wl_iw_t *iw = IW_DEV_IF(dev);
 	WL_TRACE(("%s: SIOCGIWNICKN\n", dev->name));
 
 	if (!extra)
@@ -1790,7 +1794,7 @@ wl_iw_set_wpaauth(
 	int paramid;
 	int paramval;
 	int val = 0;
-	wl_iw_t *iw = dev->priv;
+	wl_iw_t *iw = IW_DEV_IF(dev);
 
 	WL_TRACE(("%s: SIOCSIWAUTH\n", dev->name));
 
@@ -1921,7 +1925,7 @@ wl_iw_get_wpaauth(
 	int paramid;
 	int paramval = 0;
 	int val;
-	wl_iw_t *iw = dev->priv;
+	wl_iw_t *iw = IW_DEV_IF(dev);
 
 	WL_TRACE(("%s: SIOCGIWAUTH\n", dev->name));
 
