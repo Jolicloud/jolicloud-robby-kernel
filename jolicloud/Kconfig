@@ -1,5 +1,6 @@
 menu "Jolicloud Supplied Third-Party Device Drivers"
 
 source "jolicloud/broadcom/Kconfig"
+source "jolicloud/tlsup/Kconfig"
 
 endmenu

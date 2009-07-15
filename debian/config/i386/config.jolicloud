@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.30.1
-# Tue Jul 14 19:18:21 2009
+# Tue Jul 14 19:29:47 2009
 #
 # CONFIG_64BIT is not set
 CONFIG_X86_32=y
@@ -3710,6 +3710,7 @@ CONFIG_ACPI_TOSHIBA=m
 # Jolicloud Supplied Third-Party Device Drivers
 #
 CONFIG_BROADCOM_4312=m
+CONFIG_TLSUP=m
 
 #
 # Firmware Drivers
