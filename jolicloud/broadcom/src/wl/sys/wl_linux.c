@@ -23,7 +23,7 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: wl_linux.c,v 1.388.2.78.4.2 2009/04/03 02:06:22 Exp $
+ * $Id: wl_linux.c,v 1.388.2.78.4.3 2009/06/18 22:40:13 Exp $
  */
 
 #define LINUX_PORT
@@ -54,8 +54,12 @@
 #define WLC_MAXBSSCFG		1	
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 14)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
+#include <net/lib80211.h>
+#else
 #include <net/ieee80211.h>
 #endif
+#endif	
 
 #include <asm/system.h>
 #include <asm/io.h>
@@ -130,7 +134,11 @@ struct ieee80211_tkip_data {
 	u8 rx_hdr[16], tx_hdr[16];
 };
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
+#define WL_DEV_IF(dev)		((wl_if_t*)netdev_priv(dev))
+#else
 #define	WL_DEV_IF(dev)		((wl_if_t*)(dev)->priv)			
+#endif
 #define	WL_INFO(dev)		((wl_info_t*)(WL_DEV_IF(dev)->wl))	
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 20)
@@ -285,6 +293,10 @@ wl_attach(uint16 vendor, uint16 device, ulong regs, uint bustype, void *btparam,
 	wl->dev = dev;
 	wl_if_setup(dev);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
+	wlif = netdev_priv(dev);
+#endif
+
 	dev->base_addr = regs;
 
 	WL_TRACE(("wl%d: Bus: ", unit));
@@ -361,11 +373,19 @@ wl_attach(uint16 vendor, uint16 device, ulong regs, uint bustype, void *btparam,
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 14)
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
+	wl->tkipmodops = lib80211_get_crypto_ops("TKIP");
+	if (wl->tkipmodops == NULL) {
+		request_module("lib80211_crypt_tkip");
+		wl->tkipmodops = lib80211_get_crypto_ops("TKIP");
+	}
+#else
 	wl->tkipmodops = ieee80211_get_crypto_ops("TKIP");
 	if (wl->tkipmodops == NULL) {
 		request_module("ieee80211_crypt_tkip");
 		wl->tkipmodops = ieee80211_get_crypto_ops("TKIP");
 	}
+#endif 
 #endif 
 #ifdef CONFIG_WIRELESS_EXT
 	wlif->iw.wlinfo = (void *)wl;
@@ -668,7 +688,11 @@ wl_free(wl_info_t *wl)
 	}
 
 	if (wl->monitor) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
+		wl_free_if(wl, (wl_if_t *)netdev_priv(wl->monitor));
+#else
 		wl_free_if(wl, (wl_if_t *)(wl->monitor->priv));
+#endif
 		wl->monitor = NULL;
 	}
 
@@ -836,6 +860,9 @@ wl_alloc_if(wl_info_t *wl, int iftype, uint subunit, struct wlc_if* wlcif)
 #else
 
 	dev = alloc_netdev(0, name, ether_setup);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
+	wlif = netdev_priv(dev);
+#endif
 	if (!dev) {
 		MFREE(wl->osh, wlif, sizeof(wl_if_t));
 		WL_ERROR(("wl%d: wl_alloc_if: out of memory, alloc_netdev\n",
@@ -849,7 +876,9 @@ wl_alloc_if(wl_info_t *wl, int iftype, uint subunit, struct wlc_if* wlcif)
 	wlif->wl = wl;
 	wlif->wlcif = wlcif;
 	wlif->subunit = subunit;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 29)
 	dev->priv = wlif;
+#endif
 
 	if (iftype != WL_IFTYPE_MON && wl->dev && netif_queue_stopped(wl->dev))
 		netif_stop_queue(dev);
