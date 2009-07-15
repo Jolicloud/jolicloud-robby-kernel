@@ -1,0 +1,3 @@
+# arch	version		flavour		installedname			suffix	bdep
+i386	PKGVER-ABINUM	jolicloud	PKGVER-ABINUM-jolicloud		-	
+i386	PKGVER-ABINUM	jolicloud-eeepc	PKGVER-ABINUM-jolicloud-eeepc	-	

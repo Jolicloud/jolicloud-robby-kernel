@@ -1,0 +1,3 @@
+# arch	version		flavour		installedname			suffix	bdep
+i386	2.6.30-1	jolicloud	2.6.30-1-jolicloud		-	
+i386	2.6.30-1	jolicloud-eeepc	2.6.30-1-jolicloud-eeepc	-	
