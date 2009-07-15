@@ -338,6 +338,10 @@ LINUXINCLUDE    := -Iinclude \
                    -I$(srctree)/arch/$(hdr-arch)/include               \
                    -include include/linux/autoconf.h
 
+# JOLICLOUD: Include our third party driver stuff too
+LINUXINCLUDE	+= -Ijolicloud/include \
+                   $(if $(KBUILD_SRC),-I$(srctree)/jolicloud/include)
+
 KBUILD_CPPFLAGS := -D__KERNEL__
 
 KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
@@ -467,7 +471,7 @@ scripts: scripts_basic include/config/auto.conf
 
 # Objects we will link into vmlinux / subdirs we need to visit
 init-y		:= init/
-drivers-y	:= drivers/ sound/ firmware/
+drivers-y	:= drivers/ sound/ firmware/ jolicloud/
 net-y		:= net/
 libs-y		:= lib/
 core-y		:= usr/

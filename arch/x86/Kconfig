@@ -2082,6 +2082,8 @@ source "net/Kconfig"
 
 source "drivers/Kconfig"
 
+source "jolicloud/Kconfig"
+
 source "drivers/firmware/Kconfig"
 
 source "fs/Kconfig"
