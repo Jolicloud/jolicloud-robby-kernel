@@ -53,6 +53,9 @@ else
         cflags-$(CONFIG_MK8) += $(call cc-option,-march=k8)
         cflags-$(CONFIG_MPSC) += $(call cc-option,-march=nocona)
 
+        cflags-$(CONFIG_MPRESCOTT) += \
+                $(call cc-option,-march=prescott,$(call cc-option,-mtune=generic))
+
         cflags-$(CONFIG_MCORE2) += \
                 $(call cc-option,-march=core2,$(call cc-option,-mtune=generic))
         cflags-$(CONFIG_GENERIC_CPU) += $(call cc-option,-mtune=generic)

@@ -241,6 +241,7 @@ CONFIG_M686=y
 # CONFIG_MVIAC3_2 is not set
 # CONFIG_MVIAC7 is not set
 # CONFIG_MPSC is not set
+# CONFIG_MPRESCOTT is not set
 # CONFIG_MCORE2 is not set
 # CONFIG_GENERIC_CPU is not set
 CONFIG_X86_GENERIC=y
