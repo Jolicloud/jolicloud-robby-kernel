@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.30.1
-# Tue Jul 14 19:29:55 2009
+# Sun Jul 19 12:52:02 2009
 #
 # CONFIG_64BIT is not set
 CONFIG_X86_32=y
@@ -230,7 +230,7 @@ CONFIG_PARAVIRT_CLOCK=y
 # CONFIG_M686 is not set
 # CONFIG_MPENTIUMII is not set
 # CONFIG_MPENTIUMIII is not set
-# CONFIG_MPENTIUMM is not set
+CONFIG_MPENTIUMM=y
 # CONFIG_MPENTIUM4 is not set
 # CONFIG_MK6 is not set
 # CONFIG_MK7 is not set
@@ -245,7 +245,8 @@ CONFIG_PARAVIRT_CLOCK=y
 # CONFIG_MVIAC3_2 is not set
 # CONFIG_MVIAC7 is not set
 # CONFIG_MPSC is not set
-CONFIG_MCORE2=y
+# CONFIG_MPRESCOTT is not set
+# CONFIG_MCORE2 is not set
 # CONFIG_GENERIC_CPU is not set
 CONFIG_X86_GENERIC=y
 CONFIG_X86_CPU=y
