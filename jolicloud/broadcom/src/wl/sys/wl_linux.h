@@ -87,12 +87,14 @@ struct wl_info {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 14)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
 	struct lib80211_crypto_ops *tkipmodops;
+	struct lib80211_tkip_data *tkip_ucast_data;
+	struct lib80211_tkip_data *tkip_bcast_data;
 #else
 	struct ieee80211_crypto_ops *tkipmodops;	
-#endif
 	struct ieee80211_tkip_data  *tkip_ucast_data;
 	struct ieee80211_tkip_data  *tkip_bcast_data;
-#endif 
+#endif
+#endif
 
 	uint	stats_id;		
 

@@ -124,7 +124,7 @@ dev_wlc_ioctl(
 
 	fs = get_fs();
 	set_fs(get_ds());
-	ret = dev->do_ioctl(dev, &ifr, SIOCDEVPRIVATE);
+	ret = dev->netdev_ops->ndo_do_ioctl(dev, &ifr, SIOCDEVPRIVATE);
 	set_fs(fs);
 
 	return ret;
