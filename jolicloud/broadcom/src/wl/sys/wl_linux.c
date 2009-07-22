@@ -53,13 +53,17 @@
 #include <linux/pci_ids.h>
 #define WLC_MAXBSSCFG		1	
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 14)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
 #include <net/lib80211.h>
+#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 30)
+#include <linux/ieee80211.h>
 #else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 14)
 #include <net/ieee80211.h>
 #endif
-#endif	
+#endif
+
 
 #include <asm/system.h>
 #include <asm/io.h>
@@ -135,7 +139,7 @@ struct ieee80211_tkip_data {
 };
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
-#define WL_DEV_IF(dev)		((wl_if_t*)netdev_priv(dev))
+#define	WL_DEV_IF(dev)		((wl_if_t*)netdev_priv(dev))
 #else
 #define	WL_DEV_IF(dev)		((wl_if_t*)(dev)->priv)			
 #endif
@@ -224,16 +228,20 @@ static const struct ethtool_ops wl_ethtool_ops =
 };
 #endif 
 
+static const struct net_device_ops wl_netdev_ops = {
+	.ndo_open = wl_open,
+	.ndo_stop = wl_close,
+	.ndo_start_xmit = wl_start,
+	.ndo_get_stats = wl_get_stats,
+	.ndo_set_mac_address = wl_set_mac_address,
+	.ndo_set_multicast_list = wl_set_multicast_list,
+	.ndo_do_ioctl = wl_ioctl,
+};
+
 static
 void wl_if_setup(struct net_device *dev)
 {
-	dev->open = wl_open;
-	dev->stop = wl_close;
-	dev->hard_start_xmit = wl_start;
-	dev->get_stats = wl_get_stats;
-	dev->set_mac_address = wl_set_mac_address;
-	dev->set_multicast_list = wl_set_multicast_list;
-	dev->do_ioctl = wl_ioctl;
+	dev->netdev_ops = &wl_netdev_ops;
 #ifdef CONFIG_WIRELESS_EXT
 #if WIRELESS_EXT < 19
 	dev->get_wireless_stats = wl_get_wireless_stats;
@@ -375,17 +383,19 @@ wl_attach(uint16 vendor, uint16 device, ulong regs, uint bustype, void *btparam,
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
 	wl->tkipmodops = lib80211_get_crypto_ops("TKIP");
-	if (wl->tkipmodops == NULL) {
-		request_module("lib80211_crypt_tkip");
-		wl->tkipmodops = lib80211_get_crypto_ops("TKIP");
-	}
 #else
 	wl->tkipmodops = ieee80211_get_crypto_ops("TKIP");
+#endif
 	if (wl->tkipmodops == NULL) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
+		request_module("lib80211");
+		request_module("lib80211_crypt_tkip");
+		wl->tkipmodops = lib80211_get_crypto_ops("TKIP");
+#else
 		request_module("ieee80211_crypt_tkip");
 		wl->tkipmodops = ieee80211_get_crypto_ops("TKIP");
+#endif
 	}
-#endif 
 #endif 
 #ifdef CONFIG_WIRELESS_EXT
 	wlif->iw.wlinfo = (void *)wl;
@@ -859,7 +869,7 @@ wl_alloc_if(wl_info_t *wl, int iftype, uint subunit, struct wlc_if* wlcif)
 	strncpy(dev->name, name, IFNAMSIZ);
 #else
 
-	dev = alloc_netdev(0, name, ether_setup);
+	dev = alloc_netdev(sizeof(wl_if_t), name, ether_setup);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
 	wlif = netdev_priv(dev);
 #endif
