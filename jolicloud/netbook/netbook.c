@@ -541,9 +541,9 @@ int __init init_module(void) {
 			printk(KERN_NOTICE "%s informs writable=1 is dangerous"
 				": think before writing, do not let your CPU burns out!\n", 
 					EEE_NAME);
-		return true;
+		return 0;
 	}
-	return false;
+	return -1;
 }
 
 void __exit cleanup_module(void) {
