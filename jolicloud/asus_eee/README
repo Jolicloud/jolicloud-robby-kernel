@@ -1,0 +1,32 @@
+
+The module itself is in the module/ directory.  To build and insert the
+module into your kernel:
+    cd module
+    make
+    insmod asus_eee.ko
+
+Usage:  once the module has been inserted, several files will appear in the
+/proc/eee directory:
+
+    pll - Reading this file will dump the current configuration data from
+          the PLL chip.
+    fsb - Reading this file will return the current FSB and voltage settings,
+          while writing to this file will change the FSB and voltage.  The
+          format of this file is three integers:
+            <PLL N multiplier>  <PLL M divisor>  <CPU voltage>
+          CPU voltage is 0 for "low" and 1 for "high".
+    fan_rpm - The current speed of the fan in revolutions per minute.
+    fan_speed - The current speed (0-100%) the fan is set to.
+    fan_manual - When 0, the embedded controller turns the fan on and off
+                 according to the CPU temperature.  When 1, writing to
+                 fan_speed will change the speed of the fan;  the embedded
+                 controller makes no changes on its own.
+    temperature - The temperature of the CPU (in degrees C).
+
+Note that when the fan is in manual mode, IT IS POSSIBLE TO DESTROY YOUR CPU!
+It appears that the embedded controller will happily allow the temperature to
+reach 90C (the CRITICAL temperature of the CPU), at which point a thermal
+shutdown will be initiated.  This will turn the fan to 100%, throttle the CPU,
+and probably even shutdown the machine.  Your CPU may or may not survive this
+treatment...
+

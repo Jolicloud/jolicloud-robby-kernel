@@ -1,0 +1,8 @@
+config ASUS_EEE
+	tristate "ASUS_EEE FSB support (EXPERIMENTAL)"
+	depends on EXPERIMENTAL
+	help
+	  This driver supports the Asus EEE FSB overclocking module.
+
+	  To compile this driver as a module, choose M here.  The module
+	  will be called asus_eee.
