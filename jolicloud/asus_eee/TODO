@@ -1,0 +1,32 @@
+
+This is the list of things I'm planning to work on in future versions...
+
+- Implement a fan control algorithm which works better than the one
+  the EC uses.
+    - Allow configuration of the temperature when the fan turns on and off.
+    - Include two configurable speeds.  (e.g. quiet mode and fast mode)
+    - Need to determine how much cooling the fan produces at each speed.
+
+- Make the FSB switching smarter:
+    - Replace N/M/Voltage values with a single FSB speed value.
+    - Automatically pause at intermediate FSB speeds when jumping from
+      e.g. 70 to 100 or vice-versa.
+    - Configurable voltage threshold (FSB speed at which voltage should
+      be raised)
+
+- Integrate with the cpufreq subsystem:
+    - Allow on-demand speed changes (so that when CPU load increases, the
+      FSB can automatically be raised).
+    - This will let the speed be changed using the standard GNOME CPU applet,
+      for instance.
+
+- Investigate how the battery stuff works.  I think there's a way to get at
+  the battery's remaining capacity in mAh, which would work MUCH better than
+  Asus's current (lousy) implementation.  I also think there's a way to find
+  out the current power consumption in mAh.
+
+- Find a way to disable the (rather annoying) flashing power LED whilst in
+  suspend-to-RAM.
+
+- Investigate ways to decrease power consumption during suspend-to-RAM.
+
