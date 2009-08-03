@@ -67,11 +67,11 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Andrew Tipton, Jean Fabrice, Roberto A. Foglietta");
 MODULE_DESCRIPTION("Support for eeePC-specific functionality.");
 
-#define EEE_VERSION "0.3"
+#define EEE_VERSION "0.3jolicloud1"
 #define EEE_NAME "asus_eee"
 
 MODULE_VERSION(EEE_VERSION);
-MODULE_INFO(module_depends, "i2c-i801");
+//MODULE_INFO(depends, "i2c-i801");
 MODULE_DEVICE_TABLE(pci, eeepc_pci_tbl);
 
 static int writable = 0;
@@ -297,20 +297,24 @@ static void eee_set_voltage(enum eee_voltage voltage) {
 /*** FSB functions ***/
 #define FSB_MSB_INDEX 11
 #define FSB_LSB_INDEX 12
+#define FSB_PCI_INDEX 15
 #define FSB_MSB_MASK 0x3F
 #define FSB_LSB_MASK 0xFF
+#define FSB_PCI_MASK 0xFF
 
-static void eee_get_freq(int *n, int *m) {
-    *m = eee_pll_data[FSB_MSB_INDEX] & FSB_MSB_MASK;
-    *n = eee_pll_data[FSB_LSB_INDEX];
+static void eee_get_freq(int *dynA, int *dynB, int *pci) {
+    *dynA = eee_pll_data[FSB_MSB_INDEX] & FSB_MSB_MASK;
+    *dynB = eee_pll_data[FSB_LSB_INDEX] & FSB_LSB_MASK;
+    *pci  = eee_pll_data[FSB_PCI_INDEX] & FSB_PCI_MASK;
 }
 
-static void eee_set_freq(int n, int m) {
-    int current_n = 0, current_m = 0;
-    eee_get_freq(&current_n, &current_m);
-    if (current_n != n || current_m != m) {
-        eee_pll_data[FSB_MSB_INDEX] = m & FSB_MSB_MASK;
-        eee_pll_data[FSB_LSB_INDEX] = n & FSB_LSB_MASK;
+static void eee_set_freq(int dynA, int dynB, int pci) {
+    int current_dynA = 0, current_dynB = 0, current_pci = 0;
+    eee_get_freq(&current_dynA, &current_dynB, &current_pci);
+    if (current_dynA != dynA || current_dynB != dynB || current_pci != pci) {
+        eee_pll_data[FSB_MSB_INDEX] = dynA;
+        eee_pll_data[FSB_LSB_INDEX] = dynB;
+        eee_pll_data[FSB_PCI_INDEX] = pci;
         eee_pll_write();
     }
 }
@@ -360,20 +364,22 @@ struct eee_proc_file {
 
 
 EEE_PROC_READFUNC(fsb) {
-    int n = 0;
-    int m = 0;
+    int dynA = 0;
+    int dynB = 0;
+    int pci = 0;
     int voltage = 0;
-    eee_get_freq(&n, &m);
+    eee_get_freq(&dynA, &dynB, &pci);
     voltage = (int)eee_get_voltage();
-    EEE_PROC_PRINTF("%d %d %d\n", n, m, voltage);
+    EEE_PROC_PRINTF("%d %d %d %d\n", dynA, dynB, pci, voltage);
 }
 
 EEE_PROC_WRITEFUNC(fsb) {
-    int n = 70;     // sensible defaults
-    int m = 24;
+    int dynA = 70;     // sensible defaults
+    int dynB = 24;
+    int pci = 0;
     int voltage = 0;
-    EEE_PROC_SCANF(3, "%i %i %i", &n, &m, &voltage);
-    eee_set_freq(n, m);
+    EEE_PROC_SCANF(4, "%i %i %i %i", &dynA, &dynB, &pci, &voltage);
+    eee_set_freq(dynA, dynB, pci);
     eee_set_voltage(voltage);
 }
 
@@ -509,7 +515,7 @@ static int __init eee_proc_init(void) {
         printk(KERN_ERR "%s: Unable to create /proc/eee\n", EEE_NAME);
         return false;
     }
-    eee_proc_rootdir->owner = THIS_MODULE;
+    //eee_proc_rootdir->owner = THIS_MODULE;
 
     /* Create the individual proc files but avoid
      * to create pll if i2c_adapter was not found
@@ -532,7 +538,7 @@ static int __init eee_proc_init(void) {
             proc_file->write_proc = &eee_proc_writefunc;
         }
         proc_file->data = f;
-        proc_file->owner = THIS_MODULE;
+        //proc_file->owner = THIS_MODULE;
         proc_file->mode = S_IFREG | f->mode;
         proc_file->uid = 0;
         proc_file->gid = 0;
@@ -563,9 +569,9 @@ int __init init_module(void) {
 			printk(KERN_NOTICE "%s informs writable=1 is dangerous"
 				": think before writing, do not let your CPU burns out!\n", 
 					EEE_NAME);
-		return true;
+		return 0;
 	}
-	return false;
+	return -1;
 }
 
 void __exit cleanup_module(void) {

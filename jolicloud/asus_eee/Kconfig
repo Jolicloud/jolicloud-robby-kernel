@@ -1,6 +1,6 @@
 config ASUS_EEE
 	tristate "ASUS_EEE FSB support (EXPERIMENTAL)"
-	depends on EXPERIMENTAL
+	depends on I2C_I801 && EXPERIMENTAL
 	help
 	  This driver supports the Asus EEE FSB overclocking module.
 
