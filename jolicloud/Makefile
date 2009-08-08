@@ -3,6 +3,7 @@
 #
 
 obj-$(CONFIG_ASUS_EEE)		+= asus_eee/
+obj-$(CONFIG_AUFS_FS)		+= aufs/
 obj-$(CONFIG_BROADCOM_4312)	+= broadcom/
 obj-$(CONFIG_NETBOOK)		+= netbook/
 obj-$(CONFIG_TLSUP)			+= tlsup/

@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.30.4
-# Mon Aug  3 13:37:17 2009
+# Sat Aug  8 09:18:57 2009
 #
 # CONFIG_64BIT is not set
 CONFIG_X86_32=y
@@ -3712,6 +3712,19 @@ CONFIG_ACPI_TOSHIBA=m
 # Jolicloud Supplied Third-Party Device Drivers
 #
 CONFIG_ASUS_EEE=m
+CONFIG_AUFS_FS=m
+CONFIG_AUFS_BRANCH_MAX_127=y
+# CONFIG_AUFS_BRANCH_MAX_511 is not set
+# CONFIG_AUFS_BRANCH_MAX_1023 is not set
+# CONFIG_AUFS_BRANCH_MAX_32767 is not set
+CONFIG_AUFS_HINOTIFY=y
+# CONFIG_AUFS_EXPORT is not set
+# CONFIG_AUFS_SHWH is not set
+# CONFIG_AUFS_BR_RAMFS is not set
+CONFIG_AUFS_BR_FUSE=y
+# CONFIG_AUFS_DEBUG is not set
+CONFIG_AUFS_BDEV_LOOP=y
+CONFIG_AUFS_POLL=y
 CONFIG_BROADCOM_4312=m
 # CONFIG_NETBOOK is not set
 CONFIG_TLSUP=m
