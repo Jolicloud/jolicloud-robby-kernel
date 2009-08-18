@@ -12517,6 +12517,7 @@ static struct snd_pci_quirk alc268_cfg_tbl[] = {
 						ALC268_ACER_ASPIRE_ONE),
 	SND_PCI_QUIRK(0x1028, 0x0253, "Dell OEM", ALC268_DELL),
 	SND_PCI_QUIRK(0x1028, 0x02b0, "Dell Inspiron Mini9", ALC268_DELL),
+	SND_PCI_QUIRK(0x1028, 0x02b2, "Dell Vostro A90", ALC268_DELL),
 	SND_PCI_QUIRK_MASK(0x103c, 0xff00, 0x3000, "HP TX25xx series",
 			   ALC268_TOSHIBA),
 	SND_PCI_QUIRK(0x1043, 0x1205, "ASUS W7J", ALC268_3ST),
