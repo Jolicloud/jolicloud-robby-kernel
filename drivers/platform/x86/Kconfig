@@ -327,6 +327,7 @@ config INTEL_MENLOW
 config EEEPC_LAPTOP
 	tristate "Eee PC Hotkey Driver (EXPERIMENTAL)"
 	depends on ACPI
+	depends on I2C_I801
 	depends on INPUT
 	depends on EXPERIMENTAL
 	depends on RFKILL || RFKILL = n
