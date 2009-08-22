@@ -16617,6 +16617,40 @@ static void alc663_m51va_inithook(struct hda_codec *codec)
 	alc_mic_automute(codec);
 }
 
+static void alc272_toshiba_speaker_automute(struct hda_codec *codec)
+{
+	unsigned int present;
+	unsigned char bits;
+
+	present = snd_hda_codec_read(codec, 0x21, 0,
+			AC_VERB_GET_PIN_SENSE, 0)
+			& AC_PINSENSE_PRESENCE;
+	bits = present ? HDA_AMP_MUTE : 0;
+	snd_hda_codec_amp_stereo(codec, 0x17, HDA_OUTPUT, 0,
+				AMP_OUT_MUTE, bits);
+	snd_hda_codec_amp_stereo(codec, 0x17, HDA_OUTPUT, 1,
+				AMP_OUT_MUTE, bits);
+}
+
+static void alc272_toshiba_unsol_event(struct hda_codec *codec,
+		unsigned int res)
+{
+	switch (res >> 26) {
+	case ALC880_HP_EVENT:
+		alc272_toshiba_speaker_automute(codec);
+		break;
+	case ALC880_MIC_EVENT:
+		alc663_m51va_mic_automute(codec);
+		break;
+	}
+}
+
+static void alc272_toshiba_inithook(struct hda_codec *codec)
+{
+	alc272_toshiba_speaker_automute(codec);
+	alc663_m51va_mic_automute(codec);
+}
+
 /* ***************** Mode1 ******************************/
 #define alc663_mode1_unsol_event	alc663_m51va_unsol_event
 #define alc663_mode1_setup		alc663_m51va_setup
@@ -17226,8 +17260,8 @@ static struct alc_config_preset alc662_presets[] = {
 		.capsrc_nids = alc662_capsrc_nids,
 		.channel_mode = alc662_3ST_2ch_modes,
 		.input_mux = &alc663_m51va_capture_source,
-		.unsol_event = alc663_m51va_unsol_event,
-		.init_hook = alc663_m51va_inithook,
+		.unsol_event = alc272_toshiba_unsol_event,
+		.init_hook = alc272_toshiba_inithook,
 	},
 };
 
