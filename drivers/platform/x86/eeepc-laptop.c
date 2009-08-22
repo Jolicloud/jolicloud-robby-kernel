@@ -1,5 +1,5 @@
 /*
- *  eepc-laptop.c - Asus Eee PC extras
+ *  eeepc-laptop.c - Asus Eee PC extras
  *
  *  Based on asus_acpi.c as patched for the Eee PC by Asus:
  *  ftp://ftp.asus.com/pub/ASUS/EeePC/701/ASUS_ACPI_071126.rar
@@ -242,6 +242,7 @@ static struct backlight_ops eeepcbl_ops = {
 MODULE_AUTHOR("Corentin Chary, Eric Cooper");
 MODULE_DESCRIPTION(EEEPC_HOTK_NAME);
 MODULE_LICENSE("GPL");
+MODULE_VERSION(EEEPC_LAPTOP_VERSION);
 
 /*
  * ACPI Helpers
@@ -500,7 +501,7 @@ static struct attribute_group platform_attribute_group = {
 /*
  * Hotkey functions
  */
-static struct key_entry *eepc_get_entry_by_scancode(int code)
+static struct key_entry *eeepc_get_entry_by_scancode(int code)
 {
 	struct key_entry *key;
 
@@ -511,7 +512,7 @@ static struct key_entry *eepc_get_entry_by_scancode(int code)
 	return NULL;
 }
 
-static struct key_entry *eepc_get_entry_by_keycode(int code)
+static struct key_entry *eeepc_get_entry_by_keycode(int code)
 {
 	struct key_entry *key;
 
@@ -524,7 +525,7 @@ static struct key_entry *eepc_get_entry_by_keycode(int code)
 
 static int eeepc_getkeycode(struct input_dev *dev, int scancode, int *keycode)
 {
-	struct key_entry *key = eepc_get_entry_by_scancode(scancode);
+	struct key_entry *key = eeepc_get_entry_by_scancode(scancode);
 
 	if (key && key->type == KE_KEY) {
 		*keycode = key->keycode;
@@ -542,12 +543,12 @@ static int eeepc_setkeycode(struct input_dev *dev, int scancode, int keycode)
 	if (keycode < 0 || keycode > KEY_MAX)
 		return -EINVAL;
 
-	key = eepc_get_entry_by_scancode(scancode);
+	key = eeepc_get_entry_by_scancode(scancode);
 	if (key && key->type == KE_KEY) {
 		old_keycode = key->keycode;
 		key->keycode = keycode;
 		set_bit(keycode, dev->keybit);
-		if (!eepc_get_entry_by_keycode(old_keycode))
+		if (!eeepc_get_entry_by_keycode(old_keycode))
 			clear_bit(old_keycode, dev->keybit);
 		return 0;
 	}
@@ -738,7 +739,7 @@ static void eeepc_hotk_notify(struct acpi_device *device, u32 event)
 			else
 				event = NOTIFY_BRN_MIN + 1; /* ... unchanged */
 		}
-		key = eepc_get_entry_by_scancode(event);
+		key = eeepc_get_entry_by_scancode(event);
 		if (key) {
 			switch (key->type) {
 			case KE_KEY:
