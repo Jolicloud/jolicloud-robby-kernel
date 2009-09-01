@@ -16371,6 +16371,11 @@ static struct hda_verb alc272_dell_init_verbs[] = {
 	{}
 };
 
+static struct snd_kcontrol_new alc272_toshiba_mixer[] = {
+	HDA_CODEC_VOLUME("Front Mic Boost", 0x19, 0, HDA_INPUT),
+	{ } /* end */
+};
+
 static struct hda_verb alc272_toshiba_init_verbs[] = {
 	/* Front Pin: output 0 (0x0c) */
 	{0x17, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_OUT}, /* 0x14 */
@@ -16380,6 +16385,7 @@ static struct hda_verb alc272_toshiba_init_verbs[] = {
 	{0x14, AC_VERB_SET_AMP_GAIN_MUTE, AMP_OUT_MUTE},    /* 0x19 */
 	{0x17, AC_VERB_SET_EAPD_BTLENABLE, 2}, /* 0x14 */
 	{0x19, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_IN}, /* originally 0x12 */
+	{0x19, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_VREF80},
 	{0x13, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_IN},
 	{0x15, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_IN},
 	{0x16, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_IN},
@@ -17250,7 +17256,8 @@ static struct alc_config_preset alc662_presets[] = {
 		.init_hook = alc663_mode4_inithook,
 	},
 	[ALC272_TOSHIBA_NB200] = {
-		.mixers = { alc663_m51va_mixer },
+		.mixers = { alc663_m51va_mixer, alc272_toshiba_mixer },
+		.cap_mixer = alc662_auto_capture_mixer,
 		.init_verbs = { alc662_init_verbs, alc272_toshiba_init_verbs },
 		.num_dacs = ARRAY_SIZE(alc662_dac_nids),
 		.dac_nids = alc662_dac_nids,
