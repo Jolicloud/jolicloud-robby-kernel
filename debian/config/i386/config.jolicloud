@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
-# Linux kernel version: 2.6.31-rc7
-# Tue Aug 25 16:13:19 2009
+# Linux kernel version: 2.6.31-rc9
+# Sun Sep  6 23:50:14 2009
 #
 # CONFIG_64BIT is not set
 CONFIG_X86_32=y
@@ -2817,8 +2817,7 @@ CONFIG_DVB_USB_AF9015=m
 CONFIG_DVB_USB_CE6230=m
 CONFIG_DVB_TTUSB_BUDGET=m
 CONFIG_DVB_TTUSB_DEC=m
-CONFIG_DVB_SIANO_SMS1XXX=m
-CONFIG_DVB_SIANO_SMS1XXX_SMS_IDS=y
+# CONFIG_SMS_SIANO_MDTV is not set
 
 #
 # Supported FlexCopII (B2C2) Adapters
