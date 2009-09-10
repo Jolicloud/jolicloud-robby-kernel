@@ -286,6 +286,6 @@ build-arch:  $(addprefix build-,$(flavours))
 
 binary-arch-deps = binary-debs
 ifeq ($(AUTOBUILD),)
-binary-arch-deps += binary-udebs
+#binary-arch-deps += binary-udebs
 endif
 binary-arch: $(binary-arch-deps)
