@@ -17,6 +17,7 @@ $(stampdir)/stamp-prepare-%: $(confdir)/config $(confdir)/config.%
 	fi
 	find $(builddir)/build-$* -name "*.ko" | xargs rm -f
 	$(kmake) O=$(builddir)/build-$* silentoldconfig prepare scripts
+	( cd jolicloud/broadcom/lib ; uudecode *.uu )
 	touch $@
 
 
@@ -26,7 +27,7 @@ build-%: $(stampdir)/stamp-build-%
 $(stampdir)/stamp-build-%: target_flavour = $*
 $(stampdir)/stamp-build-%: $(stampdir)/stamp-prepare-%
 	@echo "Building $*..."
-	$(kmake) O=$(builddir)/build-$* $(conc_level) $(build_image)
+	#$(kmake) O=$(builddir)/build-$* $(conc_level) $(build_image)
 	$(kmake) O=$(builddir)/build-$* $(conc_level) modules
 	@touch $@
 

@@ -46,6 +46,8 @@ clean: debian/control
 	rm -f $(stampdir)/stamp-*
 	rm -rf debian/linux-*
 
+	rm -f jolicloud/broadcom/lib/wlc_hybrid.o_shipped_{i386,x86_64}
+
 	# This gets rid of the d-i packages in control
 	cp -f debian/control.stub debian/control
 
