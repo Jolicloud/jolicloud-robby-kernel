@@ -1,0 +1,18 @@
+#!/bin/sh
+
+set -e
+
+case "$1" in
+    install|upgrade)
+	if [ ! -d /usr/include/drm-linux-libc ]; then
+	    mkdir /usr/include/drm-linux-libc
+	fi
+	for file in drm_sarea.h drm.h drm_hashtab.h i915_drm.h; do
+	    dpkg-divert --add --rename --package psb-kernel-headers --divert \
+		/usr/include/drm-linux-libc/$file /usr/include/drm/$file
+	done
+    ;;
+esac
+
+#DEBHELPER#
+
