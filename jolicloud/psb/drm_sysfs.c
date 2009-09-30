@@ -167,7 +167,7 @@ int drm_sysfs_device_add(struct drm_device *dev, struct drm_head *head)
 	 * will create the device node.  We don't want to do that just
 	 * yet...
 	 */
-	/* dev->dev.devt = head->device; */
+	dev->dev.devt = head->device;
 	dev_set_name(&dev->dev, "card%d", head->minor);
 
 	err = device_register(&dev->dev);
@@ -176,7 +176,7 @@ int drm_sysfs_device_add(struct drm_device *dev, struct drm_head *head)
 		goto err_out;
 	}
 
-	for (i = 0; i < ARRAY_SIZE(device_attrs); i++) {
+/*	for (i = 0; i < ARRAY_SIZE(device_attrs); i++) {
 		err = device_create_file(&dev->dev, &device_attrs[i]);
 		if (err)
 			goto err_out_files;
@@ -189,6 +189,7 @@ err_out_files:
 		for (j = 0; j < i; j++)
 			device_remove_file(&dev->dev, &device_attrs[i]);
 	device_unregister(&dev->dev);
+*/
 err_out:
 
 	return err;
