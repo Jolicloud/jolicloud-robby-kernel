@@ -30,7 +30,7 @@
 
 #include <linux/i2c.h>
 #include <linux/delay.h>
-#include "drm_crtc.h"
+#include "psb-drm_crtc.h"
 #include "intel_sdvo_regs.h"
 
 #include <linux/proc_fs.h>

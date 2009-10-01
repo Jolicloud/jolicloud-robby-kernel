@@ -22,14 +22,14 @@
 /*
  */
 
-#include "drmP.h"
-#include "drm.h"
+#include "psb-drmP.h"
+#include "psb-drm.h"
 #include "psb_drm.h"
 #include "psb_drv.h"
 #include "psb_reg.h"
 #include "i915_reg.h"
 #include "psb_msvdx.h"
-#include "drm_pciids.h"
+#include "psb-drm_pciids.h"
 #include "psb_scene.h"
 #include <linux/cpu.h>
 #include <linux/notifier.h>

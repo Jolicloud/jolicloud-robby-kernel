@@ -32,11 +32,11 @@
 #include <linux/init.h>
 #include <linux/console.h>
 
-#include "drmP.h"
-#include "drm.h"
-#include "drm_crtc.h"
+#include "psb-drmP.h"
+#include "psb-drm.h"
+#include "psb-drm_crtc.h"
 #include "psb_drv.h"
-#include "drm_compat.h"
+#include "psb-drm_compat.h"
 
 #define SII_1392_WA
 #ifdef SII_1392_WA

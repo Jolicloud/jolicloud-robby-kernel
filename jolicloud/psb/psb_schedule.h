@@ -26,7 +26,7 @@
 #ifndef _PSB_SCHEDULE_H_
 #define _PSB_SCHEDULE_H_
 
-#include "drmP.h"
+#include "psb-drmP.h"
 
 enum psb_task_type {
 	psb_ta_midscene_task,

@@ -24,7 +24,7 @@
  * Thomas Hellstrom <thomas-at-tungstengraphics-dot-com>
  */
 
-#include "drmP.h"
+#include "psb-drmP.h"
 #include "psb_drv.h"
 #include "psb_reg.h"
 #include "psb_scene.h"

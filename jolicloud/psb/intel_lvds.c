@@ -29,8 +29,8 @@
 
 #include <linux/i2c.h>
 #include <linux/backlight.h>
-#include "drm_crtc.h"
-#include "drm_edid.h"
+#include "psb-drm_crtc.h"
+#include "psb-drm_edid.h"
 #include "intel_lvds.h"
 
 #include <acpi/acpi_drivers.h>

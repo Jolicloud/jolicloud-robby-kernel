@@ -22,7 +22,7 @@
 /*
  * Authors: Thomas Hellstrom <thomas-at-tungstengraphics.com>
  */
-#include "drmP.h"
+#include "psb-drmP.h"
 #include "psb_drv.h"
 #include "psb_schedule.h"
 

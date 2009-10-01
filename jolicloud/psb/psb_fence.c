@@ -23,7 +23,7 @@
  * Authors: Thomas Hellström <thomas-at-tungstengraphics-dot-com>
  */
 
-#include "drmP.h"
+#include "psb-drmP.h"
 #include "psb_drv.h"
 
 static void psb_poll_ta(struct drm_device *dev, uint32_t waiting_types)

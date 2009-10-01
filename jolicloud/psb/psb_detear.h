@@ -27,8 +27,8 @@
 #ifndef _PSB_DETEAR_H_
 #define _PSB_DETEAR_H_
 
-#include "drmP.h"
-#include "drm.h"
+#include "psb-drmP.h"
+#include "psb-drm.h"
 #include "psb_drm.h"
 #include "psb_drv.h"
 

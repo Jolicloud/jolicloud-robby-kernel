@@ -23,7 +23,7 @@
  * Make calls into closed source X server code.
  */
 
-#include "drmP.h"
+#include "psb-drmP.h"
 #include "psb_drv.h"
 
 void

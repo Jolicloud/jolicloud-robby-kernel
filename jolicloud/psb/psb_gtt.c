@@ -22,7 +22,7 @@
 /*
  * Authors: Thomas Hellstrom <thomas-at-tungstengraphics.com>
  */
-#include "drmP.h"
+#include "psb-drmP.h"
 #include "psb_drv.h"
 
 static inline uint32_t psb_gtt_mask_pte(uint32_t pfn, int type)

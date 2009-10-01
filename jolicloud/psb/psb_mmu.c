@@ -19,7 +19,7 @@
  * develop this driver.
  *
  **************************************************************************/
-#include "drmP.h"
+#include "psb-drmP.h"
 #include "psb_drv.h"
 #include "psb_reg.h"
 

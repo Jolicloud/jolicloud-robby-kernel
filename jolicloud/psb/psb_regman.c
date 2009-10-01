@@ -22,7 +22,7 @@
 /*
  */
 
-#include "drmP.h"
+#include "psb-drmP.h"
 #include "psb_drv.h"
 
 struct psb_use_reg {

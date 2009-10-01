@@ -24,7 +24,7 @@
 #ifndef _PSB_DRV_H_
 #define _PSB_DRV_H_
 
-#include "drmP.h"
+#include "psb-drmP.h"
 #include "psb_drm.h"
 #include "psb_reg.h"
 #include "psb_schedule.h"

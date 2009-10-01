@@ -7,14 +7,17 @@
 # $XFree86: xc/programs/Xserver/hw/xfree86/os-support/linux/drm/kernel/Makefile.kernel,v 1.18 2003/08/16 17:59:17 dawes Exp $
 #
 
-drm-objs    := drm_auth.o drm_bufs.o drm_context.o drm_dma.o drm_drawable.o \
-		drm_drv.o drm_fops.o drm_ioctl.o drm_irq.o \
-		drm_lock.o drm_memory.o drm_proc.o drm_stub.o drm_vm.o \
-		drm_sysfs.o drm_pci.o drm_agpsupport.o drm_scatter.o \
-		drm_memory_debug.o ati_pcigart.o drm_sman.o \
-		drm_hashtab.o drm_mm.o drm_object.o drm_compat.o \
-	        drm_fence.o drm_ttm.o drm_bo.o drm_bo_move.o drm_crtc.o \
-		drm_edid.o drm_modes.o drm_bo_lock.o drm_regman.o drm_vm_nopage_compat.o
+psb-drm-objs := psb-drm_auth.o psb-drm_bufs.o psb-drm_context.o \
+		psb-drm_dma.o psb-drm_drawable.o psb-drm_drv.o psb-drm_fops.o \
+		psb-drm_ioctl.o psb-drm_irq.o psb-drm_lock.o psb-drm_memory.o \
+		psb-drm_proc.o psb-drm_stub.o psb-drm_vm.o psb-drm_sysfs.o \
+		psb-drm_pci.o psb-drm_agpsupport.o psb-drm_scatter.o \
+		psb-drm_memory_debug.o ati_pcigart.o psb-drm_sman.o \
+		psb-drm_hashtab.o psb-drm_mm.o psb-drm_object.o psb-drm_compat.o \
+		psb-drm_fence.o psb-drm_ttm.o psb-drm_bo.o psb-drm_bo_move.o \
+		psb-drm_crtc.o psb-drm_edid.o psb-drm_modes.o psb-drm_bo_lock.o \
+		psb-drm_regman.o psb-drm_vm_nopage_compat.o
+
 tdfx-objs   := tdfx_drv.o
 r128-objs   := r128_drv.o r128_cce.o r128_state.o r128_irq.o
 mga-objs    := mga_drv.o mga_dma.o mga_state.o mga_warp.o mga_irq.o
@@ -58,7 +61,7 @@ nouveau-objs += nouveau_ioc32.o
 xgi-objs    += xgi_ioc32.o
 endif
 
-obj-m			+= drm.o
+obj-m			+= psb-drm.o
 obj-m			+= psb.o
 #obj-$(CONFIG_DRM_TDFX)	+= tdfx.o
 #obj-$(CONFIG_DRM_R128)	+= r128.o
