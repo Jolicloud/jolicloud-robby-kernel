@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
-# Linux kernel version: 2.6.31-rc9
-# Sun Sep  6 23:50:14 2009
+# Linux kernel version: 2.6.31.1
+# Thu Oct  1 09:40:59 2009
 #
 # CONFIG_64BIT is not set
 CONFIG_X86_32=y
@@ -290,7 +290,7 @@ CONFIG_HPET_EMULATE_RTC=y
 CONFIG_DMI=y
 # CONFIG_IOMMU_HELPER is not set
 # CONFIG_IOMMU_API is not set
-CONFIG_NR_CPUS=2
+CONFIG_NR_CPUS=8
 CONFIG_SCHED_SMT=y
 CONFIG_SCHED_MC=y
 # CONFIG_PREEMPT_NONE is not set
