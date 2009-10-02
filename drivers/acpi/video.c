@@ -2394,8 +2394,8 @@ static int __init acpi_video_init(void)
 {
 	dmi_check_system(video_dmi_table);
 
-	if (intel_opregion_present())
-		return 0;
+//	if (intel_opregion_present())
+//		return 0;
 
 	return acpi_video_register();
 }
