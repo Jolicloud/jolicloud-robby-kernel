@@ -43,4 +43,14 @@ EXTRA_CFLAGS       :=
 EXTRA_CFLAGS       += -I$(src)/src/include
 EXTRA_CFLAGS       += -I$(src)/src/wl/sys
 
-EXTRA_LDFLAGS      := $(KBUILD_SRC)/$(src)/lib/wlc_hybrid.o_shipped_$(BINARCH)
+HYBRID_MODULE      := lib/wlc_hybrid_$(BINARCH).o
+HYBRID_MODULE_UU   := $(KBUILD_SRC)/$(obj)/$(HYBRID_MODULE).uu
+HYBRID_MODULE_OBJ  := $(O)/$(obj)/$(HYBRID_MODULE)
+
+EXTRA_LDFLAGS      := $(HYBRID_MODULE_OBJ)
+
+$(HYBRID_MODULE_OBJ): $(HYBRID_MODULE_UU)
+	mkdir -p `dirname $@`
+	uudecode -o $@ $^
+
+$(src)/wl.o: $(HYBRID_MODULE_OBJ)
