@@ -79,7 +79,7 @@ static void psb_destroy_scene(struct kref *kref)
 	PSB_DEBUG_RENDER("Scene destroy.\n");
 	psb_scheduler_remove_scene_refs(scene);
 	ttm_bo_unref(&scene->hw_data);
-	drm_free(scene, sizeof(*scene), DRM_MEM_DRIVER);
+	kfree(scene);
 }
 
 void psb_scene_unref(struct psb_scene **p_scene)
@@ -112,7 +112,7 @@ static struct psb_scene *psb_alloc_scene(struct drm_device *dev,
 	PSB_DEBUG_RENDER("Alloc scene w %u h %u msaa %u\n", w & 0xffff, h,
 			 w >> 16);
 
-	scene = drm_calloc(1, sizeof(*scene), DRM_MEM_DRIVER);
+	scene = kcalloc(1, sizeof(*scene), GFP_KERNEL);
 
 	if (!scene) {
 		DRM_ERROR("Out of memory allocating scene object.\n");
@@ -142,7 +142,7 @@ static struct psb_scene *psb_alloc_scene(struct drm_device *dev,
 
 	return scene;
 out_err:
-	drm_free(scene, sizeof(*scene), DRM_MEM_DRIVER);
+	kfree(scene);
 	return NULL;
 }
 
@@ -311,7 +311,7 @@ static void psb_scene_pool_destroy(struct kref *kref)
 			psb_scene_unref(&pool->scenes[i]);
 	}
 
-	drm_free(pool, sizeof(*pool), DRM_MEM_DRIVER);
+	kfree(pool);
 }
 
 void psb_scene_pool_unref(struct psb_scene_pool **p_pool)
@@ -381,7 +381,7 @@ struct psb_scene_pool *psb_scene_pool_alloc(struct drm_file *file_priv,
 	int ret;
 
 	PSB_DEBUG_RENDER("Scene pool alloc\n");
-	pool = drm_calloc(1, sizeof(*pool), DRM_MEM_DRIVER);
+	pool = kcalloc(1, sizeof(*pool), GFP_KERNEL);
 	if (!pool) {
 		DRM_ERROR("Out of memory allocating scene pool object.\n");
 		return NULL;
@@ -405,7 +405,7 @@ struct psb_scene_pool *psb_scene_pool_alloc(struct drm_file *file_priv,
 
 	return pool;
 out_err:
-	drm_free(pool, sizeof(*pool), DRM_MEM_DRIVER);
+	kfree(pool);
 	return NULL;
 }
 
@@ -420,7 +420,7 @@ static void psb_ta_mem_destroy(struct kref *kref)
 
 	ttm_bo_unref(&ta_mem->hw_data);
 	ttm_bo_unref(&ta_mem->ta_memory);
-	drm_free(ta_mem, sizeof(*ta_mem), DRM_MEM_DRIVER);
+	kfree(ta_mem);
 }
 
 void psb_ta_mem_unref(struct psb_ta_mem **p_ta_mem)
@@ -449,7 +449,7 @@ struct psb_ta_mem *psb_alloc_ta_mem(struct drm_device *dev, uint32_t pages)
 
 	INIT_LIST_HEAD(&buf.head);
 
-	ta_mem = drm_calloc(1, sizeof(*ta_mem), DRM_MEM_DRIVER);
+	ta_mem = kcalloc(1, sizeof(*ta_mem), GFP_KERNEL);
 
 	if (!ta_mem) {
 		DRM_ERROR("Out of memory allocating parameter memory.\n");
@@ -496,7 +496,7 @@ struct psb_ta_mem *psb_alloc_ta_mem(struct drm_device *dev, uint32_t pages)
 out_err1:
 	ttm_bo_unref(&ta_mem->hw_data);
 out_err0:
-	drm_free(ta_mem, sizeof(*ta_mem), DRM_MEM_DRIVER);
+	kfree(ta_mem);
 	return NULL;
 }
 

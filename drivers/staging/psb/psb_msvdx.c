@@ -71,7 +71,7 @@ int psb_msvdx_dequeue_send(struct drm_device *dev)
 	}
 	list_del(&msvdx_cmd->head);
 	kfree(msvdx_cmd->cmd);
-	drm_free(msvdx_cmd, sizeof(struct psb_msvdx_cmd_queue), DRM_MEM_DRIVER);
+	kfree(msvdx_cmd);
 
 	return ret;
 }
@@ -150,7 +150,7 @@ int psb_msvdx_map_command(struct drm_device *dev,
 	if (copy_cmd) {
 		PSB_DEBUG_GENERAL("MSVDXQUE:copying command\n");
 
-		tmp = drm_calloc(1, cmd_size, DRM_MEM_DRIVER);
+		tmp = kcalloc(1, cmd_size, GFP_KERNEL);
 		if (tmp == NULL) {
 			ret = -ENOMEM;
 			DRM_ERROR("MSVDX: fail to callc,ret=:%d\n", ret);
@@ -250,8 +250,8 @@ int psb_submit_video_cmdbuf(struct drm_device *dev,
 		/* queue the command to be sent when the h/w is ready */
 		PSB_DEBUG_GENERAL("MSVDXQUE: queueing sequence:%08x..\n",
 				sequence);
-		msvdx_cmd = drm_calloc(1, sizeof(struct psb_msvdx_cmd_queue),
-				DRM_MEM_DRIVER);
+		msvdx_cmd = kcalloc(1, sizeof(struct psb_msvdx_cmd_queue),
+				GFP_KERNEL);
 		if (msvdx_cmd == NULL) {
 			mutex_unlock(&dev_priv->msvdx_mutex);
 			DRM_ERROR("MSVDXQUE: Out of memory...\n");
@@ -263,8 +263,7 @@ int psb_submit_video_cmdbuf(struct drm_device *dev,
 		if (ret) {
 			mutex_unlock(&dev_priv->msvdx_mutex);
 			DRM_ERROR("MSVDXQUE: Failed to extract cmd\n");
-			drm_free(msvdx_cmd, sizeof(struct psb_msvdx_cmd_queue),
-				DRM_MEM_DRIVER);
+			kfree(msvdx_cmd);
 			return ret;
 		}
 		msvdx_cmd->cmd = cmd;

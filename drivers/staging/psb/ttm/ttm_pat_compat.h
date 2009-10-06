@@ -33,6 +33,8 @@
 #ifndef _TTM_PAT_COMPAT_
 #define _TTM_PAT_COMPAT_
 #include <asm/page.h>
+#include "ttm_bo_api.h"
+#include "ttm_memory.h"
 
 extern void ttm_pat_init(void);
 extern void ttm_pat_takedown(void);

@@ -267,7 +267,7 @@ static uint32_t *msvdx_get_fw(struct drm_device *dev,
 			  name, (*raw)->size);
 		return NULL;
 	}
-	dev_priv->msvdx_fw = drm_calloc(1, fw_size, DRM_MEM_DRIVER);
+	dev_priv->msvdx_fw = kcalloc(1, fw_size, GFP_KERNEL);
 	if (dev_priv->msvdx_fw == NULL)
 		DRM_ERROR("MSVDX: allocate FW buffer failed\n");
 	else {
@@ -661,8 +661,7 @@ int psb_msvdx_uninit(struct drm_device *dev)
 	if (dev_priv->ccb1)
 		psb_free_ccb(&dev_priv->ccb1);
 	if (dev_priv->msvdx_fw)
-		drm_free(dev_priv->msvdx_fw, dev_priv->msvdx_fw_size,
-			DRM_MEM_DRIVER);
+		kfree(dev_priv->msvdx_fw);
 
 	return 0;
 }

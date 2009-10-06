@@ -981,7 +981,7 @@ static void psb_free_task_wq(struct work_struct *work)
 		if (atomic_read(&task->buf.done)) {
 			PSB_DEBUG_RENDER("Deleting task %d\n",
 					 task->sequence);
-			drm_free(task, sizeof(*task), DRM_MEM_DRIVER);
+			kfree(task);
 			task = NULL;
 		}
 		spin_lock_irqsave(&scheduler->lock, irq_flags);
@@ -1236,7 +1236,7 @@ static int psb_setup_task(struct drm_device *dev,
 		return -EINVAL;
 	}
 
-	task = drm_calloc(1, sizeof(*task), DRM_MEM_DRIVER);
+	task = kcalloc(1, sizeof(*task), GFP_KERNEL);
 	if (!task)
 		return -ENOMEM;
 
@@ -1281,7 +1281,7 @@ static int psb_setup_task(struct drm_device *dev,
 	*task_p = task;
 	return 0;
 out_err:
-	drm_free(task, sizeof(*task), DRM_MEM_DRIVER);
+	kfree(task);
 	*task_p = NULL;
 	return ret;
 }

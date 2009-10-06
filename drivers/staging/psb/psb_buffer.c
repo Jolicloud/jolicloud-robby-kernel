@@ -29,8 +29,6 @@
 #include "ttm/ttm_execbuf_util.h"
 #include "ttm/ttm_fence_api.h"
 
-#define DRM_MEM_TTM       26
-
 struct drm_psb_ttm_backend {
 	struct ttm_backend base;
 	struct page **pages;
@@ -430,7 +428,7 @@ static void drm_psb_tbe_destroy(struct ttm_backend *backend)
 	    container_of(backend, struct drm_psb_ttm_backend, base);
 
 	if (backend)
-		drm_free(psb_be, sizeof(*psb_be), DRM_MEM_TTM);
+		kfree(psb_be);
 }
 
 static struct ttm_backend_func psb_ttm_backend = {
@@ -445,7 +443,7 @@ static struct ttm_backend *drm_psb_tbe_init(struct ttm_bo_device *bdev)
 {
 	struct drm_psb_ttm_backend *psb_be;
 
-	psb_be = drm_calloc(1, sizeof(*psb_be), DRM_MEM_TTM);
+	psb_be = kcalloc(1, sizeof(*psb_be), GFP_KERNEL);
 	if (!psb_be)
 		return NULL;
 	psb_be->pages = NULL;

@@ -41,7 +41,7 @@ int psb_open(struct inode *inode, struct file *filp)
 	if (unlikely(ret))
 		return ret;
 
-	psb_fp = drm_calloc(1, sizeof(*psb_fp), DRM_MEM_FILES);
+	psb_fp = kcalloc(1, sizeof(*psb_fp), GFP_KERNEL);
 
 	if (unlikely(psb_fp == NULL))
 		goto out_err0;
@@ -63,7 +63,7 @@ int psb_open(struct inode *inode, struct file *filp)
 	return 0;
 
 out_err1:
-	drm_free(psb_fp, sizeof(*psb_fp), DRM_MEM_FILES);
+	kfree(psb_fp);
 out_err0:
 	(void) drm_release(inode, filp);
 	return ret;
@@ -84,7 +84,7 @@ int psb_release(struct inode *inode, struct file *filp)
 	psb_check_power_state(file_priv->minor->dev, PSB_DEVICE_SGX);
 
 	ttm_object_file_release(&psb_fp->tfile);
-	drm_free(psb_fp, sizeof(*psb_fp), DRM_MEM_FILES);
+	kfree(psb_fp);
 
 	if (dev_priv && dev_priv->xhw_file)
 		psb_xhw_init_takedown(dev_priv, file_priv, 1);

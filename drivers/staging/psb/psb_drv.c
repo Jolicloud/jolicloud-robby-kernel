@@ -237,11 +237,6 @@ static void get_ci_info(struct drm_psb_private *dev_priv)
 	return;
 }
 
-static int dri_library_name(struct drm_device *dev, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "psb\n");
-}
-
 static void psb_set_uopt(struct drm_psb_uopt *uopt)
 {
 	uopt->clock_gating = drm_psb_clock_gating;
@@ -717,7 +712,7 @@ static int psb_driver_unload(struct drm_device *dev)
 		if (dev_priv->has_global)
 			psb_ttm_global_release(dev_priv);
 
-		drm_free(dev_priv, sizeof(*dev_priv), DRM_MEM_DRIVER);
+		kfree(dev_priv);
 		dev->dev_private = NULL;
 	}
 	return 0;
@@ -737,7 +732,7 @@ static int psb_driver_load(struct drm_device *dev, unsigned long chipset)
 	else
 		DRM_INFO("Run drivers on Poulsbo platform!\n");
 
-	dev_priv = drm_calloc(1, sizeof(*dev_priv), DRM_MEM_DRIVER);
+	dev_priv = kcalloc(1, sizeof(*dev_priv), GFP_KERNEL);
 	if (dev_priv == NULL)
 		return -ENOMEM;
 
@@ -951,7 +946,7 @@ static int psb_driver_load(struct drm_device *dev, unsigned long chipset)
 
 	if (drm_psb_no_fb == 0) {
 		psb_modeset_init(dev);
-		drm_helper_initial_config(dev, false);
+		drm_helper_initial_config(dev);
 	}
 	/*set SGX in low power mode*/
 	if (drm_psb_ospm && IS_MRST(dev))
@@ -1369,9 +1364,9 @@ static int psb_ospm_read(char *buf, char **start, off_t offset, int request,
 static int psb_proc_init(struct drm_minor *minor)
 {
 	struct proc_dir_entry *ent;
-	if (!minor->dev_root)
+	if (!minor->proc_root)
 		return 0;
-	ent = create_proc_read_entry(OSPM_PROC_ENTRY, 0, minor->dev_root,
+	ent = create_proc_read_entry(OSPM_PROC_ENTRY, 0, minor->proc_root,
 			psb_ospm_read, minor);
 	if (ent)
 		return 0;
@@ -1381,9 +1376,9 @@ static int psb_proc_init(struct drm_minor *minor)
 
 static void psb_proc_cleanup(struct drm_minor *minor)
 {
-	if (!minor->dev_root)
+	if (!minor->proc_root)
 		return;
-	remove_proc_entry(OSPM_PROC_ENTRY, minor->dev_root);
+	remove_proc_entry(OSPM_PROC_ENTRY, minor->proc_root);
 	return;
 }
 
@@ -1391,7 +1386,6 @@ static struct drm_driver driver = {
 	.driver_features = DRIVER_HAVE_IRQ | DRIVER_IRQ_SHARED,
 	.load = psb_driver_load,
 	.unload = psb_driver_unload,
-	.dri_library_name = dri_library_name,
 	.get_reg_ofs = drm_core_get_reg_ofs,
 	.ioctls = psb_ioctls,
 	.device_is_agp = psb_driver_device_is_agp,

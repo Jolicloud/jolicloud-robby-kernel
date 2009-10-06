@@ -1,6 +1,6 @@
 obj-$(CONFIG_DRM_PSB)		+= psb.o
 
-ccflags-y := -Idrivers/gpu/drm -Idrivers/gpu/drm/ttm -I$(PWD)
+ccflags-y := -Idrivers/gpu/drm -Idrivers/staging/psb/ttm -I$(PWD)
 
 psb-objs :=	\
 	psb_drv.o	\

@@ -218,8 +218,7 @@ static int lnc_topaz_save_command(struct drm_device *dev, void *cmd,
 	PSB_DEBUG_GENERAL("TOPAZ: queue command,sequence: %08x..\n",
 			sequence);
 
-	topaz_cmd = drm_calloc(1, sizeof(struct lnc_topaz_cmd_queue),
-			DRM_MEM_DRIVER);
+	topaz_cmd = kcalloc(1, sizeof(struct lnc_topaz_cmd_queue), GFP_KERNEL);
 	if (topaz_cmd == NULL) {
 		mutex_unlock(&dev_priv->topaz_mutex);
 		DRM_ERROR("TOPAZ: out of memory....\n");
@@ -355,7 +354,7 @@ lnc_topaz_deliver_command(struct drm_device *dev,
 
 	if (copy_cmd) {
 		PSB_DEBUG_GENERAL("TOPAZ: queue commands\n");
-		tmp = drm_calloc(1, cmd_size, DRM_MEM_DRIVER);
+		tmp = kcalloc(1, cmd_size, GFP_KERNEL);
 		if (tmp == NULL) {
 			ret = -ENOMEM;
 			goto out;
@@ -546,8 +545,7 @@ int lnc_topaz_dequeue_send(struct drm_device *dev)
 
 	list_del(&topaz_cmd->head);
 	kfree(topaz_cmd->cmd);
-	drm_free(topaz_cmd, sizeof(struct lnc_topaz_cmd_queue),
-		 DRM_MEM_DRIVER);
+	kfree(topaz_cmd);
 
 	return ret;
 }

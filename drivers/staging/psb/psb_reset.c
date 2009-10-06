@@ -214,8 +214,7 @@ void psb_msvdx_flush_cmd_queue(struct drm_device *dev)
 				_PSB_FENCE_TYPE_EXE, DRM_CMD_HANG);
 		list_del(list);
 		kfree(msvdx_cmd->cmd);
-		drm_free(msvdx_cmd, sizeof(struct psb_msvdx_cmd_queue),
-			 DRM_MEM_DRIVER);
+		kfree(msvdx_cmd);
 	}
 }
 
