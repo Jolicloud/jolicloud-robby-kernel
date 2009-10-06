@@ -1,5 +1,0 @@
-psb-kernel-source (4.41.2-0ubuntu1~910um1) karmic; urgency=low
-
-  * Initial package for Karmic, utilising DKMS.
-
- -- Luca Forina <luca.forina@gmail.com>  Thu, 11 Aug 2009 11:44:04 +1000
