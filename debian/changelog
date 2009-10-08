@@ -255,8 +255,20 @@ linux (2.6.31-7.7) UNRELEASED; urgency=low
 
 linux (2.6.31-6.6) UNRELEASED; urgency=low
 
+  [ Adam McDaniel ]
 
- -- Adam McDaniel <adam@jolicloud.org>  Mon, 05 Oct 2009 22:29:19 -0600
+  * Disabled jolicloud's poulsbo implementation
+  * SAUCE: psb: Moved staging poulsbo driver headers to include/drm
+  * Added "provides: psb-kernel-headers" to linux-headers package
+
+  [ Upstream Kernel Changes ]
+
+  * drm: Add a tracker for global objects.
+  * drm: Add unlocked IOCTL functionality from the drm repo.
+  * Staging: add Intel Poulsbo/Morrestown DRM driver
+  * Staging: psb: Update Poulsbo DRM driver for 2.6.31
+
+ -- Adam McDaniel <adam@jolicloud.org>  Tue, 06 Oct 2009 09:39:46 -0600
 
 linux (2.6.31-5.5) robby-test; urgency=low
 
