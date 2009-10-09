@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
-# Linux kernel version: 2.6.31.1
-# Thu Oct  8 10:36:58 2009
+# Linux kernel version: 2.6.31.3
+# Fri Oct  9 13:51:25 2009
 #
 # CONFIG_64BIT is not set
 CONFIG_X86_32=y
@@ -204,10 +204,10 @@ CONFIG_IOSCHED_AS=y
 CONFIG_IOSCHED_DEADLINE=y
 CONFIG_IOSCHED_CFQ=y
 # CONFIG_DEFAULT_AS is not set
-# CONFIG_DEFAULT_DEADLINE is not set
-CONFIG_DEFAULT_CFQ=y
+CONFIG_DEFAULT_DEADLINE=y
+# CONFIG_DEFAULT_CFQ is not set
 # CONFIG_DEFAULT_NOOP is not set
-CONFIG_DEFAULT_IOSCHED="cfq"
+CONFIG_DEFAULT_IOSCHED="deadline"
 CONFIG_PREEMPT_NOTIFIERS=y
 CONFIG_FREEZER=y
 
