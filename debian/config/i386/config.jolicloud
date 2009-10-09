@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.31.3
-# Fri Oct  9 13:51:25 2009
+# Fri Oct  9 14:09:03 2009
 #
 # CONFIG_64BIT is not set
 CONFIG_X86_32=y
@@ -3558,7 +3558,20 @@ CONFIG_MMC_TIFM_SD=m
 CONFIG_MMC_SDRICOH_CS=m
 CONFIG_MMC_CB710=m
 # CONFIG_MMC_VIA_SDMMC is not set
-# CONFIG_MEMSTICK is not set
+CONFIG_MEMSTICK=m
+# CONFIG_MEMSTICK_DEBUG is not set
+
+#
+# MemoryStick drivers
+#
+# CONFIG_MEMSTICK_UNSAFE_RESUME is not set
+CONFIG_MSPRO_BLOCK=m
+
+#
+# MemoryStick Host Controller Drivers
+#
+CONFIG_MEMSTICK_TIFM_MS=m
+CONFIG_MEMSTICK_JMICRON_38X=m
 CONFIG_NEW_LEDS=y
 CONFIG_LEDS_CLASS=m
 
