@@ -4,25 +4,12 @@
  * Copyright 2008, Broadcom Corporation
  * All Rights Reserved.
  * 
- *  	Unless you and Broadcom execute a separate written software license
- * agreement governing use of this software, this software is licensed to you
- * under the terms of the GNU General Public License version 2, available at
- * http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL"), with the
- * following added to such license:
- *      As a special exception, the copyright holders of this software give you
- * permission to link this software with independent modules, regardless of the
- * license terms of these independent modules, and to copy and distribute the
- * resulting executable under terms of your choice, provided that you also meet,
- * for each linked independent module, the terms and conditions of the license
- * of that module. An independent module is a module which is not derived from
- * this software.
- *
  * THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
  * KIND, EXPRESS OR IMPLIED, BY STATUTE, COMMUNICATION OR OTHERWISE. BROADCOM
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: linux_osl.c,v 1.127.2.18 2009/02/26 17:07:07 Exp $
+ * $Id: linux_osl.c,v 1.127.2.18.6.1 2009/09/09 01:12:21 Exp $
  */
 
 #define LINUX_PORT
@@ -61,7 +48,7 @@ struct osl_info {
 
 bool g_assert_bypass = FALSE;
 
-static int16 linuxbcmerrormap[] =  \
+static int16 linuxbcmerrormap[] =
 {	0, 			
 	-EINVAL,		
 	-EINVAL,		
@@ -449,7 +436,7 @@ int
 osl_printf(const char *format, ...)
 {
 	va_list args;
-	char buf[1024];
+	static char buf[1024];
 	int len;
 
 	va_start(args, format);

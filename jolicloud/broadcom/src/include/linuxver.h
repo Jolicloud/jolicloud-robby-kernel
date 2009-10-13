@@ -5,25 +5,12 @@
  * Copyright 2008, Broadcom Corporation
  * All Rights Reserved.
  * 
- *  	Unless you and Broadcom execute a separate written software license
- * agreement governing use of this software, this software is licensed to you
- * under the terms of the GNU General Public License version 2, available at
- * http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL"), with the
- * following added to such license:
- *      As a special exception, the copyright holders of this software give you
- * permission to link this software with independent modules, regardless of the
- * license terms of these independent modules, and to copy and distribute the
- * resulting executable under terms of your choice, provided that you also meet,
- * for each linked independent module, the terms and conditions of the license
- * of that module. An independent module is a module which is not derived from
- * this software.
- *
  * THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
  * KIND, EXPRESS OR IMPLIED, BY STATUTE, COMMUNICATION OR OTHERWISE. BROADCOM
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: linuxver.h,v 13.40.2.5 2008/12/15 18:36:58 Exp $
+ * $Id: linuxver.h,v 13.40.2.5.30.2 2009/09/05 00:05:17 Exp $
  */
 
 #ifndef _linuxver_h_
@@ -181,6 +168,18 @@ extern void pci_unregister_driver(struct pci_driver *drv);
 #endif
 #endif	
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 31)
+#define WL_USE_NETDEV_OPS
+#else
+#undef WL_USE_NETDEV_OPS
+#endif
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 3, 31)) && defined(CONFIG_RFKILL_INPUT)
+#define WL_CONFIG_RFKILL_INPUT
+#else
+#undef WL_CONFIG_RFKILL_INPUT
+#endif
+
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 3, 48))
 #define list_for_each(pos, head) \
 	for (pos = (head)->next; pos != (head); pos = pos->next)
@@ -289,7 +288,7 @@ static inline void tasklet_init(struct tasklet_struct *tasklet,
 	tasklet->routine = (void (*)(void *))func;
 	tasklet->data = (void *)data;
 }
-#define tasklet_kill(tasklet)	{ do{} while (0); }
+#define tasklet_kill(tasklet)	{ do {} while (0); }
 
 #define del_timer_sync(timer) del_timer(timer)
 

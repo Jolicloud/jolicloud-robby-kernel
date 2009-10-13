@@ -5,25 +5,12 @@
  * Copyright 2008, Broadcom Corporation
  * All Rights Reserved.
  * 
- *  	Unless you and Broadcom execute a separate written software license
- * agreement governing use of this software, this software is licensed to you
- * under the terms of the GNU General Public License version 2, available at
- * http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL"), with the
- * following added to such license:
- *      As a special exception, the copyright holders of this software give you
- * permission to link this software with independent modules, regardless of the
- * license terms of these independent modules, and to copy and distribute the
- * resulting executable under terms of your choice, provided that you also meet,
- * for each linked independent module, the terms and conditions of the license
- * of that module. An independent module is a module which is not derived from
- * this software.
- *
  * THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
  * KIND, EXPRESS OR IMPLIED, BY STATUTE, COMMUNICATION OR OTHERWISE. BROADCOM
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: wl_linux.c,v 1.388.2.78.4.3 2009/06/18 22:40:13 Exp $
+ * $Id: wl_linux.c,v 1.388.2.78.4.2.2.3 2009/09/05 00:05:25 Exp $
  */
 
 #define LINUX_PORT
@@ -62,8 +49,7 @@
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 14)
 #include <net/ieee80211.h>
 #endif
-#endif
-
+#endif 
 
 #include <asm/system.h>
 #include <asm/io.h>
@@ -139,7 +125,7 @@ struct ieee80211_tkip_data {
 };
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
-#define	WL_DEV_IF(dev)		((wl_if_t*)netdev_priv(dev))
+#define WL_DEV_IF(dev)		((wl_if_t*)netdev_priv(dev))
 #else
 #define	WL_DEV_IF(dev)		((wl_if_t*)(dev)->priv)			
 #endif
@@ -165,6 +151,9 @@ static void wl_dpc(ulong data);
 static void wl_link_up(wl_info_t *wl);
 static void wl_link_down(wl_info_t *wl);
 static void wl_mic_error(wl_info_t *wl, struct ether_addr *ea, bool group, bool flush_txq);
+#if defined(WL_CONFIG_RFKILL_INPUT)
+static int wl_schedule_task(wl_info_t *wl, void (*fn)(struct wl_task *), void *context);
+#endif
 #if defined(CONFIG_PROC_FS)
 static int wl_read_proc(char *buffer, char **start, off_t offset, int length, int *eof, void *data);
 #endif 
@@ -175,7 +164,12 @@ struct wl_if *wl_alloc_if(wl_info_t *wl, int iftype, uint unit, struct wlc_if* w
 static void wl_free_if(wl_info_t *wl, wl_if_t *wlif);
 static void wl_get_driver_info(struct net_device *dev, struct ethtool_drvinfo *info);
 
-MODULE_LICENSE("MIXED/Proprietary");
+#if defined(WL_CONFIG_RFKILL_INPUT)
+#include <linux/rfkill.h>
+static int wl_init_rfkill(wl_info_t *wl);
+static void wl_uninit_rfkill(wl_info_t *wl);
+static void my_force_kill(wl_task_t *task);
+#endif
 
 static struct pci_device_id wl_id_table[] = {
 	{ PCI_VENDOR_ID_BROADCOM, 0x4311, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0 }, 
@@ -228,20 +222,34 @@ static const struct ethtool_ops wl_ethtool_ops =
 };
 #endif 
 
-static const struct net_device_ops wl_netdev_ops = {
+#if defined(WL_USE_NETDEV_OPS)
+static const struct net_device_ops wl_netdev_ops =
+{
 	.ndo_open = wl_open,
-	.ndo_stop = wl_close,
-	.ndo_start_xmit = wl_start,
-	.ndo_get_stats = wl_get_stats,
-	.ndo_set_mac_address = wl_set_mac_address,
-	.ndo_set_multicast_list = wl_set_multicast_list,
-	.ndo_do_ioctl = wl_ioctl,
+        .ndo_stop = wl_close,
+        .ndo_start_xmit = wl_start,
+        .ndo_get_stats = wl_get_stats,
+        .ndo_set_mac_address = wl_set_mac_address,
+        .ndo_set_multicast_list = wl_set_multicast_list,
+        .ndo_do_ioctl = wl_ioctl
 };
+#endif
 
 static
 void wl_if_setup(struct net_device *dev)
 {
+#if defined(WL_USE_NETDEV_OPS)
 	dev->netdev_ops = &wl_netdev_ops;
+#else
+	dev->open = wl_open;
+	dev->stop = wl_close;
+	dev->hard_start_xmit = wl_start;
+	dev->get_stats = wl_get_stats;
+	dev->set_mac_address = wl_set_mac_address;
+	dev->set_multicast_list = wl_set_multicast_list;
+	dev->do_ioctl = wl_ioctl;
+#endif 
+
 #ifdef CONFIG_WIRELESS_EXT
 #if WIRELESS_EXT < 19
 	dev->get_wireless_stats = wl_get_wireless_stats;
@@ -254,6 +262,7 @@ void wl_if_setup(struct net_device *dev)
 #endif 
 
 #endif 
+
 }
 
 static wl_info_t *
@@ -383,22 +392,25 @@ wl_attach(uint16 vendor, uint16 device, ulong regs, uint bustype, void *btparam,
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
 	wl->tkipmodops = lib80211_get_crypto_ops("TKIP");
-#else
-	wl->tkipmodops = ieee80211_get_crypto_ops("TKIP");
-#endif
 	if (wl->tkipmodops == NULL) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
-		request_module("lib80211");
 		request_module("lib80211_crypt_tkip");
 		wl->tkipmodops = lib80211_get_crypto_ops("TKIP");
+	}
 #else
+	wl->tkipmodops = ieee80211_get_crypto_ops("TKIP");
+	if (wl->tkipmodops == NULL) {
 		request_module("ieee80211_crypt_tkip");
 		wl->tkipmodops = ieee80211_get_crypto_ops("TKIP");
-#endif
 	}
+#endif 
 #endif 
 #ifdef CONFIG_WIRELESS_EXT
 	wlif->iw.wlinfo = (void *)wl;
+#endif
+
+#if defined(WL_CONFIG_RFKILL_INPUT)
+	if (wl_init_rfkill(wl) < 0)
+		WL_ERROR(("%s: init_rfkill_failure\n", __FUNCTION__));
 #endif
 
 	if (wlc_iovar_setint(wl->wlc, "leddc", 0xa0000)) {
@@ -662,6 +674,10 @@ wl_free(wl_info_t *wl)
 			free_irq(wl->dev->irq, wl);
 	}
 
+#if defined(WL_CONFIG_RFKILL_INPUT)
+	wl_uninit_rfkill(wl);
+#endif
+
 	if (wl->dev) {
 		wl_free_if(wl, WL_DEV_IF(wl->dev));
 		wl->dev = NULL;
@@ -844,6 +860,36 @@ wl_txflowcontrol(wl_info_t *wl, bool state, int prio)
 	}
 }
 
+#if defined(WL_CONFIG_RFKILL_INPUT)
+
+static int
+wl_schedule_task(wl_info_t *wl, void (*fn)(struct wl_task *task), void *context)
+{
+	wl_task_t *task;
+
+	WL_TRACE(("wl%d: wl_schedule_task\n", wl->pub->unit));
+
+	if (!(task = MALLOC(wl->osh, sizeof(wl_task_t)))) {
+		WL_ERROR(("wl%d: wl_schedule_task: out of memory, malloced %d bytes\n",
+			wl->pub->unit, MALLOCED(wl->osh)));
+		return -ENOMEM;
+	}
+
+	MY_INIT_WORK(&task->work, (work_func_t)fn);
+	task->context = context;
+
+	if (!schedule_work(&task->work)) {
+		WL_ERROR(("wl%d: schedule_work() failed\n", wl->pub->unit));
+		MFREE(wl->osh, task, sizeof(wl_task_t));
+		return -ENOMEM;
+	}
+
+	atomic_inc(&wl->callbacks);
+
+	return 0;
+}
+#endif 
+
 struct wl_if *
 wl_alloc_if(wl_info_t *wl, int iftype, uint subunit, struct wlc_if* wlcif)
 {
@@ -851,12 +897,14 @@ wl_alloc_if(wl_info_t *wl, int iftype, uint subunit, struct wlc_if* wlcif)
 	wl_if_t *wlif;
 	wl_if_t *p;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 29))
 	if (!(wlif = MALLOC(wl->osh, sizeof(wl_if_t)))) {
 		WL_ERROR(("wl%d: wl_alloc_if: out of memory, malloced %d bytes\n",
 		          (wl->pub)?wl->pub->unit:subunit, MALLOCED(wl->osh)));
 		return NULL;
 	}
 	bzero(wlif, sizeof(wl_if_t));
+#endif
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 24))
 	if (!(dev = MALLOC(wl->osh, sizeof(struct net_device)))) {
 		MFREE(wl->osh, wlif, sizeof(wl_if_t));
@@ -869,12 +917,15 @@ wl_alloc_if(wl_info_t *wl, int iftype, uint subunit, struct wlc_if* wlcif)
 	strncpy(dev->name, name, IFNAMSIZ);
 #else
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29))
 	dev = alloc_netdev(sizeof(wl_if_t), name, ether_setup);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
 	wlif = netdev_priv(dev);
-#endif
+	if (!dev) {
+#else
+	dev = alloc_netdev(0, name, ether_setup);
 	if (!dev) {
 		MFREE(wl->osh, wlif, sizeof(wl_if_t));
+#endif 
 		WL_ERROR(("wl%d: wl_alloc_if: out of memory, alloc_netdev\n",
 			(wl->pub)?wl->pub->unit:subunit));
 		return NULL;
@@ -927,7 +978,11 @@ wl_free_if(wl_info_t *wl, wl_if_t *wlif)
 		MFREE(wl->osh, wlif->dev, sizeof(struct net_device));
 #else
 		free_netdev(wlif->dev);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29))
+
+		return;
 #endif
+#endif 
 	}
 	MFREE(wl->osh, wlif, sizeof(wl_if_t));
 }
@@ -1083,12 +1138,18 @@ wl_ethtool(wl_info_t *wl, void *uaddr, wl_if_t *wlif)
 	uint32 toe_cmpnt = 0, csum_dir;
 	int ret;
 
+	if (!wl || !wl->pub || !wl->wlc)
+		return -ENODEV;
+
 	WL_TRACE(("wl%d: %s\n", wl->pub->unit, __FUNCTION__));
 	if (copy_from_user(&cmd, uaddr, sizeof(uint32)))
 		return (-EFAULT);
 
 	switch (cmd) {
 	case ETHTOOL_GDRVINFO:
+		if (!wl->dev)
+			return -ENETDOWN;
+
 		wl_get_driver_info(wl->dev, &info);
 		info.cmd = cmd;
 		if (copy_to_user(uaddr, &info, sizeof(info)))
@@ -1128,6 +1189,8 @@ wl_ethtool(wl_info_t *wl, void *uaddr, wl_if_t *wlif)
 			return ret;
 
 		if (cmd == ETHTOOL_STXCSUM) {
+			if (!wl->dev)
+				return -ENETDOWN;
 			if (edata.data)
 				wl->dev->features |= NETIF_F_IP_CSUM;
 			else
@@ -1575,6 +1638,26 @@ wl_event(wl_info_t *wl, char *ifname, wlc_event_t *e)
 			e->event.flags&WLC_EVENT_MSG_GROUP,
 			e->event.flags&WLC_EVENT_MSG_FLUSHTXQ);
 		break;
+#if defined(WL_CONFIG_RFKILL_INPUT)
+	case WLC_E_RADIO:
+		{
+		mbool i;
+		if (wlc_get(wl->wlc, WLC_GET_RADIO, &i) < 0)
+			WL_ERROR(("%s: WLC_GET_RADIO failed\n", __FUNCTION__));
+		if (wl->last_phyind == (mbool)(i & WL_RADIO_HW_DISABLE))
+			break;
+
+		wl->last_phyind = (mbool)(i & WL_RADIO_HW_DISABLE);
+
+		WL_ERROR(("wl%d: Radio hardware state changed to %d\n", wl->pub->unit, i));
+		(void) wl_schedule_task(wl, my_force_kill, wl);
+		break;
+		}
+#else
+	case WLC_E_RADIO:
+		WL_ERROR(("wl_event: WLC_E_RADIO\n"));
+		break;
+#endif 
 	}
 }
 
@@ -1944,6 +2027,101 @@ wl_tkip_printstats(wl_info_t *wl, bool group_key)
 	}
 #endif 
 }
+
+#if defined(WL_CONFIG_RFKILL_INPUT)
+
+static int
+wl_sw_toggle_radio(void *data, enum rfkill_state state)
+{
+	wl_info_t *wl = data;
+	mbool cur_state;
+	uint32 radioval = WL_RADIO_SW_DISABLE << 16;
+
+	if (wlc_get(wl->wlc, WLC_GET_RADIO, &cur_state) < 0) {
+		WL_ERROR(("%s: WLC_GET_RADIO failed\n", __FUNCTION__));
+	}
+
+	switch (state) {
+	case RFKILL_STATE_SOFT_BLOCKED:
+
+		if (!mboolisset(cur_state, WL_RADIO_SW_DISABLE)) {
+			WL_ERROR(("%s: => Disable radio\n", __FUNCTION__));
+		}
+		return 0;
+	case RFKILL_STATE_UNBLOCKED:
+
+		if (mboolisset(cur_state, WL_RADIO_SW_DISABLE)) {
+			radioval |= WL_RADIO_SW_DISABLE;
+			WL_ERROR(("%s: => Enable radio\n", __FUNCTION__));
+		}
+		return 0;
+	default:
+		return -EINVAL;
+	}
+	if (wlc_set(wl->wlc, WLC_SET_RADIO, radioval) < 0)
+			WL_ERROR(("%s: SET_RADIO failed\n", __FUNCTION__));
+}
+
+static int
+wl_init_rfkill(wl_info_t *wl)
+{
+	int status;
+	wl->wl_rfkill.rfkill = rfkill_allocate(&wl->dev->dev, RFKILL_TYPE_WLAN);
+	if (!wl->wl_rfkill.rfkill) {
+		WL_ERROR(("%s: RFKILL: Failed to allocate rfkill\n", __FUNCTION__));
+		return -ENOMEM;
+	}
+
+	snprintf(wl->wl_rfkill.rfkill_name, sizeof(wl->wl_rfkill.rfkill_name),
+		"brcmwl-%d", wl->pub->unit);
+
+	if (wlc_get(wl->wlc, WLC_GET_RADIO, &status) < 0)
+		WL_ERROR(("%s: WLC_GET_RADIO failed\n", __FUNCTION__));
+
+	wl->wl_rfkill.rfkill->name = wl->wl_rfkill.rfkill_name;
+	wl->wl_rfkill.rfkill->data = wl;
+	wl->wl_rfkill.rfkill->toggle_radio = wl_sw_toggle_radio;
+
+	if (status & WL_RADIO_HW_DISABLE)
+		wl->wl_rfkill.rfkill->state = RFKILL_STATE_HARD_BLOCKED;
+	else
+		wl->wl_rfkill.rfkill->state = RFKILL_STATE_UNBLOCKED;
+
+	wl->wl_rfkill.rfkill->user_claim_unsupported = 1;
+
+	if (rfkill_register(wl->wl_rfkill.rfkill)) {
+		WL_ERROR(("%s: rfkill_register failed! \n", __FUNCTION__));
+		rfkill_free(wl->wl_rfkill.rfkill);
+	}
+	wl->wl_rfkill.registered = TRUE;
+	return 0;
+}
+
+static void
+wl_uninit_rfkill(wl_info_t *wl)
+{
+	if (wl->wl_rfkill.registered) {
+		rfkill_unregister(wl->wl_rfkill.rfkill);
+		wl->wl_rfkill.registered = FALSE;
+		wl->wl_rfkill.rfkill = NULL;
+	}
+}
+
+static void
+my_force_kill(wl_task_t *task)
+{
+	wl_info_t *wl = (wl_info_t *) task->context;
+
+	ASSERT(wl);
+	if (wl->last_phyind)
+		rfkill_force_state(wl->wl_rfkill.rfkill, RFKILL_STATE_HARD_BLOCKED);
+	else
+		rfkill_force_state(wl->wl_rfkill.rfkill, RFKILL_STATE_UNBLOCKED);
+
+	MFREE(wl->osh, task, sizeof(wl_task_t));
+	atomic_dec(&wl->callbacks);
+}
+#endif 
 
 static int
 wl_linux_watchdog(void *ctx)

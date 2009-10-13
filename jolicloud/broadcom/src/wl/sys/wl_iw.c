@@ -4,25 +4,12 @@
  * Copyright 2008, Broadcom Corporation
  * All Rights Reserved.
  * 
- *  	Unless you and Broadcom execute a separate written software license
- * agreement governing use of this software, this software is licensed to you
- * under the terms of the GNU General Public License version 2, available at
- * http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL"), with the
- * following added to such license:
- *      As a special exception, the copyright holders of this software give you
- * permission to link this software with independent modules, regardless of the
- * license terms of these independent modules, and to copy and distribute the
- * resulting executable under terms of your choice, provided that you also meet,
- * for each linked independent module, the terms and conditions of the license
- * of that module. An independent module is a module which is not derived from
- * this software.
- *
  * THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
  * KIND, EXPRESS OR IMPLIED, BY STATUTE, COMMUNICATION OR OTHERWISE. BROADCOM
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: wl_iw.c,v 1.63.2.25.4.5 2009/06/18 22:40:12 Exp $
+ * $Id: wl_iw.c,v 1.63.2.25.4.4.2.3 2009/09/09 01:12:27 Exp $
  */
 
 #define LINUX_PORT
@@ -124,7 +111,11 @@ dev_wlc_ioctl(
 
 	fs = get_fs();
 	set_fs(get_ds());
+#if defined(WL_USE_NETDEV_OPS)
 	ret = dev->netdev_ops->ndo_do_ioctl(dev, &ifr, SIOCDEVPRIVATE);
+#else
+	ret = dev->do_ioctl(dev, &ifr, SIOCDEVPRIVATE);
+#endif
 	set_fs(fs);
 
 	return ret;
@@ -473,7 +464,7 @@ wl_iw_get_range(
 )
 {
 	struct iw_range *range = (struct iw_range *) extra;
-	int channels[MAXCHANNEL+1];
+	static int channels[MAXCHANNEL+1];
 	wl_uint32_list_t *list = (wl_uint32_list_t *) channels;
 	wl_rateset_t rateset;
 	int error, i;
@@ -586,6 +577,10 @@ wl_iw_get_range(
 	range->enc_capa |= IW_ENC_CAPA_CIPHER_TKIP;
 	range->enc_capa |= IW_ENC_CAPA_CIPHER_CCMP;
 	range->enc_capa |= IW_ENC_CAPA_WPA2;
+#if WIRELESS_EXT >= 22 && defined(IW_SCAN_CAPA_ESSID)
+
+	range->scan_capa = IW_SCAN_CAPA_ESSID;
+#endif
 #endif 
 
 	return 0;
