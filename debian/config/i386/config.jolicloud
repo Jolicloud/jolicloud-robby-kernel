@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.31.4
-# Tue Oct 13 13:06:36 2009
+# Wed Oct 14 08:36:47 2009
 #
 # CONFIG_64BIT is not set
 CONFIG_X86_32=y
@@ -2954,7 +2954,7 @@ CONFIG_DRM_RADEON=m
 CONFIG_DRM_I810=m
 CONFIG_DRM_I830=m
 CONFIG_DRM_I915=m
-CONFIG_DRM_I915_KMS=y
+# CONFIG_DRM_I915_KMS is not set
 CONFIG_DRM_MGA=m
 CONFIG_DRM_SIS=m
 CONFIG_DRM_VIA=m
