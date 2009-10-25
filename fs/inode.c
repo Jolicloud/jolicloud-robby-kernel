@@ -1626,3 +1626,7 @@ void inode_init_owner(struct inode *inode, const struct inode *dir,
 	inode->i_mode = mode;
 }
 EXPORT_SYMBOL(inode_init_owner);
+
+#define CREATE_TRACE_POINTS
+#include <trace/events/vfs.h>
+
