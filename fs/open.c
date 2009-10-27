@@ -32,6 +32,9 @@
 
 #include "internal.h"
 
+#define CREATE_TRACE_POINTS
+#include <trace/events/fs.h>
+
 int do_truncate(struct dentry *dentry, loff_t length, unsigned int time_attrs,
 	struct file *filp)
 {
@@ -891,6 +894,7 @@ long do_sys_open(int dfd, const char __user *filename, int flags, int mode)
 			} else {
 				fsnotify_open(f->f_path.dentry);
 				fd_install(fd, f);
+				trace_do_sys_open(tmp, flags, mode);
 			}
 		}
 		putname(tmp);
