@@ -233,10 +233,11 @@ void drm_free_pages(unsigned long address, int order, int area)
 static void *agp_remap(unsigned long offset, unsigned long size,
 			      struct drm_device * dev)
 {
-	unsigned long *phys_addr_map, i, num_pages =
+	unsigned long i, num_pages =
 	    PAGE_ALIGN(size) / PAGE_SIZE;
 	struct drm_agp_mem *agpmem;
 	struct page **page_map;
+	struct page **phys_page_map;
 	void *addr;
 
 	size = PAGE_ALIGN(size);
@@ -263,10 +264,10 @@ static void *agp_remap(unsigned long offset, unsigned long size,
 	if (!page_map)
 		return NULL;
 
-	phys_addr_map =
+	phys_page_map = 
 	    agpmem->memory->pages + (offset - agpmem->bound) / PAGE_SIZE;
 	for (i = 0; i < num_pages; ++i)
-		page_map[i] = pfn_to_page(phys_addr_map[i] >> PAGE_SHIFT);
+		page_map[i] = phys_page_map[i];
 	addr = vmap(page_map, num_pages, VM_IOREMAP, PAGE_AGP);
 	vfree(page_map);
 

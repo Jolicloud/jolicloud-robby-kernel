@@ -145,7 +145,7 @@ static int drm_do_vm_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 		 * Get the page, inc the use count, and return it
 		 */
 		offset = (baddr - agpmem->bound) >> PAGE_SHIFT;
-		page = virt_to_page(__va(agpmem->memory->pages[offset]));
+ 		page = agpmem->memory->pages[offset];
 		get_page(page);
 		vmf->page = page;
 

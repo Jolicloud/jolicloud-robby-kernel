@@ -524,7 +524,7 @@ static int drm_agp_populate(struct drm_ttm_backend *backend,
 	DRM_DEBUG("Current page count is %ld\n", (long) mem->page_count);
 	mem->page_count = 0;
 	for (cur_page = pages; cur_page < last_page; ++cur_page)
-		mem->pages[mem->page_count++] = phys_to_gart(page_to_phys(*cur_page));
+		mem->pages[mem->page_count++] = *cur_page;
 	agp_be->mem = mem;
 	return 0;
 }
