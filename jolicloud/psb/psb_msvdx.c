@@ -32,8 +32,8 @@
  *
  **************************************************************************/
 
-#include "psb-drmP.h"
-#include "psb-drm_os_linux.h"
+#include "drmP.h"
+#include "drm_os_linux.h"
 #include "psb_drv.h"
 #include "psb_drm.h"
 #include "psb_msvdx.h"

@@ -31,7 +31,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "psb-drmP.h"
+#include "drmP.h"
 
 # define ATI_PCIGART_PAGE_SIZE		4096	/**< PCI GART page size */
 
