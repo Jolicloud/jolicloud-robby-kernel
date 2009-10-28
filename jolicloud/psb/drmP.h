@@ -34,6 +34,8 @@
 #ifndef _DRM_P_H_
 #define _DRM_P_H_
 
+#include "rename_drm-psb_symbols.h"
+
 #ifdef __KERNEL__
 #ifdef __alpha__
 /* add include of current.h so that "current" is defined
