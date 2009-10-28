@@ -34,11 +34,6 @@
 #include "ttm/ttm_fence_user.h"
 #include "ttm/ttm_placement_user.h"
 
-/*
- * Intel Poulsbo driver package version.
- */
-#define PSB_PACKAGE_VERSION "5.0.1.0046"
-
 #define DRM_PSB_SAREA_MAJOR 0
 #define DRM_PSB_SAREA_MINOR 2
 #define PSB_FIXED_SHIFT 16
@@ -381,10 +376,6 @@ struct drm_psb_xhw_arg {
 	} arg;
 };
 
-#define DRM_PSB_CMDBUF          0x00
-#define DRM_PSB_XHW_INIT        0x01
-#define DRM_PSB_XHW             0x02
-#define DRM_PSB_SCENE_UNREF     0x03
 /* Controlling the kernel modesetting buffers */
 
 #define DRM_PSB_KMS_OFF		0x00
@@ -394,7 +385,6 @@ struct drm_psb_xhw_arg {
 #define DRM_PSB_XHW_INIT        0x04
 #define DRM_PSB_XHW             0x05
 #define DRM_PSB_EXTENSION       0x06
-#define DRM_PSB_HW_INFO         DRM_PSB_EXTENSION
 
 /*
  * Xhw commands.
@@ -414,7 +404,6 @@ struct drm_psb_xhw_arg {
 #define PSB_XHW_RESUME          0x08
 #define PSB_XHW_TA_MEM_LOAD	0x09
 #define PSB_XHW_CHECK_LOCKUP    0x0a
-#define PSB_XHW_HOTPLUG         0x0b
 
 #define PSB_SCENE_FLAG_DIRTY       (1 << 0)
 #define PSB_SCENE_FLAG_COMPLETE    (1 << 1)
