@@ -7,7 +7,7 @@
 # $XFree86: xc/programs/Xserver/hw/xfree86/os-support/linux/drm/kernel/Makefile.kernel,v 1.18 2003/08/16 17:59:17 dawes Exp $
 #
 
-drm-objs    := drm_auth.o drm_bufs.o drm_context.o drm_dma.o drm_drawable.o \
+drm-psb-objs := drm_auth.o drm_bufs.o drm_context.o drm_dma.o drm_drawable.o \
 		drm_drv.o drm_fops.o drm_ioctl.o drm_irq.o \
 		drm_lock.o drm_memory.o drm_proc.o drm_stub.o drm_vm.o \
 		drm_sysfs.o drm_pci.o drm_agpsupport.o drm_scatter.o \
@@ -49,7 +49,7 @@ xgi-objs    := xgi_cmdlist.o xgi_drv.o xgi_fb.o xgi_misc.o xgi_pcie.o \
 		xgi_fence.o
 
 ifeq ($(CONFIG_COMPAT),y)
-drm-objs    += drm_ioc32.o
+drm-psb-objs    += drm_ioc32.o
 radeon-objs += radeon_ioc32.o
 mga-objs    += mga_ioc32.o
 r128-objs   += r128_ioc32.o
@@ -58,7 +58,7 @@ nouveau-objs += nouveau_ioc32.o
 xgi-objs    += xgi_ioc32.o
 endif
 
-obj-m			+= drm.o
+obj-m			+= drm-psb.o
 obj-m			+= psb.o
 #obj-$(CONFIG_DRM_TDFX)	+= tdfx.o
 #obj-$(CONFIG_DRM_R128)	+= r128.o
