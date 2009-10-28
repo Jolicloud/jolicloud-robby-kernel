@@ -1,0 +1,15 @@
+#!/bin/sh
+
+set -e
+
+case "$1" in
+    remove|purge)
+        for file in drm_sarea.h drm.h drm_hashtab.h i915_drm.h; do
+            dpkg-divert --remove --rename /usr/include/drm/$file
+        done
+	rm -f /usr/include/drm-linux-libc
+    ;;
+esac
+
+#DEBHELPER#
+

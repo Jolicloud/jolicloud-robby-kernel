@@ -2,5 +2,6 @@ menu "Jolicloud Supplied Third-Party Device Drivers"
 
 source "jolicloud/asus_eee/Kconfig"
 source "jolicloud/broadcom/Kconfig"
+source "jolicloud/psb/Kconfig"
 
 endmenu
