@@ -36,18 +36,16 @@ echo "Processing $arch ($kernarch) ... "
 # JOLICLOUD: Only configure jolicloud* config flavours
 configs=$(cd $confdir && ls config.jolicloud*)
 
-# JOLICLOUD: Don't merge upstream global config file. Jolicloud configs are
-# not split like Ubuntu's configs.
-#if [ -f $confdir/config ]; then
-#	for config in $configs; do
-#		case $config in
-#			*)
-#				cat $confdir/config >> $confdir/$config
-#				;;
-#		esac
-#	done
-#	rm -f $confdir/config
-#fi
+if [ -f $confdir/config ]; then
+	for config in $configs; do
+		case $config in
+			*)
+				cat $confdir/config >> $confdir/$config
+				;;
+		esac
+	done
+	rm -f $confdir/config
+fi
 
 test -d build || mkdir build
 cd build

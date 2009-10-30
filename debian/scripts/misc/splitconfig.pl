@@ -3,9 +3,6 @@
 %configs = ();
 %common = ();
 
-print "Not running splitconfig to avoid mucking upstream ubuntu config files\n";
-exit 0;
-
 print "Reading config's ...\n";
 
 opendir(DIR, ".");
