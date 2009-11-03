@@ -1218,22 +1218,17 @@ void __init sk_init(void)
 void sock_wfree(struct sk_buff *skb)
 {
 	struct sock *sk = skb->sk;
-	unsigned int len = skb->truesize;
+	int res;
 
-	if (!sock_flag(sk, SOCK_USE_WRITE_QUEUE)) {
-		/*
-		 * Keep a reference on sk_wmem_alloc, this will be released
-		 * after sk_write_space() call
-		 */
-		atomic_sub(len - 1, &sk->sk_wmem_alloc);
+	/* In case it might be waiting for more memory. */
+	res = atomic_sub_return(skb->truesize, &sk->sk_wmem_alloc);
+	if (!sock_flag(sk, SOCK_USE_WRITE_QUEUE))
 		sk->sk_write_space(sk);
-		len = 1;
-	}
 	/*
-	 * if sk_wmem_alloc reaches 0, we must finish what sk_free()
-	 * could not do because of in-flight packets
+	 * if sk_wmem_alloc reached 0, we are last user and should
+	 * free this sock, as sk_free() call could not do it.
 	 */
-	if (atomic_sub_and_test(len, &sk->sk_wmem_alloc))
+	if (res == 0)
 		__sk_free(sk);
 }
 EXPORT_SYMBOL(sock_wfree);
