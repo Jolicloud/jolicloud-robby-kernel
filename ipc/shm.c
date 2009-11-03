@@ -410,7 +410,7 @@ static int newseg(struct ipc_namespace *ns, struct ipc_params *params)
 	return error;
 
 no_id:
-	if (is_file_hugepages(file) && shp->mlock_user)
+	if (shp->mlock_user)	/* shmflg & SHM_HUGETLB case */
 		user_shm_unlock(size, shp->mlock_user);
 	fput(file);
 no_file:

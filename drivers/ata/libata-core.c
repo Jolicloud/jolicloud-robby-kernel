@@ -709,13 +709,7 @@ u64 ata_tf_read_block(struct ata_taskfile *tf, struct ata_device *dev)
 		head = tf->device & 0xf;
 		sect = tf->lbal;
 
-		if (!sect) {
-			ata_dev_printk(dev, KERN_WARNING, "device reported "
-				       "invalid CHS sector 0\n");
-			sect = 1; /* oh well */
-		}
-
-		block = (cyl * dev->heads + head) * dev->sectors + sect - 1;
+		block = (cyl * dev->heads + head) * dev->sectors + sect;
 	}
 
 	return block;
