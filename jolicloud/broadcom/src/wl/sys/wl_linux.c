@@ -38,6 +38,7 @@
 #include <linux/ethtool.h>
 #include <linux/completion.h>
 #include <linux/pci_ids.h>
+#include <linux/sched.h>
 #define WLC_MAXBSSCFG		1	
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
