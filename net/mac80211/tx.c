@@ -1736,8 +1736,7 @@ int ieee80211_subif_start_xmit(struct sk_buff *skb,
 	if (!is_multicast_ether_addr(hdr.addr1)) {
 		rcu_read_lock();
 		sta = sta_info_get(local, hdr.addr1);
-		/* XXX: in the future, use sdata to look up the sta */
-		if (sta && sta->sdata == sdata)
+		if (sta)
 			sta_flags = get_sta_flags(sta);
 		rcu_read_unlock();
 	}
