@@ -538,7 +538,7 @@ static int ax25_setsockopt(struct socket *sock, int level, int optname,
 	if (level != SOL_AX25)
 		return -ENOPROTOOPT;
 
-	if (optlen < (int)sizeof(int))
+	if (optlen < sizeof(int))
 		return -EINVAL;
 
 	if (get_user(opt, (int __user *)optval))

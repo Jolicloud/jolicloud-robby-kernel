@@ -4143,8 +4143,8 @@ done:
 static int perf_copy_attr(struct perf_counter_attr __user *uattr,
 			  struct perf_counter_attr *attr)
 {
-	u32 size;
 	int ret;
+	u32 size;
 
 	if (!access_ok(VERIFY_WRITE, uattr, PERF_ATTR_SIZE_VER0))
 		return -EFAULT;
@@ -4169,19 +4169,19 @@ static int perf_copy_attr(struct perf_counter_attr __user *uattr,
 
 	/*
 	 * If we're handed a bigger struct than we know of,
-	 * ensure all the unknown bits are 0 - i.e. new
-	 * user-space does not rely on any kernel feature
-	 * extensions we dont know about yet.
+	 * ensure all the unknown bits are 0.
 	 */
 	if (size > sizeof(*attr)) {
-		unsigned char __user *addr;
-		unsigned char __user *end;
-		unsigned char val;
+		unsigned long val;
+		unsigned long __user *addr;
+		unsigned long __user *end;
 
-		addr = (void __user *)uattr + sizeof(*attr);
-		end  = (void __user *)uattr + size;
+		addr = PTR_ALIGN((void __user *)uattr + sizeof(*attr),
+				sizeof(unsigned long));
+		end  = PTR_ALIGN((void __user *)uattr + size,
+				sizeof(unsigned long));
 
-		for (; addr < end; addr++) {
+		for (; addr < end; addr += sizeof(unsigned long)) {
 			ret = get_user(val, addr);
 			if (ret)
 				return ret;

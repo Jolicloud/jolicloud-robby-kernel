@@ -143,7 +143,6 @@ void clflush_cache_range(void *vaddr, unsigned int size)
 
 	mb();
 }
-EXPORT_SYMBOL_GPL(clflush_cache_range);
 
 static void __cpa_flush_all(void *arg)
 {
