@@ -1,18 +1,9 @@
 /*
  *  eeepc-laptop.c - Asus Eee PC extras
  *
- *  v0.1 - Based on asus_acpi.c as patched for the Eee PC by Asus:
+ *  Based on asus_acpi.c as patched for the Eee PC by Asus:
  *  ftp://ftp.asus.com/pub/ASUS/EeePC/701/ASUS_ACPI_071126.rar
  *  Based on eee.c from eeepc-linux
- *
- *  v0.2 - Based on asus_eee.c - Asus eeePC extras
- *  http://code.google.com/p/eeepc-linux/
- *  by Andrew Tipton, Jean Fabrice, Roberto A Foglietta.
- *  Imported into eeepc-laptop.c by Adam McDaniel
- *
- *  Copyright (C) 2007 Andrew Tipton
- *  Copyright (C) 2008 Jean Fabrice
- *  Copyright (C) 2008 Roberto A. Foglietta
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -38,18 +29,13 @@
 #include <linux/hwmon-sysfs.h>
 #include <acpi/acpi_drivers.h>
 #include <acpi/acpi_bus.h>
-#include <asm/uaccess.h>
-#include <asm/io.h>
 #include <linux/uaccess.h>
 #include <linux/input.h>
-#include <linux/i2c.h>
-#include <linux/mutex.h>
 #include <linux/rfkill.h>
 #include <linux/pci.h>
 #include <linux/pci_hotplug.h>
 
-#define EEEPC_LAPTOP_VERSION	"0.2"
-#define EEEPC_NAME		"eeepc-laptop"
+#define EEEPC_LAPTOP_VERSION	"0.1"
 
 #define EEEPC_HOTK_NAME		"Eee PC Hotkey Driver"
 #define EEEPC_HOTK_FILE		"eeepc"
@@ -253,24 +239,6 @@ static struct backlight_device *eeepc_backlight_device;
 /* The hwmon device */
 static struct device *eeepc_hwmon_device;
 
-/* The PLL access functions.
- *
- * Note that this isn't really the "proper" way to use the I2C API... :)
- * I2C_SMBUS_BLOCK_MAX is 32, the maximum size of a block read/write.
- */
-static bool eeepc_pll_init(void);
-static bool eeepc_pll_reinit_ifneeded(void);
-static bool eeepc_pll_read(void);
-static bool eeepc_pll_write(void);
-static void eeepc_pll_exit(void);
-static struct i2c_client eeepc_pll_smbus_client = {
-	.adapter = NULL,
-	.addr = 0x69,
-	.flags = 0,
-};
-static char eeepc_pll_data[I2C_SMBUS_BLOCK_MAX];
-static int eeepc_pll_datalen = 0;
-
 /*
  * The backlight class declaration
  */
@@ -281,11 +249,10 @@ static struct backlight_ops eeepcbl_ops = {
 	.update_status = update_bl_status,
 };
 
-MODULE_AUTHOR("Corentin Chary, Eric Cooper, Andrew Tipton, Jean Fabrice, Roberto A. Foglietta");
+MODULE_AUTHOR("Corentin Chary, Eric Cooper");
 MODULE_DESCRIPTION(EEEPC_HOTK_NAME);
 MODULE_LICENSE("GPL");
 MODULE_VERSION(EEEPC_LAPTOP_VERSION);
-
 
 /*
  * ACPI Helpers
@@ -344,55 +311,6 @@ static int get_acpi(int cm)
 			pr_warning("Error reading %s\n", method);
 	}
 	return value;
-}
-
-/*
- * I2C functions
- */
-// Takes approx 150ms to execute.
-static bool eeepc_pll_read(void) {
-	if(eeepc_pll_reinit_ifneeded())
-		return -1;
-	memset(eeepc_pll_data, 0, I2C_SMBUS_BLOCK_MAX);
-	eeepc_pll_datalen = i2c_smbus_read_block_data(&eeepc_pll_smbus_client, 
-		0, eeepc_pll_data);
-	return 0;
-}
-
-// Takes approx 150ms to execute ???
-static bool eeepc_pll_write(void) {
-	if(eeepc_pll_reinit_ifneeded())
-		return -1;
-	i2c_smbus_write_block_data(&eeepc_pll_smbus_client, 
-		0, eeepc_pll_datalen, eeepc_pll_data);
-	return 0;
-}
-
-/*
- * FSB functions
- */
-#define FSB_MSB_INDEX 11
-#define FSB_LSB_INDEX 12
-#define FSB_PCI_INDEX 15
-#define FSB_MSB_MASK 0x3F
-#define FSB_LSB_MASK 0xFF
-#define FSB_PCI_MASK 0xFF
-
-static void eeepc_fsb_freq_get(int *dynA, int *dynB, int *pci) {
-    *dynA = eeepc_pll_data[FSB_MSB_INDEX] & FSB_MSB_MASK;
-    *dynB = eeepc_pll_data[FSB_LSB_INDEX] & FSB_LSB_MASK;
-    *pci  = eeepc_pll_data[FSB_PCI_INDEX] & FSB_PCI_MASK;
-}
-
-static void eeepc_fsb_freq_set(int dynA, int dynB, int pci) {
-    int current_dynA = 0, current_dynB = 0, current_pci = 0;
-    eeepc_fsb_freq_get(&current_dynA, &current_dynB, &current_pci);
-    if (current_dynA != dynA || current_dynB != dynB || current_pci != pci) {
-        eeepc_pll_data[FSB_MSB_INDEX] = dynA;
-        eeepc_pll_data[FSB_LSB_INDEX] = dynB;
-        eeepc_pll_data[FSB_PCI_INDEX] = pci;
-        eeepc_pll_write();
-    }
 }
 
 /*
@@ -586,51 +504,12 @@ static struct device_attribute dev_attr_available_cpufv = {
 	.show   = show_available_cpufv
 };
 
-static ssize_t show_sys_fsb(struct device *dev,
-				struct device_attribute *attr,
-				char *buf)
-{
-    int dynA = 0;
-    int dynB = 0;
-    int pci = 0;
-    int voltage = 0;
-    eeepc_fsb_freq_get(&dynA, &dynB, &pci);
-//    voltage = (int)eeepc_fsb_voltage_get();
-    return sprintf(buf, "%d %d %d %d\n", dynA, dynB, pci, voltage);
-}
-
-static ssize_t store_sys_fsb(struct device *dev,
-				 struct device_attribute *attr,
-				 const char *buf, size_t count)
-{
-	int dynA = 70;     // sensible defaults
-	int dynB = 24;
-	int pci = 0;
-	int voltage = 0;
-
-	if (sscanf(buf, "%i %i %i %i", &dynA, &dynB, &pci, &voltage ) != 4)
-		return -EINVAL;
-	eeepc_fsb_freq_set(dynA, dynB, pci);
-//	eeepc_fsb_voltage_set(voltage);
-
-	return count;
-}
-
-static struct device_attribute dev_attr_fsb = {
-	.attr = {
-		.name = "fsb",
-		.mode = 0644 },
-	.show   = show_sys_fsb,
-	.store  = store_sys_fsb,
-};
-
 static struct attribute *platform_attributes[] = {
 	&dev_attr_camera.attr,
 	&dev_attr_cardr.attr,
 	&dev_attr_disp.attr,
 	&dev_attr_cpufv.attr,
 	&dev_attr_available_cpufv.attr,
-	&dev_attr_fsb.attr,
 	NULL
 };
 
@@ -1344,14 +1223,6 @@ static int __devinit eeepc_hotk_add(struct acpi_device *device)
 	if (result)
 		goto fail_platform_driver;
 	eeepc_enable_camera();
-
-	result = eeepc_hwmon_init(dev);
-	if (result)
-		goto fail_hwmon;
-
-	result = eeepc_pll_init();
-	if (result)
-		goto fail_pll;
 
 	/* Register platform stuff */
 	result = platform_driver_register(&platform_driver);
