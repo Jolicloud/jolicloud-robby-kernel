@@ -253,12 +253,6 @@ config MPSC
 	  using the cpu family field
 	  in /proc/cpuinfo. Family 15 is an older Xeon, Family 6 a newer one.
 
-config MPRESCOTT
-	bool "Intel P4 / Atom / Prescott"
-	---help---
-
-	  Select this for Intel Prescott and Intel Atom CPUs.
-
 config MCORE2
 	bool "Core 2/newer Xeon"
 	---help---
@@ -370,7 +364,7 @@ config X86_ALIGNMENT_16
 
 config X86_INTEL_USERCOPY
 	def_bool y
-	depends on MPENTIUM4 || MPENTIUMM || MPENTIUMIII || MPENTIUMII || M586MMX || X86_GENERIC || MK8 || MK7 || MEFFICEON || MPRESCOTT || MCORE2
+	depends on MPENTIUM4 || MPENTIUMM || MPENTIUMIII || MPENTIUMII || M586MMX || X86_GENERIC || MK8 || MK7 || MEFFICEON || MCORE2
 
 config X86_USE_PPRO_CHECKSUM
 	def_bool y
@@ -398,7 +392,7 @@ config X86_OOSTORE
 config X86_P6_NOP
 	def_bool y
 	depends on X86_64
-	depends on (MPRESCOTT || MCORE2 || MPENTIUM4 || MPSC)
+	depends on (MCORE2 || MPENTIUM4 || MPSC)
 
 config X86_TSC
 	def_bool y
