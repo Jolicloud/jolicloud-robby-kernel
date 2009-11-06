@@ -100,6 +100,7 @@ struct intel_encoder {
 	int type;
 	struct i2c_adapter *i2c_bus;
 	struct i2c_adapter *ddc_bus;
+	struct edid *edid;
 	bool load_detect_temp;
 	bool needs_tv_clock;
 	void *dev_priv;
