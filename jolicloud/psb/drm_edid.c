@@ -39,7 +39,7 @@ int drm_get_acpi_edid(char *method, char *edid, ssize_t length)
 	if (obj && obj->type == ACPI_TYPE_BUFFER)
 		memcpy(edid, obj->buffer.pointer, obj->buffer.length);
 	else {
-		printk(KERN_ERR PREFIX "Invalid _DDC data\n");
+		printk(KERN_ERR "Invalid _DDC data\n");
 		status = -EFAULT;
 		kfree(obj);
 	}
