@@ -1,3 +1,3 @@
 # arch	version		flavour		installedname			suffix	bdep
-i386	2.6.32-1	jolicloud	2.6.32-1-jolicloud		-	
-i386	2.6.32-1	jolicloud-atom	2.6.32-1-jolicloud-atom	-	
+i386	2.6.32-2	jolicloud	2.6.32-2-jolicloud		-	
+i386	2.6.32-2	jolicloud-atom	2.6.32-2-jolicloud-atom	-	

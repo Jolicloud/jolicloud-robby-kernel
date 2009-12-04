@@ -47,7 +47,7 @@ Description: Linux kernel specific documentation for version 2.6.32
  information about the problems, which may result by upgrading your
  kernel.
 
-Package: linux-headers-2.6.32-1
+Package: linux-headers-2.6.32-2
 Architecture: all
 Section: devel
 Priority: optional
@@ -56,7 +56,7 @@ Provides: linux-headers, linux-headers-2.6
 Description: Header files related to Linux kernel version 2.6.32
  This package provides kernel header files for version 2.6.32, for sites
  that want the latest kernel headers. Please read
- /usr/share/doc/linux-headers-2.6.32-1/debian.README.gz for details
+ /usr/share/doc/linux-headers-2.6.32-2/debian.README.gz for details
 
 Package: linux-libc-dev
 Architecture: i386 amd64 armel lpia
@@ -69,7 +69,7 @@ Description: Linux Kernel Headers for development
  libraries. They are NOT meant to be used to build third-party modules for
  your kernel. Use linux-headers-* packages for that.
 
-Package: linux-image-2.6.32-1-jolicloud
+Package: linux-image-2.6.32-2-jolicloud
 Architecture: i386
 Section: base
 Priority: optional
@@ -95,20 +95,20 @@ Description: Linux kernel image for version 2.6.32 on x86-based netbooks
  the linux-jolicloud meta-package, which will ensure that upgrades work
  correctly, and that supporting packages are also installed.
 
-Package: linux-headers-2.6.32-1-jolicloud
+Package: linux-headers-2.6.32-2-jolicloud
 Architecture: i386
 Section: devel
 Priority: optional
-Depends: coreutils | fileutils (>= 4.0), linux-headers-2.6.32-1, ${shlibs:Depends}
+Depends: coreutils | fileutils (>= 4.0), linux-headers-2.6.32-2, ${shlibs:Depends}
 Provides: linux-headers, linux-headers-2.6, psb-kernel-headers
 Description: Linux kernel headers for version 2.6.32 on x86-based netbooks
  This package provides kernel header files for version 2.6.32 on
  x86-based netbooks.
  .
  This is for sites that want the latest kernel headers.  Please read
- /usr/share/doc/linux-headers-2.6.32-1/debian.README.gz for details.
+ /usr/share/doc/linux-headers-2.6.32-2/debian.README.gz for details.
 
-Package: linux-image-debug-2.6.32-1-jolicloud
+Package: linux-image-debug-2.6.32-2-jolicloud
 Architecture: i386
 Section: devel
 Priority: optional
@@ -123,7 +123,7 @@ Description: Linux kernel debug image for version 2.6.32 on x86-based netbooks
  is uncompressed, and unstripped. This package also includes the
  unstripped modules.
 
-Package: linux-image-2.6.32-1-jolicloud-atom
+Package: linux-image-2.6.32-2-jolicloud-atom
 Architecture: i386
 Section: base
 Priority: optional
@@ -149,20 +149,20 @@ Description: Linux kernel image for version 2.6.32 on Intel Atom processors
  the linux-jolicloud-atom meta-package, which will ensure that upgrades work
  correctly, and that supporting packages are also installed.
 
-Package: linux-headers-2.6.32-1-jolicloud-atom
+Package: linux-headers-2.6.32-2-jolicloud-atom
 Architecture: i386
 Section: devel
 Priority: optional
-Depends: coreutils | fileutils (>= 4.0), linux-headers-2.6.32-1, ${shlibs:Depends}
+Depends: coreutils | fileutils (>= 4.0), linux-headers-2.6.32-2, ${shlibs:Depends}
 Provides: linux-headers, linux-headers-2.6, psb-kernel-headers
 Description: Linux kernel headers for version 2.6.32 on Intel Atom processors
  This package provides kernel header files for version 2.6.32 on
  Intel Atom processors.
  .
  This is for sites that want the latest kernel headers.  Please read
- /usr/share/doc/linux-headers-2.6.32-1/debian.README.gz for details.
+ /usr/share/doc/linux-headers-2.6.32-2/debian.README.gz for details.
 
-Package: linux-image-debug-2.6.32-1-jolicloud-atom
+Package: linux-image-debug-2.6.32-2-jolicloud-atom
 Architecture: i386
 Section: devel
 Priority: optional
