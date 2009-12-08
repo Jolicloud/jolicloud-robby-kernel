@@ -7,6 +7,7 @@ source "ubuntu/fsam7400/Kconfig"
 source "ubuntu/iscsitarget/Kconfig"
 source "ubuntu/lirc/Kconfig"
 source "ubuntu/ndiswrapper/Kconfig"
+source "ubuntu/omnibook/Kconfig"
 source "ubuntu/rfkill/Kconfig"
 
 endmenu
