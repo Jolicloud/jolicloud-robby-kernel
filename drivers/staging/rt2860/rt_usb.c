@@ -77,9 +77,9 @@ Return Value:
 Note:
 ========================================================================
 */
-int RtmpMgmtTaskInit(IN RTMP_ADAPTER * pAd)
+int RtmpMgmtTaskInit(struct rt_rtmp_adapter *pAd)
 {
-	RTMP_OS_TASK *pTask;
+	struct rt_rtmp_os_task *pTask;
 	int status;
 
 	/*
@@ -133,10 +133,10 @@ Return Value:
 Note:
 ========================================================================
 */
-void RtmpMgmtTaskExit(IN RTMP_ADAPTER * pAd)
+void RtmpMgmtTaskExit(struct rt_rtmp_adapter *pAd)
 {
 	int ret;
-	RTMP_OS_TASK *pTask;
+	struct rt_rtmp_os_task *pTask;
 
 	/* Sleep 50 milliseconds so pending io might finish normally */
 	RTMPusecDelay(50000);
@@ -197,18 +197,18 @@ void RtmpMgmtTaskExit(IN RTMP_ADAPTER * pAd)
 
 static void rtusb_dataout_complete(unsigned long data)
 {
-	PRTMP_ADAPTER pAd;
-	purbb_t pUrb;
-	POS_COOKIE pObj;
-	PHT_TX_CONTEXT pHTTXContext;
+	struct rt_rtmp_adapter *pAd;
+	struct urb *pUrb;
+	struct os_cookie *pObj;
+	struct rt_ht_tx_context *pHTTXContext;
 	u8 BulkOutPipeId;
 	int Status;
 	unsigned long IrqFlags;
 
-	pUrb = (purbb_t) data;
-	pHTTXContext = (PHT_TX_CONTEXT) pUrb->context;
+	pUrb = (struct urb *)data;
+	pHTTXContext = (struct rt_ht_tx_context *)pUrb->context;
 	pAd = pHTTXContext->pAd;
-	pObj = (POS_COOKIE) pAd->OS_Cookie;
+	pObj = (struct os_cookie *)pAd->OS_Cookie;
 	Status = pUrb->status;
 
 	/* Store BulkOut PipeId */
@@ -294,14 +294,14 @@ static void rtusb_dataout_complete(unsigned long data)
 
 static void rtusb_null_frame_done_tasklet(unsigned long data)
 {
-	PRTMP_ADAPTER pAd;
-	PTX_CONTEXT pNullContext;
-	purbb_t pUrb;
+	struct rt_rtmp_adapter *pAd;
+	struct rt_tx_context *pNullContext;
+	struct urb *pUrb;
 	int Status;
 	unsigned long irqFlag;
 
-	pUrb = (purbb_t) data;
-	pNullContext = (PTX_CONTEXT) pUrb->context;
+	pUrb = (struct urb *)data;
+	pNullContext = (struct rt_tx_context *)pUrb->context;
 	pAd = pNullContext->pAd;
 	Status = pUrb->status;
 
@@ -343,14 +343,14 @@ static void rtusb_null_frame_done_tasklet(unsigned long data)
 
 static void rtusb_rts_frame_done_tasklet(unsigned long data)
 {
-	PRTMP_ADAPTER pAd;
-	PTX_CONTEXT pRTSContext;
-	purbb_t pUrb;
+	struct rt_rtmp_adapter *pAd;
+	struct rt_tx_context *pRTSContext;
+	struct urb *pUrb;
 	int Status;
 	unsigned long irqFlag;
 
-	pUrb = (purbb_t) data;
-	pRTSContext = (PTX_CONTEXT) pUrb->context;
+	pUrb = (struct urb *)data;
+	pRTSContext = (struct rt_tx_context *)pUrb->context;
 	pAd = pRTSContext->pAd;
 	Status = pUrb->status;
 
@@ -393,13 +393,13 @@ static void rtusb_rts_frame_done_tasklet(unsigned long data)
 
 static void rtusb_pspoll_frame_done_tasklet(unsigned long data)
 {
-	PRTMP_ADAPTER pAd;
-	PTX_CONTEXT pPsPollContext;
-	purbb_t pUrb;
+	struct rt_rtmp_adapter *pAd;
+	struct rt_tx_context *pPsPollContext;
+	struct urb *pUrb;
 	int Status;
 
-	pUrb = (purbb_t) data;
-	pPsPollContext = (PTX_CONTEXT) pUrb->context;
+	pUrb = (struct urb *)data;
+	pPsPollContext = (struct rt_tx_context *)pUrb->context;
 	pAd = pPsPollContext->pAd;
 	Status = pUrb->status;
 
@@ -452,14 +452,14 @@ Note:
 */
 static void rx_done_tasklet(unsigned long data)
 {
-	purbb_t pUrb;
-	PRX_CONTEXT pRxContext;
-	PRTMP_ADAPTER pAd;
+	struct urb *pUrb;
+	struct rt_rx_context *pRxContext;
+	struct rt_rtmp_adapter *pAd;
 	int Status;
 	unsigned int IrqFlags;
 
-	pUrb = (purbb_t) data;
-	pRxContext = (PRX_CONTEXT) pUrb->context;
+	pUrb = (struct urb *)data;
+	pRxContext = (struct rt_rx_context *)pUrb->context;
 	pAd = pRxContext->pAd;
 	Status = pUrb->status;
 
@@ -514,16 +514,16 @@ static void rx_done_tasklet(unsigned long data)
 
 static void rtusb_mgmt_dma_done_tasklet(unsigned long data)
 {
-	PRTMP_ADAPTER pAd;
-	PTX_CONTEXT pMLMEContext;
+	struct rt_rtmp_adapter *pAd;
+	struct rt_tx_context *pMLMEContext;
 	int index;
-	PNDIS_PACKET pPacket;
-	purbb_t pUrb;
+	void *pPacket;
+	struct urb *pUrb;
 	int Status;
 	unsigned long IrqFlags;
 
-	pUrb = (purbb_t) data;
-	pMLMEContext = (PTX_CONTEXT) pUrb->context;
+	pUrb = (struct urb *)data;
+	pMLMEContext = (struct rt_tx_context *)pUrb->context;
 	pAd = pMLMEContext->pAd;
 	Status = pUrb->status;
 	index = pMLMEContext->SelfIdx;
@@ -595,13 +595,13 @@ static void rtusb_mgmt_dma_done_tasklet(unsigned long data)
 
 static void rtusb_ac3_dma_done_tasklet(unsigned long data)
 {
-	PRTMP_ADAPTER pAd;
-	PHT_TX_CONTEXT pHTTXContext;
+	struct rt_rtmp_adapter *pAd;
+	struct rt_ht_tx_context *pHTTXContext;
 	u8 BulkOutPipeId = 3;
-	purbb_t pUrb;
+	struct urb *pUrb;
 
-	pUrb = (purbb_t) data;
-	pHTTXContext = (PHT_TX_CONTEXT) pUrb->context;
+	pUrb = (struct urb *)data;
+	pHTTXContext = (struct rt_ht_tx_context *)pUrb->context;
 	pAd = pHTTXContext->pAd;
 
 	rtusb_dataout_complete((unsigned long)pUrb);
@@ -635,13 +635,13 @@ static void rtusb_ac3_dma_done_tasklet(unsigned long data)
 
 static void rtusb_ac2_dma_done_tasklet(unsigned long data)
 {
-	PRTMP_ADAPTER pAd;
-	PHT_TX_CONTEXT pHTTXContext;
+	struct rt_rtmp_adapter *pAd;
+	struct rt_ht_tx_context *pHTTXContext;
 	u8 BulkOutPipeId = 2;
-	purbb_t pUrb;
+	struct urb *pUrb;
 
-	pUrb = (purbb_t) data;
-	pHTTXContext = (PHT_TX_CONTEXT) pUrb->context;
+	pUrb = (struct urb *)data;
+	pHTTXContext = (struct rt_ht_tx_context *)pUrb->context;
 	pAd = pHTTXContext->pAd;
 
 	rtusb_dataout_complete((unsigned long)pUrb);
@@ -675,13 +675,13 @@ static void rtusb_ac2_dma_done_tasklet(unsigned long data)
 
 static void rtusb_ac1_dma_done_tasklet(unsigned long data)
 {
-	PRTMP_ADAPTER pAd;
-	PHT_TX_CONTEXT pHTTXContext;
+	struct rt_rtmp_adapter *pAd;
+	struct rt_ht_tx_context *pHTTXContext;
 	u8 BulkOutPipeId = 1;
-	purbb_t pUrb;
+	struct urb *pUrb;
 
-	pUrb = (purbb_t) data;
-	pHTTXContext = (PHT_TX_CONTEXT) pUrb->context;
+	pUrb = (struct urb *)data;
+	pHTTXContext = (struct rt_ht_tx_context *)pUrb->context;
 	pAd = pHTTXContext->pAd;
 
 	rtusb_dataout_complete((unsigned long)pUrb);
@@ -715,13 +715,13 @@ static void rtusb_ac1_dma_done_tasklet(unsigned long data)
 
 static void rtusb_ac0_dma_done_tasklet(unsigned long data)
 {
-	PRTMP_ADAPTER pAd;
-	PHT_TX_CONTEXT pHTTXContext;
+	struct rt_rtmp_adapter *pAd;
+	struct rt_ht_tx_context *pHTTXContext;
 	u8 BulkOutPipeId = 0;
-	purbb_t pUrb;
+	struct urb *pUrb;
 
-	pUrb = (purbb_t) data;
-	pHTTXContext = (PHT_TX_CONTEXT) pUrb->context;
+	pUrb = (struct urb *)data;
+	pHTTXContext = (struct rt_ht_tx_context *)pUrb->context;
 	pAd = pHTTXContext->pAd;
 
 	rtusb_dataout_complete((unsigned long)pUrb);
@@ -753,9 +753,9 @@ static void rtusb_ac0_dma_done_tasklet(unsigned long data)
 
 }
 
-int RtmpNetTaskInit(IN RTMP_ADAPTER * pAd)
+int RtmpNetTaskInit(struct rt_rtmp_adapter *pAd)
 {
-	POS_COOKIE pObj = (POS_COOKIE) pAd->OS_Cookie;
+	struct os_cookie *pObj = (struct os_cookie *)pAd->OS_Cookie;
 
 	/* Create receive tasklet */
 	tasklet_init(&pObj->rx_done_task, rx_done_tasklet, (unsigned long)pAd);
@@ -780,11 +780,11 @@ int RtmpNetTaskInit(IN RTMP_ADAPTER * pAd)
 	return NDIS_STATUS_SUCCESS;
 }
 
-void RtmpNetTaskExit(IN RTMP_ADAPTER * pAd)
+void RtmpNetTaskExit(struct rt_rtmp_adapter *pAd)
 {
-	POS_COOKIE pObj;
+	struct os_cookie *pObj;
 
-	pObj = (POS_COOKIE) pAd->OS_Cookie;
+	pObj = (struct os_cookie *)pAd->OS_Cookie;
 
 	tasklet_kill(&pObj->rx_done_task);
 	tasklet_kill(&pObj->mgmt_dma_done_task);
