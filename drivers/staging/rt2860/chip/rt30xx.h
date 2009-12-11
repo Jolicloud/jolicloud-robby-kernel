@@ -40,8 +40,8 @@
 #ifdef RT30xx
 
 extern REG_PAIR RT30xx_RFRegTable[];
-extern UCHAR NUM_RF_REG_PARMS;
+extern u8 NUM_RF_REG_PARMS;
 
-#endif // RT30xx //
+#endif /* RT30xx // */
 
-#endif //__RT30XX_H__ //
+#endif /*__RT30XX_H__ // */

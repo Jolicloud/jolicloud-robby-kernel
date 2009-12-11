@@ -40,27 +40,27 @@
 #ifndef __AP_H__
 #define __AP_H__
 
-// ap_wpa.c
-VOID WpaStateMachineInit(IN PRTMP_ADAPTER pAd,
+/* ap_wpa.c */
+void WpaStateMachineInit(IN PRTMP_ADAPTER pAd,
 			 IN STATE_MACHINE * Sm, OUT STATE_MACHINE_FUNC Trans[]);
 
 #ifdef RTMP_MAC_USB
-VOID BeaconUpdateExec(IN PVOID SystemSpecific1,
-		      IN PVOID FunctionContext,
-		      IN PVOID SystemSpecific2, IN PVOID SystemSpecific3);
-#endif // RTMP_MAC_USB //
+void BeaconUpdateExec(void *SystemSpecific1,
+		      void *FunctionContext,
+		      void *SystemSpecific2, void *SystemSpecific3);
+#endif /* RTMP_MAC_USB // */
 
-VOID RTMPSetPiggyBack(IN PRTMP_ADAPTER pAd, IN BOOLEAN bPiggyBack);
+void RTMPSetPiggyBack(IN PRTMP_ADAPTER pAd, IN BOOLEAN bPiggyBack);
 
-VOID MacTableReset(IN PRTMP_ADAPTER pAd);
+void MacTableReset(IN PRTMP_ADAPTER pAd);
 
 MAC_TABLE_ENTRY *MacTableInsertEntry(IN PRTMP_ADAPTER pAd,
-				     IN PUCHAR pAddr,
-				     IN UCHAR apidx, IN BOOLEAN CleanAll);
+				     u8 *pAddr,
+				     u8 apidx, IN BOOLEAN CleanAll);
 
 BOOLEAN MacTableDeleteEntry(IN PRTMP_ADAPTER pAd,
-			    IN USHORT wcid, IN PUCHAR pAddr);
+			    u16 wcid, u8 *pAddr);
 
-MAC_TABLE_ENTRY *MacTableLookup(IN PRTMP_ADAPTER pAd, IN PUCHAR pAddr);
+MAC_TABLE_ENTRY *MacTableLookup(IN PRTMP_ADAPTER pAd, u8 *pAddr);
 
-#endif // __AP_H__
+#endif /* __AP_H__ */

@@ -60,20 +60,20 @@
 
 #include <net/iw_handler.h>
 
-// load firmware
+/* load firmware */
 #define __KERNEL_SYSCALLS__
 #include <linux/unistd.h>
 #include <asm/uaccess.h>
 #include <asm/types.h>
-#include <asm/unaligned.h>	// for get_unaligned()
+#include <asm/unaligned.h>	/* for get_unaligned() */
 
 #define KTHREAD_SUPPORT 1
-// RT2870 2.1.0.0 has it disabled
+/* RT2870 2.1.0.0 has it disabled */
 
 #ifdef KTHREAD_SUPPORT
 #include <linux/err.h>
 #include <linux/kthread.h>
-#endif // KTHREAD_SUPPORT //
+#endif /* KTHREAD_SUPPORT // */
 
 /***********************************************************************************
  *	Profile related sections
@@ -82,12 +82,12 @@
 #ifdef RTMP_MAC_PCI
 #define STA_PROFILE_PATH			"/etc/Wireless/RT2860STA/RT2860STA.dat"
 #define STA_DRIVER_VERSION			"2.1.0.0"
-#endif // RTMP_MAC_PCI //
+#endif /* RTMP_MAC_PCI // */
 #ifdef RTMP_MAC_USB
 #define STA_PROFILE_PATH			"/etc/Wireless/RT2870STA/RT2870STA.dat"
 #define STA_DRIVER_VERSION			"2.1.0.0"
-// RT3070 version: 2.1.1.0
-#endif // RTMP_MAC_USB //
+/* RT3070 version: 2.1.1.0 */
+#endif /* RTMP_MAC_USB // */
 
 extern const struct iw_handler_def rt28xx_iw_handler_def;
 
@@ -99,7 +99,6 @@ extern const struct iw_handler_def rt28xx_iw_handler_def;
 #define IN
 #define OUT
 #define INOUT
-#define NDIS_STATUS		INT
 
 /***********************************************************************************
  *	OS Specific definitions and data structures
@@ -124,8 +123,8 @@ typedef int (*HARD_START_XMIT_FUNC) (struct sk_buff * skb,
 #define PCI_DEVICE(vend,dev) \
 	.vendor = (vend), .device = (dev), \
 	.subvendor = PCI_ANY_ID, .subdevice = PCI_ANY_ID
-#endif // PCI_DEVICE //
-#endif // RTMP_MAC_PCI //
+#endif /* PCI_DEVICE // */
+#endif /* RTMP_MAC_PCI // */
 
 #define RT_MOD_INC_USE_COUNT() \
 	if (!try_module_get(THIS_MODULE)) \
@@ -140,7 +139,7 @@ typedef int (*HARD_START_XMIT_FUNC) (struct sk_buff * skb,
 #define RTMP_DEC_REF(_A)		0
 #define RTMP_GET_REF(_A)		0
 
-// This function will be called when query /proc
+/* This function will be called when query /proc */
 struct iw_statistics *rt28xx_get_wireless_stats(IN struct net_device *net_dev);
 
 /***********************************************************************************
@@ -176,13 +175,13 @@ struct iw_statistics *rt28xx_get_wireless_stats(IN struct net_device *net_dev);
 /***********************************************************************************
  *	Ralink Specific network related constant definitions
  ***********************************************************************************/
-#define MIN_NET_DEVICE_FOR_AID			0x00	//0x00~0x3f
-#define MIN_NET_DEVICE_FOR_MBSSID		0x00	//0x00,0x10,0x20,0x30
-#define MIN_NET_DEVICE_FOR_WDS			0x10	//0x40,0x50,0x60,0x70
+#define MIN_NET_DEVICE_FOR_AID			0x00	/*0x00~0x3f */
+#define MIN_NET_DEVICE_FOR_MBSSID		0x00	/*0x00,0x10,0x20,0x30 */
+#define MIN_NET_DEVICE_FOR_WDS			0x10	/*0x40,0x50,0x60,0x70 */
 #define MIN_NET_DEVICE_FOR_APCLI		0x20
 #define MIN_NET_DEVICE_FOR_MESH			0x30
 #define MIN_NET_DEVICE_FOR_DLS			0x40
-#define NET_DEVICE_REAL_IDX_MASK		0x0f	// for each operation mode, we maximum support 15 entities.
+#define NET_DEVICE_REAL_IDX_MASK		0x0f	/* for each operation mode, we maximum support 15 entities. */
 
 #define NDIS_PACKET_TYPE_DIRECTED		0
 #define NDIS_PACKET_TYPE_MULTICAST		1
@@ -217,9 +216,9 @@ struct os_lock {
 
 typedef spinlock_t NDIS_SPIN_LOCK;
 
-//
-//  spin_lock enhanced for Nested spin lock
-//
+/* */
+/*  spin_lock enhanced for Nested spin lock */
+/* */
 #define NdisAllocateSpinLock(__lock)      \
 {                                       \
     spin_lock_init((spinlock_t *)(__lock));               \
@@ -238,7 +237,7 @@ typedef spinlock_t NDIS_SPIN_LOCK;
 	spin_unlock_bh((spinlock_t *)(__lock));		\
 }
 
-// sample, use semaphore lock to replace IRQ lock, 2007/11/15
+/* sample, use semaphore lock to replace IRQ lock, 2007/11/15 */
 #define RTMP_IRQ_LOCK(__lock, __irqflags)			\
 {													\
 	__irqflags = 0;									\
@@ -330,7 +329,7 @@ do { \
 /***********************************************************************************
  *	OS Memory Access related data structure and definitions
  ***********************************************************************************/
-#define MEM_ALLOC_FLAG      (GFP_ATOMIC)	//(GFP_DMA | GFP_ATOMIC)
+#define MEM_ALLOC_FLAG      (GFP_ATOMIC)	/*(GFP_DMA | GFP_ATOMIC) */
 
 #define NdisMoveMemory(Destination, Source, Length) memmove(Destination, Source, Length)
 #define NdisCopyMemory(Destination, Source, Length) memcpy(Destination, Source, Length)
@@ -390,7 +389,7 @@ typedef void (*TIMER_FUNCTION) (unsigned long);
 
 #define ONE_TICK 1
 
-static inline void NdisGetSystemUpTime(ULONG * time)
+static inline void NdisGetSystemUpTime(unsigned long * time)
 {
 	*time = jiffies;
 }
@@ -403,12 +402,12 @@ struct os_cookie {
 #ifdef RTMP_MAC_PCI
 	struct pci_dev *pci_dev;
 	struct pci_dev *parent_pci_dev;
-	USHORT DeviceID;
+	u16 DeviceID;
 	dma_addr_t pAd_pa;
-#endif				// RTMP_MAC_PCI //
+#endif				/* RTMP_MAC_PCI // */
 #ifdef RTMP_MAC_USB
 	struct usb_device *pUsb_Dev;
-#endif				// RTMP_MAC_USB //
+#endif				/* RTMP_MAC_USB // */
 
 	RTMP_NET_TASK_STRUCT rx_done_task;
 	RTMP_NET_TASK_STRUCT mgmt_dma_done_task;
@@ -419,16 +418,16 @@ struct os_cookie {
 	RTMP_NET_TASK_STRUCT tbtt_task;
 #ifdef RTMP_MAC_PCI
 	RTMP_NET_TASK_STRUCT fifo_statistic_full_task;
-#endif				// RTMP_MAC_PCI //
+#endif				/* RTMP_MAC_PCI // */
 #ifdef RTMP_MAC_USB
 	RTMP_NET_TASK_STRUCT null_frame_complete_task;
 	RTMP_NET_TASK_STRUCT rts_frame_complete_task;
 	RTMP_NET_TASK_STRUCT pspoll_frame_complete_task;
-#endif				// RTMP_MAC_USB //
+#endif				/* RTMP_MAC_USB // */
 
-	unsigned long apd_pid;	//802.1x daemon pid
-	INT ioctl_if_type;
-	INT ioctl_if;
+	unsigned long apd_pid;	/*802.1x daemon pid */
+	int ioctl_if_type;
+	int ioctl_if;
 };
 
 typedef struct os_cookie *POS_COOKIE;
@@ -440,7 +439,7 @@ typedef struct os_cookie *POS_COOKIE;
 	addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]
 
 #ifdef DBG
-extern ULONG RTDebugLevel;
+extern unsigned long RTDebugLevel;
 
 #define DBGPRINT_RAW(Level, Fmt)    \
 do{                                   \
@@ -501,41 +500,41 @@ void linux_pci_unmap_single(void *handle, dma_addr_t dma_addr, size_t size,
 
 #define DEV_ALLOC_SKB(_length) \
 	dev_alloc_skb(_length)
-#endif // RTMP_MAC_PCI //
+#endif /* RTMP_MAC_PCI // */
 #ifdef RTMP_MAC_USB
-#define PCI_MAP_SINGLE(_handle, _ptr, _size, _dir) (ULONG)0
+#define PCI_MAP_SINGLE(_handle, _ptr, _size, _dir) (unsigned long)0
 
 #define PCI_UNMAP_SINGLE(_handle, _ptr, _size, _dir)
-#endif // RTMP_MAC_USB //
+#endif /* RTMP_MAC_USB // */
 
 /*
- * ULONG
+ * unsigned long
  * RTMP_GetPhysicalAddressLow(
  *   IN NDIS_PHYSICAL_ADDRESS  PhysicalAddress);
  */
 #define RTMP_GetPhysicalAddressLow(PhysicalAddress)		(PhysicalAddress)
 
 /*
- * ULONG
+ * unsigned long
  * RTMP_GetPhysicalAddressHigh(
  *   IN NDIS_PHYSICAL_ADDRESS  PhysicalAddress);
  */
 #define RTMP_GetPhysicalAddressHigh(PhysicalAddress)		(0)
 
 /*
- * VOID
+ * void
  * RTMP_SetPhysicalAddressLow(
  *   IN NDIS_PHYSICAL_ADDRESS  PhysicalAddress,
- *   IN ULONG  Value);
+ *   unsigned long  Value);
  */
 #define RTMP_SetPhysicalAddressLow(PhysicalAddress, Value)	\
 			PhysicalAddress = Value;
 
 /*
- * VOID
+ * void
  * RTMP_SetPhysicalAddressHigh(
  *   IN NDIS_PHYSICAL_ADDRESS  PhysicalAddress,
- *   IN ULONG  Value);
+ *   unsigned long  Value);
  */
 #define RTMP_SetPhysicalAddressHigh(PhysicalAddress, Value)
 
@@ -545,7 +544,7 @@ void linux_pci_unmap_single(void *handle, dma_addr_t dma_addr, size_t size,
  * Device Register I/O Access related definitions and data structures.
  **********************************************************************************/
 #ifdef RTMP_MAC_PCI
-//Patch for ASIC turst read/write bug, needs to remove after metel fix
+/*Patch for ASIC turst read/write bug, needs to remove after metel fix */
 #define RTMP_IO_READ32(_A, _R, _pV)								\
 {																\
     if ((_A)->bPCIclkOff == FALSE)                                  \
@@ -572,7 +571,7 @@ void linux_pci_unmap_single(void *handle, dma_addr_t dma_addr, size_t size,
 {																				\
     if ((_A)->bPCIclkOff == FALSE)                                  \
     {                                                               \
-	UINT	Val;																\
+	u32 Val;																\
 	Val = readl((void *)((_A)->CSRBaseAddress + MAC_CSR0));			\
 	writel((_V), (void *)((_A)->CSRBaseAddress + (_R)));								\
     }                                                               \
@@ -580,7 +579,7 @@ void linux_pci_unmap_single(void *handle, dma_addr_t dma_addr, size_t size,
 
 #define RTMP_IO_FORCE_WRITE32(_A, _R, _V)												\
 {																				\
-	UINT	Val;																\
+	u32 Val;																\
 	Val = readl((void *)((_A)->CSRBaseAddress + MAC_CSR0));			\
 	writel(_V, (void *)((_A)->CSRBaseAddress + (_R)));								\
 }
@@ -588,53 +587,53 @@ void linux_pci_unmap_single(void *handle, dma_addr_t dma_addr, size_t size,
 #if defined(RALINK_2880) || defined(RALINK_3052)
 #define RTMP_IO_WRITE8(_A, _R, _V)            \
 {                    \
-	ULONG Val;                \
-	UCHAR _i;                \
+	unsigned long Val;                \
+	u8 _i;                \
 	_i = ((_R) & 0x3);             \
 	Val = readl((void *)((_A)->CSRBaseAddress + ((_R) - _i)));   \
 	Val = Val & (~(0x000000ff << ((_i)*8)));         \
-	Val = Val | ((ULONG)(_V) << ((_i)*8));         \
+	Val = Val | ((unsigned long)(_V) << ((_i)*8));         \
 	writel((Val), (void *)((_A)->CSRBaseAddress + ((_R) - _i)));    \
 }
 #else
 #define RTMP_IO_WRITE8(_A, _R, _V)												\
 {																				\
-	UINT	Val;																\
+	u32 Val;																\
 	Val = readl((void *)((_A)->CSRBaseAddress + MAC_CSR0));			\
-	writeb((_V), (PUCHAR)((_A)->CSRBaseAddress + (_R)));		\
+	writeb((_V), (u8 *)((_A)->CSRBaseAddress + (_R)));		\
 }
-#endif // #if defined(BRCM_6358) || defined(RALINK_2880) //
+#endif /* #if defined(BRCM_6358) || defined(RALINK_2880) // */
 
 #define RTMP_IO_WRITE16(_A, _R, _V)												\
 {																				\
-	UINT	Val;																\
+	u32 Val;																\
 	Val = readl((void *)((_A)->CSRBaseAddress + MAC_CSR0));			\
-	writew((_V), (PUSHORT)((_A)->CSRBaseAddress + (_R)));	\
+	writew((_V), (u16 *)((_A)->CSRBaseAddress + (_R)));	\
 }
-#endif // RTMP_MAC_PCI //
+#endif /* RTMP_MAC_PCI // */
 #ifdef RTMP_MAC_USB
-//Patch for ASIC turst read/write bug, needs to remove after metel fix
+/*Patch for ASIC turst read/write bug, needs to remove after metel fix */
 #define RTMP_IO_READ32(_A, _R, _pV)								\
-	RTUSBReadMACRegister((_A), (_R), (PUINT32) (_pV))
+	RTUSBReadMACRegister((_A), (_R), (u32 *)(_pV))
 
 #define RTMP_IO_READ8(_A, _R, _pV)								\
 {																\
 }
 
 #define RTMP_IO_WRITE32(_A, _R, _V)								\
-	RTUSBWriteMACRegister((_A), (_R), (UINT32) (_V))
+	RTUSBWriteMACRegister((_A), (_R), (u32)(_V))
 
 #define RTMP_IO_WRITE8(_A, _R, _V)								\
 {																\
-	USHORT	_Val = _V;											\
-	RTUSBSingleWrite((_A), (_R), (USHORT) (_Val));								\
+	u16	_Val = _V;											\
+	RTUSBSingleWrite((_A), (_R), (u16)(_Val));								\
 }
 
 #define RTMP_IO_WRITE16(_A, _R, _V)								\
 {																\
-	RTUSBSingleWrite((_A), (_R), (USHORT) (_V));								\
+	RTUSBSingleWrite((_A), (_R), (u16)(_V));								\
 }
-#endif // RTMP_MAC_USB //
+#endif /* RTMP_MAC_USB // */
 
 /***********************************************************************************
  *	Network Related data structure and marco definitions
@@ -687,7 +686,7 @@ void linux_pci_unmap_single(void *handle, dma_addr_t dma_addr, size_t size,
 #define GET_OS_PKT_DATATAIL(_pkt) \
 		(RTPKT_TO_OSPKT(_pkt)->tail)
 #define SET_OS_PKT_DATATAIL(_pkt, _start, _len)	\
-		((RTPKT_TO_OSPKT(_pkt))->tail) = (PUCHAR)((_start) + (_len))
+		((RTPKT_TO_OSPKT(_pkt))->tail) = (u8 *)((_start) + (_len))
 
 #define GET_OS_PKT_HEAD(_pkt) \
 		(RTPKT_TO_OSPKT(_pkt)->head)
@@ -719,34 +718,34 @@ void linux_pci_unmap_single(void *handle, dma_addr_t dma_addr, size_t size,
 
 #define CB_OFF  10
 
-// User Priority
+/* User Priority */
 #define RTMP_SET_PACKET_UP(_p, _prio)			(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+0] = _prio)
 #define RTMP_GET_PACKET_UP(_p)					(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+0])
 
-// Fragment #
+/* Fragment # */
 #define RTMP_SET_PACKET_FRAGMENTS(_p, _num)		(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+1] = _num)
 #define RTMP_GET_PACKET_FRAGMENTS(_p)			(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+1])
 
-// 0x0 ~0x7f: TX to AP's own BSS which has the specified AID. if AID>127, set bit 7 in RTMP_SET_PACKET_EMACTAB too.
-//(this value also as MAC(on-chip WCID) table index)
-// 0x80~0xff: TX to a WDS link. b0~6: WDS index
+/* 0x0 ~0x7f: TX to AP's own BSS which has the specified AID. if AID>127, set bit 7 in RTMP_SET_PACKET_EMACTAB too. */
+/*(this value also as MAC(on-chip WCID) table index) */
+/* 0x80~0xff: TX to a WDS link. b0~6: WDS index */
 #define RTMP_SET_PACKET_WCID(_p, _wdsidx)		(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+2] = _wdsidx)
-#define RTMP_GET_PACKET_WCID(_p)          		((UCHAR)(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+2]))
+#define RTMP_GET_PACKET_WCID(_p)          		((u8)(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+2]))
 
-// 0xff: PKTSRC_NDIS, others: local TX buffer index. This value affects how to a packet
+/* 0xff: PKTSRC_NDIS, others: local TX buffer index. This value affects how to a packet */
 #define RTMP_SET_PACKET_SOURCE(_p, _pktsrc)		(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+3] = _pktsrc)
 #define RTMP_GET_PACKET_SOURCE(_p)       		(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+3])
 
-// RTS/CTS-to-self protection method
+/* RTS/CTS-to-self protection method */
 #define RTMP_SET_PACKET_RTS(_p, _num)      		(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+4] = _num)
 #define RTMP_GET_PACKET_RTS(_p)          		(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+4])
-// see RTMP_S(G)ET_PACKET_EMACTAB
+/* see RTMP_S(G)ET_PACKET_EMACTAB */
 
-// TX rate index
+/* TX rate index */
 #define RTMP_SET_PACKET_TXRATE(_p, _rate)		(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+5] = _rate)
 #define RTMP_GET_PACKET_TXRATE(_p)		  		(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+5])
 
-// From which Interface
+/* From which Interface */
 #define RTMP_SET_PACKET_IF(_p, _ifdx)		(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+6] = _ifdx)
 #define RTMP_GET_PACKET_IF(_p)		  		(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+6])
 #define RTMP_SET_PACKET_NET_DEVICE_MBSSID(_p, _bss)		RTMP_SET_PACKET_IF((_p), (_bss))
@@ -759,9 +758,9 @@ void linux_pci_unmap_single(void *handle, dma_addr_t dma_addr, size_t size,
 #define RTMP_SET_PACKET_MOREDATA(_p, _morebit)		(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+7] = _morebit)
 #define RTMP_GET_PACKET_MOREDATA(_p)				(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+7])
 
-//
-//      Sepcific Pakcet Type definition
-//
+/* */
+/*      Sepcific Pakcet Type definition */
+/* */
 #define RTMP_PACKET_SPECIFIC_CB_OFFSET	11
 
 #define RTMP_PACKET_SPECIFIC_DHCP		0x01
@@ -771,10 +770,10 @@ void linux_pci_unmap_single(void *handle, dma_addr_t dma_addr, size_t size,
 #define RTMP_PACKET_SPECIFIC_VLAN		0x10
 #define RTMP_PACKET_SPECIFIC_LLCSNAP	0x20
 
-//Specific
+/*Specific */
 #define RTMP_SET_PACKET_SPECIFIC(_p, _flg)	   	(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+11] = _flg)
 
-//DHCP
+/*DHCP */
 #define RTMP_SET_PACKET_DHCP(_p, _flg)   													\
 			do{																				\
 				if (_flg)																	\
@@ -784,7 +783,7 @@ void linux_pci_unmap_single(void *handle, dma_addr_t dma_addr, size_t size,
 			}while(0)
 #define RTMP_GET_PACKET_DHCP(_p)		(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+11] & RTMP_PACKET_SPECIFIC_DHCP)
 
-//EAPOL
+/*EAPOL */
 #define RTMP_SET_PACKET_EAPOL(_p, _flg)   													\
 			do{																				\
 				if (_flg)																	\
@@ -794,7 +793,7 @@ void linux_pci_unmap_single(void *handle, dma_addr_t dma_addr, size_t size,
 			}while(0)
 #define RTMP_GET_PACKET_EAPOL(_p)		(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+11] & RTMP_PACKET_SPECIFIC_EAPOL)
 
-//WAI
+/*WAI */
 #define RTMP_SET_PACKET_WAI(_p, _flg)   													\
 			do{																				\
 				if (_flg)																	\
@@ -806,7 +805,7 @@ void linux_pci_unmap_single(void *handle, dma_addr_t dma_addr, size_t size,
 
 #define RTMP_GET_PACKET_LOWRATE(_p)		(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+11] & (RTMP_PACKET_SPECIFIC_EAPOL | RTMP_PACKET_SPECIFIC_DHCP | RTMP_PACKET_SPECIFIC_WAI))
 
-//VLAN
+/*VLAN */
 #define RTMP_SET_PACKET_VLAN(_p, _flg)   													\
 			do{																				\
 				if (_flg)																	\
@@ -816,7 +815,7 @@ void linux_pci_unmap_single(void *handle, dma_addr_t dma_addr, size_t size,
 			}while(0)
 #define RTMP_GET_PACKET_VLAN(_p)		(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+11] & RTMP_PACKET_SPECIFIC_VLAN)
 
-//LLC/SNAP
+/*LLC/SNAP */
 #define RTMP_SET_PACKET_LLCSNAP(_p, _flg)   													\
 			do{																				\
 				if (_flg)																	\
@@ -827,7 +826,7 @@ void linux_pci_unmap_single(void *handle, dma_addr_t dma_addr, size_t size,
 
 #define RTMP_GET_PACKET_LLCSNAP(_p)		(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+11] & RTMP_PACKET_SPECIFIC_LLCSNAP)
 
-// IP
+/* IP */
 #define RTMP_SET_PACKET_IPV4(_p, _flg)														\
 			do{																				\
 				if (_flg)																	\
@@ -838,7 +837,7 @@ void linux_pci_unmap_single(void *handle, dma_addr_t dma_addr, size_t size,
 
 #define RTMP_GET_PACKET_IPV4(_p)		(RTPKT_TO_OSPKT(_p)->cb[CB_OFF+11] & RTMP_PACKET_SPECIFIC_IPV4)
 
-// If this flag is set, it indicates that this EAPoL frame MUST be clear.
+/* If this flag is set, it indicates that this EAPoL frame MUST be clear. */
 #define RTMP_SET_PACKET_CLEAR_EAP_FRAME(_p, _flg)   (RTPKT_TO_OSPKT(_p)->cb[CB_OFF+12] = _flg)
 #define RTMP_GET_PACKET_CLEAR_EAP_FRAME(_p)         (RTPKT_TO_OSPKT(_p)->cb[CB_OFF+12])
 
@@ -860,13 +859,13 @@ int rt28xx_packet_xmit(struct sk_buff *skb);
 #define IRQ_HANDLE_TYPE  irqreturn_t
 
 IRQ_HANDLE_TYPE rt2860_interrupt(int irq, void *dev_instance);
-#endif // RTMP_MAC_PCI //
+#endif /* RTMP_MAC_PCI // */
 
-INT rt28xx_sta_ioctl(IN PNET_DEV net_dev, IN OUT struct ifreq *rq, IN INT cmd);
+int rt28xx_sta_ioctl(IN PNET_DEV net_dev, IN OUT struct ifreq *rq, int cmd);
 
 extern int ra_mtd_write(int num, loff_t to, size_t len, const u_char * buf);
 extern int ra_mtd_read(int num, loff_t from, size_t len, u_char * buf);
 
 #define GET_PAD_FROM_NET_DEV(_pAd, _net_dev)	(_pAd) = (PRTMP_ADAPTER)(_net_dev)->ml_priv;
 
-#endif // __RT_LINUX_H__ //
+#endif /* __RT_LINUX_H__ // */
