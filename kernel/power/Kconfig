@@ -242,3 +242,11 @@ config PM_OPS
 	bool
 	depends on PM_SLEEP || PM_RUNTIME
 	default y
+
+config SR_REPORT_TIME_LIMIT
+	int "Default low threshold"
+	depends on PM
+	default 100
+	help
+	  Print suspend/resume information for driver/device for time greater
+	  then default msec, ie 100 msec.
