@@ -16646,7 +16646,7 @@ static void alc272_toshiba_unsol_event(struct hda_codec *codec,
 		alc272_toshiba_speaker_automute(codec);
 		break;
 	case ALC880_MIC_EVENT:
-		alc663_m51va_mic_automute(codec);
+		alc_mic_automute(codec);
 		break;
 	}
 }
@@ -16654,7 +16654,7 @@ static void alc272_toshiba_unsol_event(struct hda_codec *codec,
 static void alc272_toshiba_inithook(struct hda_codec *codec)
 {
 	alc272_toshiba_speaker_automute(codec);
-	alc663_m51va_mic_automute(codec);
+	alc_mic_automute(codec);
 }
 
 /* ***************** Mode1 ******************************/
@@ -17266,7 +17266,7 @@ static struct alc_config_preset alc662_presets[] = {
 		.num_adc_nids = ARRAY_SIZE(alc662_adc_nids),
 		.capsrc_nids = alc662_capsrc_nids,
 		.channel_mode = alc662_3ST_2ch_modes,
-		.input_mux = &alc663_m51va_capture_source,
+		/*.input_mux = &alc663_m51va_capture_source,*/
 		.unsol_event = alc272_toshiba_unsol_event,
 		.init_hook = alc272_toshiba_inithook,
 	},
