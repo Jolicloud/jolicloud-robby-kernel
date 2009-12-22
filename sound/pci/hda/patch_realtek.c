@@ -16231,6 +16231,7 @@ static struct hda_verb alc663_auto_init_verbs[] = {
 };
 
 static struct hda_verb alc663_m51va_init_verbs[] = {
+	{0x12, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_IN},
 	{0x15, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_IN},
 	{0x16, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_IN},
 	{0x21, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_HP},
@@ -16916,6 +16917,8 @@ static const char *alc662_models[ALC662_MODEL_LAST] = {
 
 static struct snd_pci_quirk alc662_cfg_tbl[] = {
 	SND_PCI_QUIRK(0x1019, 0x9087, "ECS", ALC662_ECS),
+	SND_PCI_QUIRK(0x1025, 0x022c, "Acer JM11_ML", ALC663_ASUS_H13),
+	SND_PCI_QUIRK(0x1025, 0x0244, "Acer JM11_ML", ALC663_ASUS_H13),
 	SND_PCI_QUIRK(0x1028, 0x02d6, "DELL", ALC272_DELL),
 	SND_PCI_QUIRK(0x1028, 0x02f4, "DELL ZM1", ALC272_DELL_ZM1),
 	SND_PCI_QUIRK(0x1043, 0x1000, "ASUS N50Vm", ALC663_ASUS_MODE1),
