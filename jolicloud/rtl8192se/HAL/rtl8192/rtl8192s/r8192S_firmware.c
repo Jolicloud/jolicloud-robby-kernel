@@ -341,11 +341,7 @@ bool FirmwareDownload92S(struct net_device *dev)
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,5,0) && defined(USE_FW_SOURCE_IMG_FILE)			
 			if(pFirmware->szFwTmpBufferLen == 0)
 			{
-#ifdef _RTL8192_EXT_PATCH_
-				const char 		*pFwImageFileName[1] = {"RTL8191SE_MESH/rtl8192sfw.bin"};
-#else
-				const char 		*pFwImageFileName[1] = {"RTL8192SE/rtl8192sfw.bin"};
-#endif
+				const char 		*pFwImageFileName[1] = {"rtl8192s.bin"};
 				const struct firmware 	*fw_entry = NULL;
 				u32 ulInitStep = 0;
 				int 			rc = 0;
