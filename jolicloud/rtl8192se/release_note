@@ -1,0 +1,91 @@
+---------------------------------------------------
+Release for rtl8192SE linux driver
+
+---------------------------------------------------------------------------------------------
+Release date = 2009-02-27
+Operating system release = FC6 
+Kernel version = 2.6.18
+Release driver version = 0001.0120.2009
+Change history =
+	1. First Release for 8192SE.
+
+---------------------------------------------------------------------------------------------
+Release date = 2009-03-20
+Operating system release = Ubuntu 8.10 
+Kernel version = 2.6.27
+Release driver version = 0002.0320.2009
+Change history =
+	1. Update firmware and phy parameters.
+	2. Synchronize HAL with windows.
+
+---------------------------------------------------------------------------------------------
+Release date = 2009-04-01
+Operating system release = Ubuntu 8.10 
+Kernel version = 2.6.27
+Release driver version = 0003.0401.2009
+Change history =
+	1. Revise some IOT issues.
+        2. added power save feature.
+
+---------------------------------------------------------------------------------------------
+Release date = 2009-05-08
+Operating system release = Ubuntu 8.10 
+Kernel version = 2.6.27
+Release driver version = 0006.0508.2009
+Change history =
+	1. Revise some IOT issues for 1x1 card.
+
+---------------------------------------------------------------------------------------------
+Release date = 2009-05-18
+Operating system release = Ubuntu 8.10 
+Kernel version = 2.6.27
+Release driver version = 0007.0518.2009
+Change history =
+	1. release driver for 2x2 card.
+
+---------------------------------------------------------------------------------------------
+Release date = 2009-09-16
+Operating system release = Ubuntu 8.10/ubuntu9.04/moblin2
+Kernel version = 2.6.28/2.6.30/2.6.31
+Release driver version = 0009.0916.2009
+Change history =
+	1. Fix some moblin 2.6.30 UI issues.
+	2. Fix the issue of can't scan completely some times. 
+
+---------------------------------------------------------------------------------------------
+Release date = 2009-10-12
+Operating system release = Ubuntu 8.10/ubuntu9.04/ubuntu9.10/moblin2
+Kernel version = 2.6.28/2.6.30/2.6.31
+Release driver version = 0010.1012.2009
+Change history =
+	1. Fix potential deadlock when set mode.
+	2. Change frame format of mesh AMSDU as described in 802.11s D3.0 spec . 
+	3. Fix issue of roaming cause by UI fail some times,
+	   In roaming we should nitify UI, or UI can't get signal strength correctly .
+	4. after scan we should ask wpa to get scan use wireless_send_event(ieee->dev,SIOCGIWSCAN,&wrqu,NULL)
+   	   or some OS like Moblin will scan fail and can't see little APs in UI.
+	5. send assocreq_ies & assocresp_ies to user space after linked.
+	6. fix issue of wep key setting fail in 2.4 kernel.
+	7. send ADDBAREQ after DHCP pkt.
+	8. Add PLL delay and reset Divider to avoid firmware download fail sometime.
+	9. Fix the issue that the network list could only be shown with the current live one when linked.
+	10. Update the driver to support ASPM with Intel and SIS PCI bridge.
+	11. There is no need to udelay after write_nic_xxx, this mod Fix issue of endpoint cpu occupancy rate.
+   	    now endpoint cpu occupancy rate if aroud 20%, rx for DIR655 is more than 150Mbps in some platform.
+
+---------------------------------------------------------------------------------------------
+Release date = 2009-11-2
+Operating system release = Ubuntu 8.10/ubuntu9.04/ubuntu9.10/moblin2/android-x86_090916
+Kernel version = 2.6.28/2.6.30/2.6.31
+Release driver version = 0011.1102.2009
+Change history = 
+	1. Fix 64BIT CPU skb_tail alignment issue .
+
+
+---------------------------------------------------------------------------------------------
+Release date = 2009-12-04
+Operating system release = Ubuntu 8.10/ubuntu9.04/ubuntu9.10/moblin2/android-x86_090916
+Kernel version = 2.6.28/2.6.30/2.6.31
+Release driver version = 0013.1204.2009
+Change history = 
+	1. Add firmware worldwide13.
