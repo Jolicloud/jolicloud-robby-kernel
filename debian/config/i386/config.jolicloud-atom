@@ -3,6 +3,7 @@
 #
 # CONFIG_ADM8211 is not set
 # CONFIG_AIRO is not set
+# CONFIG_APM is not set
 # CONFIG_AT76C50X_USB is not set
 # CONFIG_ATMEL is not set
 # CONFIG_CPU_SUP_AMD is not set
