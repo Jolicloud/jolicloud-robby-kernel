@@ -4,5 +4,6 @@ source "jolicloud/asus_eee/Kconfig"
 source "jolicloud/broadcom/Kconfig"
 source "jolicloud/psb/Kconfig"
 source "jolicloud/rtl8192se/Kconfig"
+source "jolicloud/rtl8192u/Kconfig"
 
 endmenu
