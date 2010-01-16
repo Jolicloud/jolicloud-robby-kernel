@@ -112,6 +112,8 @@ u32 rt_global_debug_component = \
 
 static struct usb_device_id rtl8192_usb_id_tbl[] = {
 	/* Realtek */
+	{USB_DEVICE(0x0bda, 0x8171)},
+	{USB_DEVICE(0x0bda, 0x8172)},
 	{USB_DEVICE(0x0bda, 0x8192)},
 	{USB_DEVICE(0x0bda, 0x8709)},
 	/* Corega */
@@ -126,8 +128,6 @@ static struct usb_device_id rtl8192_usb_id_tbl[] = {
 	{USB_DEVICE(0x2001, 0x3301)},
 	/* Zinwell */
 	{USB_DEVICE(0x5a57, 0x0290)},
-	//92SU
-	{USB_DEVICE(0x0bda, 0x8172)},
 	{}
 };
 
