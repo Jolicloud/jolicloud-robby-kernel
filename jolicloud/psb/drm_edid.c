@@ -316,6 +316,8 @@ static int add_detailed_info(struct drm_output *output, struct edid *edid)
 		/* Detailed mode timing */
 		if (timing->pixel_clock) {
 			newmode = drm_mode_detailed(dev, timing);
+			if(!newmode)
+				continue;
 			/* First detailed mode is preferred */
 			if (i == 0 && edid->preferred_timing)
 				newmode->type |= DRM_MODE_TYPE_PREFERRED;
