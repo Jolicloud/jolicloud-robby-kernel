@@ -277,11 +277,9 @@ void via_chrome9_drm_sg_cleanup(struct drm_sg_mem *entry)
 
 	vfree(entry->virtual);
 
-	drm_free(entry->busaddr,
-		 entry->pages * sizeof(*entry->busaddr), DRM_MEM_PAGES);
-	drm_free(entry->pagelist,
-		 entry->pages * sizeof(*entry->pagelist), DRM_MEM_PAGES);
-	drm_free(entry, sizeof(*entry), DRM_MEM_SGLISTS);
+	drm_free_large(entry->busaddr);
+	drm_free_large(entry->pagelist);
+	drm_free_large(entry);
 }
 
 static int
@@ -299,7 +297,7 @@ via_chrome9_drm_sg_alloc(struct drm_device *dev,
 	if (dev->sg)
 		return -EINVAL;
 
-	entry = drm_alloc(sizeof(*entry), DRM_MEM_SGLISTS);
+	entry = drm_calloc_large(sizeof(*entry), DRM_MEM_SGLISTS);
 	if (!entry)
 		return -ENOMEM;
 
@@ -308,22 +306,20 @@ via_chrome9_drm_sg_alloc(struct drm_device *dev,
 	DRM_DEBUG("size=%ld pages=%ld\n", request->size, pages);
 
 	entry->pages = pages;
-	entry->pagelist = drm_alloc(pages * sizeof(*entry->pagelist),
+	entry->pagelist = drm_calloc_large(pages * sizeof(*entry->pagelist),
 				    DRM_MEM_PAGES);
 	if (!entry->pagelist) {
-		drm_free(entry, sizeof(*entry), DRM_MEM_SGLISTS);
+		drm_free_large(entry);
 		return -ENOMEM;
 	}
 
 	memset(entry->pagelist, 0, pages * sizeof(*entry->pagelist));
 
-	entry->busaddr = drm_alloc(pages * sizeof(*entry->busaddr),
+	entry->busaddr = drm_calloc_large(pages * sizeof(*entry->busaddr),
 				   DRM_MEM_PAGES);
 	if (!entry->busaddr) {
-		drm_free(entry->pagelist,
-			 entry->pages * sizeof(*entry->pagelist),
-			 DRM_MEM_PAGES);
-		drm_free(entry, sizeof(*entry), DRM_MEM_SGLISTS);
+		drm_free_large(entry->pagelist);
+		drm_free_large(entry);
 		return -ENOMEM;
 	}
 	memset((void *)entry->busaddr, 0, pages * sizeof(*entry->busaddr));
@@ -331,12 +327,9 @@ via_chrome9_drm_sg_alloc(struct drm_device *dev,
 	entry->virtual = __vmalloc(pages << PAGE_SHIFT,
 		GFP_KERNEL | __GFP_HIGHMEM, PAGE_KERNEL_NOCACHE);
 	if (!entry->virtual) {
-		drm_free(entry->busaddr,
-			 entry->pages * sizeof(*entry->busaddr), DRM_MEM_PAGES);
-		drm_free(entry->pagelist,
-			 entry->pages * sizeof(*entry->pagelist),
-			 DRM_MEM_PAGES);
-		drm_free(entry, sizeof(*entry), DRM_MEM_SGLISTS);
+		drm_free_large(entry->busaddr);
+		drm_free_large(entry->pagelist);
+		drm_free_large(entry);
 		return -ENOMEM;
 	}
 

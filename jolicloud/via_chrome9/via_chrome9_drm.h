@@ -508,5 +508,17 @@ extern void via_chrome9_preclose(struct drm_device *dev,
 extern int via_chrome9_is_agp(struct drm_device *dev);
 extern irqreturn_t via_chrome9_interrupt(int irq, void *dev_instance);
 
+#ifndef DRM_MEM_SGLISTS
+#define DRM_MEM_SGLISTS 20
+#endif
+
+#ifndef DRM_MEM_PAGES
+#define DRM_MEM_PAGES 9
+#endif
+
+#ifndef DRM_MEM_DRIVER
+#define DRM_MEM_DRIVER 2
+#endif
+
 
 #endif				/* _VIA_CHROME9_DRM_H_ */

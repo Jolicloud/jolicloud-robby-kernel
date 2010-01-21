@@ -725,8 +725,7 @@ int via_chrome9_driver_load(struct drm_device *dev,
 	dev->types[8] = _DRM_STAT_SECONDARY;
 	dev->types[9] = _DRM_STAT_DMA;
 
-	dev_priv = drm_calloc(1, sizeof(struct drm_via_chrome9_private),
-		DRM_MEM_DRIVER);
+	dev_priv = drm_calloc_large(1, sizeof(struct drm_via_chrome9_private));
 	if (dev_priv == NULL)
 		return -ENOMEM;
 
@@ -738,7 +737,7 @@ int via_chrome9_driver_load(struct drm_device *dev,
 
 	ret = drm_sman_init(&dev_priv->sman, 2, 12, 8);
 	if (ret)
-		drm_free(dev_priv, sizeof(*dev_priv), DRM_MEM_DRIVER);
+		drm_free_large(dev_priv);
 	return ret;
 }
 
@@ -748,8 +747,7 @@ int via_chrome9_driver_unload(struct drm_device *dev)
 
 	drm_sman_takedown(&dev_priv->sman);
 
-	drm_free(dev_priv, sizeof(struct drm_via_chrome9_private),
-		DRM_MEM_DRIVER);
+	drm_free_large(dev_priv);
 
 	dev->dev_private = 0;
 
