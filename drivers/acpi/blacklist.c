@@ -271,6 +271,37 @@ static struct dmi_system_id acpi_osi_dmi_table[] __initdata = {
 		     DMI_MATCH(DMI_PRODUCT_VERSION, "ThinkPad T500"),
 		},
 	},
+
+	/*
+	 * Asus EeePC 1005P/PE uses the Pinetrail CPU, currently they are the
+	 * only netbooks produced by the Asus brand. When the Intel Pineview
+	 * video driver is enabled without KMS, backlight control is lost.
+	 * Also, hotkeys do not work as expected.
+	 *
+	 * The BIOS requires _OSI(Linux) to allow for backlight and hotkey
+	 * control.
+	 *
+	 * Other non-Asus Pinetrail CPUs may also be affected.
+	 *
+	 */
+
+	{
+	.callback = dmi_enable_osi_linux,
+	.ident = "Asus EeePC 1005P",
+	.matches = {
+		     DMI_MATCH(DMI_SYS_VENDOR, "ASUSTeK Computer INC."),
+		     DMI_MATCH(DMI_PRODUCT_NAME, "1005P"),
+		},
+	},
+	{
+	.callback = dmi_enable_osi_linux,
+	.ident = "Asus EeePC 1005PE",
+	.matches = {
+		     DMI_MATCH(DMI_SYS_VENDOR, "ASUSTeK Computer INC."),
+		     DMI_MATCH(DMI_PRODUCT_NAME, "1005PE"),
+		},
+	},
+
 	{}
 };
 
