@@ -105,6 +105,7 @@ static int qcprobe(struct usb_serial *serial, const struct usb_device_id *id)
 		}
 		break;
 
+	case 3:
 	case 4:
 		/* Composite mode */
 		if (ifnum == 2) {
