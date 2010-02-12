@@ -64,6 +64,9 @@ printenv:
 ifneq ($(SUBLEVEL),)
 	@echo "SUBLEVEL          = $(SUBLEVEL)"
 endif
+#ifneq ($(EXTRASUBLEVEL),)
+	@echo "EXTRASUBLEVEL     = $(EXTRASUBLEVEL)"
+#endif
 	@echo "CONCURRENCY_LEVEL = $(CONCURRENCY_LEVEL)"
 
 printchanges:

@@ -62,7 +62,7 @@ endif
 # be an in development git tree. We want to force it here instead of
 # committing changes to the top level Makefile
 SUBLEVEL	:= $(shell echo $(release) | awk -F. '{print $$3}')
-EXTRASUBLEVEL	:= $(shell echo $(release) | awk -F$(SUBLEVEL) '{print $$4}')
+EXTRASUBLEVEL	:= $(shell echo $(release) | perl -ne '@a=split("$(SUBLEVEL)");print $$a[1]')
 
 arch		:= $(shell dpkg-architecture -qDEB_HOST_ARCH)
 abidir		:= $(CURDIR)/debian/abi/$(release)-$(revision)/$(arch)
