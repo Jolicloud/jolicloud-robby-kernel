@@ -62,6 +62,7 @@ endif
 # be an in development git tree. We want to force it here instead of
 # committing changes to the top level Makefile
 SUBLEVEL	:= $(shell echo $(release) | awk -F. '{print $$3}')
+EXTRASUBLEVEL	:= $(shell echo $(release) | awk -F$(SUBLEVEL) '{print $$4}')
 
 arch		:= $(shell dpkg-architecture -qDEB_HOST_ARCH)
 abidir		:= $(CURDIR)/debian/abi/$(release)-$(revision)/$(arch)
@@ -96,7 +97,7 @@ conc_level		= -j$(CONCURRENCY_LEVEL)
 
 # target_flavour is filled in for each step
 kmake = make ARCH=$(build_arch) \
-	EXTRAVERSION=-$(abinum)-$(target_flavour) \
+	EXTRAVERSION=$(EXTRASUBLEVEL)-$(abinum)-$(target_flavour) \
 	CONFIG_DEBUG_SECTION_MISMATCH=y SUBLEVEL=$(SUBLEVEL) \
  	KBUILD_BUILD_VERSION="$(uploadnum)"
 ifneq ($(LOCAL_ENV_CC),)
