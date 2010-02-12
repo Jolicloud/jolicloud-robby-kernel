@@ -1,6 +1,4 @@
 /*
- * pcicfg.h: PCI configuration constants and structures.
- *
  * Copyright (C) 2010, Broadcom Corporation
  * All Rights Reserved.
  * 
@@ -9,12 +7,27 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: pcicfg.h,v 1.49.68.1 2009/12/07 20:06:51 Exp $
- */
+ * $Id: phy_version.h.in,v 1.2 2009/06/18 06:28:33 Exp $
+ *
+*/
 
-#ifndef	_h_pcicfg_
-#define	_h_pcicfg_
+#ifndef phy_version_h_
+#define phy_version_h_
 
-#define	PCI_BAR0_WIN		0x80	
-#define PCI_BAR0_WINSZ		(16 * 1024)	
-#endif	
+#define	PHY_MAJOR_VERSION		1
+
+#define	PHY_MINOR_VERSION		52
+
+#define	PHY_RC_NUMBER		14
+
+#define	PHY_INCREMENTAL_NUMBER	0
+
+#define	PHY_BUILD_NUMBER		0
+
+#define	PHY_VERSION			1, 52, 14, 0
+
+#define	PHY_VERSION_NUM		0x01340e00
+
+#define	PHY_VERSION_STR		"1.52.14.0"
+
+#endif 

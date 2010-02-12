@@ -2,7 +2,7 @@
  * Linux-specific portion of
  * Broadcom 802.11abg Networking Device Driver
  *
- * Copyright 2008, Broadcom Corporation
+ * Copyright (C) 2010, Broadcom Corporation
  * All Rights Reserved.
  * 
  * THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
@@ -10,7 +10,7 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: wl_linux.c,v 1.388.2.78.4.2.2.3 2009/09/05 00:05:25 Exp $
+ * $Id: wl_linux.c,v 1.480.2.12.2.14 2009/12/31 19:03:02 Exp $
  */
 
 #define LINUX_PORT
@@ -38,20 +38,10 @@
 #include <linux/ethtool.h>
 #include <linux/completion.h>
 #include <linux/pci_ids.h>
-#include <linux/sched.h>
 #define WLC_MAXBSSCFG		1	
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
-#include <net/lib80211.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 32)
+#include <linux/sched.h>
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 30)
-#include <linux/ieee80211.h>
-#else
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 14)
-#include <net/ieee80211.h>
-#endif
-#endif 
-
 #include <asm/system.h>
 #include <asm/io.h>
 #include <asm/irq.h>
@@ -69,13 +59,14 @@
 #include <wlioctl.h>
 #include <wlc_key.h>
 
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(2, 4, 5)
-#error "No support for Kernel Rev <= 2.4.5, As the older kernel revs doesn't support Tasklets"
-#endif
+typedef const struct si_pub	si_t;
 
 typedef void wlc_info_t;
 typedef void wlc_hw_info_t;
-typedef const struct si_pub	si_t;
+
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(2, 4, 5)
+#error "No support for Kernel Rev <= 2.4.5, As the older kernel revs doesn't support Tasklets"
+#endif
 
 #include <wlc_pub.h>
 #include <wl_dbg.h>
@@ -125,23 +116,12 @@ struct ieee80211_tkip_data {
 	u8 rx_hdr[16], tx_hdr[16];
 };
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
-#define WL_DEV_IF(dev)		((wl_if_t*)netdev_priv(dev))
-#else
-#define	WL_DEV_IF(dev)		((wl_if_t*)(dev)->priv)			
-#endif
 #define	WL_INFO(dev)		((wl_info_t*)(WL_DEV_IF(dev)->wl))	
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 20)
-#define	WL_ISR(i, d, p)		wl_isr((i), (d))
-#else
-#define	WL_ISR(i, d, p)		wl_isr((i), (d), (p))
-#endif	
 
 static int wl_open(struct net_device *dev);
 static int wl_close(struct net_device *dev);
 static int wl_start(struct sk_buff *skb, struct net_device *dev);
-static int wl_start_int(wl_if_t *wlif, struct sk_buff *skb);
+static int wl_start_int(wl_info_t *wl, wl_if_t *wlif, struct sk_buff *skb);
 
 static struct net_device_stats *wl_get_stats(struct net_device *dev);
 static int wl_set_mac_address(struct net_device *dev, void *addr);
@@ -149,9 +129,8 @@ static void wl_set_multicast_list(struct net_device *dev);
 static void _wl_set_multicast_list(struct net_device *dev);
 static int wl_ethtool(wl_info_t *wl, void *uaddr, wl_if_t *wlif);
 static void wl_dpc(ulong data);
-static void wl_link_up(wl_info_t *wl);
-static void wl_link_down(wl_info_t *wl);
-static void wl_mic_error(wl_info_t *wl, struct ether_addr *ea, bool group, bool flush_txq);
+static void wl_link_up(wl_info_t *wl, char * ifname);
+static void wl_link_down(wl_info_t *wl, char *ifname);
 #if defined(WL_CONFIG_RFKILL_INPUT)
 static int wl_schedule_task(wl_info_t *wl, void (*fn)(struct wl_task *), void *context);
 #endif
@@ -161,7 +140,7 @@ static int wl_read_proc(char *buffer, char **start, off_t offset, int length, in
 #if defined(BCMDBG)
 static int wl_dump(wl_info_t *wl, struct bcmstrbuf *b);
 #endif 
-struct wl_if *wl_alloc_if(wl_info_t *wl, int iftype, uint unit, struct wlc_if* wlc_if);
+static struct wl_if *wl_alloc_if(wl_info_t *wl, int iftype, uint unit, struct wlc_if* wlc_if);
 static void wl_free_if(wl_info_t *wl, wl_if_t *wlif);
 static void wl_get_driver_info(struct net_device *dev, struct ethtool_drvinfo *info);
 
@@ -169,7 +148,7 @@ static void wl_get_driver_info(struct net_device *dev, struct ethtool_drvinfo *i
 #include <linux/rfkill.h>
 static int wl_init_rfkill(wl_info_t *wl);
 static void wl_uninit_rfkill(wl_info_t *wl);
-static void my_force_kill(wl_task_t *task);
+static void wl_force_kill(wl_task_t *task);
 #endif
 
 static struct pci_device_id wl_id_table[] = {
@@ -185,6 +164,7 @@ static struct pci_device_id wl_id_table[] = {
 	{ PCI_VENDOR_ID_BROADCOM, 0x432d, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0 }, 
 	{ PCI_VENDOR_ID_BROADCOM, 0x4353, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0 }, 
 	{ PCI_VENDOR_ID_BROADCOM, 0x4357, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0 }, 
+	{ PCI_VENDOR_ID_BROADCOM, 0x4727, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0 }, 
 	{ 0 }
 };
 MODULE_DEVICE_TABLE(pci, wl_id_table);
@@ -201,6 +181,9 @@ module_param(oneonly, int, 0);
 
 static int piomode = 0;
 module_param(piomode, int, 0);
+
+static int instance_base = 0;	
+module_param(instance_base, int, 0);
 
 static int nompc = 0;
 module_param(nompc, int, 0);
@@ -227,14 +210,14 @@ static const struct ethtool_ops wl_ethtool_ops =
 static const struct net_device_ops wl_netdev_ops =
 {
 	.ndo_open = wl_open,
-        .ndo_stop = wl_close,
-        .ndo_start_xmit = wl_start,
-        .ndo_get_stats = wl_get_stats,
-        .ndo_set_mac_address = wl_set_mac_address,
-        .ndo_set_multicast_list = wl_set_multicast_list,
-        .ndo_do_ioctl = wl_ioctl
+	.ndo_stop = wl_close,
+	.ndo_start_xmit = wl_start,
+	.ndo_get_stats = wl_get_stats,
+	.ndo_set_mac_address = wl_set_mac_address,
+	.ndo_set_multicast_list = wl_set_multicast_list,
+	.ndo_do_ioctl = wl_ioctl
 };
-#endif
+#endif 
 
 static
 void wl_if_setup(struct net_device *dev)
@@ -278,9 +261,14 @@ wl_attach(uint16 vendor, uint16 device, ulong regs, uint bustype, void *btparam,
 	osl_t *osh;
 	int unit;
 
-	unit = wl_found;
+	unit = wl_found + instance_base;
 
-	if (oneonly && (unit != 0)) {
+	if (unit < 0) {
+		WL_ERROR(("wl%d: unit number overflow, exiting\n", unit));
+		return NULL;
+	}
+
+	if (oneonly && (unit != instance_base)) {
 		WL_ERROR(("wl%d: wl_attach: oneonly is set, exiting\n", unit));
 		return NULL;
 	}
@@ -333,7 +321,7 @@ wl_attach(uint16 vendor, uint16 device, ulong regs, uint bustype, void *btparam,
 		bustype = PCI_BUS;
 		WL_TRACE(("force to PCI\n"));
 	}
-	wl->bustype = bustype;
+	wl->bcm_bustype = bustype;
 
 	if ((wl->regsva = ioremap_nocache(dev->base_addr, PCI_BAR0_WINSZ)) == NULL) {
 		WL_ERROR(("wl%d: ioremap() failed\n", unit));
@@ -346,18 +334,22 @@ wl_attach(uint16 vendor, uint16 device, ulong regs, uint bustype, void *btparam,
 	{
 	int err;
 	if (!(wl->wlc = wlc_attach((void *) wl, vendor, device, unit, wl->piomode,
-		osh, wl->regsva, wl->bustype, btparam, &err))) {
+		osh, wl->regsva, wl->bcm_bustype, btparam, &err))) {
 		printf("%s: %s driver failed with code %d\n", dev->name, EPI_VERSION_STR, err);
 		goto fail;
 	}
 	}
-	wl->pub = (wlc_pub_t *)wl->wlc;
+	wl->pub = wlc_pub(wl->wlc);
 
 	if (nompc) {
 		if (wlc_iovar_setint(wl->wlc, "mpc", 0)) {
 			WL_ERROR(("wl%d: Error setting MPC variable to 0\n", unit));
 		}
 	}
+
+	wlc_iovar_setint(wl->wlc, "scan_passive_time", 170);
+
+	wlc_iovar_setint(wl->wlc, "qtxpower", 23 * 4);
 
 #if defined(CONFIG_PROC_FS)
 
@@ -377,7 +369,7 @@ wl_attach(uint16 vendor, uint16 device, ulong regs, uint bustype, void *btparam,
 		dev->irq = irq;
 	}
 
-	if (wl->bustype == PCI_BUS) {
+	if (wl->bcm_bustype == PCI_BUS) {
 		struct pci_dev *pci_dev = (struct pci_dev *)btparam;
 		if (pci_dev != NULL)
 			SET_NETDEV_DEV(dev, &pci_dev->dev);
@@ -435,7 +427,7 @@ wl_attach(uint16 vendor, uint16 device, ulong regs, uint bustype, void *btparam,
 	wlc_dump_register(wl->pub, "wl", (dump_fn_t)wl_dump, (void *)wl);
 #endif
 
-	printf("%s: Broadcom BCM%04x 802.11 Wireless Controller " EPI_VERSION_STR,
+	printf("%s: Broadcom BCM%04x 802.11 Hybrid Wireless Controller " EPI_VERSION_STR,
 		dev->name, device);
 
 #ifdef BCMDBG
@@ -608,6 +600,7 @@ wl_remove(struct pci_dev *pdev)
 	WL_APSTA_UPDN(("wl%d (%s): wl_remove() -> wl_down()\n", wl->pub->unit, wl->dev->name));
 	wl_down(wl);
 	WL_UNLOCK(wl);
+
 	wl_free(wl);
 	pci_disable_device(pdev);
 	pci_set_drvdata(pdev, NULL);
@@ -715,18 +708,14 @@ wl_free(wl_info_t *wl)
 	}
 
 	if (wl->monitor) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
-		wl_free_if(wl, (wl_if_t *)netdev_priv(wl->monitor));
-#else
-		wl_free_if(wl, (wl_if_t *)(wl->monitor->priv));
-#endif
+		wl_free_if(wl, WL_DEV_IF(wl->monitor));
 		wl->monitor = NULL;
 	}
 
 	osh = wl->osh;
 
-	if (wl->regsva && BUSTYPE(wl->bustype) != SDIO_BUS &&
-	    BUSTYPE(wl->bustype) != JTAG_BUS) {
+	if (wl->regsva && BUSTYPE(wl->bcm_bustype) != SDIO_BUS &&
+	    BUSTYPE(wl->bcm_bustype) != JTAG_BUS) {
 		iounmap((void*)wl->regsva);
 	}
 	wl->regsva = NULL;
@@ -734,13 +723,16 @@ wl_free(wl_info_t *wl)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 14)
 
 	if (wl->tkipmodops != NULL) {
+		int idx;
 		if (wl->tkip_ucast_data) {
 			wl->tkipmodops->deinit(wl->tkip_ucast_data);
 			wl->tkip_ucast_data = NULL;
 		}
-		if (wl->tkip_bcast_data) {
-			wl->tkipmodops->deinit(wl->tkip_bcast_data);
-			wl->tkip_bcast_data = NULL;
+		for (idx = 0; idx < NUM_GROUP_KEYS; idx++) {
+			if (wl->tkip_bcast_data[idx]) {
+				wl->tkipmodops->deinit(wl->tkip_bcast_data[idx]);
+				wl->tkip_bcast_data[idx] = NULL;
+			}
 		}
 	}
 #endif 
@@ -810,40 +802,36 @@ wl_close(struct net_device *dev)
 static int BCMFASTPATH
 wl_start(struct sk_buff *skb, struct net_device *dev)
 {
-	wl_if_t *wlif;
-
 	if (!dev)
 		return -ENETDOWN;
 
-	wlif = WL_DEV_IF(dev);
-
-	return wl_start_int(wlif, skb);
+	return wl_start_int(WL_INFO(dev), WL_DEV_IF(dev), skb);
 }
 
 static int BCMFASTPATH
-wl_start_int(wl_if_t *wlif, struct sk_buff *skb)
+wl_start_int(wl_info_t *wl, wl_if_t *wlif, struct sk_buff *skb)
 {
-	wl_info_t *wl;
 	void *pkt;
-
-	wl = wlif->wl;
-
-	WL_LOCK(wl);
 
 	WL_TRACE(("wl%d: wl_start: len %d summed %d\n", wl->pub->unit, skb->len, skb->ip_summed));
 
+	WL_LOCK(wl);
+
 	if ((pkt = PKTFRMNATIVE(wl->osh, skb)) == NULL) {
 		WL_ERROR(("wl%d: PKTFRMNATIVE failed!\n", wl->pub->unit));
-		WLCNTINCR(wl->pub->_cnt.txnobuf);
-		dev_kfree_skb_any(skb);
+		WLCNTINCR(wl->pub->_cnt->txnobuf);
+		PKTFREE(wl->osh, skb, TRUE);
 		WL_UNLOCK(wl);
 		return 0;
 	}
 
 	if (WME_ENAB(wl->pub) && (PKTPRIO(pkt) == 0))
 		pktsetprio(pkt, FALSE);
+
 	wlc_sendpkt(wl->wlc, pkt, wlif->wlcif);
+
 	WL_UNLOCK(wl);
+
 	return (0);
 }
 
@@ -891,7 +879,7 @@ wl_schedule_task(wl_info_t *wl, void (*fn)(struct wl_task *task), void *context)
 }
 #endif 
 
-struct wl_if *
+static struct wl_if *
 wl_alloc_if(wl_info_t *wl, int iftype, uint subunit, struct wlc_if* wlcif)
 {
 	struct net_device *dev;
@@ -905,7 +893,7 @@ wl_alloc_if(wl_info_t *wl, int iftype, uint subunit, struct wlc_if* wlcif)
 		return NULL;
 	}
 	bzero(wlif, sizeof(wl_if_t));
-#endif
+#endif 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 24))
 	if (!(dev = MALLOC(wl->osh, sizeof(struct net_device)))) {
 		MFREE(wl->osh, wlif, sizeof(wl_if_t));
@@ -917,23 +905,22 @@ wl_alloc_if(wl_info_t *wl, int iftype, uint subunit, struct wlc_if* wlcif)
 	ether_setup(dev);
 	strncpy(dev->name, name, IFNAMSIZ);
 #else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29))
 	dev = alloc_netdev(sizeof(wl_if_t), name, ether_setup);
 	wlif = netdev_priv(dev);
 	if (!dev) {
 #else
-	dev = alloc_netdev(0, name, ether_setup);
-	if (!dev) {
-		MFREE(wl->osh, wlif, sizeof(wl_if_t));
-#endif 
-		WL_ERROR(("wl%d: wl_alloc_if: out of memory, alloc_netdev\n",
-			(wl->pub)?wl->pub->unit:subunit));
-		return NULL;
+		dev = alloc_netdev(0, name, ether_setup);
+		if (!dev) {
+			MFREE(wl->osh, wlif, sizeof(wl_if_t));
+#endif
+			WL_ERROR(("wl%d: wl_alloc_if: out of memory, alloc_netdev\n",
+				(wl->pub)?wl->pub->unit:subunit));
+			return NULL;
 	}
 #endif 
 
-	wlif->type = iftype;
 	wlif->dev = dev;
 	wlif->wl = wl;
 	wlif->wlcif = wlcif;
@@ -980,10 +967,9 @@ wl_free_if(wl_info_t *wl, wl_if_t *wlif)
 #else
 		free_netdev(wlif->dev);
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29))
-
 		return;
-#endif
-#endif 
+#endif	
+#endif	
 	}
 	MFREE(wl->osh, wlif, sizeof(wl_if_t));
 }
@@ -1084,7 +1070,6 @@ wl_down(wl_info_t *wl)
 	WL_TRACE(("wl%d: wl_down\n", wl->pub->unit));
 
 	for (wlif = wl->if_list; wlif != NULL; wlif = wlif->next) {
-		WL_INFORM(("%s: stop interfaces\n", __FUNCTION__));
 		netif_down(wlif->dev);
 		netif_stop_queue(wlif->dev);
 	}
@@ -1095,7 +1080,6 @@ wl_down(wl_info_t *wl)
 	WL_UNLOCK(wl);
 
 	SPINWAIT((atomic_read(&wl->callbacks) > callbacks), 100 * 1000);
-	ASSERT(atomic_read(&wl->callbacks) == callbacks);
 
 	WL_LOCK(wl);
 }
@@ -1362,7 +1346,7 @@ wl_get_wireless_stats(struct net_device *dev)
 		rssi = 0;
 	else {
 		scb_val_t scb;
-		res = wlc_ioctl(wl->wlc, WLC_GET_RSSI, &scb, sizeof(scb), wlif->wlcif);
+		res = wlc_ioctl(wl->wlc, WLC_GET_RSSI, &scb, sizeof(int), wlif->wlcif);
 		if (res) {
 			WL_ERROR(("wl%d: %s: WLC_GET_RSSI failed (%d)\n",
 				wl->pub->unit, __FUNCTION__, res));
@@ -1550,7 +1534,7 @@ wl_sendup(wl_info_t *wl, wl_if_t *wlif, void *p, int numpkt)
 		skb->dev = wl->dev;
 	}
 
-	skb->protocol = eth_type_trans(skb, skb->dev);
+	skb->protocol = eth_type_trans(skb, wl->dev);
 	if (!ISALIGNED((uintptr)skb->data, 4)) {
 		WL_ERROR(("Unaligned assert. skb %p. skb->data %p.\n", skb, skb->data));
 		if (wlif) {
@@ -1608,15 +1592,15 @@ wl_dump(wl_info_t *wl, struct bcmstrbuf *b)
 #endif	
 
 static void
-wl_link_up(wl_info_t *wl)
+wl_link_up(wl_info_t *wl, char *ifname)
 {
-	WL_ERROR(("wl%d: %s: link up\n", wl->pub->unit, __FUNCTION__));
+	WL_ERROR(("wl%d: link up (%s)\n", wl->pub->unit, ifname));
 }
 
 static void
-wl_link_down(wl_info_t *wl)
+wl_link_down(wl_info_t *wl, char *ifname)
 {
-	WL_ERROR(("wl%d: %s: link down\n", wl->pub->unit, __FUNCTION__));
+	WL_ERROR(("wl%d: link down (%s)\n", wl->pub->unit, ifname));
 }
 
 void
@@ -1630,18 +1614,12 @@ wl_event(wl_info_t *wl, char *ifname, wlc_event_t *e)
 	case WLC_E_LINK:
 	case WLC_E_NDIS_LINK:
 		if (e->event.flags&WLC_EVENT_MSG_LINK)
-			wl_link_up(wl);
+			wl_link_up(wl, ifname);
 		else
-			wl_link_down(wl);
-		break;
-	case WLC_E_MIC_ERROR:
-		wl_mic_error(wl, e->addr,
-			e->event.flags&WLC_EVENT_MSG_GROUP,
-			e->event.flags&WLC_EVENT_MSG_FLUSHTXQ);
+			wl_link_down(wl, ifname);
 		break;
 #if defined(WL_CONFIG_RFKILL_INPUT)
-	case WLC_E_RADIO:
-		{
+	case WLC_E_RADIO: {
 		mbool i;
 		if (wlc_get(wl->wlc, WLC_GET_RADIO, &i) < 0)
 			WL_ERROR(("%s: WLC_GET_RADIO failed\n", __FUNCTION__));
@@ -1651,15 +1629,19 @@ wl_event(wl_info_t *wl, char *ifname, wlc_event_t *e)
 		wl->last_phyind = (mbool)(i & WL_RADIO_HW_DISABLE);
 
 		WL_ERROR(("wl%d: Radio hardware state changed to %d\n", wl->pub->unit, i));
-		(void) wl_schedule_task(wl, my_force_kill, wl);
+		(void) wl_schedule_task(wl, wl_force_kill, wl);
 		break;
-		}
+	}
 #else
 	case WLC_E_RADIO:
-		WL_ERROR(("wl_event: WLC_E_RADIO\n"));
 		break;
 #endif 
 	}
+}
+
+void
+wl_event_sync(wl_info_t *wl, char *ifname, wlc_event_t *e)
+{
 }
 
 static void
@@ -1723,6 +1705,12 @@ wl_init_timer(wl_info_t *wl, void (*fn)(void *arg), void *arg, const char *name)
 void
 wl_add_timer(wl_info_t *wl, wl_timer_t *t, uint ms, int periodic)
 {
+#ifdef BCMDBG
+	if (t->set) {
+		WL_ERROR(("%s: Already set. Name: %s, per %d\n",
+			__FUNCTION__, t->name, periodic));
+	}
+#endif
 	ASSERT(!t->set);
 
 	t->ms = ms;
@@ -1785,14 +1773,6 @@ wl_free_timer(wl_info_t *wl, wl_timer_t *t)
 
 }
 
-static void
-wl_mic_error(wl_info_t *wl, struct ether_addr *ea, bool group, bool flush_txq)
-{
-	WL_WSEC(("wl%d: mic error using %s key\n", wl->pub->unit,
-		(group) ? "group" : "pairwise"));
-
-}
-
 void
 wl_monitor(wl_info_t *wl, wl_rxsts_t *rxsts, void *p)
 {
@@ -1847,9 +1827,9 @@ wl_tkip_miccheck(wl_info_t *wl, void *p, int hdr_len, bool group_key, int key_in
 	skb->dev = wl->dev;
 
 	if (wl->tkipmodops) {
-		if (group_key && wl->tkip_bcast_data)
+		if (group_key && wl->tkip_bcast_data[key_index])
 			return (wl->tkipmodops->decrypt_msdu(skb, key_index, hdr_len,
-				wl->tkip_bcast_data));
+				wl->tkip_bcast_data[key_index]));
 		else if (!group_key && wl->tkip_ucast_data)
 			return (wl->tkipmodops->decrypt_msdu(skb, key_index, hdr_len,
 				wl->tkip_ucast_data));
@@ -1908,11 +1888,22 @@ wl_tkip_decrypt(wl_info_t *wl, void *p, int hdr_len, bool group_key)
 	int err = -1;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 14)
 	struct sk_buff *skb = (struct sk_buff *)p;
-	skb->dev = wl->dev;
+	uint8 *pos;
+	uint8 key_idx = 0;
+
+	if (group_key) {
+		skb->dev = wl->dev;
+		pos = skb->data + hdr_len;
+		key_idx = pos[3];
+		key_idx >>= 6;
+		WL_ERROR(("%s: Invalid key_idx %d\n", __FUNCTION__, key_idx));
+		ASSERT(key_idx < NUM_GROUP_KEYS);
+	}
 
 	if (wl->tkipmodops) {
-		if (group_key && wl->tkip_bcast_data)
-			err = wl->tkipmodops->decrypt_mpdu(skb, hdr_len, wl->tkip_bcast_data);
+		if (group_key && key_idx < NUM_GROUP_KEYS && wl->tkip_bcast_data[key_idx])
+			err = wl->tkipmodops->decrypt_mpdu(skb, hdr_len,
+				wl->tkip_bcast_data[key_idx]);
 		else if (!group_key && wl->tkip_ucast_data)
 			err = wl->tkipmodops->decrypt_mpdu(skb, hdr_len, wl->tkip_ucast_data);
 	}
@@ -1953,13 +1944,14 @@ wl_tkip_keyset(wl_info_t *wl, wsec_key_t *key)
 		uint8 keybuf[8];
 		if (group_key) {
 			if (key->len) {
-				if (!wl->tkip_bcast_data) {
+				if (!wl->tkip_bcast_data[key->id]) {
 					WL_WSEC(("Init TKIP Bcast Module\n"));
 					WL_UNLOCK(wl);
-					wl->tkip_bcast_data = wl->tkipmodops->init(key->id);
+					wl->tkip_bcast_data[key->id] =
+						wl->tkipmodops->init(key->id);
 					WL_LOCK(wl);
 				}
-				if (wl->tkip_bcast_data) {
+				if (wl->tkip_bcast_data[key->id]) {
 					WL_WSEC(("TKIP SET BROADCAST KEY******************\n"));
 					bzero(rxseq, IW_ENCODE_SEQ_MAX_SIZE);
 					bcopy(&key->rxiv, rxseq, 6);
@@ -1967,14 +1959,14 @@ wl_tkip_keyset(wl_info_t *wl, wsec_key_t *key)
 					bcopy(&key->data[16], &key->data[24], sizeof(keybuf));
 					bcopy(keybuf, &key->data[16], sizeof(keybuf));
 					wl->tkipmodops->set_key(&key->data, key->len,
-						(uint8 *)&key->rxiv, wl->tkip_bcast_data);
+						(uint8 *)&key->rxiv, wl->tkip_bcast_data[key->id]);
 				}
 			}
 			else {
-				if (wl->tkip_bcast_data) {
+				if (wl->tkip_bcast_data[key->id]) {
 					WL_WSEC(("Deinit TKIP Bcast Module\n"));
-					wl->tkipmodops->deinit(wl->tkip_bcast_data);
-					wl->tkip_bcast_data = NULL;
+					wl->tkipmodops->deinit(wl->tkip_bcast_data[key->id]);
+					wl->tkip_bcast_data[key->id] = NULL;
 				}
 			}
 		}
@@ -2017,10 +2009,15 @@ wl_tkip_printstats(wl_info_t *wl, bool group_key)
 {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 14)
 	char debug_buf[512];
+	int idx;
 	if (wl->tkipmodops) {
-		if (group_key && wl->tkip_bcast_data)
-			wl->tkipmodops->print_stats(debug_buf, wl->tkip_bcast_data);
-		else if (!group_key && wl->tkip_ucast_data)
+		if (group_key) {
+			for (idx = 0; idx < NUM_GROUP_KEYS; idx++) {
+				if (wl->tkip_bcast_data[idx])
+					wl->tkipmodops->print_stats(debug_buf,
+						wl->tkip_bcast_data[idx]);
+			}
+		} else if (!group_key && wl->tkip_ucast_data)
 			wl->tkipmodops->print_stats(debug_buf, wl->tkip_ucast_data);
 		else
 			return;
@@ -2109,7 +2106,7 @@ wl_uninit_rfkill(wl_info_t *wl)
 }
 
 static void
-my_force_kill(wl_task_t *task)
+wl_force_kill(wl_task_t *task)
 {
 	wl_info_t *wl = (wl_info_t *) task->context;
 
@@ -2144,30 +2141,30 @@ wl_linux_watchdog(void *ctx)
 #ifdef CONFIG_WIRELESS_EXT
 		wstats = &wl->wstats_watchdog[id];
 #endif
-		stats->rx_packets = WLCNTVAL(wl->pub->_cnt.rxframe);
-		stats->tx_packets = WLCNTVAL(wl->pub->_cnt.txframe);
-		stats->rx_bytes = WLCNTVAL(wl->pub->_cnt.rxbyte);
-		stats->tx_bytes = WLCNTVAL(wl->pub->_cnt.txbyte);
-		stats->rx_errors = WLCNTVAL(wl->pub->_cnt.rxerror);
-		stats->tx_errors = WLCNTVAL(wl->pub->_cnt.txerror);
+		stats->rx_packets = WLCNTVAL(wl->pub->_cnt->rxframe);
+		stats->tx_packets = WLCNTVAL(wl->pub->_cnt->txframe);
+		stats->rx_bytes = WLCNTVAL(wl->pub->_cnt->rxbyte);
+		stats->tx_bytes = WLCNTVAL(wl->pub->_cnt->txbyte);
+		stats->rx_errors = WLCNTVAL(wl->pub->_cnt->rxerror);
+		stats->tx_errors = WLCNTVAL(wl->pub->_cnt->txerror);
 		stats->collisions = 0;
 
 		stats->rx_length_errors = 0;
-		stats->rx_over_errors = WLCNTVAL(wl->pub->_cnt.rxoflo);
-		stats->rx_crc_errors = WLCNTVAL(wl->pub->_cnt.rxcrc);
+		stats->rx_over_errors = WLCNTVAL(wl->pub->_cnt->rxoflo);
+		stats->rx_crc_errors = WLCNTVAL(wl->pub->_cnt->rxcrc);
 		stats->rx_frame_errors = 0;
-		stats->rx_fifo_errors = WLCNTVAL(wl->pub->_cnt.rxoflo);
+		stats->rx_fifo_errors = WLCNTVAL(wl->pub->_cnt->rxoflo);
 		stats->rx_missed_errors = 0;
 
-		stats->tx_fifo_errors = WLCNTVAL(wl->pub->_cnt.txuflo);
+		stats->tx_fifo_errors = WLCNTVAL(wl->pub->_cnt->txuflo);
 #ifdef CONFIG_WIRELESS_EXT
 #if WIRELESS_EXT > 11
 		wstats->discard.nwid = 0;
-		wstats->discard.code = WLCNTVAL(wl->pub->_cnt.rxundec);
-		wstats->discard.fragment = WLCNTVAL(wl->pub->_cnt.rxfragerr);
-		wstats->discard.retries = WLCNTVAL(wl->pub->_cnt.txfail);
-		wstats->discard.misc = WLCNTVAL(wl->pub->_cnt.rxrunt) +
-			WLCNTVAL(wl->pub->_cnt.rxgiant);
+		wstats->discard.code = WLCNTVAL(wl->pub->_cnt->rxundec);
+		wstats->discard.fragment = WLCNTVAL(wl->pub->_cnt->rxfragerr);
+		wstats->discard.retries = WLCNTVAL(wl->pub->_cnt->txfail);
+		wstats->discard.misc = WLCNTVAL(wl->pub->_cnt->rxrunt) +
+			WLCNTVAL(wl->pub->_cnt->rxgiant);
 
 		wstats->miss.beacon = 0;
 #endif 

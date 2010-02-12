@@ -2,7 +2,7 @@
  * Common (OS-independent) definitions for
  * Broadcom 802.11abg Networking Device Driver
  *
- * Copyright 2008, Broadcom Corporation
+ * Copyright (C) 2010, Broadcom Corporation
  * All Rights Reserved.
  * 
  * THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
@@ -10,31 +10,26 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: wlc_pub.h,v 1.293.2.36 2009/01/23 22:38:41 Exp $
+ * $Id: wlc_pub.h,v 1.392.2.6 2009/10/30 06:21:23 Exp $
  */
 
 #ifndef _wlc_pub_h_
 #define _wlc_pub_h_
 
-#if defined(__GNUC__)
-#define PACKED  __attribute__((packed))
-#else
-#define PACKED
-#endif
-
-#define	MAX_TIMERS	(27 + (2 * WLC_MAXDPT))		
+#define	MAX_TIMERS	(29 + (2 * WLC_MAXDPT))		
 
 #define	WLC_NUMRATES	16	
 #define	MAXMULTILIST	32	
 #define	D11_PHY_HDR_LEN	6	
+
+#ifndef LINUX_WLUSER_POSTMOGRIFY_REMOVAL
 
 #define	PHY_TYPE_A	0	
 #define	PHY_TYPE_G	2	
 #define	PHY_TYPE_N	4	
 #define	PHY_TYPE_LP	5	
 #define	PHY_TYPE_SSN	6	
-#define	PHY_TYPE_QN	7	
-#define	PHY_TYPE_NULL	0xf	
+#define	PHY_TYPE_LCN	8	
 
 #define WLC_10_MHZ	10	
 #define WLC_20_MHZ	20	
@@ -43,6 +38,7 @@
 #define CHSPEC_WLC_BW(chanspec)	(CHSPEC_IS40(chanspec) ? WLC_40_MHZ : \
 				 CHSPEC_IS20(chanspec) ? WLC_20_MHZ : \
 							 WLC_10_MHZ)
+#endif 
 
 #define	WLC_RSSI_MINVAL		-200	
 #define	WLC_RSSI_NO_SIGNAL	-91	
@@ -52,6 +48,25 @@
 #define	WLC_RSSI_VERY_GOOD	-58	
 #define	WLC_RSSI_EXCELLENT	-57	
 #define	WLC_RSSI_INVALID	 0	
+
+typedef struct wlc_tunables {
+	int ntxd;			
+	int nrxd;			
+	int rxbufsz;		
+	int nrxbufpost;		
+	int maxscb;			
+	int ampdunummpdu;	
+	int maxpktcb;		
+	int maxdpt;			
+	int maxucodebss;	
+	int maxucodebss4;	
+	int maxbss;			
+	int datahiwat;		
+	int ampdudatahiwat;	
+	int rxbnd;			
+	int txsbnd;			
+	int memreserved;	
+} wlc_tunables_t;
 
 typedef struct wlc_rateset {
 	uint	count;			
@@ -67,6 +82,7 @@ struct rsn_parms {
 	uint8 unicast[4];	
 	uint8 acount;		
 	uint8 auth[4];		
+	uint8 PAD[4];		
 };
 
 typedef void *wlc_pkt_t;
@@ -87,6 +103,7 @@ typedef struct wlc_bss_info
 	uint8		SSID_len;	
 	uint8		SSID[32];	
 	int16		RSSI;		
+	int16		SNR;		
 	uint16		beacon_period;	
 	uint16		atim_window;	
 	chanspec_t	chanspec;	
@@ -103,12 +120,17 @@ typedef struct wlc_bss_info
 	uint8		wme_qosinfo;	
 	struct rsn_parms wpa;
 	struct rsn_parms wpa2;
+#ifdef BCMWAPI_WAI
+	struct rsn_parms wapi;
+#endif 
 	uint16		qbss_load_aac;	
 
 	uint8		qbss_load_chan_free;	
 	uint8		mcipher;	
 	uint8		wpacfg;		
 } wlc_bss_info_t;
+
+#ifndef LINUX_WLUSER_POSTMOGRIFY_REMOVAL
 
 struct wlc_if;
 
@@ -122,6 +144,7 @@ struct wlc_if;
 #define WLC_ENOMEM	8 
 #define WLC_EBUSY	9 
 
+#define IOVF_MFG	(1<<3)  
 #define IOVF_WHL	(1<<4)	
 #define IOVF_NTRL	(1<<5)	
 
@@ -145,8 +168,10 @@ typedef int (*dump_fn_t)(void *handle, struct bcmstrbuf *b);
 typedef int (*iovar_fn_t)(void *handle, const bcm_iovar_t *vi, uint32 actionid,
 	const char *name, void *params, uint plen, void *arg, int alen,
 	int vsize, struct wlc_if *wlcif);
+#endif 
 
 typedef struct wlc_pub {
+	void		*wlc;
 	uint		unit;			
 	uint		corerev;		
 	osl_t		*osh;			
@@ -154,6 +179,7 @@ typedef struct wlc_pub {
 	char		*vars;			
 	bool		up;			
 	bool		hw_off;			
+	wlc_tunables_t *tunables;	
 	bool		hw_up;			
 	bool		_piomode;		 
 	uint		_nbands;		
@@ -166,12 +192,17 @@ typedef struct wlc_pub {
 	bool		_assoc_recreate;	
 	int		_wme;			
 	uint8		_mbss;			
+#ifdef WLBDD
+	bool		_bdd;			
+#endif
+#ifdef WLP2P
+	bool		_p2p;			
+#endif
 	bool		allmulti;		
-	bool		BSS;			
 	bool		associated;		
 
-	bool		phytest_on;		
-	bool		bf_preempt;		
+	bool            phytest_on;             
+	bool		bf_preempt_4306;	
 	uint		txqstopped;		
 
 	bool		_ampdu;			
@@ -181,17 +212,12 @@ typedef struct wlc_pub {
 	int		_n_reqd;		
 	int8		_coex;			
 
-	bool		_priofc;		
+	bool		_priofc;	
 
 	struct ether_addr	cur_etheraddr;	
-	struct ether_addr	multicast[MAXMULTILIST]; 
-	uint		nmulticast;		
-	pmkid_cand_t	pmkid_cand[MAXPMKID];	
-	uint		npmkid_cand;		
-	pmkid_t		pmkid[MAXPMKID];	
-	uint		npmkid;			
 
-	wlc_bss_info_t	current_bss;		
+	struct ether_addr	*multicast; 
+	uint		nmulticast;		
 
 	uint32		wlfeatureflag;		
 	int		psq_pkts_total;		
@@ -199,9 +225,6 @@ typedef struct wlc_pub {
 	uint		_activity;		
 
 	uint16		txmaxpkts;		
-
-	int8		txpwr_local_max;	
-	uint8		txpwr_local_constraint;	
 
 	uint32		swdecrypt;		
 
@@ -215,14 +238,18 @@ typedef struct wlc_pub {
 	uint8		sromrev;		
 	uint32		boardflags;		
 	uint32		boardflags2;		
-	uint8		antsel_type;		
-	bool		antsel_avail;           
 
-	uint32 		radar;			
+	wl_cnt_t	*_cnt;			
+	wl_wme_cnt_t	*_wme_cnt;		
 
-	wl_cnt_t	_cnt;			
-	wl_wme_cnt_t	_wme_cnt;		
+	bool		_win7;			
+	bool		_extsta;		
+	bool		_pkt_filter;		
 
+	bool		_lmac;			
+
+	uint16		bt_period; 		
+	bool		phy_11ncapable;		
 } wlc_pub_t;
 
 typedef struct	wl_rxsts {
@@ -239,9 +266,12 @@ typedef struct	wl_rxsts {
 	uint	preamble;		
 	uint	encoding;		
 	uint	nfrmtype;		
+	struct wl_if *wlif;	
 } wl_rxsts_t;
 
 struct wlc_info;
+struct wlc_hw_info;
+struct wlc_bsscfg;
 struct wlc_if;
 
 #define	AP_ENAB(pub)	(0)
@@ -250,6 +280,8 @@ struct wlc_if;
 
 #define STA_ONLY(pub)	(!AP_ENAB(pub))
 #define AP_ONLY(pub)	(AP_ENAB(pub) && !APSTA_ENAB(pub))
+
+#ifndef LINUX_WLUSER_POSTMOGRIFY_REMOVAL
 
 #define WLC_PREC_BMP_ALL		MAXBITVAL(WLC_PREC_COUNT)
 
@@ -270,8 +302,10 @@ struct wlc_if;
 				NBITVAL(WLC_PRIO_TO_PREC(PRIO_8021D_NC)) |	\
 				NBITVAL(WLC_PRIO_TO_HI_PREC(PRIO_8021D_NC)))
 
+#endif 
+
 #define WME_ENAB(pub) ((pub)->_wme != OFF)
-#define WME_AUTO(wlc) ((wlc)->pub._wme == AUTO)
+#define WME_AUTO(wlc) ((wlc)->pub->_wme == AUTO)
 
 #define WLC_USE_COREFLAGS	0xffffffff	
 
@@ -281,6 +315,8 @@ struct wlc_if;
 #define WLCNTADD(a,delta)	((a) += (delta)) 
 #define WLCNTSET(a,value)	((a) = (value)) 
 #define WLCNTVAL(a)		(a)	
+
+#ifndef LINUX_WLUSER_POSTMOGRIFY_REMOVAL
 
 extern void * wlc_attach(void *wl, uint16 vendor, uint16 device, uint unit, bool piomode,
 	osl_t *osh, void *regsva, uint bustype, void *btparam, uint *perr);
@@ -309,13 +345,20 @@ extern int wlc_iovar_op(struct wlc_info *wlc, const char *name, void *params, in
 extern int wlc_ioctl(struct wlc_info *wlc, int cmd, void *arg, int len, struct wlc_if *wlcif);
 
 extern void wlc_statsupd(struct wlc_info *wlc);
+#endif 
 
+extern wlc_pub_t *wlc_pub(void *wlc);
+
+#ifndef LINUX_WLUSER_POSTMOGRIFY_REMOVAL
 extern int wlc_module_register(wlc_pub_t *pub, const bcm_iovar_t *iovars,
                                const char *name, void *hdl, iovar_fn_t iovar_fn,
                                watchdog_fn_t watchdog_fn, down_fn_t down_fn);
 extern int wlc_module_unregister(wlc_pub_t *pub, const char *name, void *hdl);
+#endif 
 
-#define WLC_RPCTX_PARAMS	32
+#ifndef LINUX_WLUSER_POSTMOGRIFY_REMOVAL
 
-#undef PACKED
+#define WLC_RPCTX_PARAMS        32
+
+#endif 
 #endif 

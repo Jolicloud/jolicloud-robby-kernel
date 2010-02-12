@@ -1,14 +1,15 @@
 /*
  * Misc system wide definitions
  *
- * Copyright 2008, Broadcom Corporation
+ * Copyright (C) 2010, Broadcom Corporation
  * All Rights Reserved.
  * 
  * THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
  * KIND, EXPRESS OR IMPLIED, BY STATUTE, COMMUNICATION OR OTHERWISE. BROADCOM
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
- * $Id: bcmdefs.h,v 13.43.2.11 2009/02/11 01:59:34 Exp $
+ *
+ * $Id: bcmdefs.h,v 13.61 2009/04/01 18:59:11 Exp $
  */
 
 #ifndef	_bcmdefs_h_
@@ -26,7 +27,14 @@
 #define BCMFASTPATH
 
 #define BCMROMDATA(_data)	_data
+#define BCMROMDAT_NAME(_data)	_data
 #define BCMROMFN(_fn)		_fn
+#define BCMROMFN_NAME(_fn)	_fn
+#define STATIC	static
+#define BCMROMDAT_ARYSIZ(data)	ARRAYSIZE(data)
+#define BCMROMDAT_SIZEOF(data)	sizeof(data)
+#define BCMROMDAT_APATCH(data)
+#define BCMROMDAT_SPATCH(data)
 
 #define	SI_BUS			0	
 #define	PCI_BUS			1	
@@ -106,12 +114,16 @@ typedef struct {
 } hnddma_seg_map_t;
 
 #if defined(BCM_RPC_NOCOPY) || defined(BCM_RCP_TXNOCOPY)
+
 #define BCMEXTRAHDROOM 220
 #else
 #define BCMEXTRAHDROOM 172
 #endif
 
 #define BCMDONGLEHDRSZ 12
+#define BCMDONGLEPADSZ 16
+
+#define BCMDONGLEOVERHEAD	(BCMDONGLEHDRSZ + BCMDONGLEPADSZ)
 
 #ifdef BCMDBG
 

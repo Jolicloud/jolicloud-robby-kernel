@@ -1,7 +1,7 @@
 /*
  * Linux Wireless Extensions support
  *
- * Copyright 2008, Broadcom Corporation
+ * Copyright (C) 2010, Broadcom Corporation
  * All Rights Reserved.
  * 
  * THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
@@ -9,7 +9,7 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: wl_iw.c,v 1.63.2.25.4.4.2.3 2009/09/09 01:12:27 Exp $
+ * $Id: wl_iw.c,v 1.109.2.2.8.8 2010/01/28 03:10:40 Exp $
  */
 
 #define LINUX_PORT
@@ -36,7 +36,7 @@ typedef const struct si_pub	si_t;
 extern bool wl_iw_conn_status_str(uint32 event_type, uint32 status,
 	uint32 reason, char* stringBuf, uint buflen);
 
-#define MAX_IOCTL_LEN 600
+#define MAX_WLIW_IOCTL_LEN 1024
 
 #define htod32(i) i
 #define htod16(i) i
@@ -46,6 +46,7 @@ extern bool wl_iw_conn_status_str(uint32 event_type, uint32 status,
 #define dtohchanspec(i) i
 
 #ifdef CONFIG_WIRELESS_EXT
+
 extern struct iw_statistics *wl_get_wireless_stats(struct net_device *dev);
 #endif 
 
@@ -107,8 +108,6 @@ dev_wlc_ioctl(
 	strcpy(ifr.ifr_name, dev->name);
 	ifr.ifr_data = (caddr_t) &ioc;
 
-	dev_open(dev);
-
 	fs = get_fs();
 	set_fs(get_ds());
 #if defined(WL_USE_NETDEV_OPS)
@@ -160,17 +159,21 @@ dev_wlc_bufvar_get(
 	char *name,
 	char *buf, int buflen)
 {
-	char ioctlbuf[MAX_IOCTL_LEN];
+	char *ioctlbuf;
 	int error;
 
 	uint len;
 
-	len = bcm_mkiovar(name, NULL, 0, ioctlbuf, sizeof(ioctlbuf));
+	ioctlbuf = kmalloc(MAX_WLIW_IOCTL_LEN, GFP_KERNEL);
+	if (!ioctlbuf)
+		return -ENOMEM;
+	len = bcm_mkiovar(name, NULL, 0, ioctlbuf, MAX_WLIW_IOCTL_LEN);
 	ASSERT(len);
-	error = dev_wlc_ioctl(dev, WLC_GET_VAR, (void *)ioctlbuf, MAX_IOCTL_LEN);
+	error = dev_wlc_ioctl(dev, WLC_GET_VAR, (void *)ioctlbuf, MAX_WLIW_IOCTL_LEN);
 	if (!error)
 		bcopy(ioctlbuf, buf, buflen);
 
+	kfree(ioctlbuf);
 	return (error);
 }
 
@@ -282,7 +285,7 @@ wl_iw_config_commit(
 
 	bzero(&bssid, sizeof(struct sockaddr));
 	if ((error = dev_wlc_ioctl(dev, WLC_REASSOC, &bssid, ETHER_ADDR_LEN))) {
-		WL_ERROR(("Invalid ioctl data.\n"));
+		WL_ERROR(("%s: WLC_REASSOC failed (%d)\n", __FUNCTION__, error));
 		return error;
 	}
 
@@ -673,20 +676,21 @@ wl_iw_set_wap(
 	WL_TRACE(("%s: SIOCSIWAP\n", dev->name));
 
 	if (awrq->sa_family != ARPHRD_ETHER) {
-		WL_ERROR(("Invalid Header...sa_family\n"));
+		WL_ERROR(("%s: Invalid Header...sa_family\n", __FUNCTION__));
 		return -EINVAL;
 	}
 
 	if (ETHER_ISBCAST(awrq->sa_data) || ETHER_ISNULLADDR(awrq->sa_data)) {
 		scb_val_t scbval;
-
 		bzero(&scbval, sizeof(scb_val_t));
-		dev_wlc_ioctl(dev, WLC_DISASSOC, &scbval, sizeof(scb_val_t));
+		if ((error = dev_wlc_ioctl(dev, WLC_DISASSOC, &scbval, sizeof(scb_val_t)))) {
+			WL_ERROR(("%s: WLC_DISASSOC failed (%d).\n", __FUNCTION__, error));
+		}
 		return 0;
 	}
 
 	if ((error = dev_wlc_ioctl(dev, WLC_REASSOC, awrq->sa_data, ETHER_ADDR_LEN))) {
-		WL_ERROR(("Invalid ioctl data.\n"));
+		WL_ERROR(("%s: WLC_REASSOC failed (%d).\n", __FUNCTION__, error));
 		return error;
 	}
 
@@ -745,7 +749,7 @@ wl_iw_mlme(
 			sizeof(scb_val_t));
 	}
 	else {
-		WL_ERROR(("Invalid ioctl data.\n"));
+		WL_ERROR(("%s: Invalid ioctl data.\n", __FUNCTION__));
 		return error;
 	}
 
@@ -1040,6 +1044,7 @@ done:
 
 	return 0;
 }
+
 #endif 
 
 static int
@@ -1065,6 +1070,7 @@ wl_iw_set_essid(
 		memcpy(ssid.SSID, extra, ssid.SSID_len);
 		ssid.SSID_len = htod32(ssid.SSID_len);
 	}
+
 	if ((error = dev_wlc_ioctl(dev, WLC_SET_SSID, &ssid, sizeof(ssid))))
 		return error;
 
@@ -1565,8 +1571,7 @@ wl_iw_get_encode(
 	if (key.index >= DOT11_MAX_DEFAULT_KEYS)
 		key.index = 0;
 
-	if ((error = dev_wlc_ioctl(dev, WLC_GET_KEY, &key, sizeof(key))) ||
-	    (error = dev_wlc_ioctl(dev, WLC_GET_WSEC, &wsec, sizeof(wsec))) ||
+	if ((error = dev_wlc_ioctl(dev, WLC_GET_WSEC, &wsec, sizeof(wsec))) ||
 	    (error = dev_wlc_ioctl(dev, WLC_GET_AUTH, &auth, sizeof(auth))))
 		return error;
 
@@ -1798,6 +1803,12 @@ wl_iw_set_wpaauth(
 
 	switch (paramid) {
 	case IW_AUTH_WPA_VERSION:
+		if ((error = dev_wlc_intvar_get(dev, "wsec", &val)))
+			return error;
+		if (val & (TKIP_ENABLED | AES_ENABLED)) {
+			val &= ~(TKIP_ENABLED | AES_ENABLED);
+			dev_wlc_intvar_set(dev, "wsec", val);
+		}
 
 		if (paramval & IW_AUTH_WPA_VERSION_DISABLED)
 			val = WPA_AUTH_DISABLED;
@@ -2127,7 +2138,7 @@ const struct iw_handler_def wl_iw_handler_def =
 	.private_args = wl_iw_priv_args,
 #if WIRELESS_EXT >= 19
 	get_wireless_stats: wl_get_wireless_stats,
-#endif
+#endif 
 	};
 #endif 
 
@@ -2288,7 +2299,7 @@ wl_iw_conn_status_str(uint32 event_type, uint32 status, uint32 reason,
 		memset(stringBuf, 0, buflen);
 		snprintf(stringBuf, buflen, "%s %s %02d %02d",
 			name, cause, status, reason);
-		WL_INFORM(("Connection status: %s\n", stringBuf));
+		WL_TRACE(("Connection status: %s\n", stringBuf));
 		return TRUE;
 	} else {
 		return FALSE;
@@ -2326,6 +2337,8 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 	int cmd = 0;
 	uint32 event_type = e->event_type;
 	uint16 flags =  e->flags;
+	uint32 datalen = e->datalen;
+	uint32 status =  e->status;
 
 	memset(&wrqu, 0, sizeof(wrqu));
 	memset(extra, 0, sizeof(extra));
@@ -2357,6 +2370,25 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 		if (!(flags & WLC_EVENT_MSG_LINK)) {
 			bzero(wrqu.addr.sa_data, ETHER_ADDR_LEN);
 			bzero(&extra, ETHER_ADDR_LEN);
+		}
+		break;
+	case WLC_E_ACTION_FRAME:
+		cmd = IWEVCUSTOM;
+		if (datalen + 1 <= sizeof(extra)) {
+			wrqu.data.length = datalen + 1;
+			extra[0] = WLC_E_ACTION_FRAME;
+			memcpy(&extra[1], data, datalen);
+			WL_TRACE(("WLC_E_ACTION_FRAME len %d \n", wrqu.data.length));
+		}
+		break;
+
+	case WLC_E_ACTION_FRAME_COMPLETE:
+		cmd = IWEVCUSTOM;
+		if (sizeof(status) + 1 <= sizeof(extra)) {
+			wrqu.data.length = sizeof(status) + 1;
+			extra[0] = WLC_E_ACTION_FRAME_COMPLETE;
+			memcpy(&extra[1], &status, sizeof(status));
+			WL_TRACE(("wl_iw_event status %d  \n", status));
 		}
 		break;
 #endif 
@@ -2401,6 +2433,7 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 		return;
 	}
 #endif 
+
 	default:
 
 		break;
@@ -2502,4 +2535,13 @@ int wl_iw_get_wireless_stats(struct net_device *dev, struct iw_statistics *wstat
 
 done:
 	return res;
+}
+
+int wl_iw_attach(struct net_device *dev)
+{
+	return 0;
+}
+
+void wl_iw_detach(void)
+{
 }

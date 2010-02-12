@@ -2,7 +2,7 @@
  * Linux-specific abstractions to gain some independence from linux kernel versions.
  * Pave over some 2.2 versus 2.4 versus 2.6 kernel differences.
  *
- * Copyright 2008, Broadcom Corporation
+ * Copyright (C) 2010, Broadcom Corporation
  * All Rights Reserved.
  * 
  * THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
@@ -10,7 +10,7 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: linuxver.h,v 13.40.2.5.30.2 2009/09/05 00:05:17 Exp $
+ * $Id: linuxver.h,v 13.50.22.2 2009/10/02 19:09:49 Exp $
  */
 
 #ifndef _linuxver_h_
@@ -52,6 +52,9 @@
 #include <linux/pci.h>
 #include <linux/interrupt.h>
 #include <linux/netdevice.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 28))
+#undef IP_TOS
+#endif
 #include <asm/io.h>
 
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(2, 5, 41))
@@ -104,6 +107,17 @@ typedef irqreturn_t(*FN_ISR) (int irq, void *dev_id, struct pt_regs *ptregs);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 5, 67)
 #define MOD_INC_USE_COUNT
 #define MOD_DEC_USE_COUNT
+#endif 
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
+#include <net/lib80211.h>
+#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 30)
+#include <linux/ieee80211.h>
+#else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 14)
+#include <net/ieee80211.h>
+#endif
 #endif 
 
 #ifndef __exit
@@ -174,7 +188,7 @@ extern void pci_unregister_driver(struct pci_driver *drv);
 #undef WL_USE_NETDEV_OPS
 #endif
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 3, 31)) && defined(CONFIG_RFKILL_INPUT)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 31)) && defined(CONFIG_RFKILL_INPUT)
 #define WL_CONFIG_RFKILL_INPUT
 #else
 #undef WL_CONFIG_RFKILL_INPUT
@@ -444,5 +458,31 @@ do {									\
 })
 
 #endif 
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
+#define KILL_PROC(pid, sig) \
+{ \
+	struct task_struct *tsk; \
+	tsk = find_task_by_vpid(pid); \
+	if (tsk) send_sig(sig, tsk, 1); \
+}
+#else
+#define KILL_PROC(pid, sig) \
+{ \
+	kill_proc(pid, sig, 1); \
+}
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
+#define WL_DEV_IF(dev)          ((wl_if_t*)netdev_priv(dev))
+#else
+#define WL_DEV_IF(dev)          ((wl_if_t*)(dev)->priv)
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 20)
+#define WL_ISR(i, d, p)         wl_isr((i), (d))
+#else
+#define WL_ISR(i, d, p)         wl_isr((i), (d), (p))
+#endif  
 
 #endif 

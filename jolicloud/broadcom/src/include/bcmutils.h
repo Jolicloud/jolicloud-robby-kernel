@@ -1,7 +1,7 @@
 /*
  * Misc useful os-independent macros and functions.
  *
- * Copyright 2008, Broadcom Corporation
+ * Copyright (C) 2010, Broadcom Corporation
  * All Rights Reserved.
  * 
  * THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
@@ -9,11 +9,15 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: bcmutils.h,v 13.199.2.5 2008/11/25 12:13:46 Exp $
+ * $Id: bcmutils.h,v 13.217 2009/05/14 22:33:52 Exp $
  */
 
 #ifndef	_bcmutils_h_
 #define	_bcmutils_h_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define _BCM_U	0x01	
 #define _BCM_L	0x02	
@@ -94,6 +98,8 @@ struct spktq {
 
 #define PKTQ_PREC_ITER(pq, prec)        for (prec = (pq)->num_prec - 1; prec >= 0; prec--)
 
+typedef bool (*ifpkt_cb_t)(void*, int);
+
 struct ether_addr;
 
 #define pktq_psetmax(pq, prec, _max)    ((pq)->q[prec].max = (_max))
@@ -110,7 +116,8 @@ extern void *pktq_penq_head(struct pktq *pq, int prec, void *p);
 extern void *pktq_pdeq(struct pktq *pq, int prec);
 extern void *pktq_pdeq_tail(struct pktq *pq, int prec);
 
-extern void pktq_pflush(osl_t *osh, struct pktq *pq, int prec, bool dir);
+extern void pktq_pflush(osl_t *osh, struct pktq *pq, int prec, bool dir,
+	ifpkt_cb_t fn, int arg);
 
 extern bool pktq_pdel(struct pktq *pq, void *p, int prec);
 
@@ -135,7 +142,7 @@ extern void *pktq_deq(struct pktq *pq, int *prec_out);
 extern void *pktq_deq_tail(struct pktq *pq, int *prec_out);
 extern void *pktq_peek(struct pktq *pq, int *prec_out);
 extern void *pktq_peek_tail(struct pktq *pq, int *prec_out);
-extern void pktq_flush(osl_t *osh, struct pktq *pq, bool dir); 
+extern void pktq_flush(osl_t *osh, struct pktq *pq, bool dir, ifpkt_cb_t fn, int arg);
 
 extern uint pktcopy(osl_t *osh, void *p, uint offset, int len, uchar *buf);
 extern uint pktfrombuf(osl_t *osh, void *p, uint offset, int len, uchar *buf);
@@ -155,6 +162,9 @@ extern char *BCMROMFN(bcmstrstr)(char *haystack, char *needle);
 extern char *BCMROMFN(bcmstrcat)(char *dest, const char *src);
 extern char *BCMROMFN(bcmstrncat)(char *dest, const char *src, uint size);
 extern ulong wchar2ascii(char *abuf, ushort *wbuf, ushort wbuflen, ulong abuflen);
+char* bcmstrtok(char **string, const char *delimiters, char *tokdelim);
+int bcmstricmp(const char *s1, const char *s2);
+int bcmstrnicmp(const char* s1, const char* s2, int cnt);
 
 extern char *bcm_ether_ntoa(const struct ether_addr *ea, char *buf);
 extern int BCMROMFN(bcm_ether_atoe)(char *p, struct ether_addr *ea);
@@ -274,7 +284,7 @@ extern int bcm_iovar_lencheck(const bcm_iovar_t *table, void *arg, int len, bool
 #define BCME_NOT_WME_ASSOCIATION	-34	
 #define BCME_SDIO_ERROR			-35	
 #define BCME_DONGLE_DOWN		-36	
-#define BCME_VERSION			-37 	
+#define BCME_VERSION			-37 
 #define BCME_TXFAIL			-38 	
 #define BCME_RXFAIL			-39	
 #define BCME_NODEVICE			-40 	
@@ -432,11 +442,33 @@ store16_ua(uint8 *a, uint16 v)
 	a[0] = v & 0xff;
 }
 
+static INLINE void
+xor_128bit_block(const uint8 *src1, const uint8 *src2, uint8 *dst)
+{
+	if (
+#ifdef __i386__
+	    1 ||
+#endif
+	    (((uintptr)src1 | (uintptr)src2 | (uintptr)dst) & 3) == 0) {
+
+		((uint32 *)dst)[0] = ((const uint32 *)src1)[0] ^ ((const uint32 *)src2)[0];
+		((uint32 *)dst)[1] = ((const uint32 *)src1)[1] ^ ((const uint32 *)src2)[1];
+		((uint32 *)dst)[2] = ((const uint32 *)src1)[2] ^ ((const uint32 *)src2)[2];
+		((uint32 *)dst)[3] = ((const uint32 *)src1)[3] ^ ((const uint32 *)src2)[3];
+	} else {
+
+		int k;
+		for (k = 0; k < 16; k++)
+			dst[k] = src1[k] ^ src2[k];
+	}
+}
+
 extern uint8 BCMROMFN(hndcrc8)(uint8 *p, uint nbytes, uint8 crc);
 extern uint16 BCMROMFN(hndcrc16)(uint8 *p, uint nbytes, uint16 crc);
 extern uint32 BCMROMFN(hndcrc32)(uint8 *p, uint nbytes, uint32 crc);
 
-#if defined(BCMDBG) || defined(BCMDBG_ERR) || defined(BCMDBG_DUMP)
+#if defined(BCMDBG) || defined(DHD_DEBUG) || defined(BCMDBG_ERR) || \
+	defined(BCMDBG_DUMP)
 extern int bcm_format_flags(const bcm_bit_desc_t *bd, uint32 flags, char* buf, int len);
 extern int bcm_format_hex(char *str, const void *bytes, int len);
 extern void prhex(const char *msg, uchar *buf, uint len);
@@ -471,6 +503,9 @@ struct fielddesc {
 
 extern void bcm_binit(struct bcmstrbuf *b, char *buf, uint size);
 extern int bcm_bprintf(struct bcmstrbuf *b, const char *fmt, ...);
+extern void bcm_inc_bytes(uchar *num, int num_bytes, uint8 amount);
+extern int bcm_cmp_bytes(uchar *arg1, uchar *arg2, uint8 nbytes);
+extern void bcm_print_bytes(char *name, const uchar *cdata, int len);
 
 typedef  uint32 (*bcmutl_rdreg_rtn)(void *arg0, uint arg1, uint32 offset);
 extern uint bcmdumpfields(bcmutl_rdreg_rtn func_ptr, void *arg0, uint arg1, struct fielddesc *str,
@@ -478,5 +513,9 @@ extern uint bcmdumpfields(bcmutl_rdreg_rtn func_ptr, void *arg0, uint arg1, stru
 
 extern uint bcm_mkiovar(char *name, char *data, uint datalen, char *buf, uint len);
 extern uint BCMROMFN(bcm_bitcount)(uint8 *bitmap, uint bytelength);
+
+#ifdef __cplusplus
+	}
+#endif
 
 #endif	

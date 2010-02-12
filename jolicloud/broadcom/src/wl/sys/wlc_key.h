@@ -3,7 +3,7 @@
  * and exported functions for
  * Broadcom 802.11abg Networking Device Driver
  *
- * Copyright 2008, Broadcom Corporation
+ * Copyright (C) 2010, Broadcom Corporation
  * All Rights Reserved.
  * 
  * THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
@@ -11,7 +11,7 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: wlc_key.h,v 1.44.2.5 2008/08/22 00:37:51 Exp $
+ * $Id: wlc_key.h,v 1.58.2.2.4.1 2009/12/02 01:32:58 Exp $
  */
 
 #ifndef _wlc_key_h_

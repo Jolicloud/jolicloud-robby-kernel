@@ -1,7 +1,7 @@
 /*
  * Linux OS Independent Layer
  *
- * Copyright 2008, Broadcom Corporation
+ * Copyright (C) 2010, Broadcom Corporation
  * All Rights Reserved.
  * 
  * THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
@@ -9,7 +9,7 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: linux_osl.c,v 1.127.2.18.6.1 2009/09/09 01:12:21 Exp $
+ * $Id: linux_osl.c,v 1.152.18.5.4.1 2009/11/13 00:32:19 Exp $
  */
 
 #define LINUX_PORT
@@ -22,6 +22,8 @@
 #include <bcmutils.h>
 #include <linux/delay.h>
 #include <pcicfg.h>
+
+#include <linux/fs.h>
 
 #define PCI_CFG_RETRY 		10
 
@@ -36,6 +38,15 @@ typedef struct bcm_mem_link {
 	char	file[BCM_MEM_FILENAME_LEN];
 } bcm_mem_link_t;
 
+#if defined(DSLCPE_DELAY_NOT_YET)
+struct shared_osl {
+	int long_delay;
+	spinlock_t *lock;
+	void *wl;
+	unsigned long MIPS;
+};
+#endif
+
 struct osl_info {
 	osl_pubinfo_t pub;
 	uint magic;
@@ -46,7 +57,7 @@ struct osl_info {
 	bcm_mem_link_t *dbgmem_list;
 };
 
-bool g_assert_bypass = FALSE;
+uint32 g_assert_type = 0;
 
 static int16 linuxbcmerrormap[] =
 {	0, 			
@@ -89,11 +100,11 @@ static int16 linuxbcmerrormap[] =
 	-EINVAL,		
 	-EIO,			
 	-EIO,			
-	-EINVAL			
+	-EINVAL,		
 
 #if BCME_LAST != -40
 #error "You need to add a OS error translation in the linuxbcmerrormap \
-	for new error code defined in bcmuitls.h"
+	for new error code defined in bcmutils.h"
 #endif 
 };
 
@@ -194,12 +205,13 @@ osl_pktfree(osl_t *osh, void *p, bool send)
 		nskb = skb->next;
 		skb->next = NULL;
 
-		if (skb->destructor) {
+		{
+			if (skb->destructor)
 
-			dev_kfree_skb_any(skb);
-		} else {
+				dev_kfree_skb_any(skb);
+			else
 
-			dev_kfree_skb(skb);
+				dev_kfree_skb(skb);
 		}
 
 		osh->pub.pktalloced--;
@@ -340,9 +352,14 @@ osl_dma_consistent_align(void)
 }
 
 void*
-osl_dma_alloc_consistent(osl_t *osh, uint size, ulong *pap)
+osl_dma_alloc_consistent(osl_t *osh, uint size, uint16 align_bits, uint *alloced, ulong *pap)
 {
+	uint16 align = (1 << align_bits);
 	ASSERT((osh && (osh->magic == OS_HANDLE_MAGIC)));
+
+	if (!ISALIGNED(DMA_CONSISTENT_ALIGN, align))
+		size += align;
+	*alloced = size;
 
 	return (pci_alloc_consistent(osh->pdev, size, (dma_addr_t*)pap));
 }
@@ -358,13 +375,11 @@ osl_dma_free_consistent(osl_t *osh, void *va, uint size, ulong pa)
 uint BCMFASTPATH
 osl_dma_map(osl_t *osh, void *va, uint size, int direction)
 {
-	ASSERT((osh && (osh->magic == OS_HANDLE_MAGIC)));
+	int dir;
 
-	if (direction == DMA_TX)
-		return (pci_map_single(osh->pdev, va, size, PCI_DMA_TODEVICE));
-	else {
-		return (pci_map_single(osh->pdev, va, size, PCI_DMA_FROMDEVICE));
-	}
+	ASSERT((osh && (osh->magic == OS_HANDLE_MAGIC)));
+	dir = (direction == DMA_TX)? PCI_DMA_TODEVICE: PCI_DMA_FROMDEVICE;
+	return (pci_map_single(osh->pdev, va, size, dir));
 }
 
 void BCMFASTPATH
@@ -382,8 +397,19 @@ void
 osl_assert(char *exp, char *file, int line)
 {
 	char tempbuf[256];
+	char *basename;
+
+	basename = strrchr(file, '/');
+
+	if (basename)
+		basename++;
+
+	if (!basename)
+		basename = file;
+
 #ifdef BCMDBG_ASSERT
-	snprintf(tempbuf, 256, "assertion \"%s\" failed: file \"%s\", line %d\n", exp, file, line);
+	snprintf(tempbuf, 256, "assertion \"%s\" failed: file \"%s\", line %d\n",
+		exp, basename, line);
 
 	if (!in_interrupt()) {
 		const int delay = 3;
@@ -392,7 +418,7 @@ osl_assert(char *exp, char *file, int line)
 		set_current_state(TASK_INTERRUPTIBLE);
 		schedule_timeout(delay * HZ);
 	}
-	if (!g_assert_bypass)
+	if (g_assert_type == 0)
 		panic("%s", tempbuf);
 #endif
 
@@ -424,6 +450,12 @@ osl_pktdup(osl_t *osh, void *skb)
 
 	osh->pub.pktalloced++;
 	return (p);
+}
+
+uint32
+osl_sysuptime(void)
+{
+	return ((uint32)jiffies * (1000 / HZ));
 }
 
 uint
@@ -595,6 +627,12 @@ osl_uncached(void *va)
 	return ((void*)va);
 }
 
+void *
+osl_cached(void *va)
+{
+	return ((void*)va);
+}
+
 uint
 osl_getcycles(void)
 {
@@ -743,4 +781,40 @@ osl_pkt_frmnative(osl_t *osh, void *pkt)
 		osh->pub.pktalloced++;
 	}
 	return (void *)pkt;
+}
+
+void *
+osl_os_open_image(char *filename)
+{
+	struct file *fp;
+
+	fp = filp_open(filename, O_RDONLY, 0);
+
+	 if (IS_ERR(fp))
+		 fp = NULL;
+
+	 return fp;
+}
+
+int
+osl_os_get_image_block(char *buf, int len, void *image)
+{
+	struct file *fp = (struct file *)image;
+	int rdlen;
+
+	if (!image)
+		return 0;
+
+	rdlen = kernel_read(fp, fp->f_pos, buf, len);
+	if (rdlen > 0)
+		fp->f_pos += rdlen;
+
+	return rdlen;
+}
+
+void
+osl_os_close_image(void *image)
+{
+	if (image)
+		filp_close((struct file *)image, NULL);
 }

@@ -1,7 +1,7 @@
 /*
  * From FreeBSD 2.2.7: Fundamental constants relating to ethernet.
  *
- * Copyright 2008, Broadcom Corporation
+ * Copyright (C) 2010, Broadcom Corporation
  * All Rights Reserved.
  * 
  * THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
@@ -9,7 +9,7 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: ethernet.h,v 9.45.12.1 2008/08/13 02:24:19 Exp $
+ * $Id: ethernet.h,v 9.50.4.3 2009/10/22 07:38:44 Exp $
  */
 
 #ifndef _NET_ETHERNET_H_	  
@@ -19,12 +19,7 @@
 #include "typedefs.h"
 #endif
 
-#if defined(__GNUC__)
-#define	PACKED	__attribute__((packed))
-#else
-#pragma pack(1)
-#define	PACKED
-#endif
+#include <packed_section_start.h>
 
 #define	ETHER_ADDR_LEN		6
 
@@ -49,6 +44,7 @@
 #define	ETHER_TYPE_BRCM		0x886c		
 #define	ETHER_TYPE_802_1X	0x888e		
 #define	ETHER_TYPE_802_1X_PREAUTH 0x88c7	
+#define ETHER_TYPE_WAI		0x88b4		
 
 #define	ETHER_BRCM_SUBTYPE_LEN	4	
 #define	ETHER_BRCM_CRAM		1	
@@ -70,15 +66,15 @@
 
 #ifndef __INCif_etherh   
 
-struct	ether_header {
+BWL_PRE_PACKED_STRUCT struct ether_header {
 	uint8	ether_dhost[ETHER_ADDR_LEN];
 	uint8	ether_shost[ETHER_ADDR_LEN];
 	uint16	ether_type;
-} PACKED;
+} BWL_POST_PACKED_STRUCT;
 
-struct	ether_addr {
+BWL_PRE_PACKED_STRUCT struct	ether_addr {
 	uint8 octet[ETHER_ADDR_LEN];
-} PACKED;
+} BWL_POST_PACKED_STRUCT;
 #endif	
 
 #define ETHER_SET_LOCALADDR(ea)	(((uint8 *)(ea))[0] = (((uint8 *)(ea))[0] | 2))
@@ -116,9 +112,13 @@ static const struct ether_addr ether_null = {{0, 0, 0, 0, 0, 0}};
 			    ((uint8 *)(ea))[4] |		\
 			    ((uint8 *)(ea))[5]) == 0)
 
-#undef PACKED
-#if !defined(__GNUC__)
-#pragma pack()
-#endif
+#define ETHER_MOVE_HDR(d, s) \
+do { \
+	struct ether_header t; \
+	t = *(struct ether_header *)(s); \
+	*(struct ether_header *)(d) = t; \
+} while (0)
+
+#include <packed_section_end.h>
 
 #endif 

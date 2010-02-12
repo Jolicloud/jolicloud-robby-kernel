@@ -1,13 +1,12 @@
 /*
- * Copyright 2008, Broadcom Corporation
+ * Copyright (C) 2010, Broadcom Corporation
  * All Rights Reserved.
  * 
  * THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
  * KIND, EXPRESS OR IMPLIED, BY STATUTE, COMMUNICATION OR OTHERWISE. BROADCOM
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
- *
- * $Id: typedefs.h,v 1.85.32.8 2009/02/26 17:07:08 Exp $
+ * $Id: typedefs.h,v 1.96.28.1.8.1 2009/11/30 22:27:30 Exp $
  */
 
 #ifndef _TYPEDEFS_H_
@@ -32,6 +31,13 @@
 typedef unsigned long long int uintptr;
 #endif
 
+#if defined(TARGETOS_nucleus)
+
+#include <stddef.h>
+
+#define TYPEDEF_FLOAT_T
+#endif   
+
 #if defined(LINUX_PORT)
 #define TYPEDEF_UINT
 #define TYPEDEF_USHORT
@@ -49,6 +55,8 @@ typedef unsigned long long int uintptr;
 #define TYPEDEF_UINT64
 #endif
 
+#if !defined(__BOB__) && !defined(TARGETOS_nucleus)
+
 #if defined(__KERNEL__)
 
 #if defined(LINUX_PORT)
@@ -58,6 +66,8 @@ typedef unsigned long long int uintptr;
 #else
 
 #include <sys/types.h>
+
+#endif 
 
 #endif 
 
@@ -166,18 +176,24 @@ typedef float64 float_t;
 #define	PTRSZ	sizeof(char*)
 #endif
 
-#ifndef INLINE
-
 #if defined(__GNUC__)
-
-#define INLINE __inline__
-
+	#define BWL_COMPILER_GNU
+#elif defined(__CC_ARM) && __CC_ARM
+	#define BWL_COMPILER_ARMCC
 #else
-
-#define INLINE
-
+	#error "Unknown compiler!"
 #endif 
 
+#ifndef INLINE
+	#if defined(BWL_COMPILER_MICROSOFT)
+		#define INLINE __inline
+	#elif defined(BWL_COMPILER_GNU)
+		#define INLINE __inline__
+	#elif defined(BWL_COMPILER_ARMCC)
+		#define INLINE	__inline
+	#else
+		#define INLINE
+	#endif 
 #endif 
 
 #undef TYPEDEF_BOOL
@@ -199,6 +215,8 @@ typedef float64 float_t;
 #undef TYPEDEF_FLOAT_T
 
 #endif 
+
+#define UNUSED_PARAMETER(x) (void)(x)
 
 #include <bcmdefs.h>
 

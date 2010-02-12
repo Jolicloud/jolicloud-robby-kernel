@@ -1,4 +1,3 @@
-
 SOFTWARE LICENSE AGREEMENT
 
 Unless you and Broadcom Corporation (“Broadcom”) execute a separate written software license agreement governing use of the accompanying software, this software is licensed to you under the terms of this Software License Agreement (“Agreement”).  

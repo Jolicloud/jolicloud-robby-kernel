@@ -3,7 +3,7 @@
  * This header file housing the define and function prototype use by
  * both the wl driver, tools & Apps.
  *
- * Copyright 2008, Broadcom Corporation
+ * Copyright (C) 2010, Broadcom Corporation
  * All Rights Reserved.
  * 
  * THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
@@ -11,7 +11,7 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: bcmwifi.h,v 1.19.2.1.54.1 2009/03/25 01:50:55 Exp $
+ * $Id: bcmwifi.h,v 1.24 2009/05/21 21:22:04 Exp $
  */
 
 #ifndef	_bcmwifi_h_
@@ -87,6 +87,7 @@ typedef uint16 chanspec_t;
 #define CHSPEC_CTL_CHAN(chspec)  ((CHSPEC_SB_LOWER(chspec)) ? \
 				  (LOWER_20_SB((chspec & WL_CHANSPEC_CHAN_MASK))) : \
 				  (UPPER_20_SB((chspec & WL_CHANSPEC_CHAN_MASK))))
+#define CHSPEC2WLC_BAND(chspec) (CHSPEC_IS5G((chspec))? WLC_BAND_5G: WLC_BAND_2G)
 
 #define CHANSPEC_STR_LEN    8
 
@@ -113,6 +114,8 @@ extern chanspec_t wf_chspec_aton(char *a);
 extern bool wf_chspec_malformed(chanspec_t chanspec);
 
 extern uint8 wf_chspec_ctlchan(chanspec_t chspec);
+
+extern chanspec_t wf_chspec_ctlchspec(chanspec_t chspec);
 
 extern int wf_mhz2channel(uint freq, uint start_factor);
 

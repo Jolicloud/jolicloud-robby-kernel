@@ -1,7 +1,7 @@
 /*
  * OS Abstraction Layer
  *
- * Copyright 2008, Broadcom Corporation
+ * Copyright (C) 2010, Broadcom Corporation
  * All Rights Reserved.
  * 
  * THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
@@ -9,7 +9,7 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: osl.h,v 13.38.2.3 2009/02/26 17:07:08 Exp $
+ * $Id: osl.h,v 13.44 2009/03/02 05:15:20 Exp $
  */
 
 #ifndef _osl_h_
@@ -25,6 +25,14 @@ typedef void (*pktfree_cb_fn_t)(void *ctx, void *pkt, unsigned int status);
 #include <linux_osl.h>
 
 #define	SET_REG(osh, r, mask, val)	W_REG((osh), (r), ((R_REG((osh), r) & ~(mask)) | (val)))
+
+#ifndef AND_REG
+#define AND_REG(osh, r, v)		W_REG(osh, (r), R_REG(osh, r) & (v))
+#endif   
+
+#ifndef OR_REG
+#define OR_REG(osh, r, v)		W_REG(osh, (r), R_REG(osh, r) | (v))
+#endif   
 
 #if !defined(OSL_SYSUPTIME)
 #define OSL_SYSUPTIME() (0)

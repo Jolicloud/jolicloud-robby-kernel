@@ -1,7 +1,7 @@
 /*
  * wl_linux.c exported functions and definitions
  *
- * Copyright 2008, Broadcom Corporation
+ * Copyright (C) 2010, Broadcom Corporation
  * All Rights Reserved.
  * 
  * THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
@@ -9,7 +9,7 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: wl_linux.h,v 1.22.2.3.6.2 2009/09/05 00:05:25 Exp $
+ * $Id: wl_linux.h,v 1.27.2.4.4.1 2009/11/18 18:51:21 Exp $
  */
 
 #ifndef _wl_linux_h_
@@ -45,9 +45,7 @@ typedef struct wl_if {
 	struct wl_if *next;
 	struct wl_info *wl;		
 	struct net_device *dev;		
-	int type;			
 	struct wlc_if *wlcif;		
-	struct ether_addr remote;	
 	uint subunit;			
 	bool dev_registed;		
 } wl_if_t;
@@ -65,12 +63,11 @@ struct wl_info {
 	struct net_device *dev;		
 	spinlock_t	lock;		
 	spinlock_t	isr_lock;	
-	uint		bustype;	
+	uint		bcm_bustype;	
 	bool		piomode;	
 	void *regsva;			
 	struct net_device_stats stats;	
 	wl_if_t *if_list;		
-	struct wl_info *next;		
 	atomic_t callbacks;		
 	struct wl_timer *timers;	
 	struct tasklet_struct tasklet;	
@@ -78,13 +75,14 @@ struct wl_info {
 	bool		resched;	
 	uint32		pci_psstate[16];	
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 14)
+#define NUM_GROUP_KEYS 4
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
 	struct lib80211_crypto_ops *tkipmodops;
 #else
 	struct ieee80211_crypto_ops *tkipmodops;	
 #endif
 	struct ieee80211_tkip_data  *tkip_ucast_data;
-	struct ieee80211_tkip_data  *tkip_bcast_data;
+	struct ieee80211_tkip_data  *tkip_bcast_data[NUM_GROUP_KEYS];
 #endif 
 
 	uint	stats_id;		

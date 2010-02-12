@@ -1,7 +1,7 @@
 /*
  * Broadcom Ethernettype  protocol definitions
  *
- * Copyright 2008, Broadcom Corporation
+ * Copyright (C) 2010, Broadcom Corporation
  * All Rights Reserved.
  * 
  * THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
@@ -9,20 +9,19 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: bcmeth.h,v 9.9.12.2 2008/05/02 23:24:25 Exp $
+ * $Id: bcmeth.h,v 9.11.68.1 2009/11/04 02:12:59 Exp $
  */
 
 #ifndef _BCMETH_H_
 #define _BCMETH_H_
 
-#if defined(__GNUC__)
-#define	PACKED	__attribute__((packed))
-#else
-#pragma pack(1)
-#define	PACKED
+#ifndef _TYPEDEFS_H_
+#include <typedefs.h>
 #endif
 
-typedef  struct bcmeth_hdr
+#include <packed_section_start.h>
+
+typedef BWL_PRE_PACKED_STRUCT struct bcmeth_hdr
 {
 	uint16	subtype;	
 	uint16	length;
@@ -30,11 +29,8 @@ typedef  struct bcmeth_hdr
 	uint8	oui[3];		
 
 	uint16	usr_subtype;
-} PACKED bcmeth_hdr_t;
+} BWL_POST_PACKED_STRUCT bcmeth_hdr_t;
 
-#undef PACKED
-#if !defined(__GNUC__)
-#pragma pack()
-#endif
+#include <packed_section_end.h>
 
 #endif	

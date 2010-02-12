@@ -1,7 +1,7 @@
 /*
  * Linux OS Independent Layer
  *
- * Copyright 2008, Broadcom Corporation
+ * Copyright (C) 2010, Broadcom Corporation
  * All Rights Reserved.
  * 
  * THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
@@ -9,7 +9,7 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: linux_osl.h,v 13.133.2.9 2008/12/05 00:54:44 Exp $
+ * $Id: linux_osl.h,v 13.146.6.4 2009/10/21 18:57:23 Exp $
  */
 
 #ifndef _linux_osl_h_
@@ -17,10 +17,14 @@
 
 #include <typedefs.h>
 
+extern void * osl_os_open_image(char * filename);
+extern int osl_os_get_image_block(char * buf, int len, void * image);
+extern void osl_os_close_image(void * image);
+
 extern osl_t *osl_attach(void *pdev, uint bustype, bool pkttag);
 extern void osl_detach(osl_t *osh);
 
-extern bool g_assert_bypass;
+extern uint32 g_assert_type;
 
 #if defined(BCMDBG_ASSERT)
 	#define ASSERT(exp) \
@@ -91,12 +95,12 @@ typedef struct {
 extern uint osl_malloc_failed(osl_t *osh);
 
 #define	DMA_CONSISTENT_ALIGN	osl_dma_consistent_align()
-#define	DMA_ALLOC_CONSISTENT(osh, size, pap, dmah) \
-	osl_dma_alloc_consistent((osh), (size), (pap))
+#define	DMA_ALLOC_CONSISTENT(osh, size, align, tot, pap, dmah) \
+	osl_dma_alloc_consistent((osh), (size), (align), (tot), (pap))
 #define	DMA_FREE_CONSISTENT(osh, va, size, pa, dmah) \
 	osl_dma_free_consistent((osh), (void*)(va), (size), (pa))
 extern uint osl_dma_consistent_align(void);
-extern void *osl_dma_alloc_consistent(osl_t *osh, uint size, ulong *pap);
+extern void *osl_dma_alloc_consistent(osl_t *osh, uint size, uint16 align, uint *tot, ulong *pap);
 extern void osl_dma_free_consistent(osl_t *osh, void *va, uint size, ulong pa);
 
 #define	DMA_TX	1	
@@ -113,8 +117,6 @@ extern void osl_dma_unmap(osl_t *osh, uint pa, uint size, int direction);
 
 	#define SELECT_BUS_WRITE(osh, mmap_op, bus_op) mmap_op
 	#define SELECT_BUS_READ(osh, mmap_op, bus_op) mmap_op
-
-#define OSL_SYSUPTIME()		(0)
 
 #define OSL_ERROR(bcmerror)	osl_error(bcmerror)
 extern int osl_error(int bcmerror);
@@ -230,8 +232,13 @@ extern void osl_writeb(uint8 v, volatile uint8 *r);
 extern void osl_writew(uint16 v, volatile uint16 *r);
 extern void osl_writel(uint32 v, volatile uint32 *r);
 
+#define OSL_SYSUPTIME()		osl_sysuptime()
+extern uint32 osl_sysuptime(void);
+
 #define OSL_UNCACHED(va)	osl_uncached((va))
 extern void *osl_uncached(void *va);
+#define OSL_CACHED(va)		osl_cached((va))
+extern void *osl_cached(void *va);
 
 #define OSL_GETCYCLES(x)	((x) = osl_getcycles())
 extern uint osl_getcycles(void);
