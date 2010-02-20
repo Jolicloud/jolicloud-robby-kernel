@@ -724,7 +724,7 @@ static int load_elf_binary(struct linux_binprm *bprm, struct pt_regs *regs)
 	if (retval)
 		goto out_free_dentry;
 
-#ifdef CONFIG_X86_32
+#if defined(CONFIG_X86_32) && !defined(CONFIG_UML)
 	/*
 	 * Turn off the CS limit completely if exec-shield disabled or
 	 * NX active:
