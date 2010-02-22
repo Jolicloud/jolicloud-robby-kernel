@@ -89,17 +89,6 @@
 #define INTEL_FWH_DEVICE_CODE_4M		0xad
 
 /*
- * Force Firmware Hub probe method for specific PCI interface
- *
- * Auto-probing the FWH is the default behavior. Some devices that lack a FWH
- * but are a valid RNG may fail outright when probed, or, may cause an
- * unnecessary 0.5s to 1.0s delay during bootup.
- */
-#define FWH_AUTOLOAD		0
-#define FWH_SKIP_IF_LOCKED	1
-#define FWH_SKIP_ALWAYS		-1
-
-/*
  * Data for PCI driver interface
  *
  * This data only exists for exporting the supported
@@ -122,9 +111,7 @@ static const struct pci_device_id pci_tbl[] = {
 	{ PCI_DEVICE(0x8086, 0x248c) }, /* CAM */
 	{ PCI_DEVICE(0x8086, 0x24cc) }, /* DBM */
 	{ PCI_DEVICE(0x8086, 0x2641) }, /* FBM */
-	{ PCI_DEVICE(0x8086, 0x27b9),   /* GxM */
-	    .driver_data = FWH_SKIP_ALWAYS
-	},
+	{ PCI_DEVICE(0x8086, 0x27b9) }, /* GxM */
 	{ PCI_DEVICE(0x8086, 0x27bd) }, /* GxM DH */
 /* BA, CA, DB, Ex, 6300, Fx, 631x/632x, Gx
 	{ PCI_DEVICE(0x8086, 0x244e) }, */
@@ -159,10 +146,10 @@ static const struct pci_device_id pci_tbl[] = {
 MODULE_DEVICE_TABLE(pci, pci_tbl);
 
 static __initdata int no_fwh_detect;
-module_param(no_fwh_detect, int, FWH_AUTOLOAD);
+module_param(no_fwh_detect, int, 0);
 MODULE_PARM_DESC(no_fwh_detect, "Skip FWH detection:\n"
-				"  1 - skip if FWH space locked read-only\n"
-				" -1 - skip always");
+                                " positive value - skip if FWH space locked read-only\n"
+                                " negative value - skip always");
 
 static inline u8 hwstatus_get(void __iomem *mem)
 {
@@ -286,6 +273,7 @@ static int __init intel_rng_hw_init(void *_intel_rng_hw)
 	if (mfc != INTEL_FWH_MANUFACTURER_CODE ||
 	    (dvc != INTEL_FWH_DEVICE_CODE_8M &&
 	     dvc != INTEL_FWH_DEVICE_CODE_4M)) {
+		printk(KERN_NOTICE PFX "FWH not detected\n");
 		return -ENODEV;
 	}
 
@@ -323,7 +311,7 @@ PFX "don't want to disable this in firmware setup, and if\n"
 PFX "you are certain that your system has a functional\n"
 PFX "RNG, try using the 'no_fwh_detect' option.\n";
 
-		if (no_fwh_detect == FWH_SKIP_IF_LOCKED)
+		if (no_fwh_detect)
 			return -ENODEV;
 		printk(warning);
 		return -EBUSY;
@@ -346,22 +334,14 @@ static int __init mod_init(void)
 	u8 hw_status;
 	struct intel_rng_hw *intel_rng_hw;
 
-	for (i = 0; !dev && pci_tbl[i].vendor; ++i) {
+	for (i = 0; !dev && pci_tbl[i].vendor; ++i)
 		dev = pci_get_device(pci_tbl[i].vendor, pci_tbl[i].device,
 				     NULL);
-		/*
-		 * If the driver knows has a FWH preference, and the
-		 * user didn't specify the "no_fwh_detect" param, use the
-		 * driver's built-in setting.
-		 */
-		if (pci_tbl[i].driver_data && no_fwh_detect == FWH_AUTOLOAD)
-			no_fwh_detect = pci_tbl[i].driver_data;
-	}
 
 	if (!dev)
 		goto out; /* Device not found. */
 
-	if (no_fwh_detect == FWH_SKIP_ALWAYS) {
+	if (no_fwh_detect < 0) {
 		pci_dev_put(dev);
 		goto fwh_done;
 	}
@@ -393,10 +373,8 @@ static int __init mod_init(void)
 	pci_dev_put(dev);
 	iounmap(intel_rng_hw->mem);
 	kfree(intel_rng_hw);
-	if (err) {
-		printk(KERN_NOTICE PFX "Intel Firmware Hub not detected. "
-				       "Trying to initialize RNG anyway.\n");
-	}
+	if (err)
+		goto out;
 
 fwh_done:
 	err = -ENOMEM;
