@@ -4,17 +4,17 @@
 # This driver provides support for the
 # Direct Rendering Infrastructure (DRI) in XFree86 4.1.0 and higher.
 #
-config DRM
-	bool "Direct Rendering Manager (XFree86 4.1.0 and higher DRI support)"
-	help
-	  Kernel-level support for the Direct Rendering Infrastructure (DRI)
-	  introduced in XFree86 4.0. If you say Y here, you need to select
-	  the module that's right for your graphics card from the list below.
-	  These modules provide support for synchronization, security, and
-	  DMA transfers. Please see <http://dri.sourceforge.net/> for more
-	  details.  You should also select and configure AGP
-	  (/dev/agpgart) support.
-
+#config DRM
+#	bool "Direct Rendering Manager (XFree86 4.1.0 and higher DRI support)"
+#	help
+#	  Kernel-level support for the Direct Rendering Infrastructure (DRI)
+#	  introduced in XFree86 4.0. If you say Y here, you need to select
+#	  the module that's right for your graphics card from the list below.
+#	  These modules provide support for synchronization, security, and
+#	  DMA transfers. Please see <http://dri.sourceforge.net/> for more
+#	  details.  You should also select and configure AGP
+#	  (/dev/agpgart) support.
+#
 #config DRM_TDFX
 #	tristate "3dfx Banshee/Voodoo3+"
 #	depends on DRM && PCI
