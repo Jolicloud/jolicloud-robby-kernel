@@ -10,3 +10,6 @@ install_file	= vmlinuz
 server_sub	= virtual
 
 loader		= grub
+
+skipdbg		= true
+skipabi		= true
