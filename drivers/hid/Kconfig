@@ -248,6 +248,13 @@ config HID_SONY
 	---help---
 	Support for Sony PS3 controller.
 
+config HID_STANTUM
+	tristate "Stantum" if EMBEDDED
+	depends on USB_HID
+	default !EMBEDDED
+	---help---
+	Support for Stantum HID devices.
+
 config HID_SUNPLUS
 	tristate "Sunplus" if EMBEDDED
 	depends on USB_HID
