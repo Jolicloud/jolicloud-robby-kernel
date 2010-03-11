@@ -47,8 +47,39 @@ static struct usb_device_id id_table[] = {
 	{USB_DEVICE(0x05c6, 0x9221)},	/* Generic Gobi QDL device */
 	{USB_DEVICE(0x05c6, 0x9231)},	/* Generic Gobi QDL device */
 	{USB_DEVICE(0x1f45, 0x0001)},	/* Unknown Gobi QDL device */
+	{USB_DEVICE(0x16d8, 0x8001)},   /* CMOTech Gobi 2000 QDL device */
+	{USB_DEVICE(0x16d8, 0x8002)},   /* CMOTech Gobi 2000 Modem Device */
+	{USB_DEVICE(0x05c6, 0x9274)},   /* iRex Gobi 2000 QDL device */
+	{USB_DEVICE(0x05c6, 0x9275)},   /* iRex Gobi 2000 Modem Device */
+	{USB_DEVICE(0x1199, 0x9000)},   /* Sierra Gobi 2000 QDL device */
+	{USB_DEVICE(0x1199, 0x9001)},   /* Sierra Gobi 2000 Modem Device */
+	{USB_DEVICE(0x1199, 0x9002)},   /* Sierra Gobi 2000 Modem Device */
+	{USB_DEVICE(0x1199, 0x9003)},   /* Sierra Gobi 2000 Modem Device */
+	{USB_DEVICE(0x1199, 0x9004)},   /* Sierra Gobi 2000 Modem Device */
+	{USB_DEVICE(0x1199, 0x9005)},   /* Sierra Gobi 2000 Modem Device */
+	{USB_DEVICE(0x1199, 0x9006)},   /* Sierra Gobi 2000 Modem Device */
+	{USB_DEVICE(0x1199, 0x9007)},   /* Sierra Gobi 2000 Modem Device */
+	{USB_DEVICE(0x1199, 0x9008)},   /* Sierra Gobi 2000 Modem Device */
+	{USB_DEVICE(0x1199, 0x9009)},   /* Sierra Gobi 2000 Modem Device */
+	{USB_DEVICE(0x1199, 0x900a)},   /* Sierra Gobi 2000 Modem Device */
+	{USB_DEVICE(0x03f0, 0x241d)},   /* HP Gobi 2000 QDL device */
+	{USB_DEVICE(0x03f0, 0x251d)},   /* HP Gobi 2000 Modem Device */
+	{USB_DEVICE(0x413c, 0x8185)},   /* Dell Gobi 2000 QDL device */
+	{USB_DEVICE(0x413c, 0x8186)},   /* Dell Gobi 2000 Modem Device */
 	{USB_DEVICE(0x05c6, 0x9204)},	/* Gobi 2000 QDL device */
 	{USB_DEVICE(0x05c6, 0x9205)},	/* Gobi 2000 Modem device */
+	{USB_DEVICE(0x05c6, 0x9214)},   /* Acer Gobi 2000 QDL device */
+	{USB_DEVICE(0x05c6, 0x9215)},   /* Acer Gobi 2000 Modem Device */
+	{USB_DEVICE(0x05c6, 0x9244)},   /* Samsung Gobi 2000 QDL device */
+	{USB_DEVICE(0x05c6, 0x9245)},   /* Samsung Gobi 2000 Modem Device */
+	{USB_DEVICE(0x05c6, 0x9224)},   /* Sony Gobi 2000 QDL device */
+	{USB_DEVICE(0x05c6, 0x9225)},   /* Sony Gobi 2000 Modem Device */
+	{USB_DEVICE(0x05c6, 0x9234)},   /* Top Global Gobi 2000 QDL device */
+	{USB_DEVICE(0x05c6, 0x9235)},   /* Top Global Gobi 2000 Modem Device */
+	{USB_DEVICE(0x05c6, 0x9264)},   /* Asus Gobi 2000 QDL device */
+	{USB_DEVICE(0x05c6, 0x9265)},   /* Asus Gobi 2000 Modem Device */
+	{USB_DEVICE(0x413c, 0x8185)},   /* Dell Gobi 2000 QDL device */
+	{USB_DEVICE(0x413c, 0x8186)},   /* Dell Gobi 2000 Modem Device */
 	{ }				/* Terminating entry */
 };
 MODULE_DEVICE_TABLE(usb, id_table);
