@@ -1,0 +1,8 @@
+arch="armel"
+supported="omap"
+desc="OMAP3/4-based systems"
+target="Beagleboard, Gumstix, etc."
+bootloader="flash-kernel"
+provides=""
+section_image="universe/base"
+do_debug="Yes"
