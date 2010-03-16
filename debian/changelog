@@ -1,3 +1,19 @@
+linux (2.6.32.9-1.20) robby; urgency=low
+
+  [ Adam McDaniel ]
+
+  * JAMBON: qcserial: Add new device IDs
+
+  [ Anssi Hannula ]
+
+  * JAMBON: qcserial: Add support for Qualcomm Gobi 2000 devices
+
+  [ Matthew Garrett ]
+
+  * JAMBON: qcserial: Support gobi 2000 variants with 3 interfaces
+
+ -- Adam McDaniel <adam@jolicloud.org>  Fri, 12 Mar 2010 16:06:09 -0700
+
 linux (2.6.32.9-1.19) robby; urgency=low
 
   [ Adam McDaniel ]
