@@ -10,10 +10,10 @@ abi-check-%: $(abidir)/%
 	# JOLICLOUD: Hacked abi-check-% rule to symlink the new abi as the old.
 	# This prevents build errors when checking a jolicloud release one or
 	# more revisions later than the upstream ubuntu release.
-	if [ ! -e "$(prev_abidir)" ]; then \
-		mkdir -p `dirname "$(prev_abidir)"`; \
-		ln -s "$(abidir)" "$(prev_abidir)"; \
-	fi
+	#if [ ! -e "$(prev_abidir)" ]; then \
+	#	mkdir -p `dirname "$(prev_abidir)"`; \
+	#	ln -s "$(abidir)" "$(prev_abidir)"; \
+	#fi
 	
 	@perl -f debian/scripts/abi-check "$*" "$(prev_abinum)" "$(abinum)" \
 		"$(prev_abidir)" "$(abidir)" "$(skipabi)"
