@@ -41,8 +41,6 @@
 #error "*** Sorry, this driver requires kernel version 2.4.22 or higher"
 #endif
 
-#include <linux/autoconf.h>
-
 #include <linux/errno.h>
 #include <linux/init.h>
 #include <linux/kernel.h>

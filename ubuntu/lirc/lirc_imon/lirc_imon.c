@@ -30,8 +30,6 @@
 #error "*** Sorry, this driver requires a 2.6 kernel"
 #endif
 
-#include <linux/autoconf.h>
-
 #include <linux/errno.h>
 #include <linux/init.h>
 #include <linux/kernel.h>

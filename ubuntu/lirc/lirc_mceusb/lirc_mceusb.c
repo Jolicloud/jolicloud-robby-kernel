@@ -52,7 +52,6 @@
 #error "Sorry, this driver needs kernel version 2.6.5 or higher"
 #error "*******************************************************"
 #endif
-#include <linux/autoconf.h>
 #include <linux/kernel.h>
 #include <linux/errno.h>
 #include <linux/init.h>

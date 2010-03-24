@@ -34,7 +34,6 @@
 #error "**********************************************************"
 #endif
 
-#include <linux/autoconf.h>
 #ifdef CONFIG_SMP
 #error "--- Sorry, this driver is not SMP safe. ---"
 #endif
@@ -43,7 +42,6 @@
 #include <linux/sched.h>
 #include <linux/errno.h>
 #include <linux/signal.h>
-#include <linux/autoconf.h>
 #include <linux/fs.h>
 #include <linux/kernel.h>
 #include <linux/ioport.h>

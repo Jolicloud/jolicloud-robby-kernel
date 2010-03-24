@@ -45,8 +45,6 @@
 # include <config.h>
 #endif
 
-#include <linux/autoconf.h>
-
 #include <linux/sched.h>
 #include <linux/errno.h>
 #include <linux/signal.h>
