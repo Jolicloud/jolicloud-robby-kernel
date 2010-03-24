@@ -77,6 +77,7 @@ static inline int lirc_buffer_init(struct lirc_buffer *buf,
 				    unsigned int chunk_size,
 				    unsigned int size)
 {
+	int ret;
 	init_waitqueue_head(&buf->wait_poll);
 	spin_lock_init(&buf->lock);
 #ifndef LIRC_HAVE_KFIFO
@@ -85,8 +86,8 @@ static inline int lirc_buffer_init(struct lirc_buffer *buf,
 	buf->chunk_size = chunk_size;
 	buf->size = size;
 #ifdef LIRC_HAVE_KFIFO
-	buf->fifo = kfifo_alloc(size*chunk_size, GFP_KERNEL, &buf->lock);
-	if (!buf->fifo)
+	ret = kfifo_alloc(buf->fifo, size*chunk_size, GFP_KERNEL);
+	if (ret)
 		return -ENOMEM;
 #else
 	buf->data = kmalloc(size*chunk_size, GFP_KERNEL);
