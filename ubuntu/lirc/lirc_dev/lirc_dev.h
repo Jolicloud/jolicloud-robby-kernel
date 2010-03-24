@@ -183,7 +183,7 @@ static inline void lirc_buffer_read(struct lirc_buffer *buf,
 {
 #ifdef LIRC_HAVE_KFIFO
 	if (kfifo_len(buf->fifo) >= buf->chunk_size)
-		kfifo_get(buf->fifo, dest, buf->chunk_size);
+		kfifo_out(buf->fifo, dest, buf->chunk_size);
 #else
 	unsigned long flags;
 	lirc_buffer_lock(buf, &flags);
@@ -204,7 +204,7 @@ static inline void lirc_buffer_write(struct lirc_buffer *buf,
 				     unsigned char *orig)
 {
 #ifdef LIRC_HAVE_KFIFO
-	kfifo_put(buf->fifo, orig, buf->chunk_size);
+	kfifo_in(buf->fifo, orig, buf->chunk_size);
 #else
 	unsigned long flags;
 	lirc_buffer_lock(buf, &flags);
@@ -239,7 +239,7 @@ static inline void lirc_buffer_write_n(struct lirc_buffer *buf,
 				       unsigned char *orig, int count)
 {
 #ifdef LIRC_HAVE_KFIFO
-	kfifo_put(buf->fifo, orig, count * buf->chunk_size);
+	kfifo_in(buf->fifo, orig, count * buf->chunk_size);
 #else
 	unsigned long flags;
 	lirc_buffer_lock(buf, &flags);
