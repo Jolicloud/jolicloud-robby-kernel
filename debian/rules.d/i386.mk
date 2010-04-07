@@ -13,4 +13,4 @@ loader		= grub
 
 skipdbg		= true
 skipabi		= true
-skipmodules	= true
+skipmodule	= true
