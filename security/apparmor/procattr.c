@@ -33,17 +33,19 @@
 int aa_getprocattr(struct aa_profile *profile, char **string)
 {
 	char *str;
-	int len = 0, mode_len, name_len, ns_len = 0;
+	int len = 0, mode_len = 0, ns_len = 0, name_len;
 	const char *mode_str = profile_mode_names[profile->mode];
 	struct aa_namespace *ns = profile->ns;
 	char *s;
 
-	mode_len = strlen(mode_str) + 3;	/* + 3 for _() */
-	name_len = strlen(profile->base.hname);
+	/* unconfined profiles don't have a mode string appended */
+	if (!unconfined(profile))
+		mode_len = strlen(mode_str) + 3;	/* + 3 for _() */
 	if (ns != root_ns)
 		ns_len = strlen(ns->base.name) + 3; /*+ 3 for :// */
+	name_len = strlen(profile->base.hname);
 	len = mode_len + ns_len + name_len + 1;	    /*+ 1 for \n */
-	s = str = kmalloc(len + 1, GFP_ATOMIC);	    /* + 1 \0 */
+	s = str = kmalloc(len + 1, GFP_KERNEL);	    /* + 1 \0 */
 	if (!str)
 		return -ENOMEM;
 
@@ -51,7 +53,8 @@ int aa_getprocattr(struct aa_profile *profile, char **string)
 		sprintf(s, "%s://", ns->base.name);
 		s += ns_len;
 	}
-	if (profile->flags & PFLAG_UNCONFINED)
+	if (unconfined(profile))
+		/* mode string not being appended */
 		sprintf(s, "%s\n", profile->base.hname);
 	else
 		sprintf(s, "%s (%s)\n", profile->base.hname, mode_str);
