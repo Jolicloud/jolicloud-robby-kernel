@@ -444,17 +444,18 @@ static void __aa_replace_profile(struct aa_profile *old,
 		new->ns = aa_get_namespace(old->ns);
 		new->sid = old->sid;
 		__aa_add_profile(&policy->profiles, new);
+
+		/* inherit children */
+		list_for_each_entry_safe(child, tmp, &old->base.profiles,
+					 base.list) {
+			aa_put_profile(child->parent);
+			child->parent = aa_get_profile(new);
+			/* list refcount transfered to @new*/
+			list_move(&child->base.list, &new->base.profiles);
+		}
 	} else {
 		/* refcount not taken, held via @old refcount */
 		new = old->ns->unconfined;
-	}
-
-	/* inherit children */
-	list_for_each_entry_safe(child, tmp, &old->base.profiles, base.list) {
-		aa_put_profile(child->parent);
-		child->parent = aa_get_profile(new);
-		/* list refcount transfered to @new*/
-		list_move(&child->base.list, &new->base.profiles);
 	}
 
 	/* released by aa_free_profile */
