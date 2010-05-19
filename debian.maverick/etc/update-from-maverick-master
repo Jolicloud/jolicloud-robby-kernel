@@ -1,0 +1,93 @@
+#!/bin/bash
+
+#
+# This script is intended as a helper when updating from
+# Maverick master. When complete you should have a copy of
+# the master changelog with the correct release names.
+#
+MAV=maverick
+DMAS=debian.master
+DMAV=debian.${MAV}
+DEF_REPO=git://kernel.ubuntu.com/ubuntu/ubuntu-${MAV}.git
+MAVERICK_REPO="${DEF_REPO}"
+DEF_ARCHES="i386 amd64"
+FOREIGN_ARCHES="armel ia64 powerpc sparc config.common.ports"
+
+#
+# PPAs do not have a proposed pocket. The default assumes the
+# real archive is the upload target.
+#
+POCKET="-proposed"
+IGNORE_ABI=""
+IGNORE_MODULES=""
+
+usage="$0 [-r MAVERICK_REPO] [-p]"
+
+#
+# command line options:
+# [-r MAVERICK_REPO] - override default ${MAV} git repository.
+# [-p] - Assume the upload target is a PPA
+
+while getopts ":r:pim" opt; do
+	case $opt in
+	r ) MAVERICK_REPO="$OPTARG" ;;
+	p ) POCKET="" ;;
+	\? ) echo usage: ${usage}; exit ;;
+	esac
+done
+shift $(($OPTIND - 1))
+
+if [ ! -d ${DMAV} ]
+then
+	echo You must run this sript from the top directory of this repository.
+	exit 1
+fi
+
+#
+# Pull in any Maverick master branch updates.
+#
+git remote rm ${MAV}
+git remote add ${MAV} ${MAVERICK_REPO}
+if ! git fetch ${MAV} || ! git fetch ${MAV} master
+then
+	exit 1
+fi
+
+#
+# Find the most recent tag on ${MAV} master, then rebase against it. This avoids
+# the case where there have been some commits since the last official tag.
+#
+MASTER_TAG="`git describe --long refs/remotes/${MAV}/master | sed 's/-[0-9]*-.*$//'`"
+if ! git rebase ${MASTER_TAG}
+then
+	exit 1
+fi
+
+#
+# Update configs from master
+#
+rsync -av --delete ${DMAS}/config/ ${DMAV}/config
+
+#
+# Update changelog from master. Change the package name and release pocket.
+#
+cp ${DMAS}/changelog ${DMAV}/changelog
+sed -i -e '1s/'${MAV}'.*;/lucid'${POCKET}';/' -e '1s/^linux /linux-lts-backport-'${MAV}' /' -e '1s/)/~lucid1)/' ${DMAV}/changelog
+
+#
+# Finally, rerun updateconfigs.
+#
+fakeroot debian/rules clean updateconfigs
+
+#
+# Get the master branch ABI files, which can be mostly ignored since
+# the build is skipabi and skipmodule.
+# We can ignore ABI changes with the assurance that Maverick upstream
+# will change ABI when required.
+#
+rsync -av --delete ${DMAS}/abi/ ${DMAV}/abi
+for i in ${FOREIGN_ARCHES}
+do
+	rm -rf ${DMAV}/abi/2*/${i}
+done
+git add ${DMAV}/abi/2*
