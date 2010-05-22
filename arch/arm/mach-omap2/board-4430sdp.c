@@ -110,8 +110,16 @@ static struct platform_device sdp4430_lcd_device = {
 	.id		= -1,
 };
 
+static struct platform_device sdp4430_nop_usb_device = {
+	.name		= "nop_usb_xceiv",
+	.id		= -1,
+	.resource	= NULL,
+	.num_resources	= 0,
+};
+
 static struct platform_device *sdp4430_devices[] __initdata = {
 	&sdp4430_lcd_device,
+	&sdp4430_nop_usb_device,
 };
 
 static struct omap_lcd_config sdp4430_lcd_config __initdata = {
@@ -374,8 +382,6 @@ static void __init omap_4430sdp_init(void)
 	platform_add_devices(sdp4430_devices, ARRAY_SIZE(sdp4430_devices));
 	omap_serial_init();
 	omap4_twl6030_hsmmc_init(mmc);
-	/* OMAP4 SDP uses internal transceiver so register nop transceiver */
-	usb_nop_xceiv_register();
 	/* FIXME: allow multi-omap to boot until musb is updated for omap4 */
 	if (!cpu_is_omap44xx())
 		usb_musb_init(&musb_board_data);

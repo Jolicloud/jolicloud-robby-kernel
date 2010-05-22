@@ -618,6 +618,13 @@ struct spi_board_info omap3evm_spi_board_info[] = {
 	},
 };
 
+static struct platform_device omap3_evm_nop_usb_device = {
+	.name		= "nop_usb_xceiv",
+	.id		= -1,
+	.resource	= NULL,
+	.num_resources	= 0,
+};
+
 static struct omap_board_config_kernel omap3_evm_config[] __initdata = {
 };
 
@@ -632,6 +639,7 @@ static void __init omap3_evm_init_irq(void)
 
 static struct platform_device *omap3_evm_devices[] __initdata = {
 	&omap3_evm_dss_device,
+	&omap3_evm_nop_usb_device,
 };
 
 static struct ehci_hcd_omap_platform_data ehci_pdata __initdata = {
@@ -679,9 +687,6 @@ static void __init omap3_evm_init(void)
 				ARRAY_SIZE(omap3evm_spi_board_info));
 
 	omap_serial_init();
-
-	/* OMAP3EVM uses ISP1504 phy and so register nop transceiver */
-	usb_nop_xceiv_register();
 
 	if (get_omap3_evm_rev() >= OMAP3EVM_BOARD_GEN_2) {
 		/* enable EHCI VBUS using GPIO22 */
