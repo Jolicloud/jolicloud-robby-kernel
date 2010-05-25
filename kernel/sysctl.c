@@ -101,6 +101,26 @@ extern int sysctl_nr_open_min, sysctl_nr_open_max;
 #ifndef CONFIG_MMU
 extern int sysctl_nr_trim_pages;
 #endif
+
+int exec_shield = (1<<0);
+/* exec_shield is a bitmask:
+ * 0: off; vdso at STACK_TOP, 1 page below TASK_SIZE
+ * (1<<0) 1: on [also on if !=0]
+ * (1<<1) 2: force noexecstack regardless of PT_GNU_STACK
+ * The old settings
+ * (1<<2) 4: vdso just below .text of main (unless too low)
+ * (1<<3) 8: vdso just below .text of PT_INTERP (unless too low)
+ * are ignored because the vdso is placed completely randomly
+ */
+
+static int __init setup_exec_shield(char *str)
+{
+	get_option(&str, &exec_shield);
+
+	return 1;
+}
+__setup("exec-shield=", setup_exec_shield);
+
 #ifdef CONFIG_BLOCK
 extern int blk_iopoll_enabled;
 #endif
@@ -428,6 +448,14 @@ static struct ctl_table kern_table[] = {
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec,
 	},
+	{
+		.procname	= "exec-shield",
+		.data		= &exec_shield,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec,
+	},
+
 #ifdef CONFIG_PROC_SYSCTL
 	{
 		.procname	= "tainted",

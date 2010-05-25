@@ -124,13 +124,16 @@ static unsigned long mmap_legacy_base(void)
  */
 void arch_pick_mmap_layout(struct mm_struct *mm)
 {
-	if (mmap_is_legacy()) {
+	if (!(2 & exec_shield) && mmap_is_legacy()) {
 		mm->mmap_base = mmap_legacy_base();
 		mm->get_unmapped_area = arch_get_unmapped_area;
 		mm->unmap_area = arch_unmap_area;
 	} else {
 		mm->mmap_base = mmap_base();
 		mm->get_unmapped_area = arch_get_unmapped_area_topdown;
+		if (!(current->personality & READ_IMPLIES_EXEC)
+		    && mmap_is_ia32())
+			mm->get_unmapped_exec_area = arch_get_unmapped_exec_area;
 		mm->unmap_area = arch_unmap_area_topdown;
 	}
 }
