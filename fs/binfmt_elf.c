@@ -701,10 +701,12 @@ static int load_elf_binary(struct linux_binprm *bprm, struct pt_regs *regs)
 			break;
 		}
 
+#ifdef CONFIG_X86_32
 	if (current->personality == PER_LINUX && (exec_shield & 2)) {
 		executable_stack = EXSTACK_DISABLE_X;
 		current->flags |= PF_RANDOMIZE;
 	}
+#endif
 
 	/* Some simple consistency checks for the interpreter */
 	if (elf_interpreter) {
@@ -738,8 +740,11 @@ static int load_elf_binary(struct linux_binprm *bprm, struct pt_regs *regs)
 	/* Do this immediately, since STACK_TOP as used in setup_arg_pages
 	   may depend on the personality.  */
 	SET_PERSONALITY(loc->elf_ex);
-	if (!(exec_shield & 2) &&
-			elf_read_implies_exec(loc->elf_ex, executable_stack))
+	if (elf_read_implies_exec(loc->elf_ex, executable_stack)
+#ifdef CONFIG_X86_32
+	    && !(exec_shield & 2)
+#endif
+	   )
 		current->personality |= READ_IMPLIES_EXEC;
 
 	if (!(current->personality & ADDR_NO_RANDOMIZE) && randomize_va_space)

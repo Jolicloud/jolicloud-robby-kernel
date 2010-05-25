@@ -158,9 +158,6 @@ static inline int hlt_works(int cpu)
 
 #define cache_line_size()	(boot_cpu_data.x86_cache_alignment)
 
-#define __HAVE_ARCH_ALIGN_STACK
-extern unsigned long arch_align_stack(unsigned long sp);
-
 extern void cpu_detect(struct cpuinfo_x86 *c);
 
 extern struct pt_regs *idle_regs(struct pt_regs *);
