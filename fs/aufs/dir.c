@@ -292,8 +292,7 @@ static int au_do_fsync_dir_no_file(struct dentry *dentry, int datasync)
 		err = filemap_fdatawrite(h_inode->i_mapping);
 		AuDebugOn(!h_inode->i_fop);
 		if (!err && h_inode->i_fop->fsync)
-			err = h_inode->i_fop->fsync(NULL, h_path.dentry,
-						    datasync);
+			err = h_inode->i_fop->fsync(NULL, datasync);
 		if (!err)
 			err = filemap_fdatawrite(h_inode->i_mapping);
 		if (!err)
@@ -342,12 +341,13 @@ static int au_do_fsync_dir(struct file *file, int datasync)
 /*
  * @file may be NULL
  */
-static int aufs_fsync_dir(struct file *file, struct dentry *dentry,
-			  int datasync)
+static int aufs_fsync_dir(struct file *file, int datasync)
 {
 	int err;
+	struct dentry *dentry;
 	struct super_block *sb;
 
+	dentry = file->f_dentry;
 	IMustLock(dentry->d_inode);
 
 	err = 0;
