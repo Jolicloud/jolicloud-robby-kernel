@@ -1543,7 +1543,6 @@ void ath_set_hw_capab(struct ath_softc *sc, struct ieee80211_hw *hw)
 		IEEE80211_HW_SIGNAL_DBM |
 		IEEE80211_HW_SUPPORTS_PS |
 		IEEE80211_HW_PS_NULLFUNC_STACK |
-		IEEE80211_HW_REPORTS_TX_ACK_STATUS |
 		IEEE80211_HW_SPECTRUM_MGMT;
 
 	if (sc->sc_ah->caps.hw_caps & ATH9K_HW_CAP_HT)
@@ -2308,19 +2307,6 @@ static void ath9k_remove_interface(struct ieee80211_hw *hw,
 	mutex_unlock(&sc->mutex);
 }
 
-void ath9k_enable_ps(struct ath_softc *sc)
-{
-	sc->ps_enabled = true;
-	if (!(sc->sc_ah->caps.hw_caps & ATH9K_HW_CAP_AUTOSLEEP)) {
-		if ((sc->imask & ATH9K_INT_TIM_TIMER) == 0) {
-			sc->imask |= ATH9K_INT_TIM_TIMER;
-			ath9k_hw_set_interrupts(sc->sc_ah,
-					sc->imask);
-		}
-	}
-	ath9k_hw_setrxabort(sc->sc_ah, 1);
-}
-
 static int ath9k_config(struct ieee80211_hw *hw, u32 changed)
 {
 	struct ath_wiphy *aphy = hw->priv;
@@ -2352,9 +2338,19 @@ static int ath9k_config(struct ieee80211_hw *hw, u32 changed)
 	if (changed & IEEE80211_CONF_CHANGE_PS) {
 		if (conf->flags & IEEE80211_CONF_PS) {
 			sc->sc_flags |= SC_OP_PS_ENABLED;
+			if (!(ah->caps.hw_caps &
+			      ATH9K_HW_CAP_AUTOSLEEP)) {
+				if ((sc->imask & ATH9K_INT_TIM_TIMER) == 0) {
+					sc->imask |= ATH9K_INT_TIM_TIMER;
+					ath9k_hw_set_interrupts(sc->sc_ah,
+							sc->imask);
+				}
+			}
+			sc->ps_enabled = true;
 			if ((sc->sc_flags & SC_OP_NULLFUNC_COMPLETED)) {
 				sc->sc_flags &= ~SC_OP_NULLFUNC_COMPLETED;
-				ath9k_enable_ps(sc);
+				sc->ps_enabled = true;
+				ath9k_hw_setrxabort(sc->sc_ah, 1);
 			}
 		} else {
 			sc->ps_enabled = false;

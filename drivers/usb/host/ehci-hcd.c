@@ -993,7 +993,7 @@ rescan:
 	/* endpoints can be iso streams.  for now, we don't
 	 * accelerate iso completions ... so spin a while.
 	 */
-	if (qh->hw == NULL) {
+	if (qh->hw->hw_info1 == 0) {
 		ehci_vdbg (ehci, "iso delay\n");
 		goto idle_timeout;
 	}

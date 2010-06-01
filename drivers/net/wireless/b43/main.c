@@ -852,16 +852,19 @@ static void b43_op_update_tkip_key(struct ieee80211_hw *hw,
 	if (B43_WARN_ON(!modparam_hwtkip))
 		return;
 
-	/* This is only called from the RX path through mac80211, where
-	 * our mutex is already locked. */
-	B43_WARN_ON(!mutex_is_locked(&wl->mutex));
+	mutex_lock(&wl->mutex);
+
 	dev = wl->current_dev;
-	B43_WARN_ON(!dev || b43_status(dev) < B43_STAT_INITIALIZED);
+	if (!dev || b43_status(dev) < B43_STAT_INITIALIZED)
+		goto out_unlock;
 
 	keymac_write(dev, index, NULL);	/* First zero out mac to avoid race */
 
 	rx_tkip_phase1_write(dev, index, iv32, phase1key);
 	keymac_write(dev, index, addr);
+
+out_unlock:
+	mutex_unlock(&wl->mutex);
 }
 
 static void do_key_write(struct b43_wldev *dev,

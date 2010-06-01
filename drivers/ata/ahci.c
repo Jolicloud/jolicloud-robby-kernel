@@ -2831,14 +2831,6 @@ static bool ahci_broken_suspend(struct pci_dev *pdev)
 		 * On HP dv[4-6] and HDX18 with earlier BIOSen, link
 		 * to the harddisk doesn't become online after
 		 * resuming from STR.  Warn and fail suspend.
-		 *
-		 * http://bugzilla.kernel.org/show_bug.cgi?id=12276
-		 *
-		 * Use dates instead of versions to match as HP is
-		 * apparently recycling both product and version
-		 * strings.
-		 *
-		 * http://bugzilla.kernel.org/show_bug.cgi?id=15462
 		 */
 		{
 			.ident = "dv4",
@@ -2847,7 +2839,7 @@ static bool ahci_broken_suspend(struct pci_dev *pdev)
 				DMI_MATCH(DMI_PRODUCT_NAME,
 					  "HP Pavilion dv4 Notebook PC"),
 			},
-			.driver_data = "20090105",	/* F.30 */
+			.driver_data = "F.30", /* cutoff BIOS version */
 		},
 		{
 			.ident = "dv5",
@@ -2856,7 +2848,7 @@ static bool ahci_broken_suspend(struct pci_dev *pdev)
 				DMI_MATCH(DMI_PRODUCT_NAME,
 					  "HP Pavilion dv5 Notebook PC"),
 			},
-			.driver_data = "20090506",	/* F.16 */
+			.driver_data = "F.16", /* cutoff BIOS version */
 		},
 		{
 			.ident = "dv6",
@@ -2865,7 +2857,7 @@ static bool ahci_broken_suspend(struct pci_dev *pdev)
 				DMI_MATCH(DMI_PRODUCT_NAME,
 					  "HP Pavilion dv6 Notebook PC"),
 			},
-			.driver_data = "20090423",	/* F.21 */
+			.driver_data = "F.21",	/* cutoff BIOS version */
 		},
 		{
 			.ident = "HDX18",
@@ -2874,7 +2866,7 @@ static bool ahci_broken_suspend(struct pci_dev *pdev)
 				DMI_MATCH(DMI_PRODUCT_NAME,
 					  "HP HDX18 Notebook PC"),
 			},
-			.driver_data = "20090430",	/* F.23 */
+			.driver_data = "F.23",	/* cutoff BIOS version */
 		},
 		/*
 		 * Acer eMachines G725 has the same problem.  BIOS
@@ -2882,8 +2874,6 @@ static bool ahci_broken_suspend(struct pci_dev *pdev)
 		 * work.  Inbetween, there are V1.06, V2.06 and V3.03
 		 * that we don't have much idea about.  For now,
 		 * blacklist anything older than V3.04.
-		 *
-		 * http://bugzilla.kernel.org/show_bug.cgi?id=15104
 		 */
 		{
 			.ident = "G725",
@@ -2891,21 +2881,19 @@ static bool ahci_broken_suspend(struct pci_dev *pdev)
 				DMI_MATCH(DMI_SYS_VENDOR, "eMachines"),
 				DMI_MATCH(DMI_PRODUCT_NAME, "eMachines G725"),
 			},
-			.driver_data = "20091216",	/* V3.04 */
+			.driver_data = "V3.04",	/* cutoff BIOS version */
 		},
 		{ }	/* terminate list */
 	};
 	const struct dmi_system_id *dmi = dmi_first_match(sysids);
-	int year, month, date;
-	char buf[9];
+	const char *ver;
 
 	if (!dmi || pdev->bus->number || pdev->devfn != PCI_DEVFN(0x1f, 2))
 		return false;
 
-	dmi_get_date(DMI_BIOS_DATE, &year, &month, &date);
-	snprintf(buf, sizeof(buf), "%04d%02d%02d", year, month, date);
+	ver = dmi_get_system_info(DMI_BIOS_VERSION);
 
-	return strcmp(buf, dmi->driver_data) < 0;
+	return !ver || strcmp(ver, dmi->driver_data) < 0;
 }
 
 static bool ahci_broken_online(struct pci_dev *pdev)
