@@ -35,9 +35,7 @@
 #include <linux/usb.h>
 #include <linux/platform_device.h>
 #include <linux/io.h>
-#include <linux/mm.h>
 #include <linux/irq.h>
-#include <asm/cacheflush.h>
 
 #include "../core/hcd.h"
 #include "r8a66597.h"
@@ -822,26 +820,6 @@ static void enable_r8a66597_pipe(struct r8a66597 *r8a66597, struct urb *urb,
 	enable_r8a66597_pipe_dma(r8a66597, dev, pipe, urb);
 }
 
-static void r8a66597_urb_done(struct r8a66597 *r8a66597, struct urb *urb,
-			      int status)
-__releases(r8a66597->lock)
-__acquires(r8a66597->lock)
-{
-	if (usb_pipein(urb->pipe) && usb_pipetype(urb->pipe) != PIPE_CONTROL) {
-		void *ptr;
-
-		for (ptr = urb->transfer_buffer;
-		     ptr < urb->transfer_buffer + urb->transfer_buffer_length;
-		     ptr += PAGE_SIZE)
-			flush_dcache_page(virt_to_page(ptr));
-	}
-
-	usb_hcd_unlink_urb_from_ep(r8a66597_to_hcd(r8a66597), urb);
-	spin_unlock(&r8a66597->lock);
-	usb_hcd_giveback_urb(r8a66597_to_hcd(r8a66597), urb, status);
-	spin_lock(&r8a66597->lock);
-}
-
 /* this function must be called with interrupt disabled */
 static void force_dequeue(struct r8a66597 *r8a66597, u16 pipenum, u16 address)
 {
@@ -862,9 +840,15 @@ static void force_dequeue(struct r8a66597 *r8a66597, u16 pipenum, u16 address)
 		list_del(&td->queue);
 		kfree(td);
 
-		if (urb)
-			r8a66597_urb_done(r8a66597, urb, -ENODEV);
+		if (urb) {
+			usb_hcd_unlink_urb_from_ep(r8a66597_to_hcd(r8a66597),
+					urb);
 
+			spin_unlock(&r8a66597->lock);
+			usb_hcd_giveback_urb(r8a66597_to_hcd(r8a66597), urb,
+					-ENODEV);
+			spin_lock(&r8a66597->lock);
+		}
 		break;
 	}
 }
@@ -1301,7 +1285,10 @@ __releases(r8a66597->lock) __acquires(r8a66597->lock)
 		if (usb_pipeisoc(urb->pipe))
 			urb->start_frame = r8a66597_get_frame(hcd);
 
-		r8a66597_urb_done(r8a66597, urb, status);
+		usb_hcd_unlink_urb_from_ep(r8a66597_to_hcd(r8a66597), urb);
+		spin_unlock(&r8a66597->lock);
+		usb_hcd_giveback_urb(hcd, urb, status);
+		spin_lock(&r8a66597->lock);
 	}
 
 	if (restart) {
