@@ -400,9 +400,10 @@ int disable_nonboot_cpus(void)
 		if (cpu == first_cpu)
 			continue;
 		error = _cpu_down(cpu, 1);
-		if (!error)
+		if (!error) {
 			cpumask_set_cpu(cpu, frozen_cpus);
-		else {
+			printk("CPU%d is down\n", cpu);
+		} else {
 			printk(KERN_ERR "Error taking CPU%d down: %d\n",
 				cpu, error);
 			break;

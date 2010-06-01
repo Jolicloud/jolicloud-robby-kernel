@@ -216,17 +216,8 @@ static void disable_controller(struct r8a66597 *r8a66597)
 {
 	int port;
 
-	/* disable interrupts */
 	r8a66597_write(r8a66597, 0, INTENB0);
-	r8a66597_write(r8a66597, 0, INTENB1);
-	r8a66597_write(r8a66597, 0, BRDYENB);
-	r8a66597_write(r8a66597, 0, BEMPENB);
-	r8a66597_write(r8a66597, 0, NRDYENB);
-
-	/* clear status */
-	r8a66597_write(r8a66597, 0, BRDYSTS);
-	r8a66597_write(r8a66597, 0, NRDYSTS);
-	r8a66597_write(r8a66597, 0, BEMPSTS);
+	r8a66597_write(r8a66597, 0, INTSTS0);
 
 	for (port = 0; port < r8a66597->max_root_hub; port++)
 		r8a66597_disable_port(r8a66597, port);
@@ -2478,12 +2469,6 @@ static int __devinit r8a66597_probe(struct platform_device *pdev)
 	r8a66597->rh_timer.function = r8a66597_timer;
 	r8a66597->rh_timer.data = (unsigned long)r8a66597;
 	r8a66597->reg = (unsigned long)reg;
-
-	/* make sure no interrupts are pending */
-	ret = r8a66597_clock_enable(r8a66597);
-	if (ret < 0)
-		goto clean_up3;
-	disable_controller(r8a66597);
 
 	for (i = 0; i < R8A66597_MAX_NUM_PIPE; i++) {
 		INIT_LIST_HEAD(&r8a66597->pipe_queue[i]);
