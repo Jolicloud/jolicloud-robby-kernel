@@ -2086,18 +2086,11 @@ static inline int is_si_special(const struct siginfo *info)
 	return info <= SEND_SIG_FORCED;
 }
 
-/*
- * True if we are on the alternate signal stack.
- */
+/* True if we are on the alternate signal stack.  */
+
 static inline int on_sig_stack(unsigned long sp)
 {
-#ifdef CONFIG_STACK_GROWSUP
-	return sp >= current->sas_ss_sp &&
-		sp - current->sas_ss_sp < current->sas_ss_size;
-#else
-	return sp > current->sas_ss_sp &&
-		sp - current->sas_ss_sp <= current->sas_ss_size;
-#endif
+	return (sp - current->sas_ss_sp < current->sas_ss_size);
 }
 
 static inline int sas_ss_flags(unsigned long sp)
