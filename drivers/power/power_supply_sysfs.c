@@ -13,6 +13,7 @@
 
 #include <linux/ctype.h>
 #include <linux/power_supply.h>
+#include <linux/slab.h>
 
 #include "power_supply.h"
 
@@ -65,7 +66,10 @@ static ssize_t power_supply_show_property(struct device *dev,
 	ret = psy->get_property(psy, off, &value);
 
 	if (ret < 0) {
-		if (ret != -ENODEV)
+		if (ret == -ENODATA)
+			dev_dbg(dev, "driver has no data for `%s' property\n",
+				attr->attr.name);
+		else if (ret != -ENODEV)
 			dev_err(dev, "driver failed to report `%s' property\n",
 				attr->attr.name);
 		return ret;
@@ -96,6 +100,7 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(present),
 	POWER_SUPPLY_ATTR(online),
 	POWER_SUPPLY_ATTR(technology),
+	POWER_SUPPLY_ATTR(cycle_count),
 	POWER_SUPPLY_ATTR(voltage_max),
 	POWER_SUPPLY_ATTR(voltage_min),
 	POWER_SUPPLY_ATTR(voltage_max_design),

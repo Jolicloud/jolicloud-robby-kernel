@@ -32,6 +32,7 @@
 #include <linux/uaccess.h>
 #include <linux/io.h>
 #include <linux/spinlock.h>
+#include <linux/slab.h>
 
 #define TIMEOUT_MIN		1
 #define TIMEOUT_MAX		2
@@ -202,7 +203,7 @@ static int at32_wdt_get_status(void)
 	return status;
 }
 
-static struct watchdog_info at32_wdt_info = {
+static const struct watchdog_info at32_wdt_info = {
 	.identity	= "at32ap700x watchdog",
 	.options	= WDIOF_SETTIMEOUT |
 			  WDIOF_KEEPALIVEPING |
@@ -326,7 +327,7 @@ static int __init at32_wdt_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	wdt->regs = ioremap(regs->start, regs->end - regs->start + 1);
+	wdt->regs = ioremap(regs->start, resource_size(regs));
 	if (!wdt->regs) {
 		ret = -ENOMEM;
 		dev_dbg(&pdev->dev, "could not map I/O memory\n");

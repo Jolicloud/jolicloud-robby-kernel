@@ -8,6 +8,7 @@
 
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/slab.h>
 #include <linux/errno.h>
 #include <linux/init.h>
 #include <linux/types.h>
@@ -365,11 +366,10 @@ static inline void sgiseeq_rx(struct net_device *dev, struct sgiseeq_private *sp
 					}
 					skb_reserve(newskb, 2);
 				} else {
-					skb = netdev_alloc_skb(dev, len + 2);
-					if (skb) {
-						skb_reserve(skb, 2);
+					skb = netdev_alloc_skb_ip_align(dev, len);
+					if (skb)
 						skb_copy_to_linear_data(skb, rd->skb->data, len);
-					}
+
 					newskb = rd->skb;
 				}
 memory_squeeze:
@@ -593,8 +593,10 @@ static int sgiseeq_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	/* Setup... */
 	len = skb->len;
 	if (len < ETH_ZLEN) {
-		if (skb_padto(skb, ETH_ZLEN))
+		if (skb_padto(skb, ETH_ZLEN)) {
+			spin_unlock_irqrestore(&sp->tx_lock, flags);
 			return NETDEV_TX_OK;
+		}
 		len = ETH_ZLEN;
 	}
 
@@ -661,7 +663,7 @@ static void sgiseeq_set_multicast(struct net_device *dev)
 
 	if(dev->flags & IFF_PROMISC)
 		sp->mode = SEEQ_RCMD_RANY;
-	else if ((dev->flags & IFF_ALLMULTI) || dev->mc_count)
+	else if ((dev->flags & IFF_ALLMULTI) || !netdev_mc_empty(dev))
 		sp->mode = SEEQ_RCMD_RBMCAST;
 	else
 		sp->mode = SEEQ_RCMD_RBCAST;

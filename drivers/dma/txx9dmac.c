@@ -1313,7 +1313,7 @@ static int txx9dmac_resume_noirq(struct device *dev)
 
 }
 
-static struct dev_pm_ops txx9dmac_dev_pm_ops = {
+static const struct dev_pm_ops txx9dmac_dev_pm_ops = {
 	.suspend_noirq = txx9dmac_suspend_noirq,
 	.resume_noirq = txx9dmac_resume_noirq,
 };
@@ -1359,3 +1359,5 @@ module_exit(txx9dmac_exit);
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("TXx9 DMA Controller driver");
 MODULE_AUTHOR("Atsushi Nemoto <anemo@mba.ocn.ne.jp>");
+MODULE_ALIAS("platform:txx9dmac");
+MODULE_ALIAS("platform:txx9dmac-chan");

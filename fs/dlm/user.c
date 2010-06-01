@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2009 Red Hat, Inc.  All rights reserved.
+ * Copyright (C) 2006-2010 Red Hat, Inc.  All rights reserved.
  *
  * This copyrighted material is made available to anyone wishing to use,
  * modify, copy, or redistribute it subject to the terms and conditions
@@ -17,6 +17,7 @@
 #include <linux/spinlock.h>
 #include <linux/dlm.h>
 #include <linux/dlm_device.h>
+#include <linux/slab.h>
 
 #include "dlm_internal.h"
 #include "lockspace.h"
@@ -173,7 +174,7 @@ static int lkb_is_endoflife(struct dlm_lkb *lkb, int sb_status, int type)
 /* we could possibly check if the cancel of an orphan has resulted in the lkb
    being removed and then remove that lkb from the orphans list and free it */
 
-void dlm_user_add_ast(struct dlm_lkb *lkb, int type, int bastmode)
+void dlm_user_add_ast(struct dlm_lkb *lkb, int type, int mode)
 {
 	struct dlm_ls *ls;
 	struct dlm_user_args *ua;
@@ -206,8 +207,10 @@ void dlm_user_add_ast(struct dlm_lkb *lkb, int type, int bastmode)
 
 	ast_type = lkb->lkb_ast_type;
 	lkb->lkb_ast_type |= type;
-	if (bastmode)
-		lkb->lkb_bastmode = bastmode;
+	if (type == AST_BAST)
+		lkb->lkb_bastmode = mode;
+	else
+		lkb->lkb_castmode = mode;
 
 	if (!ast_type) {
 		kref_get(&lkb->lkb_ref);
@@ -267,7 +270,7 @@ static int device_user_lock(struct dlm_user_proc *proc,
 		goto out;
 	}
 
-	ua = kzalloc(sizeof(struct dlm_user_args), GFP_KERNEL);
+	ua = kzalloc(sizeof(struct dlm_user_args), GFP_NOFS);
 	if (!ua)
 		goto out;
 	ua->proc = proc;
@@ -307,7 +310,7 @@ static int device_user_unlock(struct dlm_user_proc *proc,
 	if (!ls)
 		return -ENOENT;
 
-	ua = kzalloc(sizeof(struct dlm_user_args), GFP_KERNEL);
+	ua = kzalloc(sizeof(struct dlm_user_args), GFP_NOFS);
 	if (!ua)
 		goto out;
 	ua->proc = proc;
@@ -352,7 +355,7 @@ static int dlm_device_register(struct dlm_ls *ls, char *name)
 
 	error = -ENOMEM;
 	len = strlen(name) + strlen(name_prefix) + 2;
-	ls->ls_device.name = kzalloc(len, GFP_KERNEL);
+	ls->ls_device.name = kzalloc(len, GFP_NOFS);
 	if (!ls->ls_device.name)
 		goto fail;
 
@@ -520,7 +523,7 @@ static ssize_t device_write(struct file *file, const char __user *buf,
 #endif
 		return -EINVAL;
 
-	kbuf = kzalloc(count + 1, GFP_KERNEL);
+	kbuf = kzalloc(count + 1, GFP_NOFS);
 	if (!kbuf)
 		return -ENOMEM;
 
@@ -546,7 +549,7 @@ static ssize_t device_write(struct file *file, const char __user *buf,
 
 		/* add 1 after namelen so that the name string is terminated */
 		kbuf = kzalloc(sizeof(struct dlm_write_request) + namelen + 1,
-			       GFP_KERNEL);
+			       GFP_NOFS);
 		if (!kbuf) {
 			kfree(k32buf);
 			return -ENOMEM;
@@ -648,7 +651,7 @@ static int device_open(struct inode *inode, struct file *file)
 	if (!ls)
 		return -ENOENT;
 
-	proc = kzalloc(sizeof(struct dlm_user_proc), GFP_KERNEL);
+	proc = kzalloc(sizeof(struct dlm_user_proc), GFP_NOFS);
 	if (!proc) {
 		dlm_put_lockspace(ls);
 		return -ENOMEM;

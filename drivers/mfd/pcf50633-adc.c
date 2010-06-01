@@ -17,6 +17,7 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/device.h>
@@ -209,17 +210,16 @@ static void pcf50633_adc_irq(int irq, void *data)
 
 static int __devinit pcf50633_adc_probe(struct platform_device *pdev)
 {
-	struct pcf50633_subdev_pdata *pdata = pdev->dev.platform_data;
 	struct pcf50633_adc *adc;
 
 	adc = kzalloc(sizeof(*adc), GFP_KERNEL);
 	if (!adc)
 		return -ENOMEM;
 
-	adc->pcf = pdata->pcf;
+	adc->pcf = dev_to_pcf50633(pdev->dev.parent);
 	platform_set_drvdata(pdev, adc);
 
-	pcf50633_register_irq(pdata->pcf, PCF50633_IRQ_ADCRDY,
+	pcf50633_register_irq(adc->pcf, PCF50633_IRQ_ADCRDY,
 					pcf50633_adc_irq, adc);
 
 	mutex_init(&adc->queue_mutex);

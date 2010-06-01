@@ -9,7 +9,6 @@
  * 2 of the License, or (at your option) any later version.
  */
 
-#include <linux/slab.h>
 #include <linux/sysctl.h>
 #include <linux/proc_fs.h>
 #include <linux/init.h>
@@ -176,21 +175,19 @@ static int procctl_frv_pin_cxnr(ctl_table *table, int write, struct file *filp,
 static struct ctl_table frv_table[] =
 {
 	{
-		.ctl_name 	= 1,
 		.procname 	= "cache-mode",
 		.data		= NULL,
 		.maxlen		= 0,
 		.mode		= 0644,
-		.proc_handler	= &procctl_frv_cachemode,
+		.proc_handler	= procctl_frv_cachemode,
 	},
 #ifdef CONFIG_MMU
 	{
-		.ctl_name	= 2,
 		.procname	= "pin-cxnr",
 		.data		= NULL,
 		.maxlen		= 0,
 		.mode		= 0644,
-		.proc_handler	= &procctl_frv_pin_cxnr
+		.proc_handler	= procctl_frv_pin_cxnr
 	},
 #endif
 	{}
@@ -203,7 +200,6 @@ static struct ctl_table frv_table[] =
 static struct ctl_table frv_dir_table[] =
 {
 	{
-		.ctl_name	= CTL_FRV,
 		.procname	= "frv",
 		.mode 		= 0555,
 		.child		= frv_table

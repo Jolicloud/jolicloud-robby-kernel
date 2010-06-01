@@ -17,6 +17,7 @@
 #include <linux/fs.h>
 #include <linux/jhash.h>
 #include <linux/namei.h>
+#include <linux/slab.h>
 #include <linux/pagemap.h>
 
 #include "netfs.h"
@@ -722,8 +723,6 @@ static int pohmelfs_remove_entry(struct inode *dir, struct dentry *dentry)
 		if (inode->i_nlink)
 			inode_dec_link_count(inode);
 	}
-	dprintk("%s: inode: %p, lock: %ld, unhashed: %d.\n",
-		__func__, pi, inode->i_state & I_LOCK, hlist_unhashed(&inode->i_hash));
 
 	return err;
 }

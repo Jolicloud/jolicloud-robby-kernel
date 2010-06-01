@@ -29,6 +29,7 @@
 #include <linux/delay.h>
 #include <linux/clk.h>
 #include <linux/gpio.h>
+#include <linux/slab.h>
 
 #include <asm/io.h>
 #include <asm/irq.h>
@@ -1709,7 +1710,7 @@ static int pxa2xx_spi_resume(struct device *dev)
 	return 0;
 }
 
-static struct dev_pm_ops pxa2xx_spi_pm_ops = {
+static const struct dev_pm_ops pxa2xx_spi_pm_ops = {
 	.suspend	= pxa2xx_spi_suspend,
 	.resume		= pxa2xx_spi_resume,
 };

@@ -19,6 +19,7 @@
 
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/gfp.h>
 #include <linux/pci.h>
 #include <linux/blkdev.h>
 #include <linux/delay.h>
@@ -416,6 +417,10 @@ static struct ata_port_operations sil24_ops = {
 	.port_resume		= sil24_port_resume,
 #endif
 };
+
+static int sata_sil24_msi;    /* Disable MSI */
+module_param_named(msi, sata_sil24_msi, bool, S_IRUGO);
+MODULE_PARM_DESC(msi, "Enable MSI (Default: false)");
 
 /*
  * Use bits 30-31 of port_flags to encode available port numbers.
@@ -1339,6 +1344,11 @@ static int sil24_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 	pcie_set_readrq(pdev, 4096);
 
 	sil24_init_controller(host);
+
+	if (sata_sil24_msi && !pci_enable_msi(pdev)) {
+		dev_printk(KERN_INFO, &pdev->dev, "Using MSI\n");
+		pci_intx(pdev, 0);
+	}
 
 	pci_set_master(pdev);
 	return ata_host_activate(host, pdev->irq, sil24_interrupt, IRQF_SHARED,

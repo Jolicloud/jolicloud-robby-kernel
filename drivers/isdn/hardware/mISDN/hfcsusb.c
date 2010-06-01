@@ -33,6 +33,7 @@
 #include <linux/delay.h>
 #include <linux/usb.h>
 #include <linux/mISDNhw.h>
+#include <linux/slab.h>
 #include "hfcsusb.h"
 
 static const char *hfcsusb_rev = "Revision: 0.3.3 (socket), 2008-11-05";
@@ -721,7 +722,7 @@ hfcsusb_setup_bch(struct bchannel *bch, int protocol)
 	switch (protocol) {
 	case (-1):	/* used for init */
 		bch->state = -1;
-		/* fall trough */
+		/* fall through */
 	case (ISDN_P_NONE):
 		if (bch->state == ISDN_P_NONE)
 			return 0; /* already in idle state */

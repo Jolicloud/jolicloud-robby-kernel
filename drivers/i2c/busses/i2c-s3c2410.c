@@ -34,6 +34,7 @@
 #include <linux/platform_device.h>
 #include <linux/clk.h>
 #include <linux/cpufreq.h>
+#include <linux/slab.h>
 
 #include <asm/irq.h>
 #include <asm/io.h>
@@ -967,7 +968,7 @@ static int s3c24xx_i2c_resume(struct device *dev)
 	return 0;
 }
 
-static struct dev_pm_ops s3c24xx_i2c_dev_pm_ops = {
+static const struct dev_pm_ops s3c24xx_i2c_dev_pm_ops = {
 	.suspend_noirq = s3c24xx_i2c_suspend_noirq,
 	.resume = s3c24xx_i2c_resume,
 };

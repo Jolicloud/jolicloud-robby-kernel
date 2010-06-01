@@ -14,6 +14,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/device.h>
+#include <linux/slab.h>
 #include <linux/gpio.h>
 #include <linux/of.h>
 #include <linux/of_gpio.h>
@@ -21,6 +22,8 @@
 #include <linux/spi/mmc_spi.h>
 #include <linux/mmc/core.h>
 #include <linux/mmc/host.h>
+
+MODULE_LICENSE("GPL");
 
 enum {
 	CD_GPIO = 0,

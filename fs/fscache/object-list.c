@@ -12,6 +12,7 @@
 #define FSCACHE_DEBUG_LEVEL COOKIE
 #include <linux/module.h>
 #include <linux/seq_file.h>
+#include <linux/slab.h>
 #include <linux/key.h>
 #include <keys/user-type.h>
 #include "internal.h"
@@ -91,7 +92,7 @@ EXPORT_SYMBOL(fscache_object_destroy);
  */
 static struct fscache_object *fscache_objlist_lookup(loff_t *_pos)
 {
-	struct fscache_object *pobj, *obj, *minobj = NULL;
+	struct fscache_object *pobj, *obj = NULL, *minobj = NULL;
 	struct rb_node *p;
 	unsigned long pos;
 

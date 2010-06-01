@@ -48,13 +48,13 @@
 #include <linux/netdevice.h>
 #include <linux/ioport.h>
 #include <linux/delay.h>
-#include <linux/slab.h>
 #include <linux/init.h>
 #include <linux/rtnetlink.h>
 #include <linux/serial_reg.h>
 #include <linux/dma-mapping.h>
 #include <linux/pnp.h>
 #include <linux/platform_device.h>
+#include <linux/gfp.h>
 
 #include <asm/io.h>
 #include <asm/dma.h>
@@ -115,7 +115,7 @@ struct smsc_ircc_subsystem_configuration {
 	unsigned short vendor; /* PCI vendor ID */
 	unsigned short device; /* PCI vendor ID */
 	unsigned short subvendor; /* PCI subsystem vendor ID */
-	unsigned short subdevice; /* PCI sybsystem device ID */
+	unsigned short subdevice; /* PCI subsystem device ID */
 	unsigned short sir_io; /* I/O port for SIR */
 	unsigned short fir_io; /* I/O port for FIR */
 	unsigned char  fir_irq; /* FIR IRQ */

@@ -29,6 +29,7 @@
 #include <linux/poll.h>
 #include <linux/ptrace.h>
 #include <linux/seq_file.h>
+#include <linux/slab.h>
 
 #include <asm/io.h>
 #include <asm/time.h>
@@ -2494,7 +2495,7 @@ static ssize_t spufs_switch_log_read(struct file *file, char __user *buf,
 	struct spu_context *ctx = SPUFS_I(inode)->i_ctx;
 	int error = 0, cnt = 0;
 
-	if (!buf || len < 0)
+	if (!buf)
 		return -EINVAL;
 
 	error = spu_acquire(ctx);

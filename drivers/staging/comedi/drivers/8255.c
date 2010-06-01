@@ -81,6 +81,7 @@ I/O port base address can be found in the output of 'lspci -v'.
 #include "../comedidev.h"
 
 #include <linux/ioport.h>
+#include <linux/slab.h>
 
 #define _8255_SIZE 4
 
@@ -132,6 +133,7 @@ void subdev_8255_interrupt(struct comedi_device *dev,
 
 	comedi_event(dev, s);
 }
+EXPORT_SYMBOL(subdev_8255_interrupt);
 
 static int subdev_8255_cb(int dir, int port, int data, unsigned long arg)
 {
@@ -179,15 +181,14 @@ static int subdev_8255_insn_config(struct comedi_device *dev,
 	unsigned int bits;
 
 	mask = 1 << CR_CHAN(insn->chanspec);
-	if (mask & 0x0000ff) {
+	if (mask & 0x0000ff)
 		bits = 0x0000ff;
-	} else if (mask & 0x00ff00) {
+	else if (mask & 0x00ff00)
 		bits = 0x00ff00;
-	} else if (mask & 0x0f0000) {
+	else if (mask & 0x0f0000)
 		bits = 0x0f0000;
-	} else {
+	else
 		bits = 0xf00000;
-	}
 
 	switch (data[0]) {
 	case INSN_CONFIG_DIO_INPUT:
@@ -333,11 +334,10 @@ int subdev_8255_init(struct comedi_device *dev, struct comedi_subdevice *s,
 		return -ENOMEM;
 
 	CALLBACK_ARG = arg;
-	if (cb == NULL) {
+	if (cb == NULL)
 		CALLBACK_FUNC = subdev_8255_cb;
-	} else {
+	else
 		CALLBACK_FUNC = cb;
-	}
 	s->insn_bits = subdev_8255_insn;
 	s->insn_config = subdev_8255_insn_config;
 
@@ -347,6 +347,7 @@ int subdev_8255_init(struct comedi_device *dev, struct comedi_subdevice *s,
 
 	return 0;
 }
+EXPORT_SYMBOL(subdev_8255_init);
 
 int subdev_8255_init_irq(struct comedi_device *dev, struct comedi_subdevice *s,
 			 int (*cb) (int, int, int, unsigned long),
@@ -366,6 +367,7 @@ int subdev_8255_init_irq(struct comedi_device *dev, struct comedi_subdevice *s,
 
 	return 0;
 }
+EXPORT_SYMBOL(subdev_8255_init_irq);
 
 void subdev_8255_cleanup(struct comedi_device *dev, struct comedi_subdevice *s)
 {
@@ -378,6 +380,7 @@ void subdev_8255_cleanup(struct comedi_device *dev, struct comedi_subdevice *s)
 		kfree(s->private);
 	}
 }
+EXPORT_SYMBOL(subdev_8255_cleanup);
 
 /*
 
@@ -448,8 +451,3 @@ static int dev_8255_detach(struct comedi_device *dev)
 
 	return 0;
 }
-
-EXPORT_SYMBOL(subdev_8255_init);
-EXPORT_SYMBOL(subdev_8255_init_irq);
-EXPORT_SYMBOL(subdev_8255_cleanup);
-EXPORT_SYMBOL(subdev_8255_interrupt);

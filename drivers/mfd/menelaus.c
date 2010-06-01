@@ -40,11 +40,12 @@
 #include <linux/delay.h>
 #include <linux/rtc.h>
 #include <linux/bcd.h>
+#include <linux/slab.h>
 
 #include <asm/mach/irq.h>
 
 #include <mach/gpio.h>
-#include <mach/menelaus.h>
+#include <plat/menelaus.h>
 
 #define DRIVER_NAME			"menelaus"
 

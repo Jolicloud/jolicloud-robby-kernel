@@ -29,7 +29,6 @@
 
 #include <linux/init.h>
 #include <linux/types.h>
-#include <linux/slab.h>
 #include <linux/mm.h>
 #include <linux/spinlock.h>
 #include <linux/string.h>
@@ -38,6 +37,7 @@
 #include <linux/vmalloc.h>
 #include <linux/suspend.h>
 #include <linux/lmb.h>
+#include <linux/gfp.h>
 #include <asm/io.h>
 #include <asm/prom.h>
 #include <asm/iommu.h>
@@ -160,7 +160,7 @@ static int dart_build(struct iommu_table *tbl, long index,
 
 	dp = ((unsigned int*)tbl->it_base) + index;
 
-	/* On U3, all memory is contigous, so we can move this
+	/* On U3, all memory is contiguous, so we can move this
 	 * out of the loop.
 	 */
 	l = npages;

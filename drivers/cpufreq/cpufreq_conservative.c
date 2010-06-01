@@ -164,20 +164,22 @@ static struct notifier_block dbs_cpufreq_notifier_block = {
 };
 
 /************************** sysfs interface ************************/
-static ssize_t show_sampling_rate_max(struct cpufreq_policy *policy, char *buf)
+static ssize_t show_sampling_rate_max(struct kobject *kobj,
+				      struct attribute *attr, char *buf)
 {
 	printk_once(KERN_INFO "CPUFREQ: conservative sampling_rate_max "
 		    "sysfs file is deprecated - used by: %s\n", current->comm);
 	return sprintf(buf, "%u\n", -1U);
 }
 
-static ssize_t show_sampling_rate_min(struct cpufreq_policy *policy, char *buf)
+static ssize_t show_sampling_rate_min(struct kobject *kobj,
+				      struct attribute *attr, char *buf)
 {
 	return sprintf(buf, "%u\n", min_sampling_rate);
 }
 
 #define define_one_ro(_name)		\
-static struct freq_attr _name =		\
+static struct global_attr _name =	\
 __ATTR(_name, 0444, show_##_name, NULL)
 
 define_one_ro(sampling_rate_max);
@@ -186,7 +188,7 @@ define_one_ro(sampling_rate_min);
 /* cpufreq_conservative Governor Tunables */
 #define show_one(file_name, object)					\
 static ssize_t show_##file_name						\
-(struct cpufreq_policy *unused, char *buf)				\
+(struct kobject *kobj, struct attribute *attr, char *buf)		\
 {									\
 	return sprintf(buf, "%u\n", dbs_tuners_ins.object);		\
 }
@@ -197,8 +199,40 @@ show_one(down_threshold, down_threshold);
 show_one(ignore_nice_load, ignore_nice);
 show_one(freq_step, freq_step);
 
-static ssize_t store_sampling_down_factor(struct cpufreq_policy *unused,
-		const char *buf, size_t count)
+/*** delete after deprecation time ***/
+#define DEPRECATION_MSG(file_name)					\
+	printk_once(KERN_INFO "CPUFREQ: Per core conservative sysfs "	\
+		"interface is deprecated - " #file_name "\n");
+
+#define show_one_old(file_name)						\
+static ssize_t show_##file_name##_old					\
+(struct cpufreq_policy *unused, char *buf)				\
+{									\
+	printk_once(KERN_INFO "CPUFREQ: Per core conservative sysfs "	\
+		"interface is deprecated - " #file_name "\n");		\
+	return show_##file_name(NULL, NULL, buf);			\
+}
+show_one_old(sampling_rate);
+show_one_old(sampling_down_factor);
+show_one_old(up_threshold);
+show_one_old(down_threshold);
+show_one_old(ignore_nice_load);
+show_one_old(freq_step);
+show_one_old(sampling_rate_min);
+show_one_old(sampling_rate_max);
+
+#define define_one_ro_old(object, _name)	\
+static struct freq_attr object =		\
+__ATTR(_name, 0444, show_##_name##_old, NULL)
+
+define_one_ro_old(sampling_rate_min_old, sampling_rate_min);
+define_one_ro_old(sampling_rate_max_old, sampling_rate_max);
+
+/*** delete after deprecation time ***/
+
+static ssize_t store_sampling_down_factor(struct kobject *a,
+					  struct attribute *b,
+					  const char *buf, size_t count)
 {
 	unsigned int input;
 	int ret;
@@ -214,8 +248,8 @@ static ssize_t store_sampling_down_factor(struct cpufreq_policy *unused,
 	return count;
 }
 
-static ssize_t store_sampling_rate(struct cpufreq_policy *unused,
-		const char *buf, size_t count)
+static ssize_t store_sampling_rate(struct kobject *a, struct attribute *b,
+				   const char *buf, size_t count)
 {
 	unsigned int input;
 	int ret;
@@ -231,8 +265,8 @@ static ssize_t store_sampling_rate(struct cpufreq_policy *unused,
 	return count;
 }
 
-static ssize_t store_up_threshold(struct cpufreq_policy *unused,
-		const char *buf, size_t count)
+static ssize_t store_up_threshold(struct kobject *a, struct attribute *b,
+				  const char *buf, size_t count)
 {
 	unsigned int input;
 	int ret;
@@ -251,8 +285,8 @@ static ssize_t store_up_threshold(struct cpufreq_policy *unused,
 	return count;
 }
 
-static ssize_t store_down_threshold(struct cpufreq_policy *unused,
-		const char *buf, size_t count)
+static ssize_t store_down_threshold(struct kobject *a, struct attribute *b,
+				    const char *buf, size_t count)
 {
 	unsigned int input;
 	int ret;
@@ -272,8 +306,8 @@ static ssize_t store_down_threshold(struct cpufreq_policy *unused,
 	return count;
 }
 
-static ssize_t store_ignore_nice_load(struct cpufreq_policy *policy,
-		const char *buf, size_t count)
+static ssize_t store_ignore_nice_load(struct kobject *a, struct attribute *b,
+				      const char *buf, size_t count)
 {
 	unsigned int input;
 	int ret;
@@ -308,8 +342,8 @@ static ssize_t store_ignore_nice_load(struct cpufreq_policy *policy,
 	return count;
 }
 
-static ssize_t store_freq_step(struct cpufreq_policy *policy,
-		const char *buf, size_t count)
+static ssize_t store_freq_step(struct kobject *a, struct attribute *b,
+			       const char *buf, size_t count)
 {
 	unsigned int input;
 	int ret;
@@ -331,7 +365,7 @@ static ssize_t store_freq_step(struct cpufreq_policy *policy,
 }
 
 #define define_one_rw(_name) \
-static struct freq_attr _name = \
+static struct global_attr _name = \
 __ATTR(_name, 0644, show_##_name, store_##_name)
 
 define_one_rw(sampling_rate);
@@ -358,11 +392,59 @@ static struct attribute_group dbs_attr_group = {
 	.name = "conservative",
 };
 
+/*** delete after deprecation time ***/
+
+#define write_one_old(file_name)					\
+static ssize_t store_##file_name##_old					\
+(struct cpufreq_policy *unused, const char *buf, size_t count)		\
+{									\
+	printk_once(KERN_INFO "CPUFREQ: Per core conservative sysfs "	\
+		"interface is deprecated - " #file_name "\n");	\
+	return store_##file_name(NULL, NULL, buf, count);		\
+}
+write_one_old(sampling_rate);
+write_one_old(sampling_down_factor);
+write_one_old(up_threshold);
+write_one_old(down_threshold);
+write_one_old(ignore_nice_load);
+write_one_old(freq_step);
+
+#define define_one_rw_old(object, _name)	\
+static struct freq_attr object =		\
+__ATTR(_name, 0644, show_##_name##_old, store_##_name##_old)
+
+define_one_rw_old(sampling_rate_old, sampling_rate);
+define_one_rw_old(sampling_down_factor_old, sampling_down_factor);
+define_one_rw_old(up_threshold_old, up_threshold);
+define_one_rw_old(down_threshold_old, down_threshold);
+define_one_rw_old(ignore_nice_load_old, ignore_nice_load);
+define_one_rw_old(freq_step_old, freq_step);
+
+static struct attribute *dbs_attributes_old[] = {
+	&sampling_rate_max_old.attr,
+	&sampling_rate_min_old.attr,
+	&sampling_rate_old.attr,
+	&sampling_down_factor_old.attr,
+	&up_threshold_old.attr,
+	&down_threshold_old.attr,
+	&ignore_nice_load_old.attr,
+	&freq_step_old.attr,
+	NULL
+};
+
+static struct attribute_group dbs_attr_group_old = {
+	.attrs = dbs_attributes_old,
+	.name = "conservative",
+};
+
+/*** delete after deprecation time ***/
+
 /************************** sysfs end ************************/
 
 static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 {
 	unsigned int load = 0;
+	unsigned int max_load = 0;
 	unsigned int freq_target;
 
 	struct cpufreq_policy *policy;
@@ -420,6 +502,9 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 			continue;
 
 		load = 100 * (wall_time - idle_time) / wall_time;
+
+		if (load > max_load)
+			max_load = load;
 	}
 
 	/*
@@ -430,7 +515,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		return;
 
 	/* Check for frequency increase */
-	if (load > dbs_tuners_ins.up_threshold) {
+	if (max_load > dbs_tuners_ins.up_threshold) {
 		this_dbs_info->down_skip = 0;
 
 		/* if we are already at full speed then break out early */
@@ -457,7 +542,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	 * can support the current CPU usage without triggering the up
 	 * policy. To be safe, we focus 10 points under the threshold.
 	 */
-	if (load < (dbs_tuners_ins.down_threshold - 10)) {
+	if (max_load < (dbs_tuners_ins.down_threshold - 10)) {
 		freq_target = (dbs_tuners_ins.freq_step * policy->max) / 100;
 
 		this_dbs_info->requested_freq -= freq_target;
@@ -530,7 +615,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 
 		mutex_lock(&dbs_mutex);
 
-		rc = sysfs_create_group(&policy->kobj, &dbs_attr_group);
+		rc = sysfs_create_group(&policy->kobj, &dbs_attr_group_old);
 		if (rc) {
 			mutex_unlock(&dbs_mutex);
 			return rc;
@@ -564,6 +649,13 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 			if (latency == 0)
 				latency = 1;
 
+			rc = sysfs_create_group(cpufreq_global_kobject,
+						&dbs_attr_group);
+			if (rc) {
+				mutex_unlock(&dbs_mutex);
+				return rc;
+			}
+
 			/*
 			 * conservative does not implement micro like ondemand
 			 * governor, thus we are bound to jiffes/HZ
@@ -591,7 +683,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		dbs_timer_exit(this_dbs_info);
 
 		mutex_lock(&dbs_mutex);
-		sysfs_remove_group(&policy->kobj, &dbs_attr_group);
+		sysfs_remove_group(&policy->kobj, &dbs_attr_group_old);
 		dbs_enable--;
 		mutex_destroy(&this_dbs_info->timer_mutex);
 
@@ -605,6 +697,9 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 					CPUFREQ_TRANSITION_NOTIFIER);
 
 		mutex_unlock(&dbs_mutex);
+		if (!dbs_enable)
+			sysfs_remove_group(cpufreq_global_kobject,
+					   &dbs_attr_group);
 
 		break;
 

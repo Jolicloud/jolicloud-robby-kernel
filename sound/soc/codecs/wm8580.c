@@ -25,6 +25,7 @@
 #include <linux/i2c.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
+#include <linux/slab.h>
 
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -315,7 +316,6 @@ static int wm8580_add_widgets(struct snd_soc_codec *codec)
 
 	snd_soc_dapm_add_routes(codec, audio_map, ARRAY_SIZE(audio_map));
 
-	snd_soc_dapm_new_widgets(codec);
 	return 0;
 }
 
@@ -407,8 +407,8 @@ static int pll_factors(struct _pll_div *pll_div, unsigned int target,
 	return 0;
 }
 
-static int wm8580_set_dai_pll(struct snd_soc_dai *codec_dai,
-		int pll_id, unsigned int freq_in, unsigned int freq_out)
+static int wm8580_set_dai_pll(struct snd_soc_dai *codec_dai, int pll_id,
+		int source, unsigned int freq_in, unsigned int freq_out)
 {
 	int offset;
 	struct snd_soc_codec *codec = codec_dai->codec;
@@ -800,17 +800,9 @@ static int wm8580_probe(struct platform_device *pdev)
 	snd_soc_add_controls(codec, wm8580_snd_controls,
 			     ARRAY_SIZE(wm8580_snd_controls));
 	wm8580_add_widgets(codec);
-	ret = snd_soc_init_card(socdev);
-	if (ret < 0) {
-		dev_err(codec->dev, "failed to register card: %d\n", ret);
-		goto card_err;
-	}
 
 	return ret;
 
-card_err:
-	snd_soc_free_pcms(socdev);
-	snd_soc_dapm_free(socdev);
 pcm_err:
 	return ret;
 }
@@ -961,21 +953,6 @@ static int wm8580_i2c_remove(struct i2c_client *client)
 	return 0;
 }
 
-#ifdef CONFIG_PM
-static int wm8580_i2c_suspend(struct i2c_client *client, pm_message_t msg)
-{
-	return snd_soc_suspend_device(&client->dev);
-}
-
-static int wm8580_i2c_resume(struct i2c_client *client)
-{
-	return snd_soc_resume_device(&client->dev);
-}
-#else
-#define wm8580_i2c_suspend NULL
-#define wm8580_i2c_resume NULL
-#endif
-
 static const struct i2c_device_id wm8580_i2c_id[] = {
 	{ "wm8580", 0 },
 	{ }
@@ -989,8 +966,6 @@ static struct i2c_driver wm8580_i2c_driver = {
 	},
 	.probe =    wm8580_i2c_probe,
 	.remove =   wm8580_i2c_remove,
-	.suspend =  wm8580_i2c_suspend,
-	.resume =   wm8580_i2c_resume,
 	.id_table = wm8580_i2c_id,
 };
 #endif

@@ -21,6 +21,7 @@
 #include <linux/sched.h>	/* for cond_resched */
 #include <linux/mm.h>
 #include <linux/ctype.h>
+#include <linux/slab.h>
 
 #include <asm/sections.h>
 
@@ -181,6 +182,7 @@ unsigned long kallsyms_lookup_name(const char *name)
 	}
 	return module_kallsyms_lookup_name(name);
 }
+EXPORT_SYMBOL_GPL(kallsyms_lookup_name);
 
 int kallsyms_on_each_symbol(int (*fn)(void *, const char *, struct module *,
 				      unsigned long),

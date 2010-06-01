@@ -69,9 +69,16 @@ struct kgdb_state {
 	struct pt_regs		*linux_regs;
 };
 
+/* Exception state values */
+#define DCPU_WANT_MASTER 0x1 /* Waiting to become a master kgdb cpu */
+#define DCPU_NEXT_MASTER 0x2 /* Transition from one master cpu to another */
+#define DCPU_IS_SLAVE    0x4 /* Slave cpu enter exception */
+#define DCPU_SSTEP       0x8 /* CPU is single stepping */
+
 static struct debuggerinfo_struct {
 	void			*debuggerinfo;
 	struct task_struct	*task;
+	int 			exception_state;
 } kgdb_info[NR_CPUS];
 
 /**
@@ -129,6 +136,7 @@ struct task_struct		*kgdb_usethread;
 struct task_struct		*kgdb_contthread;
 
 int				kgdb_single_step;
+pid_t				kgdb_sstep_pid;
 
 /* Our I/O buffers. */
 static char			remcom_in_buffer[BUFMAX];
@@ -390,27 +398,22 @@ int kgdb_mem2hex(char *mem, char *buf, int count)
 
 /*
  * Copy the binary array pointed to by buf into mem.  Fix $, #, and
- * 0x7d escaped with 0x7d.  Return a pointer to the character after
- * the last byte written.
+ * 0x7d escaped with 0x7d. Return -EFAULT on failure or 0 on success.
+ * The input buf is overwitten with the result to write to mem.
  */
 static int kgdb_ebin2mem(char *buf, char *mem, int count)
 {
-	int err = 0;
-	char c;
+	int size = 0;
+	char *c = buf;
 
 	while (count-- > 0) {
-		c = *buf++;
-		if (c == 0x7d)
-			c = *buf++ ^ 0x20;
-
-		err = probe_kernel_write(mem, &c, 1);
-		if (err)
-			break;
-
-		mem++;
+		c[size] = *buf++;
+		if (c[size] == 0x7d)
+			c[size] = *buf++ ^ 0x20;
+		size++;
 	}
 
-	return err;
+	return probe_kernel_write(mem, c, size);
 }
 
 /*
@@ -541,11 +544,16 @@ static struct task_struct *getthread(struct pt_regs *regs, int tid)
 	 */
 	if (tid == 0 || tid == -1)
 		tid = -atomic_read(&kgdb_active) - 2;
-	if (tid < 0) {
+	if (tid < -1 && tid > -NR_CPUS - 2) {
 		if (kgdb_info[-tid - 2].task)
 			return kgdb_info[-tid - 2].task;
 		else
 			return idle_task(-tid - 2);
+	}
+	if (tid <= 0) {
+		printk(KERN_ERR "KGDB: Internal thread select error\n");
+		dump_stack();
+		return NULL;
 	}
 
 	/*
@@ -555,46 +563,6 @@ static struct task_struct *getthread(struct pt_regs *regs, int tid)
 	 */
 	return find_task_by_pid_ns(tid, &init_pid_ns);
 }
-
-/*
- * CPU debug state control:
- */
-
-#ifdef CONFIG_SMP
-static void kgdb_wait(struct pt_regs *regs)
-{
-	unsigned long flags;
-	int cpu;
-
-	local_irq_save(flags);
-	cpu = raw_smp_processor_id();
-	kgdb_info[cpu].debuggerinfo = regs;
-	kgdb_info[cpu].task = current;
-	/*
-	 * Make sure the above info reaches the primary CPU before
-	 * our cpu_in_kgdb[] flag setting does:
-	 */
-	smp_wmb();
-	atomic_set(&cpu_in_kgdb[cpu], 1);
-
-	/* Wait till primary CPU is done with debugging */
-	while (atomic_read(&passive_cpu_wait[cpu]))
-		cpu_relax();
-
-	kgdb_info[cpu].debuggerinfo = NULL;
-	kgdb_info[cpu].task = NULL;
-
-	/* fix up hardware debug registers on local cpu */
-	if (arch_kgdb_ops.correct_hw_break)
-		arch_kgdb_ops.correct_hw_break();
-
-	/* Signal the primary CPU that we are done: */
-	atomic_set(&cpu_in_kgdb[cpu], 0);
-	touch_softlockup_watchdog();
-	clocksource_touch_watchdog();
-	local_irq_restore(flags);
-}
-#endif
 
 /*
  * Some architectures need cache flushes when we set/clear a
@@ -619,7 +587,8 @@ static void kgdb_flush_swbreak_addr(unsigned long addr)
 static int kgdb_activate_sw_breakpoints(void)
 {
 	unsigned long addr;
-	int error = 0;
+	int error;
+	int ret = 0;
 	int i;
 
 	for (i = 0; i < KGDB_MAX_BREAKPOINTS; i++) {
@@ -629,13 +598,16 @@ static int kgdb_activate_sw_breakpoints(void)
 		addr = kgdb_break[i].bpt_addr;
 		error = kgdb_arch_set_breakpoint(addr,
 				kgdb_break[i].saved_instr);
-		if (error)
-			return error;
+		if (error) {
+			ret = error;
+			printk(KERN_INFO "KGDB: BP install failed: %lx", addr);
+			continue;
+		}
 
 		kgdb_flush_swbreak_addr(addr);
 		kgdb_break[i].state = BP_ACTIVE;
 	}
-	return 0;
+	return ret;
 }
 
 static int kgdb_set_sw_break(unsigned long addr)
@@ -682,7 +654,8 @@ static int kgdb_set_sw_break(unsigned long addr)
 static int kgdb_deactivate_sw_breakpoints(void)
 {
 	unsigned long addr;
-	int error = 0;
+	int error;
+	int ret = 0;
 	int i;
 
 	for (i = 0; i < KGDB_MAX_BREAKPOINTS; i++) {
@@ -691,13 +664,15 @@ static int kgdb_deactivate_sw_breakpoints(void)
 		addr = kgdb_break[i].bpt_addr;
 		error = kgdb_arch_remove_breakpoint(addr,
 					kgdb_break[i].saved_instr);
-		if (error)
-			return error;
+		if (error) {
+			printk(KERN_INFO "KGDB: BP remove failed: %lx\n", addr);
+			ret = error;
+		}
 
 		kgdb_flush_swbreak_addr(addr);
 		kgdb_break[i].state = BP_SET;
 	}
-	return 0;
+	return ret;
 }
 
 static int kgdb_remove_sw_break(unsigned long addr)
@@ -870,7 +845,7 @@ static void gdb_cmd_getregs(struct kgdb_state *ks)
 
 	/*
 	 * All threads that don't have debuggerinfo should be
-	 * in __schedule() sleeping, since all other CPUs
+	 * in schedule() sleeping, since all other CPUs
 	 * are in kgdb_wait, and thus have debuggerinfo.
 	 */
 	if (local_debuggerinfo) {
@@ -1204,8 +1179,10 @@ static int gdb_cmd_exception_pass(struct kgdb_state *ks)
 		return 1;
 
 	} else {
-		error_packet(remcom_out_buffer, -EINVAL);
-		return 0;
+		kgdb_msg_write("KGDB only knows signal 9 (pass)"
+			" and 15 (pass and disconnect)\n"
+			"Executing a continue without signal passing\n", 0);
+		remcom_in_buffer[0] = 'c';
 	}
 
 	/* Indicate fall through */
@@ -1382,33 +1359,13 @@ static int kgdb_reenter_check(struct kgdb_state *ks)
 	return 1;
 }
 
-/*
- * kgdb_handle_exception() - main entry point from a kernel exception
- *
- * Locking hierarchy:
- *	interface locks, if any (begin_session)
- *	kgdb lock (kgdb_active)
- */
-int
-kgdb_handle_exception(int evector, int signo, int ecode, struct pt_regs *regs)
+static int kgdb_cpu_enter(struct kgdb_state *ks, struct pt_regs *regs)
 {
-	struct kgdb_state kgdb_var;
-	struct kgdb_state *ks = &kgdb_var;
 	unsigned long flags;
+	int sstep_tries = 100;
 	int error = 0;
 	int i, cpu;
-
-	ks->cpu			= raw_smp_processor_id();
-	ks->ex_vector		= evector;
-	ks->signo		= signo;
-	ks->ex_vector		= evector;
-	ks->err_code		= ecode;
-	ks->kgdb_usethreadid	= 0;
-	ks->linux_regs		= regs;
-
-	if (kgdb_reenter_check(ks))
-		return 0; /* Ouch, double exception ! */
-
+	int trace_on = 0;
 acquirelock:
 	/*
 	 * Interrupts will be restored by the 'trap return' code, except when
@@ -1416,24 +1373,55 @@ acquirelock:
 	 */
 	local_irq_save(flags);
 
-	cpu = raw_smp_processor_id();
-
+	cpu = ks->cpu;
+	kgdb_info[cpu].debuggerinfo = regs;
+	kgdb_info[cpu].task = current;
 	/*
-	 * Acquire the kgdb_active lock:
+	 * Make sure the above info reaches the primary CPU before
+	 * our cpu_in_kgdb[] flag setting does:
 	 */
-	while (atomic_cmpxchg(&kgdb_active, -1, cpu) != -1)
-		cpu_relax();
+	atomic_inc(&cpu_in_kgdb[cpu]);
 
 	/*
-	 * Do not start the debugger connection on this CPU if the last
-	 * instance of the exception handler wanted to come into the
-	 * debugger on a different CPU via a single step
+	 * CPU will loop if it is a slave or request to become a kgdb
+	 * master cpu and acquire the kgdb_active lock:
+	 */
+	while (1) {
+		if (kgdb_info[cpu].exception_state & DCPU_WANT_MASTER) {
+			if (atomic_cmpxchg(&kgdb_active, -1, cpu) == cpu)
+				break;
+		} else if (kgdb_info[cpu].exception_state & DCPU_IS_SLAVE) {
+			if (!atomic_read(&passive_cpu_wait[cpu]))
+				goto return_normal;
+		} else {
+return_normal:
+			/* Return to normal operation by executing any
+			 * hw breakpoint fixup.
+			 */
+			if (arch_kgdb_ops.correct_hw_break)
+				arch_kgdb_ops.correct_hw_break();
+			if (trace_on)
+				tracing_on();
+			atomic_dec(&cpu_in_kgdb[cpu]);
+			touch_softlockup_watchdog_sync();
+			clocksource_touch_watchdog();
+			local_irq_restore(flags);
+			return 0;
+		}
+		cpu_relax();
+	}
+
+	/*
+	 * For single stepping, try to only enter on the processor
+	 * that was single stepping.  To gaurd against a deadlock, the
+	 * kernel will only try for the value of sstep_tries before
+	 * giving up and continuing on.
 	 */
 	if (atomic_read(&kgdb_cpu_doing_single_step) != -1 &&
-	    atomic_read(&kgdb_cpu_doing_single_step) != cpu) {
-
+	    (kgdb_info[cpu].task &&
+	     kgdb_info[cpu].task->pid != kgdb_sstep_pid) && --sstep_tries) {
 		atomic_set(&kgdb_active, -1);
-		touch_softlockup_watchdog();
+		touch_softlockup_watchdog_sync();
 		clocksource_touch_watchdog();
 		local_irq_restore(flags);
 
@@ -1455,9 +1443,6 @@ acquirelock:
 	if (kgdb_io_ops->pre_exception)
 		kgdb_io_ops->pre_exception();
 
-	kgdb_info[ks->cpu].debuggerinfo = ks->linux_regs;
-	kgdb_info[ks->cpu].task = current;
-
 	kgdb_disable_hw_debug(ks->linux_regs);
 
 	/*
@@ -1466,14 +1451,8 @@ acquirelock:
 	 */
 	if (!kgdb_single_step) {
 		for (i = 0; i < NR_CPUS; i++)
-			atomic_set(&passive_cpu_wait[i], 1);
+			atomic_inc(&passive_cpu_wait[i]);
 	}
-
-	/*
-	 * spin_lock code is good enough as a barrier so we don't
-	 * need one here:
-	 */
-	atomic_set(&cpu_in_kgdb[ks->cpu], 1);
 
 #ifdef CONFIG_SMP
 	/* Signal the other CPUs to enter kgdb_wait() */
@@ -1498,6 +1477,9 @@ acquirelock:
 	kgdb_single_step = 0;
 	kgdb_contthread = current;
 	exception_level = 0;
+	trace_on = tracing_is_on();
+	if (trace_on)
+		tracing_off();
 
 	/* Talk to debugger with gdbserial protocol */
 	error = gdb_serial_stub(ks);
@@ -1506,13 +1488,11 @@ acquirelock:
 	if (kgdb_io_ops->post_exception)
 		kgdb_io_ops->post_exception();
 
-	kgdb_info[ks->cpu].debuggerinfo = NULL;
-	kgdb_info[ks->cpu].task = NULL;
-	atomic_set(&cpu_in_kgdb[ks->cpu], 0);
+	atomic_dec(&cpu_in_kgdb[ks->cpu]);
 
 	if (!kgdb_single_step) {
 		for (i = NR_CPUS-1; i >= 0; i--)
-			atomic_set(&passive_cpu_wait[i], 0);
+			atomic_dec(&passive_cpu_wait[i]);
 		/*
 		 * Wait till all the CPUs have quit
 		 * from the debugger.
@@ -1524,22 +1504,70 @@ acquirelock:
 	}
 
 kgdb_restore:
+	if (atomic_read(&kgdb_cpu_doing_single_step) != -1) {
+		int sstep_cpu = atomic_read(&kgdb_cpu_doing_single_step);
+		if (kgdb_info[sstep_cpu].task)
+			kgdb_sstep_pid = kgdb_info[sstep_cpu].task->pid;
+		else
+			kgdb_sstep_pid = 0;
+	}
+	if (trace_on)
+		tracing_on();
 	/* Free kgdb_active */
 	atomic_set(&kgdb_active, -1);
-	touch_softlockup_watchdog();
+	touch_softlockup_watchdog_sync();
 	clocksource_touch_watchdog();
 	local_irq_restore(flags);
 
 	return error;
 }
 
+/*
+ * kgdb_handle_exception() - main entry point from a kernel exception
+ *
+ * Locking hierarchy:
+ *	interface locks, if any (begin_session)
+ *	kgdb lock (kgdb_active)
+ */
+int
+kgdb_handle_exception(int evector, int signo, int ecode, struct pt_regs *regs)
+{
+	struct kgdb_state kgdb_var;
+	struct kgdb_state *ks = &kgdb_var;
+	int ret;
+
+	ks->cpu			= raw_smp_processor_id();
+	ks->ex_vector		= evector;
+	ks->signo		= signo;
+	ks->ex_vector		= evector;
+	ks->err_code		= ecode;
+	ks->kgdb_usethreadid	= 0;
+	ks->linux_regs		= regs;
+
+	if (kgdb_reenter_check(ks))
+		return 0; /* Ouch, double exception ! */
+	kgdb_info[ks->cpu].exception_state |= DCPU_WANT_MASTER;
+	ret = kgdb_cpu_enter(ks, regs);
+	kgdb_info[ks->cpu].exception_state &= ~DCPU_WANT_MASTER;
+	return ret;
+}
+
 int kgdb_nmicallback(int cpu, void *regs)
 {
 #ifdef CONFIG_SMP
+	struct kgdb_state kgdb_var;
+	struct kgdb_state *ks = &kgdb_var;
+
+	memset(ks, 0, sizeof(struct kgdb_state));
+	ks->cpu			= cpu;
+	ks->linux_regs		= regs;
+
 	if (!atomic_read(&cpu_in_kgdb[cpu]) &&
-			atomic_read(&kgdb_active) != cpu &&
-			atomic_read(&cpu_in_kgdb[atomic_read(&kgdb_active)])) {
-		kgdb_wait((struct pt_regs *)regs);
+	    atomic_read(&kgdb_active) != -1 &&
+	    atomic_read(&kgdb_active) != cpu) {
+		kgdb_info[cpu].exception_state |= DCPU_IS_SLAVE;
+		kgdb_cpu_enter(ks, regs);
+		kgdb_info[cpu].exception_state &= ~DCPU_IS_SLAVE;
 		return 0;
 	}
 #endif
@@ -1715,11 +1743,11 @@ EXPORT_SYMBOL_GPL(kgdb_unregister_io_module);
  */
 void kgdb_breakpoint(void)
 {
-	atomic_set(&kgdb_setting_breakpoint, 1);
+	atomic_inc(&kgdb_setting_breakpoint);
 	wmb(); /* Sync point before breakpoint */
 	arch_kgdb_breakpoint();
 	wmb(); /* Sync point after breakpoint */
-	atomic_set(&kgdb_setting_breakpoint, 0);
+	atomic_dec(&kgdb_setting_breakpoint);
 }
 EXPORT_SYMBOL_GPL(kgdb_breakpoint);
 

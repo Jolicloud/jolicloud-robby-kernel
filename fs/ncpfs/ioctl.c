@@ -15,6 +15,7 @@
 #include <linux/time.h>
 #include <linux/mm.h>
 #include <linux/mount.h>
+#include <linux/slab.h>
 #include <linux/highuid.h>
 #include <linux/smp_lock.h>
 #include <linux/vmalloc.h>
@@ -835,7 +836,7 @@ static int ncp_ioctl_need_write(unsigned int cmd)
 	case NCP_IOC_SETROOT:
 		return 0;
 	default:
-		/* unkown IOCTL command, assume write */
+		/* unknown IOCTL command, assume write */
 		return 1;
 	}
 }

@@ -13,6 +13,7 @@
 #include <linux/module.h>
 #include <linux/libata.h>
 #include <linux/irq.h>
+#include <linux/slab.h>
 #include <linux/platform_device.h>
 #include <linux/workqueue.h>
 #include <scsi/scsi_host.h>
@@ -853,7 +854,7 @@ static int __devinit octeon_cf_probe(struct platform_device *pdev)
 			return -EINVAL;
 
 		cs1 = devm_ioremap_nocache(&pdev->dev, res_cs1->start,
-					   res_cs0->end - res_cs1->start + 1);
+					   resource_size(res_cs1));
 
 		if (!cs1)
 			return -ENOMEM;

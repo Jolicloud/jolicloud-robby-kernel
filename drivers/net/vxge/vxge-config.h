@@ -14,6 +14,7 @@
 #ifndef VXGE_CONFIG_H
 #define VXGE_CONFIG_H
 #include <linux/list.h>
+#include <linux/slab.h>
 
 #ifndef VXGE_CACHE_LINE_SIZE
 #define VXGE_CACHE_LINE_SIZE 128
@@ -2201,6 +2202,8 @@ __vxge_hw_vpath_func_id_get(
 enum vxge_hw_status
 __vxge_hw_vpath_reset_check(struct __vxge_hw_virtualpath *vpath);
 
+enum vxge_hw_status
+vxge_hw_vpath_strip_fcs_check(struct __vxge_hw_device *hldev, u64 vpath_mask);
 /**
  * vxge_debug
  * @level: level of debug verbosity.

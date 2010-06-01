@@ -30,6 +30,7 @@
 #include <linux/platform_device.h>
 #include <linux/io.h>
 #include <linux/version.h>
+#include <linux/slab.h>
 
 #include <asm/irq.h>
 #include <asm/page.h>
@@ -1347,7 +1348,6 @@ static const struct v4l2_file_operations vpif_fops = {
 static struct video_device vpif_video_template = {
 	.name		= "vpif",
 	.fops		= &vpif_fops,
-	.minor		= -1,
 	.ioctl_ops	= &vpif_ioctl_ops,
 	.tvnorms	= DM646X_V4L2_STD,
 	.current_norm	= V4L2_STD_625_50,

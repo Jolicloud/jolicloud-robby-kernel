@@ -22,6 +22,7 @@
  */
 
 #include <linux/i2c.h>
+#include <linux/slab.h>
 #include "cx25821.h"
 #include "cx25821-sram.h"
 #include "cx25821-video.h"
@@ -1521,7 +1522,7 @@ static struct pci_driver cx25821_pci_driver = {
 	.resume = NULL,
 };
 
-static int cx25821_init(void)
+static int __init cx25821_init(void)
 {
 	INIT_LIST_HEAD(&cx25821_devlist);
 	printk(KERN_INFO "cx25821 driver version %d.%d.%d loaded\n",
@@ -1530,7 +1531,7 @@ static int cx25821_init(void)
 	return pci_register_driver(&cx25821_pci_driver);
 }
 
-static void cx25821_fini(void)
+static void __exit cx25821_fini(void)
 {
 	pci_unregister_driver(&cx25821_pci_driver);
 }

@@ -20,6 +20,7 @@
 #include <linux/etherdevice.h>
 #include <linux/jhash.h>
 #include <linux/random.h>
+#include <linux/slab.h>
 #include <asm/atomic.h>
 #include <asm/unaligned.h>
 #include "br_private.h"
@@ -60,8 +61,8 @@ static inline unsigned long hold_time(const struct net_bridge *br)
 static inline int has_expired(const struct net_bridge *br,
 				  const struct net_bridge_fdb_entry *fdb)
 {
-	return !fdb->is_static
-		&& time_before_eq(fdb->ageing_timer + hold_time(br), jiffies);
+	return !fdb->is_static &&
+		time_before_eq(fdb->ageing_timer + hold_time(br), jiffies);
 }
 
 static inline int br_mac_hash(const unsigned char *mac)

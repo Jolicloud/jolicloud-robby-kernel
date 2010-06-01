@@ -16,6 +16,7 @@
 #include <linux/kernel.h>
 #include <linux/time.h>
 #include <linux/rtc.h>
+#include <linux/slab.h>
 #include <linux/bcd.h>
 #include <linux/interrupt.h>
 #include <linux/ioctl.h>
@@ -485,7 +486,7 @@ static int __devexit wm831x_rtc_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static struct dev_pm_ops wm831x_rtc_pm_ops = {
+static const struct dev_pm_ops wm831x_rtc_pm_ops = {
 	.suspend = wm831x_rtc_suspend,
 	.resume = wm831x_rtc_resume,
 

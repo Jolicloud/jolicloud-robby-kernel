@@ -15,8 +15,8 @@
 #include <linux/device.h>
 #include <linux/hid.h>
 #include <linux/module.h>
+#include <linux/slab.h>
 
-MODULE_VERSION("0.5");
 MODULE_AUTHOR("Stephane Chatty <chatty@enac.fr>");
 MODULE_DESCRIPTION("Stantum HID multitouch panels");
 MODULE_LICENSE("GPL");
@@ -26,9 +26,9 @@ MODULE_LICENSE("GPL");
 struct stantum_data {
 	__s32 x, y, z, w, h;	/* x, y, pressure, width, height */
 	__u16 id;		/* touch id */
-	int valid:1;		/* valid finger data, or just placeholder? */
-	int first:1;		/* first finger in the HID packet? */
-	int activity:1;		/* at least one active finger so far? */
+	bool valid;		/* valid finger data, or just placeholder? */
+	bool first;		/* first finger in the HID packet? */
+	bool activity;		/* at least one active finger so far? */
 };
 
 static int stantum_input_mapping(struct hid_device *hdev, struct hid_input *hi,
@@ -66,7 +66,6 @@ static int stantum_input_mapping(struct hid_device *hdev, struct hid_input *hi,
 		case HID_DG_DEVICEINDEX:
 		case HID_DG_CONTACTCOUNT:
 		case HID_DG_CONTACTMAX:
-		case HID_DG_TIPPRESSURE:
 			return -1;
 
 		case HID_DG_TIPSWITCH:
@@ -84,6 +83,11 @@ static int stantum_input_mapping(struct hid_device *hdev, struct hid_input *hi,
 			input_set_abs_params(hi->input, ABS_MT_ORIENTATION,
 					1, 1, 0, 0);
 			return 1;
+		case HID_DG_TIPPRESSURE:
+			hid_map_usage(hi, usage, bit, max,
+					EV_ABS, ABS_MT_PRESSURE);
+			return 1;
+
 		case HID_DG_CONTACTID:
 			hid_map_usage(hi, usage, bit, max,
 					EV_ABS, ABS_MT_TRACKING_ID);
@@ -117,7 +121,7 @@ static int stantum_input_mapped(struct hid_device *hdev, struct hid_input *hi,
 static void stantum_filter_event(struct stantum_data *sd,
 					struct input_dev *input)
 {
-	int wide;
+	bool wide;
 
 	if (!sd->valid) {
 		/*
@@ -126,7 +130,7 @@ static void stantum_filter_event(struct stantum_data *sd,
 		 */
 		if (sd->first && sd->activity) {
 			input_event(input, EV_KEY, BTN_TOUCH, 0);
-			sd->activity = 0;
+			sd->activity = false;
 		}
 		return;
 	}
@@ -140,34 +144,32 @@ static void stantum_filter_event(struct stantum_data *sd,
 	input_event(input, EV_ABS, ABS_MT_TOUCH_MAJOR, wide ? sd->w : sd->h);
 	input_event(input, EV_ABS, ABS_MT_TOUCH_MINOR, wide ? sd->h : sd->w);
 
-#if 0
-	/* MT_PRESSURE does not exist yet */
 	input_event(input, EV_ABS, ABS_MT_PRESSURE, sd->z);
-#endif
 
 	input_mt_sync(input);
-	sd->valid = 0;
-	sd->first = 0;
+	sd->valid = false;
 
 	/* touchscreen emulation */
 	if (sd->first) {
 		if (!sd->activity) {
 			input_event(input, EV_KEY, BTN_TOUCH, 1);
-			sd->activity = 1;
+			sd->activity = true;
 		}
 		input_event(input, EV_ABS, ABS_X, sd->x);
 		input_event(input, EV_ABS, ABS_Y, sd->y);
 	}
+	sd->first = false;
 }
 
 
 static int stantum_event(struct hid_device *hid, struct hid_field *field,
-		                        struct hid_usage *usage, __s32 value)
+				struct hid_usage *usage, __s32 value)
 {
 	struct stantum_data *sd = hid_get_drvdata(hid);
 
 	if (hid->claimed & HID_CLAIMED_INPUT) {
 		struct input_dev *input = field->hidinput->input;
+
 		switch (usage->hid) {
 		case HID_DG_INRANGE:
 			/* this is the last field in a finger */
@@ -196,7 +198,7 @@ static int stantum_event(struct hid_device *hid, struct hid_field *field,
 			break;
 		case 0xff000002:
 			/* this comes only before the first finger */
-			sd->first = 1;
+			sd->first = true;
 			break;
 
 		default:
@@ -212,7 +214,8 @@ static int stantum_event(struct hid_device *hid, struct hid_field *field,
 	return 1;
 }
 
-static int stantum_probe(struct hid_device *hdev, const struct hid_device_id *id)
+static int stantum_probe(struct hid_device *hdev,
+				const struct hid_device_id *id)
 {
 	int ret;
 	struct stantum_data *sd;
@@ -222,16 +225,14 @@ static int stantum_probe(struct hid_device *hdev, const struct hid_device_id *id
 		dev_err(&hdev->dev, "cannot allocate Stantum data\n");
 		return -ENOMEM;
 	}
-	sd->valid = 0;
-	sd->first = 0;
-	sd->activity = 0;
+	sd->valid = false;
+	sd->first = false;
+	sd->activity = false;
 	hid_set_drvdata(hdev, sd);
 
 	ret = hid_parse(hdev);
 	if (!ret)
 		ret = hid_hw_start(hdev, HID_CONNECT_DEFAULT);
-	else
-		printk("STANTUM ERROR %d\n", ret);
 
 	if (ret)
 		kfree(sd);
@@ -243,6 +244,7 @@ static void stantum_remove(struct hid_device *hdev)
 {
 	hid_hw_stop(hdev);
 	kfree(hid_get_drvdata(hdev));
+	hid_set_drvdata(hdev, NULL);
 }
 
 static const struct hid_device_id stantum_devices[] = {

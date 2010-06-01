@@ -29,6 +29,7 @@
 
 #include <linux/spinlock.h>
 #include <linux/rcupdate.h>
+#include <linux/gfp.h>
 #include <linux/ip.h>
 #include <linux/ipv6.h>
 #include <net/sock.h>
@@ -204,7 +205,7 @@ int selinux_netlbl_skbuff_getsid(struct sk_buff *skb,
  *
  * Description
  * Call the NetLabel mechanism to set the label of a packet using @sid.
- * Returns zero on auccess, negative values on failure.
+ * Returns zero on success, negative values on failure.
  *
  */
 int selinux_netlbl_skbuff_setsid(struct sk_buff *skb,

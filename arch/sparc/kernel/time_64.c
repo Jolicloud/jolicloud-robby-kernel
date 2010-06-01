@@ -35,6 +35,7 @@
 #include <linux/clocksource.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
+#include <linux/ftrace.h>
 
 #include <asm/oplib.h>
 #include <asm/timer.h>
@@ -717,7 +718,7 @@ static struct clock_event_device sparc64_clockevent = {
 };
 static DEFINE_PER_CPU(struct clock_event_device, sparc64_events);
 
-void timer_interrupt(int irq, struct pt_regs *regs)
+void __irq_entry timer_interrupt(int irq, struct pt_regs *regs)
 {
 	struct pt_regs *old_regs = set_irq_regs(regs);
 	unsigned long tick_mask = tick_ops->softint_mask;
@@ -728,6 +729,7 @@ void timer_interrupt(int irq, struct pt_regs *regs)
 
 	irq_enter();
 
+	local_cpu_data().irq0_irqs++;
 	kstat_incr_irqs_this_cpu(0, irq_to_desc(0));
 
 	if (unlikely(!evt->event_handler)) {
@@ -774,25 +776,8 @@ void __devinit setup_sparc64_timer(void)
 static struct clocksource clocksource_tick = {
 	.rating		= 100,
 	.mask		= CLOCKSOURCE_MASK(64),
-	.shift		= 16,
 	.flags		= CLOCK_SOURCE_IS_CONTINUOUS,
 };
-
-static void __init setup_clockevent_multiplier(unsigned long hz)
-{
-	unsigned long mult, shift = 32;
-
-	while (1) {
-		mult = div_sc(hz, NSEC_PER_SEC, shift);
-		if (mult && (mult >> 32UL) == 0UL)
-			break;
-
-		shift--;
-	}
-
-	sparc64_clockevent.shift = shift;
-	sparc64_clockevent.mult = mult;
-}
 
 static unsigned long tb_ticks_per_usec __read_mostly;
 
@@ -828,9 +813,7 @@ void __init time_init(void)
 		clocksource_hz2mult(freq, SPARC64_NSEC_PER_CYC_SHIFT);
 
 	clocksource_tick.name = tick_ops->name;
-	clocksource_tick.mult =
-		clocksource_hz2mult(freq,
-				    clocksource_tick.shift);
+	clocksource_calc_mult_shift(&clocksource_tick, freq, 4);
 	clocksource_tick.read = clocksource_tick_read;
 
 	printk("clocksource: mult[%x] shift[%d]\n",
@@ -839,15 +822,14 @@ void __init time_init(void)
 	clocksource_register(&clocksource_tick);
 
 	sparc64_clockevent.name = tick_ops->name;
-
-	setup_clockevent_multiplier(freq);
+	clockevents_calc_mult_shift(&sparc64_clockevent, freq, 4);
 
 	sparc64_clockevent.max_delta_ns =
 		clockevent_delta2ns(0x7fffffffffffffffUL, &sparc64_clockevent);
 	sparc64_clockevent.min_delta_ns =
 		clockevent_delta2ns(0xF, &sparc64_clockevent);
 
-	printk("clockevent: mult[%lx] shift[%d]\n",
+	printk("clockevent: mult[%x] shift[%d]\n",
 	       sparc64_clockevent.mult, sparc64_clockevent.shift);
 
 	setup_sparc64_timer();

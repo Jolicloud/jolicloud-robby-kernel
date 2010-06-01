@@ -23,6 +23,7 @@
 
 #include <linux/module.h>
 #include <linux/kernel.h>
+#include <linux/slab.h>
 #include <linux/ip.h>
 #include <linux/netdevice.h>
 #include <linux/skbuff.h>
@@ -1013,12 +1014,12 @@ static ctl_table brnf_table[] = {
 		.mode		= 0644,
 		.proc_handler	= brnf_sysctl_call_tables,
 	},
-	{ .ctl_name = 0 }
+	{ }
 };
 
 static struct ctl_path brnf_path[] = {
-	{ .procname = "net", .ctl_name = CTL_NET, },
-	{ .procname = "bridge", .ctl_name = NET_BRIDGE, },
+	{ .procname = "net", },
+	{ .procname = "bridge", },
 	{ }
 };
 #endif

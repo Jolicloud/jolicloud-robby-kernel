@@ -1,5 +1,6 @@
 #include <linux/capability.h>
 #include <linux/blkdev.h>
+#include <linux/gfp.h>
 #include <linux/blkpg.h>
 #include <linux/hdreg.h>
 #include <linux/backing-dev.h>
@@ -280,6 +281,8 @@ int blkdev_ioctl(struct block_device *bdev, fmode_t mode, unsigned cmd,
 		return put_uint(arg, bdev_io_opt(bdev));
 	case BLKALIGNOFF:
 		return put_int(arg, bdev_alignment_offset(bdev));
+	case BLKDISCARDZEROES:
+		return put_uint(arg, bdev_discard_zeroes_data(bdev));
 	case BLKSECTGET:
 		return put_ushort(arg, queue_max_sectors(bdev_get_queue(bdev)));
 	case BLKRASET:
