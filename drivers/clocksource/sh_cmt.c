@@ -603,13 +603,18 @@ static int sh_cmt_setup(struct sh_cmt_priv *p, struct platform_device *pdev)
 	p->irqaction.handler = sh_cmt_interrupt;
 	p->irqaction.dev_id = p;
 	p->irqaction.flags = IRQF_DISABLED | IRQF_TIMER | IRQF_IRQPOLL;
+	ret = setup_irq(irq, &p->irqaction);
+	if (ret) {
+		pr_err("sh_cmt: failed to request irq %d\n", irq);
+		goto err1;
+	}
 
 	/* get hold of clock */
 	p->clk = clk_get(&p->pdev->dev, cfg->clk);
 	if (IS_ERR(p->clk)) {
 		pr_err("sh_cmt: cannot get clock \"%s\"\n", cfg->clk);
 		ret = PTR_ERR(p->clk);
-		goto err1;
+		goto err2;
 	}
 
 	if (resource_size(res) == 6) {
@@ -622,25 +627,14 @@ static int sh_cmt_setup(struct sh_cmt_priv *p, struct platform_device *pdev)
 		p->clear_bits = ~0xc000;
 	}
 
-	ret = sh_cmt_register(p, cfg->name,
-			      cfg->clockevent_rating,
-			      cfg->clocksource_rating);
-	if (ret) {
-		pr_err("sh_cmt: registration failed\n");
-		goto err1;
-	}
-
-	ret = setup_irq(irq, &p->irqaction);
-	if (ret) {
-		pr_err("sh_cmt: failed to request irq %d\n", irq);
-		goto err1;
-	}
-
-	return 0;
-
-err1:
+	return sh_cmt_register(p, cfg->name,
+			       cfg->clockevent_rating,
+			       cfg->clocksource_rating);
+ err2:
+	remove_irq(irq, &p->irqaction);
+ err1:
 	iounmap(p->mapbase);
-err0:
+ err0:
 	return ret;
 }
 

@@ -1178,7 +1178,7 @@ static int s3cmci_card_present(struct mmc_host *mmc)
 	struct s3c24xx_mci_pdata *pdata = host->pdata;
 	int ret;
 
-	if (pdata->no_detect)
+	if (pdata->gpio_detect == 0)
 		return -ENOSYS;
 
 	ret = gpio_get_value(pdata->gpio_detect) ? 0 : 1;
