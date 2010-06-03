@@ -545,7 +545,7 @@ static void *streamzap_probe(struct usb_device *udev, unsigned int ifnum,
 
 	sz->buf_in_len = sz->endpoint->wMaxPacketSize;
 #ifdef KERNEL_2_5
-	sz->buf_in = usb_buffer_alloc(sz->udev, sz->buf_in_len,
+	sz->buf_in = usb_alloc_coherent(sz->udev, sz->buf_in_len,
 				      GFP_ATOMIC, &sz->dma_in);
 #else
 	sz->buf_in = kmalloc(sz->buf_in_len, GFP_KERNEL);
@@ -656,7 +656,7 @@ error:
 	if (sz) {
 		usb_free_urb(sz->urb_in);
 #ifdef KERNEL_2_5
-		usb_buffer_free(udev, sz->buf_in_len, sz->buf_in, sz->dma_in);
+		usb_free_coherent(udev, sz->buf_in_len, sz->buf_in, sz->dma_in);
 #else
 		if (sz->buf_in) {
 			kfree(sz->buf_in);
@@ -787,7 +787,7 @@ static void streamzap_disconnect(struct usb_device *dev, void *ptr)
 	usb_free_urb(sz->urb_in);
 
 #ifdef KERNEL_2_5
-	usb_buffer_free(sz->udev, sz->buf_in_len, sz->buf_in, sz->dma_in);
+	usb_free_coherent(sz->udev, sz->buf_in_len, sz->buf_in, sz->dma_in);
 #else
 	kfree(sz->buf_in);
 #endif

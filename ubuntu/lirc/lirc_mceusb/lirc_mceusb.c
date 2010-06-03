@@ -1040,7 +1040,7 @@ static int mceusb_dev_probe(struct usb_interface *intf,
 		goto mem_failure_switch;
 	}
 
-	ir->buf_in = usb_buffer_alloc(dev, maxp, GFP_ATOMIC, &ir->dma_in);
+	ir->buf_in = usb_alloc_coherent(dev, maxp, GFP_ATOMIC, &ir->dma_in);
 	if (!ir->buf_in) {
 		mem_failure = 5;
 		goto mem_failure_switch;
@@ -1080,7 +1080,7 @@ mem_failure_switch:
 	case 9:
 		usb_free_urb(ir->urb_in);
 	case 7:
-		usb_buffer_free(dev, maxp, ir->buf_in, ir->dma_in);
+		usb_free_coherent(dev, maxp, ir->buf_in, ir->dma_in);
 	case 5:
 		lirc_buffer_free(rbuf);
 	case 4:
@@ -1210,7 +1210,7 @@ static void mceusb_dev_disconnect(struct usb_interface *intf)
 	mutex_lock(&ir->lock);
 	usb_kill_urb(ir->urb_in);
 	usb_free_urb(ir->urb_in);
-	usb_buffer_free(dev, ir->len_in, ir->buf_in, ir->dma_in);
+	usb_free_coherent(dev, ir->len_in, ir->buf_in, ir->dma_in);
 	mutex_unlock(&ir->lock);
 
 	unregister_from_lirc(ir);

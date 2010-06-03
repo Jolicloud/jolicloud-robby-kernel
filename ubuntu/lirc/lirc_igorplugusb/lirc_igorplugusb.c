@@ -449,7 +449,7 @@ static void *usb_remote_probe(struct usb_device *dev, unsigned int ifnum,
 	}
 
 #if defined(KERNEL_2_5)
-	ir->buf_in = usb_buffer_alloc(dev,
+	ir->buf_in = usb_alloc_coherent(dev,
 			      DEVICE_BUFLEN+DEVICE_HEADERLEN,
 			      GFP_ATOMIC, &ir->dma_in);
 #else
@@ -485,7 +485,7 @@ mem_failure_switch:
 	switch (mem_failure) {
 	case 9:
 #if defined(KERNEL_2_5)
-		usb_buffer_free(dev, DEVICE_BUFLEN+DEVICE_HEADERLEN,
+		usb_free_coherent(dev, DEVICE_BUFLEN+DEVICE_HEADERLEN,
 			ir->buf_in, ir->dma_in);
 #else
 		kfree(ir->buf_in);
@@ -568,7 +568,7 @@ static void usb_remote_disconnect(struct usb_device *dev, void *ptr)
 
 
 #if defined(KERNEL_2_5)
-	usb_buffer_free(dev, ir->len_in, ir->buf_in, ir->dma_in);
+	usb_free_coherent(dev, ir->len_in, ir->buf_in, ir->dma_in);
 #else
 	kfree(ir->buf_in);
 #endif

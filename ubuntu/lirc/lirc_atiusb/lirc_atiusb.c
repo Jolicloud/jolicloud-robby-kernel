@@ -820,7 +820,7 @@ static void free_in_endpt(struct in_endpt *iep, int mem_failure)
 				ir->devnum);
 	case 3:
 #ifdef KERNEL_2_5
-		usb_buffer_free(iep->ir->usbdev, iep->len, iep->buf, iep->dma);
+		usb_free_coherent(iep->ir->usbdev, iep->len, iep->buf, iep->dma);
 #else
 		kfree(iep->buf);
 #endif
@@ -865,7 +865,7 @@ static struct in_endpt *new_in_endpt(struct atirf_dev *ir,
 	iep->len = len;
 
 #ifdef KERNEL_2_5
-	iep->buf = usb_buffer_alloc(dev, len, GFP_ATOMIC, &iep->dma);
+	iep->buf = usb_alloc_coherent(dev, len, GFP_ATOMIC, &iep->dma);
 #else
 	iep->buf = kmalloc(len, GFP_KERNEL);
 #endif
@@ -927,7 +927,7 @@ static void free_out_endpt(struct out_endpt *oep, int mem_failure)
 		}
 	case 3:
 #ifdef KERNEL_2_5
-		usb_buffer_free(oep->ir->usbdev, USB_OUTLEN,
+		usb_free_coherent(oep->ir->usbdev, USB_OUTLEN,
 				oep->buf, oep->dma);
 #else
 		kfree(oep->buf);
@@ -961,7 +961,7 @@ static struct out_endpt *new_out_endpt(struct atirf_dev *ir,
 		init_waitqueue_head(&oep->wait);
 
 #ifdef KERNEL_2_5
-		oep->buf = usb_buffer_alloc(dev, USB_OUTLEN,
+		oep->buf = usb_alloc_coherent(dev, USB_OUTLEN,
 					    GFP_ATOMIC, &oep->dma);
 #else
 		oep->buf = kmalloc(USB_OUTLEN, GFP_KERNEL);
