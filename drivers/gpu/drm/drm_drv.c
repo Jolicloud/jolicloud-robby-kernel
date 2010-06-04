@@ -426,25 +426,6 @@ static int drm_version(struct drm_device *dev, void *data,
 	return err;
 }
 
-/**
- * Called whenever a process performs an ioctl on /dev/drm.
- *
- * \param inode device inode.
- * \param file_priv DRM file private.
- * \param cmd command.
- * \param arg user argument.
- * \return zero on success or negative number on failure.
- *
- * Looks up the ioctl function in the ::ioctls table, checking for root
- * previleges if so required, and dispatches to the respective function.
- */
-long drm_ioctl(struct file *filp,
-	      unsigned int cmd, unsigned long arg)
-{
-	return drm_unlocked_ioctl(filp, cmd, arg);
-}
-EXPORT_SYMBOL(drm_ioctl);
-
 long drm_unlocked_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct drm_file *file_priv = filp->private_data;
@@ -536,6 +517,25 @@ long drm_unlocked_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	return retcode;
 }
 EXPORT_SYMBOL(drm_unlocked_ioctl);
+
+/**
+ * Called whenever a process performs an ioctl on /dev/drm.
+ *
+ * \param inode device inode.
+ * \param file_priv DRM file private.
+ * \param cmd command.
+ * \param arg user argument.
+ * \return zero on success or negative number on failure.
+ *
+ * Looks up the ioctl function in the ::ioctls table, checking for root
+ * previleges if so required, and dispatches to the respective function.
+ */
+long drm_ioctl(struct file *filp,
+	      unsigned int cmd, unsigned long arg)
+{
+	return drm_unlocked_ioctl(filp, cmd, arg);
+}
+EXPORT_SYMBOL(drm_ioctl);
 
 struct drm_local_map *drm_getsarea(struct drm_device *dev)
 {
