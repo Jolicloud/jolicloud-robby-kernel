@@ -659,7 +659,7 @@ static int aufs_setattr(struct dentry *dentry, struct iattr *ia)
 
 		if (ia->ia_size < i_size_read(inode)) {
 			/* unmap only */
-			err = vmtruncate(inode, ia->ia_size);
+			err = simple_setsize(inode, ia->ia_size);
 			if (unlikely(err))
 				goto out_unlock;
 		}
