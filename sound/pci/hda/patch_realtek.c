@@ -195,7 +195,6 @@ enum {
 	ALC272_DELL,
 	ALC272_DELL_ZM1,
 	ALC272_SAMSUNG_NC10,
-	ALC272_TOSHIBA_NB200,
 	ALC662_AUTO,
 	ALC662_MODEL_LAST,
 };
@@ -17193,31 +17192,6 @@ static struct hda_verb alc272_dell_init_verbs[] = {
 	{}
 };
 
-<<<<<<< HEAD:sound/pci/hda/patch_realtek.c
-static struct snd_kcontrol_new alc272_toshiba_mixer[] = {
-	HDA_CODEC_VOLUME("Front Mic Boost", 0x19, 0, HDA_INPUT),
-	{ } /* end */
-};
-
-static struct hda_verb alc272_toshiba_init_verbs[] = {
-	/* Front Pin: output 0 (0x0c) */
-	{0x17, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_OUT}, /* 0x14 */
-	{0x17, AC_VERB_SET_AMP_GAIN_MUTE, AMP_OUT_UNMUTE}, /* 0x14 */
-	/* Front Mic pin: input vref at 80% */
-	{0x14, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_VREF80}, /* 0x19 */
-	{0x14, AC_VERB_SET_AMP_GAIN_MUTE, AMP_OUT_MUTE},    /* 0x19 */
-	{0x17, AC_VERB_SET_EAPD_BTLENABLE, 2}, /* 0x14 */
-	{0x19, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_IN}, /* originally 0x12 */
-	{0x19, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_VREF80},
-	{0x13, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_IN},
-	{0x15, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_IN},
-	{0x16, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_IN},
-	{0x21, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_HP},
-	{0x21, AC_VERB_SET_AMP_GAIN_MUTE, AMP_OUT_UNMUTE},
-	{0x21, AC_VERB_SET_CONNECT_SEL, 0x01},  /* Headphone */
-	{0x23, AC_VERB_SET_AMP_GAIN_MUTE, AMP_IN_MUTE(0)},
-	{0x23, AC_VERB_SET_AMP_GAIN_MUTE, AMP_IN_UNMUTE(9)},
-=======
 static struct hda_verb alc663_mode7_init_verbs[] = {
 	{0x15, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_IN},
 	{0x16, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_IN},
@@ -17252,7 +17226,6 @@ static struct hda_verb alc663_mode8_init_verbs[] = {
 	{0x22, AC_VERB_SET_AMP_GAIN_MUTE, AMP_IN_MUTE(0)},
 	{0x22, AC_VERB_SET_AMP_GAIN_MUTE, AMP_IN_UNMUTE(9)},
 	{0x15, AC_VERB_SET_UNSOLICITED_ENABLE, AC_USRSP_EN | ALC880_HP_EVENT},
->>>>>>> tags/v2.6.34:sound/pci/hda/patch_realtek.c
 	{0x18, AC_VERB_SET_UNSOLICITED_ENABLE, AC_USRSP_EN | ALC880_MIC_EVENT},
 	{0x21, AC_VERB_SET_UNSOLICITED_ENABLE, AC_USRSP_EN | ALC880_HP_EVENT},
 	{}
@@ -17852,7 +17825,6 @@ static const char *alc662_models[ALC662_MODEL_LAST] = {
 	[ALC272_DELL]		= "dell",
 	[ALC272_DELL_ZM1]	= "dell-zm1",
 	[ALC272_SAMSUNG_NC10]	= "samsung-nc10",
-	[ALC272_TOSHIBA_NB200]	= "toshiba-nb200",
 	[ALC662_AUTO]		= "auto",
 };
 
@@ -17924,12 +17896,7 @@ static struct snd_pci_quirk alc662_cfg_tbl[] = {
 	SND_PCI_QUIRK(0x105b, 0x0cd6, "Foxconn", ALC662_ECS),
 	SND_PCI_QUIRK(0x105b, 0x0d47, "Foxconn 45CMX/45GMX/45CMX-K",
 		      ALC662_3ST_6ch_DIG),
-<<<<<<< HEAD:sound/pci/hda/patch_realtek.c
-	//SND_PCI_QUIRK(0x1179, 0xff6e, "Toshiba NB200", ALC663_ASUS_MODE4),
-	SND_PCI_QUIRK(0x1179, 0xff6e, "Toshiba NB200", ALC272_TOSHIBA_NB200),
-=======
 	SND_PCI_QUIRK(0x1179, 0xff6e, "Toshiba NB20x", ALC662_AUTO),
->>>>>>> tags/v2.6.34:sound/pci/hda/patch_realtek.c
 	SND_PCI_QUIRK(0x144d, 0xca00, "Samsung NC10", ALC272_SAMSUNG_NC10),
 	SND_PCI_QUIRK(0x1458, 0xa002, "Gigabyte 945GCM-S2L",
 		      ALC662_3ST_6ch_DIG),
@@ -18246,21 +18213,6 @@ static struct alc_config_preset alc662_presets[] = {
 		.unsol_event = alc663_mode4_unsol_event,
 		.setup = alc663_mode4_setup,
 		.init_hook = alc663_mode4_inithook,
-	},
-	[ALC272_TOSHIBA_NB200] = {
-		.mixers = { alc663_m51va_mixer, alc272_toshiba_mixer },
-		.cap_mixer = alc662_auto_capture_mixer,
-		.init_verbs = { alc662_init_verbs, alc272_toshiba_init_verbs },
-		.num_dacs = ARRAY_SIZE(alc662_dac_nids),
-		.dac_nids = alc662_dac_nids,
-		.num_channel_mode = ARRAY_SIZE(alc662_3ST_2ch_modes),
-		.adc_nids = alc662_adc_nids,
-		.num_adc_nids = ARRAY_SIZE(alc662_adc_nids),
-		.capsrc_nids = alc662_capsrc_nids,
-		.channel_mode = alc662_3ST_2ch_modes,
-		/*.input_mux = &alc663_m51va_capture_source,*/
-		.unsol_event = alc272_toshiba_unsol_event,
-		.init_hook = alc272_toshiba_inithook,
 	},
 };
 
