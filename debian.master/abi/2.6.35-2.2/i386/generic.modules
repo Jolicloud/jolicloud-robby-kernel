@@ -533,6 +533,7 @@ denali
 depca
 des_generic
 dib0070
+dib0090
 dib3000mb
 dib3000mc
 dib7000m
@@ -1012,6 +1013,7 @@ i5100_edac
 i5400_edac
 i5k_amb
 i6300esb
+i7core_edac
 i810
 i810fb
 i82092
@@ -1176,6 +1178,7 @@ isight_firmware
 isl29003
 isl6405
 isl6421
+isl6423
 isofs
 isp116x-hcd
 isp1362-hcd
@@ -1964,7 +1967,8 @@ rc-avermedia
 rc-avermedia-a16d
 rc-avermedia-cardbus
 rc-avermedia-dvbt
-rc-avermedia-m135a-rm-jx
+rc-avermedia-m135a
+rc-avermedia-m733a-rm-k6
 rc-avertv-303
 rc-behold
 rc-behold-columbus
@@ -2972,6 +2976,7 @@ xfrm6_tunnel
 xfrm_ipcomp
 xfrm_user
 xfs
+xgifb
 xhci-hcd
 xirc2ps_cs
 xircom_cb
