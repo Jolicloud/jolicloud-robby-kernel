@@ -165,7 +165,8 @@ conc_level		= -j$(CONCURRENCY_LEVEL)
 kmake = make ARCH=$(build_arch) \
 	EXTRAVERSION=-$(abinum)-$(target_flavour) \
 	CONFIG_DEBUG_SECTION_MISMATCH=y SUBLEVEL=$(SUBLEVEL) \
-	KBUILD_BUILD_VERSION="$(uploadnum)"
+	KBUILD_BUILD_VERSION="$(uploadnum)" \
+	LOCALVERSION= localver-extra=
 ifneq ($(LOCAL_ENV_CC),)
 kmake += CC=$(LOCAL_ENV_CC) DISTCC_HOSTS=$(LOCAL_ENV_DISTCC_HOSTS)
 endif
