@@ -800,22 +800,17 @@ void intel_lvds_init(struct drm_device *dev)
 	}
 
 	if ((blc_type == BLC_I2C_TYPE) || (blc_type == BLC_PWM_TYPE)){	
+		struct backlight_properties props;
+
 		/* add /sys/class/backlight interface as standard */
-		psbbl_device = backlight_device_register("psblvds", &dev->pdev->dev, dev, &psbbl_ops);
+		memset(&props, 0, sizeof(struct backlight_properties));
+		props.max_brightness = BRIGHTNESS_MAX_LEVEL;
+		psbbl_device = backlight_device_register("psblvds",
+				&dev->pdev->dev, dev, &psbbl_ops, &props);
 		if (psbbl_device){
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,20)
-			down(&psbbl_device->sem);
-			psbbl_device->props->max_brightness = BRIGHTNESS_MAX_LEVEL;
-			psbbl_device->props->brightness = lvds_backlight;
-			psbbl_device->props->power = FB_BLANK_UNBLANK;
-			psbbl_device->props->update_status(psbbl_device);
-			up(&psbbl_device->sem);
-#else
-			psbbl_device->props.max_brightness = BRIGHTNESS_MAX_LEVEL;
 			psbbl_device->props.brightness = lvds_backlight;
 			psbbl_device->props.power = FB_BLANK_UNBLANK;
 			backlight_update_status(psbbl_device);
-#endif
 		}
 	}
 
