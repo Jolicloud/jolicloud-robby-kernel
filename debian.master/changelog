@@ -4,6 +4,10 @@ linux (2.6.35-3.4) UNRELEASED; urgency=low
   CHANGELOG: Use the printchanges target to see the curent changes.
   CHANGELOG: Use the insertchanges target to create the final log.
 
+  [ Upstream changes ]
+
+  * rebased to v2.6.35-rc3
+
  -- Leann Ogasawara <leann.ogasawara@canonical.com>  Thu, 10 Jun 2010 16:15:22 -0700
 
 linux (2.6.35-2.3) maverick; urgency=low
