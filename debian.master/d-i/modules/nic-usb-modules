@@ -11,3 +11,17 @@ rt73usb ?
 rt2570 ?
 cdc_ether ?
 asix ?
+cdc_eem ?
+cdc_ether ?
+cdc-phonet ?
+cdc_subset ?
+dm9601 ?
+gl620a ?
+hso ?
+int51x1 ?
+mcs7830 ?
+net1080 ?
+plusb ?
+rndis_host ?
+smsc95xx ?
+zaurus ?
