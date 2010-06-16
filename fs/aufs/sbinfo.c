@@ -200,3 +200,48 @@ void aufs_read_and_write_unlock2(struct dentry *d1, struct dentry *d2)
 	di_write_unlock2(d1, d2);
 	si_read_unlock(d1->d_sb);
 }
+
+/* ---------------------------------------------------------------------- */
+
+int si_pid_test_slow(struct super_block *sb)
+{
+	void *p;
+
+	rcu_read_lock();
+	p = radix_tree_lookup(&au_sbi(sb)->au_si_pid.tree, current->pid);
+	rcu_read_unlock();
+
+	return (long)p;
+}
+
+void si_pid_set_slow(struct super_block *sb)
+{
+	int err;
+	struct au_sbinfo *sbinfo;
+
+	AuDebugOn(si_pid_test_slow(sb));
+
+	sbinfo = au_sbi(sb);
+	err = radix_tree_preload(GFP_NOFS | __GFP_NOFAIL);
+	AuDebugOn(err);
+	spin_lock(&sbinfo->au_si_pid.tree_lock);
+	err = radix_tree_insert(&sbinfo->au_si_pid.tree, current->pid,
+				(void *)1);
+	spin_unlock(&sbinfo->au_si_pid.tree_lock);
+	AuDebugOn(err);
+	radix_tree_preload_end();
+}
+
+void si_pid_clr_slow(struct super_block *sb)
+{
+	void *p;
+	struct au_sbinfo *sbinfo;
+
+	AuDebugOn(!si_pid_test_slow(sb));
+
+	sbinfo = au_sbi(sb);
+	spin_lock(&sbinfo->au_si_pid.tree_lock);
+	p = radix_tree_delete(&sbinfo->au_si_pid.tree, current->pid);
+	spin_unlock(&sbinfo->au_si_pid.tree_lock);
+	AuDebugOn(1 != (long)p);
+}

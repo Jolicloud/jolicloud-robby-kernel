@@ -61,7 +61,18 @@ struct au_sbinfo {
 	/* nowait tasks in the system-wide workqueue */
 	struct au_nowait_tasks	si_nowait;
 
+	/*
+	 * tried sb->s_umount, but failed due to the dependecy between i_mutex.
+	 * rwsem for au_sbinfo is necessary.
+	 */
 	struct au_rwsem		si_rwsem;
+
+	/* prevent recursive locking in deleting inode */
+	struct {
+		unsigned long		*bitmap;
+		spinlock_t		tree_lock;
+		struct radix_tree_root	tree;
+	} au_si_pid;
 
 	/* branch management */
 	unsigned int		si_generation;
@@ -212,6 +223,10 @@ void aufs_write_unlock(struct dentry *dentry);
 void aufs_read_and_write_lock2(struct dentry *d1, struct dentry *d2, int isdir);
 void aufs_read_and_write_unlock2(struct dentry *d1, struct dentry *d2);
 
+int si_pid_test_slow(struct super_block *sb);
+void si_pid_set_slow(struct super_block *sb);
+void si_pid_clr_slow(struct super_block *sb);
+
 /* wbr_policy.c */
 extern struct au_wbr_copyup_operations au_wbr_copyup_ops[];
 extern struct au_wbr_create_operations au_wbr_create_ops[];
@@ -275,6 +290,45 @@ static inline void dbgaufs_si_null(struct au_sbinfo *sbinfo)
 	sbinfo->si_dbgaufs_xigen = NULL;
 #endif
 #endif
+}
+
+/* ---------------------------------------------------------------------- */
+
+static inline pid_t si_pid_bit(void)
+{
+	/* the origin of pid is 1, but the bitmap's is 0 */
+	return current->pid - 1;
+}
+
+static inline int si_pid_test(struct super_block *sb)
+{
+	pid_t bit = si_pid_bit();
+	if (bit < PID_MAX_DEFAULT)
+		return test_bit(bit, au_sbi(sb)->au_si_pid.bitmap);
+	else
+		return si_pid_test_slow(sb);
+}
+
+static inline void si_pid_set(struct super_block *sb)
+{
+	pid_t bit = si_pid_bit();
+	if (bit < PID_MAX_DEFAULT) {
+		AuDebugOn(test_bit(bit, au_sbi(sb)->au_si_pid.bitmap));
+		set_bit(bit, au_sbi(sb)->au_si_pid.bitmap);
+		/* smp_mb(); */
+	} else
+		si_pid_set_slow(sb);
+}
+
+static inline void si_pid_clr(struct super_block *sb)
+{
+	pid_t bit = si_pid_bit();
+	if (bit < PID_MAX_DEFAULT) {
+		AuDebugOn(!test_bit(bit, au_sbi(sb)->au_si_pid.bitmap));
+		clear_bit(bit, au_sbi(sb)->au_si_pid.bitmap);
+		/* smp_mb(); */
+	} else
+		si_pid_clr_slow(sb);
 }
 
 /* ---------------------------------------------------------------------- */
