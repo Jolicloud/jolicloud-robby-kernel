@@ -281,28 +281,40 @@ static inline void dbgaufs_si_null(struct au_sbinfo *sbinfo)
 
 /* lock superblock. mainly for entry point functions */
 /*
- * si_noflush_read_lock, si_noflush_write_lock,
- * si_read_unlock, si_write_unlock, si_downgrade_lock
+ * __si_read_lock, __si_write_lock,
+ * __si_read_unlock, __si_write_unlock, __si_downgrade_lock
  */
-AuSimpleLockRwsemFuncs(si_noflush, struct super_block *sb,
-		       &au_sbi(sb)->si_rwsem);
-AuSimpleUnlockRwsemFuncs(si, struct super_block *sb, &au_sbi(sb)->si_rwsem);
+AuSimpleRwsemFuncs(__si, struct super_block *sb, &au_sbi(sb)->si_rwsem);
 
 #define SiMustNoWaiters(sb)	AuRwMustNoWaiters(&au_sbi(sb)->si_rwsem)
 #define SiMustAnyLock(sb)	AuRwMustAnyLock(&au_sbi(sb)->si_rwsem)
 #define SiMustWriteLock(sb)	AuRwMustWriteLock(&au_sbi(sb)->si_rwsem)
+
+static inline void si_noflush_read_lock(struct super_block *sb)
+{
+	__si_read_lock(sb);
+}
+
+static inline int si_noflush_read_trylock(struct super_block *sb)
+{
+	return __si_read_trylock(sb);
+}
+
+static inline void si_noflush_write_lock(struct super_block *sb)
+{
+	__si_write_lock(sb);
+}
+
+static inline int si_noflush_write_trylock(struct super_block *sb)
+{
+	return __si_write_trylock(sb);
+}
 
 static inline void si_read_lock(struct super_block *sb, int flags)
 {
 	if (au_ftest_lock(flags, FLUSH))
 		au_nwt_flush(&au_sbi(sb)->si_nowait);
 	si_noflush_read_lock(sb);
-}
-
-static inline void si_write_lock(struct super_block *sb)
-{
-	au_nwt_flush(&au_sbi(sb)->si_nowait);
-	si_noflush_write_lock(sb);
 }
 
 static inline int si_read_trylock(struct super_block *sb, int flags)
@@ -312,12 +324,37 @@ static inline int si_read_trylock(struct super_block *sb, int flags)
 	return si_noflush_read_trylock(sb);
 }
 
+static inline void si_read_unlock(struct super_block *sb)
+{
+	__si_read_unlock(sb);
+}
+
+static inline void si_write_lock(struct super_block *sb)
+{
+	au_nwt_flush(&au_sbi(sb)->si_nowait);
+	si_noflush_write_lock(sb);
+}
+
+#if 0 /* unused */
 static inline int si_write_trylock(struct super_block *sb, int flags)
 {
 	if (au_ftest_lock(flags, FLUSH))
 		au_nwt_flush(&au_sbi(sb)->si_nowait);
 	return si_noflush_write_trylock(sb);
 }
+#endif
+
+static inline void si_write_unlock(struct super_block *sb)
+{
+	__si_write_unlock(sb);
+}
+
+#if 0 /* unused */
+static inline void si_downgrade_lock(struct super_block *sb)
+{
+	__si_downgrade_lock(sb);
+}
+#endif
 
 /* ---------------------------------------------------------------------- */
 
