@@ -347,21 +347,29 @@ AuSimpleRwsemFuncs(__si, struct super_block *sb, &au_sbi(sb)->si_rwsem);
 static inline void si_noflush_read_lock(struct super_block *sb)
 {
 	__si_read_lock(sb);
+	si_pid_set(sb);
 }
 
 static inline int si_noflush_read_trylock(struct super_block *sb)
 {
-	return __si_read_trylock(sb);
+	int locked = __si_read_trylock(sb);
+	if (locked)
+		si_pid_set(sb);
+	return locked;
 }
 
 static inline void si_noflush_write_lock(struct super_block *sb)
 {
 	__si_write_lock(sb);
+	si_pid_set(sb);
 }
 
 static inline int si_noflush_write_trylock(struct super_block *sb)
 {
-	return __si_write_trylock(sb);
+	int locked = __si_write_trylock(sb);
+	if (locked)
+		si_pid_set(sb);
+	return locked;
 }
 
 static inline void si_read_lock(struct super_block *sb, int flags)
@@ -380,6 +388,7 @@ static inline int si_read_trylock(struct super_block *sb, int flags)
 
 static inline void si_read_unlock(struct super_block *sb)
 {
+	si_pid_clr(sb);
 	__si_read_unlock(sb);
 }
 
@@ -400,6 +409,7 @@ static inline int si_write_trylock(struct super_block *sb, int flags)
 
 static inline void si_write_unlock(struct super_block *sb)
 {
+	si_pid_clr(sb);
 	__si_write_unlock(sb);
 }
 
