@@ -228,9 +228,15 @@ void au_iinfo_fin(struct inode *inode)
 	if (si_pid_test(sb))
 		au_xino_delete_inode(inode, unlinked);
 	else {
+		/*
+		 * it is safe to hide the dependency between sbinfo and
+		 * sb->s_umount.
+		 */
+		lockdep_off();
 		si_noflush_read_lock(sb);
 		au_xino_delete_inode(inode, unlinked);
 		si_read_unlock(sb);
+		lockdep_on();
 	}
 
 	if (iinfo->ii_vdir)
