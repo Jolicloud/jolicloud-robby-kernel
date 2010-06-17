@@ -120,6 +120,26 @@ ifeq ($(do_doc_package),true)
 	chmod 644 $(bindoc)/changelog.Debian.old.gz
 endif
 
+ifneq ($(skipsub),true)
+	for sub in $($(*)_sub); do					\
+		if ! (TO=$$sub FROM=$* ABI_RELEASE=$(abi_release) $(SHELL)		\
+			$(DROOT)/scripts/sub-flavour); then exit 1; fi;		\
+		/sbin/depmod -b debian/$(bin_pkg_name)-$$sub		\
+			-ea -F debian/$(bin_pkg_name)-$$sub/boot/System.map-$(abi_release)-$* \
+			$(abi_release)-$*;					\
+		install -d debian/$(bin_pkg_name)-$$sub/DEBIAN;	\
+		for script in postinst postrm preinst prerm; do			\
+			sed -e 's/=V/$(abi_release)-$*/g'			\
+			    -e 's/=K/$(install_file)/g'				\
+			    -e 's/=L/$(loader)/g'				\
+			    -e 's@=B@$(build_arch)@g'				\
+				$(DROOT)/control-scripts/$$script >		\
+				debian/$(bin_pkg_name)-$$sub/DEBIAN/$$script;\
+			chmod 755  debian/$(bin_pkg_name)-$$sub/DEBIAN/$$script;\
+		done;								\
+	done
+endif
+
 ifneq ($(skipdbg),true)
 	# Debug image is simple
 	install -m644 -D $(builddir)/build-$*/vmlinux \
@@ -187,7 +207,7 @@ endif
 		$(pkgdir)/lib/modules/$(abi_release)-$*/_
 	if [ -f $(pkgdir)/lib/modules/$(abi_release)-$*/modules.builtin ] ; then \
 	    mv $(pkgdir)/lib/modules/$(abi_release)-$*/modules.builtin \
-		$(pkgdir)/lib/modules/$(abi_release)-$*/_modules.builtin; \
+		$(pkgdir)/lib/modules/$(abi_release)-$*/_; \
 	fi
 	rm -f $(pkgdir)/lib/modules/$(abi_release)-$*/modules.*
 	mv $(pkgdir)/lib/modules/$(abi_release)-$*/_/* \
@@ -264,6 +284,21 @@ binary-%: install-%
 	dh_gencontrol -p$(pkghdr)
 	dh_md5sums -p$(pkghdr)
 	dh_builddeb -p$(pkghdr)
+
+ifneq ($(skipsub),true)
+	@set -e; for sub in $($(*)_sub); do		\
+		pkg=$(bin_pkg_name)-$$sub;	\
+		dh_installchangelogs -p$$pkg;		\
+		dh_installdocs -p$$pkg;			\
+		dh_compress -p$$pkg;			\
+		dh_fixperms -p$$pkg;			\
+		dh_shlibdeps -p$$pkg;			\
+		dh_installdeb -p$$pkg;			\
+		dh_gencontrol -p$$pkg;			\
+		dh_md5sums -p$$pkg;			\
+		dh_builddeb -p$$pkg;			\
+	done
+endif
 
 ifneq ($(skipdbg),true)
 	dh_installchangelogs -p$(dbgpkg)
