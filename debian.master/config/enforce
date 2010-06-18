@@ -45,3 +45,7 @@ value CONFIG_SYSFS_DEPRECATED_V2 n
 
 # automatically add local version will cause packaging failure
 value CONFIG_LOCALVERSION_AUTO n
+
+# provide framebuffer console form the start
+# UbuntuSpec:foundations-m-grub2-boot-framebuffer
+value CONFIG_FRAMEBUFFER_CONSOLE y
