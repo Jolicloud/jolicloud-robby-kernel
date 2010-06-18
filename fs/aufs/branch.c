@@ -54,11 +54,7 @@ static void au_br_do_free(struct au_branch *br)
 		else
 			break;
 
-	/* some filesystems acquire extra lock */
-	/* lockdep_off(); */
 	mntput(br->br_mnt);
-	/* lockdep_on(); */
-
 	kfree(wbr);
 	kfree(br);
 }
