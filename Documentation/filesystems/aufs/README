@@ -107,6 +107,7 @@ Features or just an idea in the future (see also design/*.txt),
 Kindly one of aufs user, the Center for Scientific Computing and Free
 Software (C3SL), Federal University of Parana offered me a public GIT
 tree space.
+And there are several GIT servers. See http://aufs.sf.net in detail.
 
 There are three GIT trees, aufs2-2.6, aufs2-standalone and aufs2-util.
 While the aufs2-util is always necessary, you need either of aufs2-2.6
