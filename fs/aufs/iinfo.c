@@ -217,7 +217,7 @@ void au_iinfo_fin(struct inode *inode)
 	struct au_hinode *hi;
 	struct super_block *sb;
 	aufs_bindex_t bindex, bend;
-	unsigned char locked;
+	const unsigned char unlinked = !inode->i_nlink;
 
 	iinfo = au_ii(inode);
 	/* bad_inode case */
@@ -225,10 +225,19 @@ void au_iinfo_fin(struct inode *inode)
 		return;
 
 	sb = inode->i_sb;
-	locked = !!si_noflush_read_trylock(sb);
-	au_xino_delete_inode(inode, !inode->i_nlink);
-	if (locked)
+	if (si_pid_test(sb))
+		au_xino_delete_inode(inode, unlinked);
+	else {
+		/*
+		 * it is safe to hide the dependency between sbinfo and
+		 * sb->s_umount.
+		 */
+		lockdep_off();
+		si_noflush_read_lock(sb);
+		au_xino_delete_inode(inode, unlinked);
 		si_read_unlock(sb);
+		lockdep_on();
+	}
 
 	if (iinfo->ii_vdir)
 		au_vdir_free(iinfo->ii_vdir);
