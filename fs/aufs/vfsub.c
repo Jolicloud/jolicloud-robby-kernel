@@ -166,9 +166,7 @@ struct dentry *vfsub_lock_rename(struct dentry *d1, struct au_hinode *hdir1,
 {
 	struct dentry *d;
 
-	lockdep_off();
 	d = lock_rename(d1, d2);
-	lockdep_on();
 	au_hn_suspend(hdir1);
 	if (hdir1 != hdir2)
 		au_hn_suspend(hdir2);
@@ -182,9 +180,7 @@ void vfsub_unlock_rename(struct dentry *d1, struct au_hinode *hdir1,
 	au_hn_resume(hdir1);
 	if (hdir1 != hdir2)
 		au_hn_resume(hdir2);
-	lockdep_off();
 	unlock_rename(d1, d2);
-	lockdep_on();
 }
 
 /* ---------------------------------------------------------------------- */
