@@ -408,7 +408,6 @@ ufs
 uinput
 usb-storage
 usbtouchscreen
-vesafb
 veth
 vfat
 vga16fb
