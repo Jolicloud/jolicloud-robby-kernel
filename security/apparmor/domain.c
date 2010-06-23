@@ -424,8 +424,12 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 		new_profile = x_to_profile(profile, sa.name, sa.perms.xindex);
 		if (!new_profile) {
 			if (sa.perms.xindex & AA_X_INHERIT) {
-				/* (p|c|n)ix - don't change profile */
+				/* (p|c|n)ix - don't change profile but do
+				 * use the newest version, which was picked
+				 * up above when getting profile 
+				 */
 				sa.base.info = "ix fallback";
+				new_profile = aa_get_profile(profile);
 				goto x_clear;
 			} else if (sa.perms.xindex & AA_X_UNCONFINED) {
 				new_profile = aa_get_profile(ns->unconfined);
@@ -492,12 +496,12 @@ apply:
 	/* when transitioning profiles clear unsafe personality bits */
 	bprm->per_clear |= PER_CLEAR_ON_SETID;
 
+x_clear:
 	aa_put_profile(cxt->profile);
 	/* transfer new profile reference will be released when cxt is freed */
 	cxt->profile = new_profile;
 
 	/* clear out all temporary/transitional state from the context */
-x_clear:
 	aa_put_profile(cxt->previous);
 	aa_put_profile(cxt->onexec);
 	cxt->previous = NULL;
