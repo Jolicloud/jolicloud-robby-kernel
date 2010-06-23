@@ -204,6 +204,8 @@ void aa_destroy_aafs(void)
  * aa_create_aafs - create the apparmor security filesystem
  *
  * dentries created here are released by aa_destroy_aafs
+ *
+ * Returns: error on failure
  */
 int aa_create_aafs(void)
 {

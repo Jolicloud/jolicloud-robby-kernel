@@ -142,6 +142,7 @@ static void print_name(struct seq_file *f, struct aa_profile *profile)
 	seq_printf(f, "%s", profile->base.name);
 }
 
+/* Returns: error on failure */
 static int seq_show_profile(struct seq_file *f, void *p)
 {
 	struct aa_profile *profile = (struct aa_profile *)p;

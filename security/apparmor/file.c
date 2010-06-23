@@ -103,6 +103,8 @@ static void file_audit_cb(struct audit_buffer *ab, void *va)
  * aa_audit_file - handle the auditing of file operations
  * @profile: the profile being enforced
  * @sa: file auditing context
+ *
+ * Returns: error on failure
  */
 int aa_audit_file(struct aa_profile *profile, struct aa_audit_file *sa)
 {
@@ -361,7 +363,7 @@ audit:
 	return sa.base.error;
 }
 
-static inline int aa_is_deleted_file(struct dentry *dentry)
+static inline bool aa_is_deleted_file(struct dentry *dentry)
 {
 	if (d_unlinked(dentry) && dentry->d_inode->i_nlink == 0)
 		return 1;

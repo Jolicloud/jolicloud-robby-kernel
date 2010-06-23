@@ -53,7 +53,7 @@ char *aa_split_name_from_ns(char *args, char **ns_name)
  *
  * The @str string must be full consumed for this to be considered a match
  */
-int aa_strneq(const char *str, const char *sub, int len)
+bool aa_strneq(const char *str, const char *sub, int len)
 {
 	int res = strncmp(str, sub, len);
 	if (res)

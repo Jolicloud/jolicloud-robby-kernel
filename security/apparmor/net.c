@@ -65,6 +65,7 @@ static void audit_cb(struct audit_buffer *ab, void *va)
 
 }
 
+/* Returns: error on failure */
 static int aa_audit_net(struct aa_profile *profile, struct aa_audit_net *sa)
 {
 	int type = AUDIT_APPARMOR_AUTO;
@@ -92,6 +93,7 @@ static int aa_audit_net(struct aa_profile *profile, struct aa_audit_net *sa)
 	return aa_audit(type, profile, &sa->base, audit_cb);
 }
 
+/* Returns: error on failure */
 int aa_net_perm(struct aa_profile *profile, char *operation,
 		int family, int type, int protocol)
 {
@@ -121,6 +123,7 @@ int aa_net_perm(struct aa_profile *profile, char *operation,
 	return aa_audit_net(profile, &sa);
 }
 
+/* Returns: error on failure */
 int aa_revalidate_sk(struct sock *sk, char *operation)
 {
 	struct aa_profile *profile;

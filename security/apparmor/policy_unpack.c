@@ -91,7 +91,7 @@ int aa_audit_iface(struct aa_audit_iface *sa)
 	return error;
 }
 
-static int aa_inbounds(struct aa_ext *e, size_t size)
+static bool aa_inbounds(struct aa_ext *e, size_t size)
 {
 	return (size <= e->end - e->pos);
 }
@@ -119,7 +119,7 @@ static size_t unpack_u16_chunk(struct aa_ext *e, char **chunk)
 	return size;
 }
 
-static int unpack_X(struct aa_ext *e, enum aa_code code)
+static bool unpack_X(struct aa_ext *e, enum aa_code code)
 {
 	if (!aa_inbounds(e, 1))
 		return 0;
@@ -141,9 +141,10 @@ static int unpack_X(struct aa_ext *e, enum aa_code code)
  * skipped and only the typecode will be tested.
  * returns 1 on success (both type code and name tests match) and the read
  * head is advanced past the headers
- * returns %0 if either match failes, the read head does not move
+ *
+ * Returns: 0 if either match failes, the read head does not move
  */
-static int unpack_nameX(struct aa_ext *e, enum aa_code code, const char *name)
+static bool unpack_nameX(struct aa_ext *e, enum aa_code code, const char *name)
 {
 	/*
 	 * May need to reset pos if name or type doesn't match
@@ -173,7 +174,7 @@ fail:
 	return 0;
 }
 
-static int unpack_u16(struct aa_ext *e, u16 *data, const char *name)
+static bool unpack_u16(struct aa_ext *e, u16 *data, const char *name)
 {
 	if (unpack_nameX(e, AA_U16, name)) {
 		if (!aa_inbounds(e, sizeof(u16)))
@@ -186,7 +187,7 @@ static int unpack_u16(struct aa_ext *e, u16 *data, const char *name)
 	return 0;
 }
 
-static int unpack_u32(struct aa_ext *e, u32 *data, const char *name)
+static bool unpack_u32(struct aa_ext *e, u32 *data, const char *name)
 {
 	if (unpack_nameX(e, AA_U32, name)) {
 		if (!aa_inbounds(e, sizeof(u32)))
@@ -199,7 +200,7 @@ static int unpack_u32(struct aa_ext *e, u32 *data, const char *name)
 	return 0;
 }
 
-static int unpack_u64(struct aa_ext *e, u64 *data, const char *name)
+static bool unpack_u64(struct aa_ext *e, u64 *data, const char *name)
 {
 	if (unpack_nameX(e, AA_U64, name)) {
 		if (!aa_inbounds(e, sizeof(u64)))
@@ -284,7 +285,7 @@ static int unpack_dynstring(struct aa_ext *e, char **string, const char *name)
 	return res;
 }
 
-static int verify_accept(struct aa_dfa *dfa, int flags)
+static bool verify_accept(struct aa_dfa *dfa, int flags)
 {
 	int i;
 
@@ -341,7 +342,7 @@ fail:
 	return ERR_PTR(-EPROTO);
 }
 
-static int aa_unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
+static bool aa_unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
 {
 	void *pos = e->pos;
 
@@ -387,7 +388,7 @@ fail:
 	return 0;
 }
 
-static int aa_unpack_rlimits(struct aa_ext *e, struct aa_profile *profile)
+static bool aa_unpack_rlimits(struct aa_ext *e, struct aa_profile *profile)
 {
 	void *pos = e->pos;
 
@@ -569,7 +570,7 @@ fail:
  * @e: serialized data read head
  * @operation: operation header is being verified for
  *
- * returns error or 0 if header is good
+ * Returns: error or 0 if header is good
  */
 static int aa_verify_header(struct aa_ext *e, struct aa_audit_iface *sa)
 {
@@ -598,7 +599,7 @@ static int aa_verify_header(struct aa_ext *e, struct aa_audit_iface *sa)
  * verify_profile - Do post unpack analysis to verify profile consistency
  * @profile: profile to verify
  *
- * RETURNS: 0 if passes verification else error
+ * Returns: 0 if passes verification else error
  */
 static bool verify_xindex(int xindex, int table_size)
 {

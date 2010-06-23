@@ -265,6 +265,8 @@ out:
 /**
  * apparmor_bprm_set_creds - set the new creds on the bprm struct
  * @bprm: binprm for the exec
+ *
+ * Returns: error on failure
  */
 int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 {

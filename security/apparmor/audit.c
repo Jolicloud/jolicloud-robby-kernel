@@ -117,6 +117,8 @@ out:
  * @cb: optional callback fn for type specific fields
  *
  * Handle default message switching based off of audit mode flags
+ *
+ * Returns: error on failure
  */
 int aa_audit(int type, struct aa_profile *profile, struct aa_audit *sa,
 	     void (*cb) (struct audit_buffer *, void *))

@@ -52,7 +52,7 @@ void apparmor_disable(void);
 
 /* fn's in lib */
 char *aa_split_name_from_ns(char *args, char **ns_name);
-int aa_strneq(const char *str, const char *sub, int len);
+bool aa_strneq(const char *str, const char *sub, int len);
 char *aa_strchrnul(const char *s, int c);
 void aa_info_message(const char *str);
 
@@ -71,7 +71,7 @@ static inline unsigned int aa_dfa_null_transition(struct aa_dfa *dfa,
 	return aa_dfa_match_len(dfa, start, "\0", 1);
 }
 
-static inline int mediated_filesystem(struct inode *inode)
+static inline bool mediated_filesystem(struct inode *inode)
 {
 	return !(inode->i_sb->s_flags & MS_NOUSER);
 }

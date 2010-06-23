@@ -94,7 +94,7 @@ const char *profile_mode_names[] = {
 	"kill",
 };
 
-static int common_init(struct aa_policy_common *common, const char *name)
+static bool common_init(struct aa_policy_common *common, const char *name)
 {
 	/* freed by common_free */
 	common->name = kstrdup(name, GFP_KERNEL);

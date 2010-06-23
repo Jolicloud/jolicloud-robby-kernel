@@ -39,6 +39,7 @@ static int aa_audit_ptrace(struct aa_profile *profile,
 	return aa_audit(AUDIT_APPARMOR_AUTO, profile, &sa->base, audit_cb);
 }
 
+/* Returns error on failure */
 int aa_may_ptrace(struct task_struct *tracer_task, struct aa_profile *tracer,
 		  struct aa_profile *tracee, unsigned int mode)
 {
