@@ -851,20 +851,20 @@ struct aa_profile *aa_find_profile(struct aa_namespace *ns, const char *hname)
  * replacement_allowed - test to see if replacement is allowed
  * @profile: profile to test if it can be replaced  (MAYBE NULL)
  * @sa: audit data  (NOT NULL)
- * @add_only: true if replacement shouldn't be allowed but addition is okay
+ * @noreplace: true if replacement shouldn't be allowed but addition is okay
  *
  * Returns: %1 if replacement allowed else %0
  */
 static bool replacement_allowed(struct aa_profile *profile,
 				struct aa_audit_iface *sa,
-				int add_only)
+				int noreplace)
 {
 	if (profile) {
 		if (profile->flags & PFLAG_IMMUTABLE) {
 			sa->base.info = "cannot replace immutible profile";
 			sa->base.error = -EPERM;
 			return 0;
-		} else if (add_only) {
+		} else if (noreplace) {
 			sa->base.info = "profile already exists";
 			sa->base.error = -EEXIST;
 			return 0;
@@ -898,7 +898,7 @@ static void __add_new_profile(struct aa_namespace *ns,
  * aa_interface_replace_profiles - replace profile(s) on the profile list
  * @udata: serialized data stream  (NOT NULL)
  * @size: size of the serialized data stream
- * @add_only: true if only doing addition, no replacement allowed
+ * @noreplace: true if only doing addition, no replacement allowed
  *
  * unpack and replace a profile on the profile list and uses of that profile
  * by any aa_task_cxt.  If the profile does not exist on the profile list
@@ -906,7 +906,7 @@ static void __add_new_profile(struct aa_namespace *ns,
  *
  * Returns: size of data consumed else error code on failure.
  */
-ssize_t aa_interface_replace_profiles(void *udata, size_t size, bool add_only)
+ssize_t aa_interface_replace_profiles(void *udata, size_t size, bool noreplace)
 {
 	struct aa_policy *policy;
 	struct aa_profile *old_profile = NULL, *new_profile = NULL;
@@ -971,10 +971,10 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size, bool add_only)
 		}
 	}
 
-	if (!replacement_allowed(old_profile, &sa, add_only))
+	if (!replacement_allowed(old_profile, &sa, noreplace))
 		goto audit;
 
-	if (!replacement_allowed(rename_profile, &sa, add_only))
+	if (!replacement_allowed(rename_profile, &sa, noreplace))
 		goto audit;
 
 audit:
