@@ -336,6 +336,26 @@ static int apparmor_path_chmod(struct dentry *dentry, struct vfsmount *mnt,
 	return error;
 }
 
+static int apparmor_path_chown(struct path *path, uid_t uid, gid_t gid)
+{
+	struct aa_profile *profile;
+	int error = 0;
+
+	if (!mediated_filesystem(path->dentry->d_inode))
+		return 0;
+
+	profile = aa_current_profile_wupd();
+	if (profile) {
+		struct path_cond cond =  { path->dentry->d_inode->i_uid,
+					   path->dentry->d_inode->i_mode
+		};
+		error = aa_path_perm(profile, "chown", path, AA_MAY_CHOWN,
+				     &cond);
+	}
+
+	return error;
+}
+
 static int apparmor_dentry_open(struct file *file, const struct cred *cred)
 {
 	struct aa_profile *profile;
@@ -712,6 +732,7 @@ static struct security_operations apparmor_ops = {
 	.path_mknod =			apparmor_path_mknod,
 	.path_rename =			apparmor_path_rename,
 	.path_chmod =			apparmor_path_chmod,
+	.path_chown =			apparmor_path_chown,
 	.path_truncate =		apparmor_path_truncate,
 	.dentry_open =			apparmor_dentry_open,
 
