@@ -88,14 +88,14 @@ static inline struct aa_task_context *__aa_task_cxt(struct task_struct *task)
  * __aa_task_is_confined - determine if @task has any confinement
  * @task: task to check confinement of
  *
- * If @task != current needs to be in RCU safe critical section
+ * If @task != current needs to be called in RCU safe critical section
  */
 static inline bool __aa_task_is_confined(struct task_struct *task)
 {
-	struct aa_task_context *cxt;
+	struct aa_task_context *cxt = __task_cred(task)->security;
 
-	cxt = __aa_task_cxt(task);
-	if (!cxt || !aa_confined(cxt->sys.profile))
+	BUG_ON(!cxt);
+	if (!aa_confined(cxt->sys.profile))
 		return 0;
 
 	return 1;
