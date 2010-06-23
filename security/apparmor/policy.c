@@ -62,7 +62,11 @@
  *       from /bin/bash
  *
  *   A profile or namespace name that can contain one or more // seperators
- *   is refered to as an fqname.
+ *   is refered to as an hname (hierarchical).
+ *   eg.  /bin/bash//bin/ls
+ *
+ *   An fqname is a name that may contain both namespace and profile hnames.
+ *   eg. :ns:/bin/bash//bin/ls
  *
  * NOTES:
  *   - hierarchical namespaces are not currently implemented.  Currently
@@ -97,8 +101,8 @@ const char *profile_mode_names[] = {
 	"kill",
 };
 
-/* fqname in this context does not have a namespace name prepended */
-static const char *fqname_subname(const char *name)
+/* hname in this context does not have a namespace name prepended */
+static const char *hname_subname(const char *name)
 {
 	char *split;
 	/* check for namespace which begins with a : and ends with : or \0 */
@@ -112,11 +116,11 @@ static const char *fqname_subname(const char *name)
 static bool common_init(struct aa_policy_common *common, const char *name)
 {
 	/* freed by common_free */
-	common->fqname = kstrdup(name, GFP_KERNEL);
-	if (!common->fqname)
+	common->hname = kstrdup(name, GFP_KERNEL);
+	if (!common->hname)
 		return 0;
 	/* base.name is a substring of fqname */
-	common->name = (char *)fqname_subname(common->fqname);
+	common->name = (char *)hname_subname(common->hname);
 
 	INIT_LIST_HEAD(&common->list);
 	INIT_LIST_HEAD(&common->profiles);
@@ -141,8 +145,8 @@ static void common_free(struct aa_policy_common *common)
 		BUG();
 	}
 
-	/* don't free name as its a subset of fqname */
-	kfree(common->fqname);
+	/* don't free name as its a subset of hname */
+	kfree(common->hname);
 }
 
 static struct aa_policy_common *__common_find(struct list_head *head,
@@ -509,11 +513,11 @@ void aa_profile_ns_list_release(void)
 
 /**
  * alloc_aa_profile - allocate, initialize and return a new profile
- * @fqname: name of the profile
+ * @hname: name of the profile
  *
  * Returns NULL on failure, else refcounted profile
  */
-struct aa_profile *alloc_aa_profile(const char *fqname)
+struct aa_profile *alloc_aa_profile(const char *hname)
 {
 	struct aa_profile *profile;
 
@@ -522,7 +526,7 @@ struct aa_profile *alloc_aa_profile(const char *fqname)
 	if (!profile)
 		return NULL;
 
-	if (!common_init(&profile->base, fqname)) {
+	if (!common_init(&profile->base, hname)) {
 		kfree(profile);
 		return NULL;
 	}
@@ -550,10 +554,10 @@ struct aa_profile *aa_alloc_null_profile(struct aa_profile *parent, int hat)
 	u32 sid = aa_alloc_sid(AA_ALLOC_SYS_SID);
 
 	/* freed below */
-	name = kmalloc(strlen(parent->base.fqname) + 2 + 7 + 8, GFP_KERNEL);
+	name = kmalloc(strlen(parent->base.hname) + 2 + 7 + 8, GFP_KERNEL);
 	if (!name)
 		goto fail;
-	sprintf(name, "%s//null-%x", parent->base.fqname, sid);
+	sprintf(name, "%s//null-%x", parent->base.hname, sid);
 
 	profile = alloc_aa_profile(name);
 	kfree(name);
@@ -701,12 +705,12 @@ struct aa_profile *aa_find_child(struct aa_profile *parent, const char *name)
 }
 
 /**
- * __aa_find_parent - lookup the parent of a profile of name @fqname
+ * __aa_find_parent - lookup the parent of a profile of name @hname
  * @ns: namespace to lookup profile in
- * @fqname: fully qualified profile name to find parent of
+ * @hname: hierarchical profile name to find parent of
  *
  * Lookups up the parent of a fully qualified profile name, the profile
- * that matches fqname does not need to exist, in general this
+ * that matches hname does not need to exist, in general this
  * is used to load a new profile.
  *
  * Requires: ns->base.lock be held
@@ -714,7 +718,7 @@ struct aa_profile *aa_find_child(struct aa_profile *parent, const char *name)
  * Returns: unrefcounted common or NULL if not found
  */
 static struct aa_policy_common *__aa_find_parent(struct aa_namespace *ns,
-						 const char *fqname)
+						 const char *hname)
 {
 	struct aa_policy_common *common;
 	struct aa_profile *profile = NULL;
@@ -722,14 +726,14 @@ static struct aa_policy_common *__aa_find_parent(struct aa_namespace *ns,
 
 	common = &ns->base;
 
-	for (split = strstr(fqname, "//"); split;) {
-		profile = __aa_strn_find_child(&common->profiles, fqname,
-					       split - fqname);
+	for (split = strstr(hname, "//"); split;) {
+		profile = __aa_strn_find_child(&common->profiles, hname,
+					       split - hname);
 		if (!profile)
 			return NULL;
 		common = &profile->base;
-		fqname = split + 2;
-		split = strstr(fqname, "//");
+		hname = split + 2;
+		split = strstr(hname, "//");
 	}
 	if (!profile)
 		return &ns->base;
@@ -737,9 +741,9 @@ static struct aa_policy_common *__aa_find_parent(struct aa_namespace *ns,
 }
 
 /**
- * __aa_find_profile - lookup the profile matching @fqname
+ * __aa_find_profile - lookup the profile matching @hname
  * @base: base list to start looking up profile name from
- * @fqname: fully qualified profile name
+ * @hname: hierarchical profile name
  *
  * Requires: ns->base.lock be held
  *
@@ -748,23 +752,23 @@ static struct aa_policy_common *__aa_find_parent(struct aa_namespace *ns,
  * Do a relative name lookup, recursing through profile tree.
  */
 static struct aa_profile *__aa_find_profile(struct aa_policy_common *base,
-					    const char *fqname)
+					    const char *hname)
 {
 	struct aa_profile *profile = NULL;
 	char *split;
 
-	for (split = strstr(fqname, "//"); split;) {
-		profile = __aa_strn_find_child(&base->profiles, fqname,
-					       split - fqname);
+	for (split = strstr(hname, "//"); split;) {
+		profile = __aa_strn_find_child(&base->profiles, hname,
+					       split - hname);
 		if (!profile)
 			return NULL;
 
 		base = &profile->base;
-		fqname = split + 2;
-		split = strstr(fqname, "//");
+		hname = split + 2;
+		split = strstr(hname, "//");
 	}
 
-	profile = __aa_find_child(&base->profiles, fqname);
+	profile = __aa_find_child(&base->profiles, hname);
 
 	return profile;
 }
@@ -772,16 +776,16 @@ static struct aa_profile *__aa_find_profile(struct aa_policy_common *base,
 /**
  * aa_find_profile_by_name - find a profile by its full or partial name
  * @ns: the namespace to start from
- * @fqname: name to do lookup on.  Does not contain namespace prefix
+ * @hname: name to do lookup on.  Does not contain namespace prefix
  *
  * Returns: refcounted profile or NULL if not found
  */
-struct aa_profile *aa_find_profile(struct aa_namespace *ns, const char *fqname)
+struct aa_profile *aa_find_profile(struct aa_namespace *ns, const char *hname)
 {
 	struct aa_profile *profile;
 
 	read_lock(&ns->base.lock);
-	profile = aa_get_profile(__aa_find_profile(&ns->base, fqname));
+	profile = aa_get_profile(__aa_find_profile(&ns->base, hname));
 	read_unlock(&ns->base.lock);
 	return profile;
 }
@@ -823,8 +827,8 @@ ssize_t aa_interface_add_profiles(void *udata, size_t size)
 		sa.base.error = PTR_ERR(ns);
 		goto fail;
 	}
-	/* profiles are currently loaded flat with fqnames */
-	sa.name = profile->base.fqname;
+	/* profiles are currently loaded flat with hnames */
+	sa.name = profile->base.hname;
 
 	write_lock(&ns->base.lock);
 
@@ -910,7 +914,7 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size)
 		goto fail;
 	}
 
-	sa.name = new_profile->base.fqname;
+	sa.name = new_profile->base.hname;
 
 	write_lock(&ns->base.lock);
 	/* no ref on common only use inside lock */
@@ -966,14 +970,14 @@ fail:
 
 /**
  * aa_interface_remove_profiles - remove profile(s) from the system
- * @name: name of the profile to remove
+ * @fqname: name of the profile to remove
  * @size: size of the name
  *
  * remove a profile from the profile list and all aa_task_context references
  * to said profile.
  * NOTE: removing confinement does not restore rlimits to preconfinemnet values
  */
-ssize_t aa_interface_remove_profiles(char *name, size_t size)
+ssize_t aa_interface_remove_profiles(char *fqname, size_t size)
 {
 	struct aa_namespace *ns = NULL;
 	struct aa_profile *profile = NULL;
@@ -981,6 +985,7 @@ ssize_t aa_interface_remove_profiles(char *name, size_t size)
 		.base.operation = "profile_remove",
 		.base.gfp_mask = GFP_ATOMIC,
 	};
+	const char *name;
 	int error;
 
 	/* check if loading policy is locked out */
@@ -991,10 +996,10 @@ ssize_t aa_interface_remove_profiles(char *name, size_t size)
 	}
 
 	write_lock(&ns_list_lock);
-	if (name[0] == ':') {
+	if (fqname[0] == ':') {
 		char *ns_name;
-		name = aa_split_name_from_ns(name, &ns_name);
-		if (name)
+		name = aa_split_name_from_ns(fqname, &ns_name);
+		if (fqname)
 			/* released below */
 			ns = aa_get_namespace(__aa_find_namespace(&ns_list,
 								  ns_name));
@@ -1026,7 +1031,7 @@ ssize_t aa_interface_remove_profiles(char *name, size_t size)
 			sa.base.info = "failed: profile does not exist";
 			goto fail_ns_lock;
 		}
-		sa.name = profile->base.fqname;
+		sa.name = profile->base.hname;
 		__aa_profile_list_release(&profile->base.profiles);
 		__aa_replace_profile(profile, NULL);
 	}

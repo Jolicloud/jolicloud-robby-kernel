@@ -19,8 +19,8 @@
 
 
 /**
- * aa_split_name_from_ns - split a profile name from a arg
- * @arg: a full qualified name in namespace profile format
+ * aa_split_name_from_ns - split a profile name from a fqname
+ * @fqname: a full qualified name in namespace profile format
  * @ns_name: pointer to portion of the string containing the ns name
  *
  * Returns: profile name or NULL if one is not specified
@@ -29,16 +29,16 @@
  * description).  If a portion of the name is missing it returns NULL for
  * that portion.
  *
- * NOTE: may modifiy the arg string.  The pointers returned point
- *       into the arg string.
+ * NOTE: may modifiy the @fqname string.  The pointers returned point
+ *       into the @fqname string.
  */
-char *aa_split_name_from_ns(char *arg, char **ns_name)
+char *aa_split_name_from_ns(char *fqname, char **ns_name)
 {
-	char *name = strstrip(arg);
+	char *name = strstrip(fqname);
 
 	*ns_name = NULL;
-	if (arg[0] == ':') {
-		char *split = strchr(&arg[1], ':');
+	if (fqname[0] == ':') {
+		char *split = strchr(&fqname[1], ':');
 		if (split) {
 			/* overwrite ':' with \0 */
 			*split = 0;
@@ -46,7 +46,7 @@ char *aa_split_name_from_ns(char *arg, char **ns_name)
 		} else
 			/* a ns name without a following profile is allowed */
 			name = NULL;
-		*ns_name = &arg[1];
+		*ns_name = &fqname[1];
 	}
 	if (name && *name == 0)
 		name = NULL;

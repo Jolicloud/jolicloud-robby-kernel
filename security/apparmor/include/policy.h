@@ -75,7 +75,7 @@ struct aa_profile;
 
 /* struct aa_policy_common - common part of both namespaces and profiles
  * @name: name of the object
- * @fqname - The full hierarchical name
+ * @hname - The hierarchical name
  * @count: reference count of the obj
  * lock: lock for modifying the object
  * @list: list object is on
@@ -83,7 +83,7 @@ struct aa_profile;
  */
 struct aa_policy_common {
 	char *name;
-	char *fqname;
+	char *hname;
 	struct kref count;
 	rwlock_t lock;
 	struct list_head list;

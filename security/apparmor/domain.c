@@ -233,7 +233,7 @@ static struct aa_profile *x_to_profile(struct aa_namespace *ns,
 			name = xname = ns_name + strlen(ns_name) + 1;
 			if (!*xname)
 				/* no name so use profile name */
-				xname = profile->base.fqname;
+				xname = profile->base.hname;
 			if (*ns_name == '@') {
 				/* TODO: variable support */
 				;
@@ -361,7 +361,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 			sa.base.error = -ENOMEM;
 			sa.base.info = "could not create null profile";
 		} else
-			sa.name2 = new_profile->base.fqname;
+			sa.name2 = new_profile->base.hname;
 		sa.perms.xindex |= AA_X_UNSAFE;
 	} else {
 		sa.base.error = -EACCES;
@@ -403,7 +403,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 		bprm->unsafe |= AA_SECURE_X_NEEDED;
 
 apply:
-	sa.name2 = new_profile->base.fqname;
+	sa.name2 = new_profile->base.hname;
 	/* When switching namespace ensure its part of audit message */
 	if (new_profile->ns != ns)
 		sa.name3 = new_profile->ns->base.name;
@@ -533,7 +533,7 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 				goto out;
 
 			/* freed below */
-			name = new_compound_name(root->base.fqname, hat_name);
+			name = new_compound_name(root->base.hname, hat_name);
 
 			sa.name = name;
 			sa.base.info = "hat not found";
@@ -546,7 +546,7 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 				goto audit;
 			}
 		} else {
-			sa.name = hat->base.fqname;
+			sa.name = hat->base.hname;
 			if (!PROFILE_IS_HAT(hat)) {
 				sa.base.info = "target not hat";
 				sa.base.error = -EPERM;
@@ -574,7 +574,7 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 		/* Return to saved profile.  Kill task if restore fails
 		 * to avoid brute force attacks
 		 */
-		sa.name = previous_profile->base.fqname;
+		sa.name = previous_profile->base.hname;
 		sa.base.error = aa_restore_previous_profile(token);
 		sa.perms.kill = AA_MAY_CHANGEHAT;
 	} else
@@ -595,7 +595,7 @@ out:
 /**
  * aa_change_profile - perform a one-way profile transition
  * @ns_name: name of the profile namespace to change to
- * @fqname: name of profile to change to
+ * @hname: name of profile to change to
  * @onexec: whether this transition is to take place immediately or at exec
  * @permtest: true if this is just a permission test
  *
@@ -605,7 +605,7 @@ out:
  *
  * Returns %0 on success, error otherwise.
  */
-int aa_change_profile(const char *ns_name, const char *fqname, int onexec,
+int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 		      int permtest)
 {
 	const struct cred *cred;
@@ -617,7 +617,7 @@ int aa_change_profile(const char *ns_name, const char *fqname, int onexec,
 		.base.gfp_mask = GFP_KERNEL,
 	};
 
-	if (!fqname && !ns_name)
+	if (!hname && !ns_name)
 		return -EINVAL;
 
 	if (onexec)
@@ -645,22 +645,22 @@ int aa_change_profile(const char *ns_name, const char *fqname, int onexec,
 	}
 
 	/* if the name was not specified, use the name of the current profile */
-	if (!fqname) {
+	if (!hname) {
 		if (!profile)
-			fqname = ns->unconfined->base.fqname;
+			hname = ns->unconfined->base.hname;
 		else
-			fqname = profile->base.fqname;
+			hname = profile->base.hname;
 	}
-	sa.name = fqname;
+	sa.name = hname;
 
-	sa.perms = change_profile_perms(profile, ns, fqname, NULL);
+	sa.perms = change_profile_perms(profile, ns, hname, NULL);
 	if (!(sa.perms.allowed & AA_MAY_CHANGE_PROFILE)) {
 		sa.base.error = -EACCES;
 		goto audit;
 	}
 
 	/* released below */
-	target = aa_find_profile(ns, fqname);
+	target = aa_find_profile(ns, hname);
 	if (!target) {
 		sa.base.info = "profile not found";
 		sa.base.error = -ENOENT;

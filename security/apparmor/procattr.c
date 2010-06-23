@@ -28,7 +28,7 @@ int aa_getprocattr(struct aa_namespace *ns, struct aa_profile *profile,
 		char *s;
 
 		mode_len = strlen(mode_str) + 3;	/* + 3 for _() */
-		name_len = strlen(profile->base.fqname);
+		name_len = strlen(profile->base.hname);
 		if (ns != default_namespace)
 			ns_len = strlen(ns->base.name) + 3; /*+ 3 for :// */
 		len = mode_len + ns_len + name_len + 1;	    /*+ 1 for \n */
@@ -40,7 +40,7 @@ int aa_getprocattr(struct aa_namespace *ns, struct aa_profile *profile,
 			sprintf(s, "%s://", ns->base.name);
 			s += ns_len;
 		}
-		sprintf(s, "%s (%s)\n",profile->base.fqname, mode_str);
+		sprintf(s, "%s (%s)\n",profile->base.hname, mode_str);
 	} else {
 		const char unconfined_str[] = "unconfined\n";
 
@@ -99,15 +99,15 @@ int aa_setprocattr_changehat(char *args, int test)
 	return aa_change_hat(hat, token, test);
 }
 
-int aa_setprocattr_changeprofile(char *args, int onexec, int test)
+int aa_setprocattr_changeprofile(char *fqname, int onexec, int test)
 {
 	char *name, *ns_name;
 
-	name = aa_split_name_from_ns(args, &ns_name);
+	name = aa_split_name_from_ns(fqname, &ns_name);
 	return aa_change_profile(ns_name, name, onexec, test);
 }
 
-int aa_setprocattr_permipc(char *args)
+int aa_setprocattr_permipc(char *fqname)
 {
 	/* TODO: add ipc permission querying */
 	return -ENOTSUPP;
