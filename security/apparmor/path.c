@@ -15,6 +15,7 @@
 #include <linux/mnt_namespace.h>
 #include <linux/mount.h>
 #include <linux/namei.h>
+#include <linux/nsproxy.h>
 #include <linux/path.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
@@ -41,25 +42,26 @@
 static int d_namespace_path(struct path *path, char *buf, int buflen,
 			    char **name, int flags)
 {
-	struct path root, tmp, ns_root = { };
+	struct path root, tmp;
 	char *res;
 	int deleted, connected;
 	int error = 0;
 
-	read_lock(&current->fs->lock);
-	root = current->fs->root;
-	/* released below */
-	path_get(&root);
-	read_unlock(&current->fs->lock);
-
-	spin_lock(&vfsmount_lock);
-	if (root.mnt && root.mnt->mnt_ns)
+	/* Get the root we want to resolve too */
+	if (flags & PATH_CHROOT_REL) {
+		/* resolve paths relative to chroot */
+		read_lock(&current->fs->lock);
+		root = current->fs->root;
 		/* released below */
-		ns_root.mnt = mntget(root.mnt->mnt_ns->root);
-	if (ns_root.mnt)
+		path_get(&root);
+		read_unlock(&current->fs->lock);
+	} else {
+		/* resolve paths relative to namespace */
+		root.mnt = current->nsproxy->mnt_ns->root;
+		root.dentry = root.mnt->mnt_root;
 		/* released below */
-		ns_root.dentry = dget(ns_root.mnt->mnt_root);
-	spin_unlock(&vfsmount_lock);
+		path_get(&root);
+	}
 
 	spin_lock(&dcache_lock);
 	/* There is a race window between path lookup here and the
@@ -70,10 +72,7 @@ static int d_namespace_path(struct path *path, char *buf, int buflen,
 	 * with an updated __d_path
 	 */
 	do {
-		if (flags & PATH_CHROOT_REL)
-			tmp = root;
-		else
-			tmp = ns_root;
+		tmp = root;
 		deleted = d_unlinked(path->dentry);
 		res = __d_path(path, &tmp, buf, buflen);
 
@@ -107,11 +106,7 @@ static int d_namespace_path(struct path *path, char *buf, int buflen,
 	}
 
 	/* Determine if the path is connected to the expected root */
-	if (flags & PATH_CHROOT_REL)
-		connected = tmp.dentry == root.dentry && tmp.mnt == root.mnt;
-	else
-		connected = tmp.dentry == ns_root.dentry &&
-			tmp.mnt == ns_root.mnt;
+	connected = tmp.dentry == root.dentry && tmp.mnt == root.mnt;
 
 	/* If the path is not connected, then remove any leading / that
 	 * __d_path may have returned.
@@ -126,7 +121,8 @@ static int d_namespace_path(struct path *path, char *buf, int buflen,
 	if (!connected && 
 	    !(flags & PATH_CONNECT_PATH) &&
 	    !((flags & PATH_CHROOT_REL) && (flags & PATH_CHROOT_NSCONNECT) &&
-	      (tmp.dentry == ns_root.dentry && tmp.mnt == ns_root.mnt))) {
+	      (tmp.mnt == current->nsproxy->mnt_ns->root &&
+	       tmp.dentry == current->nsproxy->mnt_ns->root->mnt_root))) {
 		/* disconnected path, don't return pathname starting with '/' */
 		error = -ESTALE;
 		if (*res == '/')
@@ -135,7 +131,6 @@ static int d_namespace_path(struct path *path, char *buf, int buflen,
 
 out:
 	path_put(&root);
-	path_put(&ns_root);
 
 	return error;
 }
