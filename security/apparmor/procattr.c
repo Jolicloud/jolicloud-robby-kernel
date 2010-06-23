@@ -27,7 +27,7 @@ int aa_getprocattr(struct aa_namespace *ns, struct aa_profile *profile,
 		const char *mode_str = profile_mode_names[profile->mode];
 		char *s;
 
-		mode_len = strlen(mode_str) + 3;  /* _(mode_str)\n */
+		mode_len = strlen(mode_str) + 3;	/* _(mode_str)\n */
 		name_len = strlen(profile->fqname);
 		if (ns != default_namespace)
 			ns_len = strlen(ns->base.name) + 3;
@@ -64,7 +64,7 @@ int aa_getprocattr(struct aa_namespace *ns, struct aa_profile *profile,
 	return len;
 }
 
-static char *split_token_from_name(const char *op, char *args, u64 *token)
+static char *split_token_from_name(const char *op, char *args, u64 * token)
 {
 	char *name;
 
@@ -74,7 +74,7 @@ static char *split_token_from_name(const char *op, char *args, u64 *token)
 		return ERR_PTR(-EINVAL);
 	}
 
-	name++;  /* skip ^ */
+	name++;			/* skip ^ */
 	if (!*name)
 		name = NULL;
 	return name;
@@ -107,7 +107,6 @@ int aa_setprocattr_changeprofile(char *args, int onexec, int test)
 	name = aa_split_name_from_ns(args, &ns_name);
 	return aa_change_profile(ns_name, name, onexec, test);
 }
-
 
 int aa_setprocattr_permipc(char *args)
 {

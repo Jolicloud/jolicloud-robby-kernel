@@ -67,7 +67,6 @@ const char *profile_mode_names[] = {
 	"kill",
 };
 
-
 static int common_init(struct aa_policy_common *common, const char *name)
 {
 	common->name = kstrdup(name, GFP_KERNEL);
@@ -101,7 +100,6 @@ static void common_free(struct aa_policy_common *common)
 
 static struct aa_policy_common *__common_find(struct list_head *head,
 					      const char *name)
-					      
 {
 	struct aa_policy_common *common;
 
@@ -178,7 +176,7 @@ struct aa_namespace *alloc_aa_namespace(const char *name)
 
 	ns->unconfined->sid = aa_alloc_sid(AA_ALLOC_SYS_SID);
 	ns->unconfined->flags = PFLAG_UNCONFINED | PFLAG_IX_ON_NAME_ERROR |
-		PFLAG_IMMUTABLE;
+	    PFLAG_IMMUTABLE;
 	ns->unconfined->ns = aa_get_namespace(ns);
 
 	return ns;
@@ -224,7 +222,7 @@ void free_aa_namespace(struct aa_namespace *ns)
 struct aa_namespace *__aa_find_namespace(struct list_head *head,
 					 const char *name)
 {
-	return (struct aa_namespace *) __common_find(head, name);
+	return (struct aa_namespace *)__common_find(head, name);
 }
 
 /**
@@ -249,7 +247,7 @@ static struct aa_namespace *__aa_find_namespace_by_strn(struct list_head *head,
 							const char *name,
 							int len)
 {
-	return (struct aa_namespace *) __common_find_strn(head, name, len);
+	return (struct aa_namespace *)__common_find_strn(head, name, len);
 }
 
 struct aa_namespace *aa_find_namespace_by_strn(const char *name, int len)
@@ -270,7 +268,7 @@ struct aa_namespace *aa_find_namespace_by_strn(const char *name, int len)
 struct aa_namespace *aa_prepare_namespace(const char *name)
 {
 	struct aa_namespace *ns;
- 
+
 	write_lock(&ns_list_lock);
 	if (name)
 		ns = aa_get_namespace(__aa_find_namespace(&ns_list, name));
@@ -402,7 +400,7 @@ static const char *fqname_subname(const char *name)
 {
 	char *split;
 	/* check for namespace which begins with a : and ends with : or \0 */
-	name = strstrip((char *) name);
+	name = strstrip((char *)name);
 	if (*name == ':') {
 		split = aa_strchrnul(name + 1, ':');
 		if (*split == '\0')
@@ -428,14 +426,15 @@ struct aa_profile *alloc_aa_profile(const char *fqname)
 	profile = kzalloc(sizeof(*profile), GFP_KERNEL);
 	if (!profile)
 		return NULL;
- 
+
 	if (!common_init(&profile->base, fqname)) {
 		kfree(profile);
 		return NULL;
 	}
-	
+
 	profile->fqname = profile->base.name;
-	profile->base.name = (char *) fqname_subname((const char *) profile->fqname);
+	profile->base.name =
+	    (char *)fqname_subname((const char *)profile->fqname);
 	return profile;
 }
 
@@ -471,7 +470,7 @@ struct aa_profile *aa_alloc_null_profile(struct aa_profile *parent, int hat)
 	profile->mode = APPARMOR_COMPLAIN;
 	profile->flags = PFLAG_NULL | PFLAG_NO_LIST_REF;
 	if (hat)
-	  profile->flags |= PFLAG_HAT;
+		profile->flags |= PFLAG_HAT;
 
 	profile->parent = aa_get_profile(parent);
 	profile->ns = aa_get_namespace(parent->ns);
@@ -558,21 +557,18 @@ void free_aa_profile(struct aa_profile *profile)
 	kzfree(profile);
 }
 
-
 /* TODO: profile count accounting - setup in remove */
-
 
 struct aa_profile *__aa_find_profile(struct list_head *head, const char *name)
 {
-	return (struct aa_profile *) __common_find(head, name);
+	return (struct aa_profile *)__common_find(head, name);
 }
 
 struct aa_profile *__aa_find_profile_by_strn(struct list_head *head,
 					     const char *name, int len)
 {
-	return (struct aa_profile *) __common_find_strn(head, name, len);
+	return (struct aa_profile *)__common_find_strn(head, name, len);
 }
-
 
 /**
  * aa_find_child - find a profile by @name in @parent
@@ -593,7 +589,6 @@ struct aa_profile *aa_find_child(struct aa_profile *parent, const char *name)
 	return profile;
 }
 
-
 struct aa_policy_common *__aa_find_parent_by_fqname(struct aa_namespace *ns,
 						    const char *fqname)
 {
@@ -603,8 +598,7 @@ struct aa_policy_common *__aa_find_parent_by_fqname(struct aa_namespace *ns,
 
 	common = &ns->base;
 
-	
-	for (split = strstr(fqname, "//"); split; ) {
+	for (split = strstr(fqname, "//"); split;) {
 		profile = __aa_find_profile_by_strn(&common->profiles, fqname,
 						    split - fqname);
 		if (!profile)
@@ -626,7 +620,7 @@ struct aa_profile *__aa_find_profile_by_fqname(struct aa_namespace *ns,
 	char *split;
 
 	common = &ns->base;
-	for (split = strstr(fqname, "//"); split; ) {
+	for (split = strstr(fqname, "//"); split;) {
 		profile = __aa_find_profile_by_strn(&common->profiles, fqname,
 						    split - fqname);
 		if (!profile)
@@ -672,15 +666,14 @@ struct aa_profile *aa_find_profile_by_fqname(struct aa_namespace *ns,
 struct aa_profile *aa_profile_newest(struct aa_profile *profile)
 {
 	if (unlikely(profile && profile->replacedby)) {
-		for (;profile->replacedby; profile = profile->replacedby) {
+		for (; profile->replacedby; profile = profile->replacedby) {
 			if (IS_ERR(profile->replacedby)) {
 				/* profile has been removed */
 				profile = NULL;
 				break;
 			}
-		} 
+		}
 	}
 
 	return profile;
 }
-

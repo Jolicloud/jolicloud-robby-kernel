@@ -42,7 +42,7 @@ enum aa_code {
 	AA_U16,
 	AA_U32,
 	AA_U64,
-	AA_NAME,	/* same as string except it is items name */
+	AA_NAME,		/* same as string except it is items name */
 	AA_STRING,
 	AA_BLOB,
 	AA_STRUCT,
@@ -61,11 +61,10 @@ enum aa_code {
 struct aa_ext {
 	void *start;
 	void *end;
-	void *pos;	/* pointer to current position in the buffer */
+	void *pos;		/* pointer to current position in the buffer */
 	u32 version;
 	char *ns_name;
 };
-
 
 struct aa_audit_iface {
 	struct aa_audit base;
@@ -128,7 +127,7 @@ static size_t aa_is_u16_chunk(struct aa_ext *e, char **chunk)
 
 	if (!aa_inbounds(e, sizeof(u16)))
 		goto fail;
-	size = le16_to_cpu(get_unaligned((u16 *)e->pos));
+	size = le16_to_cpu(get_unaligned((u16 *) e->pos));
 	e->pos += sizeof(u16);
 	if (!aa_inbounds(e, size))
 		goto fail;
@@ -199,7 +198,7 @@ static int aa_is_u16(struct aa_ext *e, u16 *data, const char *name)
 		if (!aa_inbounds(e, sizeof(u16)))
 			goto fail;
 		if (data)
-			*data = le16_to_cpu(get_unaligned((u16 *)e->pos));
+			*data = le16_to_cpu(get_unaligned((u16 *) e->pos));
 		e->pos += sizeof(u16);
 		return 1;
 	}
@@ -215,7 +214,7 @@ static int aa_is_u32(struct aa_ext *e, u32 *data, const char *name)
 		if (!aa_inbounds(e, sizeof(u32)))
 			goto fail;
 		if (data)
-			*data = le32_to_cpu(get_unaligned((u32 *)e->pos));
+			*data = le32_to_cpu(get_unaligned((u32 *) e->pos));
 		e->pos += sizeof(u32);
 		return 1;
 	}
@@ -231,7 +230,7 @@ static int aa_is_u64(struct aa_ext *e, u64 *data, const char *name)
 		if (!aa_inbounds(e, sizeof(u64)))
 			goto fail;
 		if (data)
-			*data = le64_to_cpu(get_unaligned((u64 *)e->pos));
+			*data = le64_to_cpu(get_unaligned((u64 *) e->pos));
 		e->pos += sizeof(u64);
 		return 1;
 	}
@@ -247,7 +246,7 @@ static size_t aa_is_array(struct aa_ext *e, const char *name)
 		int size;
 		if (!aa_inbounds(e, sizeof(u16)))
 			goto fail;
-		size = (int) le16_to_cpu(get_unaligned((u16 *)e->pos));
+		size = (int)le16_to_cpu(get_unaligned((u16 *) e->pos));
 		e->pos += sizeof(u16);
 		return size;
 	}
@@ -263,7 +262,7 @@ static size_t aa_is_blob(struct aa_ext *e, char **blob, const char *name)
 		u32 size;
 		if (!aa_inbounds(e, sizeof(u32)))
 			goto fail;
-		size = le32_to_cpu(get_unaligned((u32 *)e->pos));
+		size = le32_to_cpu(get_unaligned((u32 *) e->pos));
 		e->pos += sizeof(u32);
 		if (aa_inbounds(e, (size_t) size)) {
 			*blob = e->pos;
@@ -336,7 +335,7 @@ static struct aa_dfa *aa_unpack_dfa(struct aa_ext *e)
 			 * The dfa is aligned with in the blob to 8 bytes
 			 * from the beginning of the stream.
 			 */
-			size_t sz = blob - (char *) e->start;
+			size_t sz = blob - (char *)e->start;
 			size_t pad = ALIGN(sz, 8) - sz;
 			error = unpack_dfa(dfa, blob + pad, size - pad);
 			if (!error)
@@ -367,12 +366,12 @@ static int aa_unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
 		if (size > 16 - 4)
 			goto fail;
 		profile->file.trans.table = kzalloc(sizeof(char *) * size,
-							  GFP_KERNEL);
+						    GFP_KERNEL);
 		if (!profile->file.trans.table)
 			goto fail;
 
 		for (i = 0; i < size; i++) {
-		    char *tmp;
+			char *tmp;
 			if (!aa_is_dynstring(e, &tmp, NULL))
 				goto fail;
 			/*
@@ -486,7 +485,7 @@ static struct aa_profile *aa_unpack_profile(struct aa_ext *e,
 
 	/* mmap_min_addr is optional */
 	if (aa_is_u64(e, &tmp64, "mmap_min_addr")) {
-		profile->mmap_min_addr = (unsigned long) tmp64;
+		profile->mmap_min_addr = (unsigned long)tmp64;
 		if (((u64) profile->mmap_min_addr) == tmp64) {
 			profile->flags |= PFLAG_MMAP_MIN_ADDR;
 		} else {
@@ -562,7 +561,7 @@ static struct aa_profile *aa_unpack_profile(struct aa_ext *e,
 
 fail:
 	sa->name = profile && profile->base.name ? profile->base.name :
-						   "unknown";
+	    "unknown";
 	if (!sa->base.info)
 		sa->base.info = "failed to unpack profile";
 	aa_audit_iface(sa);
@@ -601,8 +600,6 @@ static int aa_verify_header(struct aa_ext *e, struct aa_audit_iface *sa)
 
 	return 0;
 }
-
-
 
 /**
  * aa_interface_add_profiles - Unpack and add new profile(s) to the profile list
@@ -652,7 +649,7 @@ ssize_t aa_interface_add_profiles(void *data, size_t size)
 	}
 
 	if (common != &ns->base)
-		profile->parent = aa_get_profile((struct aa_profile *) common);
+		profile->parent = aa_get_profile((struct aa_profile *)common);
 
 	if (__aa_find_profile(&common->profiles, profile->base.name)) {
 		/* A profile with this name exists already. */
@@ -745,7 +742,7 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size)
 		sa.base.info = "cannot replace immutible profile";
 		sa.base.error = -EPERM;
 		goto fail2;
-	} else  if (old_profile) {
+	} else if (old_profile) {
 		struct aa_profile *profile, *tmp;
 		list_for_each_entry_safe(profile, tmp,
 					 &old_profile->base.profiles,

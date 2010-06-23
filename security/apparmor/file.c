@@ -72,7 +72,7 @@ void file_audit_cb(struct audit_buffer *ab, void *va)
 
 	if (denied & AA_AUDIT_FILE_MASK)
 		aa_audit_file_mask(ab, "denied_mask", denied, sa->perms.xindex,
-			fsuid == sa->cond->uid);
+				   fsuid == sa->cond->uid);
 
 	if (sa->request & AA_AUDIT_FILE_MASK) {
 		audit_log_format(ab, " fsuid=%d", fsuid);
@@ -225,8 +225,7 @@ int aa_path_perm(struct aa_profile *profile, const char *operation,
 	sa.request = request;
 	sa.cond = cond;
 
-	sa.base.error = aa_get_name(path, S_ISDIR(cond->mode), &buffer,
-				    &name);
+	sa.base.error = aa_get_name(path, S_ISDIR(cond->mode), &buffer, &name);
 	sa.name = name;
 	if (sa.base.error) {
 		sa.perms = nullperms;
@@ -272,7 +271,8 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 	struct path link = { new_dir->mnt, new_dentry };
 	struct path target = { new_dir->mnt, old_dentry };
 	struct path_cond cond = { old_dentry->d_inode->i_uid,
-				  old_dentry->d_inode->i_mode };
+				  old_dentry->d_inode->i_mode
+	};
 	char *buffer = NULL, *buffer2 = NULL;
 	char *lname, *tname;
 	struct file_perms perms;
@@ -295,9 +295,8 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 	if (sa.base.error)
 		goto audit;
 
-
 	sa.perms = aa_str_perms(profile->file.dfa, DFA_START, sa.name, &cond,
-			     &state);
+				&state);
 	sa.perms.audit &= AA_MAY_LINK;
 	sa.perms.quiet &= AA_MAY_LINK;
 	sa.perms.kill &= AA_MAY_LINK;
@@ -335,7 +334,7 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 		sa.base.error = -EACCES;
 	else if (sa.perms.allowed & MAY_EXEC) {
 		if (((sa.perms.xindex & ~AA_X_UNSAFE) !=
-		     (perms.xindex &~AA_X_UNSAFE)) ||
+		     (perms.xindex & ~AA_X_UNSAFE)) ||
 		    ((sa.perms.xindex & AA_X_UNSAFE) &&
 		     !(perms.xindex & AA_X_UNSAFE))) {
 			sa.perms.allowed &= ~MAY_EXEC;
@@ -353,7 +352,6 @@ audit:
 	return sa.base.error;
 }
 
-
 static inline int aa_is_deleted_file(struct dentry *dentry)
 {
 	if (d_unlinked(dentry) && dentry->d_inode->i_nlink == 0)
@@ -365,8 +363,9 @@ int aa_file_common_perm(struct aa_profile *profile, const char *operation,
 			struct file *file, u16 request, const char *name,
 			int error)
 {
-	struct path_cond cond = { .uid = file->f_path.dentry->d_inode->i_uid,
-				 .mode = file->f_path.dentry->d_inode->i_mode };
+	struct path_cond cond = {.uid = file->f_path.dentry->d_inode->i_uid,
+				  .mode = file->f_path.dentry->d_inode->i_mode
+	};
 	struct aa_audit_file sa = { };
 
 	sa.base.operation = operation;

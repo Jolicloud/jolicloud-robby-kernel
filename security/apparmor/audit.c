@@ -22,12 +22,12 @@
 const char *audit_mode_names[] = {
 	"normal",
 	"quiet_denied",
-	"quiet"
+	"quiet",
 	"noquiet",
 	"all"
 };
 
-static char* aa_audit_type[] = {
+static char *aa_audit_type[] = {
 	"APPARMOR_AUDIT",
 	"APPARMOR_ALLOWED",
 	"APPARMOR_DENIED",
@@ -48,7 +48,7 @@ static char* aa_audit_type[] = {
 
 static int aa_audit_base(int type, struct aa_profile *profile,
 			 struct aa_audit *sa, struct audit_context *audit_cxt,
-			 void(*cb)(struct audit_buffer *, void *))
+			 void (*cb) (struct audit_buffer *, void *))
 {
 	struct audit_buffer *ab = NULL;
 
@@ -60,8 +60,8 @@ static int aa_audit_base(int type, struct aa_profile *profile,
 	if (!ab) {
 		AA_ERROR("(%d) Unable to log event of type (%d)\n",
 			 -ENOMEM, type);
-		 /* don't fail operations in complain mode even if logging
-		  * fails */
+		/* don't fail operations in complain mode even if logging
+		 * fails */
 		return type == AUDIT_APPARMOR_ALLOWED ? 0 : -ENOMEM;
 	}
 
@@ -78,7 +78,8 @@ static int aa_audit_base(int type, struct aa_profile *profile,
 			audit_log_format(ab, " error=%d", sa->error);
 	}
 
-	audit_log_format(ab, " pid=%d", sa->task ?sa->task->pid : current->pid);
+	audit_log_format(ab, " pid=%d",
+			 sa->task ? sa->task->pid : current->pid);
 
 	if (profile) {
 		pid_t pid = sa->task ? sa->task->real_parent->pid :
@@ -113,7 +114,7 @@ static int aa_audit_base(int type, struct aa_profile *profile,
  * @cb: optional callback fn for type specific fields
  */
 int aa_audit(int type, struct aa_profile *profile, struct aa_audit *sa,
-	     void(*cb)(struct audit_buffer *, void *))
+	     void (*cb) (struct audit_buffer *, void *))
 {
 	struct audit_context *audit_cxt;
 	audit_cxt = g_apparmor_logsyscall ? current->audit_context : NULL;
@@ -145,7 +146,7 @@ int aa_audit(int type, struct aa_profile *profile, struct aa_audit *sa,
  */
 int aa_audit_syscallreject(struct aa_profile *profile, gfp_t gfp,
 			   const char *msg,
-			   void(*cb)(struct audit_buffer *, void *))
+			   void (*cb) (struct audit_buffer *, void *))
 {
 	struct aa_audit sa = { };
 	sa.operation = "syscall";

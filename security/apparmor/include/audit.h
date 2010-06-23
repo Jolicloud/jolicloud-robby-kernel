@@ -22,7 +22,6 @@
 
 struct aa_profile;
 
-
 extern const char *audit_mode_names[];
 #define AUDIT_MAX_INDEX 5
 
@@ -50,10 +49,9 @@ struct aa_audit {
 };
 
 int aa_audit(int type, struct aa_profile *profile, struct aa_audit *sa,
-	     void(*cb)(struct audit_buffer *, void *));
+	     void (*cb) (struct audit_buffer *, void *));
 
 int aa_audit_syscallreject(struct aa_profile *profile, gfp_t gfp, const char *,
-			   void(*cb)(struct audit_buffer *, void *));
+			   void (*cb) (struct audit_buffer *, void *));
 
-
-#endif	/* __AA_AUDIT_H */
+#endif /* __AA_AUDIT_H */

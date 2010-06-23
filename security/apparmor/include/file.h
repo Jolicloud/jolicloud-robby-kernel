@@ -34,12 +34,11 @@ struct aa_profile;
 #define AA_MAY_CREATE			0x0080
 #define AA_LINK_SUBSET			0x0100
 #define AA_MAY_DELEGATE			0x0200
-#define AA_EXEC_DELEGATE		0x0400		/*exec allows delegate*/
+#define AA_EXEC_DELEGATE		0x0400	/*exec allows delegate */
 
-#define AA_MAY_CHANGEHAT		0x2000		/* ctrl auditing only */
-#define AA_MAY_ONEXEC			0x4000		/* exec allows onexec */
+#define AA_MAY_CHANGEHAT		0x2000	/* ctrl auditing only */
+#define AA_MAY_ONEXEC			0x4000	/* exec allows onexec */
 #define AA_MAY_CHANGE_PROFILE		0x8000
-
 
 #define AA_AUDIT_FILE_MASK	(MAY_READ | MAY_WRITE | MAY_EXEC | MAY_APPEND |\
 				 AA_MAY_LINK | AA_MAY_LOCK | AA_EXEC_MMAP | \
@@ -54,7 +53,7 @@ struct aa_profile;
 #define AA_X_INDEX_MASK		0x03ff
 
 #define AA_X_TYPE_MASK		0x0c00
-#define AA_X_TYPE_SHIFT		10		
+#define AA_X_TYPE_SHIFT		10
 #define AA_X_NONE		0x0000
 #define AA_X_NAME		0x0400	/* use executable name px */
 #define AA_X_TABLE		0x0800	/* use a specified name ->n# */
@@ -63,7 +62,6 @@ struct aa_profile;
 #define AA_X_CHILD		0x2000	/* make >AA_X_NONE apply to children */
 #define AA_X_INHERIT		0x4000
 #define AA_X_UNCONFINED		0x8000
-
 
 /* AA_SECURE_X_NEEDED - is passed in the bprm->unsafe field */
 #define AA_SECURE_X_NEEDED	0x8000
@@ -142,7 +140,6 @@ static inline u16 dfa_map_xindex(u16 mask)
 #define dfa_other_xindex(dfa, state) \
 	dfa_map_xindex((ACCEPT_TABLE(dfa)[state] >> 14) & 0x3fff)
 
-
 struct aa_audit_file {
 	struct aa_audit base;
 
@@ -195,7 +192,6 @@ int aa_file_common_perm(struct aa_profile *profile, const char *operation,
 int aa_file_perm(struct aa_profile *profile, const char *operation,
 		 struct file *file, u16 request);
 
-
 static inline void aa_free_file_rules(struct aa_file_rules *rules)
 {
 	aa_match_free(rules->dfa);
@@ -226,4 +222,4 @@ static inline u16 aa_map_file_to_perms(struct file *file)
 	return perms;
 }
 
-#endif	/* __AA_FILE_H */
+#endif /* __AA_FILE_H */

@@ -16,8 +16,6 @@
 #include "include/context.h"
 #include "include/policy.h"
 
-
-
 struct aa_task_context *aa_alloc_task_context(gfp_t flags)
 {
 	return kzalloc(sizeof(struct aa_task_context), flags);

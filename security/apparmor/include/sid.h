@@ -27,7 +27,6 @@ int aa_add_sid_profile(u32 sid, struct aa_profile *profile);
 int aa_replace_sid_profile(u32 sid, struct aa_profile *profile);
 struct aa_profile *aa_get_sid_profile(u32 sid);
 
-
 static inline u32 aa_compound_sid(u32 sys, u32 usr)
 {
 	return sys | usr;
@@ -43,4 +42,4 @@ static inline u32 aa_sys_sid(u32 sid)
 	return sid & 0xffff;
 }
 
-#endif	/* __AA_SID_H */
+#endif /* __AA_SID_H */

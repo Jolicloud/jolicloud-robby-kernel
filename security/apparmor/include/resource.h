@@ -32,7 +32,6 @@ struct aa_rlimit {
 	struct rlimit limits[RLIM_NLIMITS];
 };
 
-
 int aa_task_setrlimit(struct aa_profile *profile, unsigned int resource,
 		      struct rlimit *new_rlim);
 
@@ -43,4 +42,4 @@ static inline void aa_free_rlimit_rules(struct aa_rlimit *rlims)
 	/* NOP */
 }
 
-#endif	/* __AA_RESOURCE_H */
+#endif /* __AA_RESOURCE_H */

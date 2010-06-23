@@ -62,7 +62,7 @@ static void audit_cb(struct audit_buffer *ab, void *va)
 
 		audit_log_format(ab, " protocol=%d", sa->protocol);
 	}
-	
+
 }
 
 static int aa_audit_net(struct aa_profile *profile, struct aa_audit_net *sa)
@@ -118,7 +118,7 @@ int aa_net_perm(struct aa_profile *profile, char *operation,
 	sa.type = type;
 	sa.protocol = protocol;
 
-	return  aa_audit_net(profile, &sa);
+	return aa_audit_net(profile, &sa);
 }
 
 int aa_revalidate_sk(struct sock *sk, char *operation)

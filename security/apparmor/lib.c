@@ -19,8 +19,7 @@
 
 char *aa_strchrnul(const char *s, int c)
 {
-	for (; *s != (char)c && *s != '\0'; ++s)
-		;
+	for (; *s != (char)c && *s != '\0'; ++s) ;
 	return (char *)s;
 }
 
@@ -28,7 +27,7 @@ char *aa_split_name_from_ns(char *args, char **ns_name)
 {
 	char *name = strstrip(args);
 
-	*ns_name  = NULL;
+	*ns_name = NULL;
 	if (args[0] == ':') {
 		char *split = strstrip(strchr(&args[1], ':'));
 

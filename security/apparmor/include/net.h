@@ -29,7 +29,7 @@ struct aa_net {
 };
 
 extern int aa_net_perm(struct aa_profile *profile, char *operation,
-			int family, int type, int protocol);
+		       int family, int type, int protocol);
 extern int aa_revalidate_sk(struct sock *sk, char *operation);
 
 static inline void aa_free_net_rules(struct aa_net *new)
@@ -37,4 +37,4 @@ static inline void aa_free_net_rules(struct aa_net *new)
 	/* NOP */
 }
 
-#endif	/* __AA_NET_H */
+#endif /* __AA_NET_H */

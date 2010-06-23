@@ -19,4 +19,4 @@ ssize_t aa_interface_add_profiles(void *data, size_t size);
 ssize_t aa_interface_replace_profiles(void *udata, size_t size);
 ssize_t aa_interface_remove_profiles(char *name, size_t size);
 
-#endif	/* __POLICY_INTERFACE_H */
+#endif /* __POLICY_INTERFACE_H */

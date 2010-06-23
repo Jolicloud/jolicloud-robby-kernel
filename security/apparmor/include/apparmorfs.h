@@ -27,4 +27,4 @@ extern struct file_operations apparmorfs_matching_fops;
 extern struct file_operations apparmorfs_features_fops;
 #endif
 
-#endif	/* __AA_APPARMORFS_H */
+#endif /* __AA_APPARMORFS_H */

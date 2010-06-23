@@ -113,12 +113,10 @@ static struct file_perms change_profile_perms(struct aa_profile *profile,
 	return aa_str_perms(profile->file.dfa, state, name, &cond, rstate);
 }
 
-
 static const char *next_name(int xtype, const char *name)
 {
 	return NULL;
 }
-
 
 /* __aa_attach_match_ - find an attachment match
  * @name - to match against
@@ -178,7 +176,6 @@ static struct aa_profile *aa_sys_find_attach(struct aa_policy_common *base,
 static struct aa_profile *x_to_profile(struct aa_namespace *ns,
 				       struct aa_profile *profile,
 				       const char *name, u16 xindex)
-
 {
 	struct aa_profile *new_profile = NULL;
 	u16 xtype = xindex & AA_X_TYPE_MASK;
@@ -187,7 +184,7 @@ static struct aa_profile *x_to_profile(struct aa_namespace *ns,
 	if (!profile)
 		profile = ns->unconfined;
 
-	switch(xtype) {
+	switch (xtype) {
 	case AA_X_NONE:
 		/* fail exec unless ix || ux fallback - handled by caller */
 		return ERR_PTR(-EACCES);
@@ -259,7 +256,8 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	unsigned int state = DFA_START;
 	struct aa_audit_file sa = { };
 	struct path_cond cond = { bprm->file->f_path.dentry->d_inode->i_uid,
-				  bprm->file->f_path.dentry->d_inode->i_mode }; 
+				  bprm->file->f_path.dentry->d_inode->i_mode
+	};
 
 	sa.base.error = cap_bprm_set_creds(bprm);
 	if (sa.base.error)
@@ -280,7 +278,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	ns = cxt->sys.profile->ns;
 
 	sa.base.error = aa_get_name(&bprm->file->f_path, 0, &buffer,
-				    (char **) &sa.name);
+				    (char **)&sa.name);
 	if (sa.base.error) {
 		if (profile || profile->flags & PFLAG_IX_ON_NAME_ERROR)
 			sa.base.error = 0;
@@ -304,8 +302,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 						sa.name, &state);
 		state = aa_dfa_null_transition(profile->file.dfa, state);
 	}
-	sa.perms = aa_str_perms(profile->file.dfa, state, sa.name, &cond,
-				NULL);
+	sa.perms = aa_str_perms(profile->file.dfa, state, sa.name, &cond, NULL);
 	if (cxt->sys.onexec && sa.perms.allowed & AA_MAY_ONEXEC) {
 		new_profile = cxt->sys.onexec;
 		cxt->sys.onexec = NULL;
@@ -442,11 +439,9 @@ void apparmor_bprm_committed_creds(struct linux_binprm *bprm)
 	return;
 }
 
-
 /*
  * Functions for self directed profile change
  */
-
 
 static char *new_compound_name(const char *n1, const char *n2)
 {
@@ -629,7 +624,7 @@ int aa_change_profile(const char *ns_name, const char *fqname, int onexec,
 			goto audit;
 		target = aa_alloc_null_profile(profile, 0);
 	}
-	
+
 	/* check if tracing task is allowed to trace target domain */
 	sa.base.error = aa_may_change_ptraced_domain(current, target);
 	if (sa.base.error) {

@@ -21,7 +21,6 @@
 
 #include "policy.h"
 
-
 /* struct aa_file_cxt - the AppArmor context the file was opened in
  * @profile: the profile the file was opened under
  * @perms: the permission the file was opened with
@@ -42,10 +41,6 @@ static inline void aa_free_file_context(struct aa_file_cxt *cxt)
 	memset(cxt, 0, sizeof(struct aa_file_cxt));
 	kfree(cxt);
 }
-
-
-
-
 
 /* struct aa_task_cxt_group - a grouping label data for confined tasks
  * @profile: the current profile
@@ -85,7 +80,6 @@ void aa_put_task_policy(struct cred *cred);
 int aa_set_current_onexec(struct aa_profile *sys);
 int aa_set_current_hat(struct aa_profile *profile, u64 token);
 int aa_restore_previous_profile(u64 cookie);
-
 
 static inline struct aa_task_context *__aa_task_cxt(struct task_struct *task)
 {
@@ -149,5 +143,4 @@ static inline struct aa_profile *aa_current_profile_wupd(void)
 	return p;
 }
 
-
-#endif	/* __AA_CONTEXT_H */
+#endif /* __AA_CONTEXT_H */

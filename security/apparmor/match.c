@@ -45,7 +45,7 @@ static struct table_header *unpack_table(void *blob, size_t bsize)
 	blob += sizeof(struct table_header);
 
 	if (!(th.td_flags == YYTD_DATA16 || th.td_flags == YYTD_DATA32 ||
-		th.td_flags == YYTD_DATA8))
+	      th.td_flags == YYTD_DATA8))
 		goto out;
 
 	tsize = table_size(th.td_lolen, th.td_flags);
@@ -81,10 +81,10 @@ int unpack_dfa(struct aa_dfa *dfa, void *blob, size_t size)
 	if (size < sizeof(struct table_set_header))
 		goto fail;
 
-	if (ntohl(*(u32 *)blob) != YYTH_MAGIC)
+	if (ntohl(*(u32 *) blob) != YYTH_MAGIC)
 		goto fail;
 
-	hsize = ntohl(*(u32 *)(blob + 4));
+	hsize = ntohl(*(u32 *) (blob + 4));
 	if (size < hsize)
 		goto fail;
 
@@ -154,8 +154,7 @@ int verify_dfa(struct aa_dfa *dfa)
 	      dfa->tables[YYTD_ID_ACCEPT2 - 1] &&
 	      dfa->tables[YYTD_ID_DEF - 1] &&
 	      dfa->tables[YYTD_ID_BASE - 1] &&
-	      dfa->tables[YYTD_ID_NXT - 1] &&
-	      dfa->tables[YYTD_ID_CHK - 1]))
+	      dfa->tables[YYTD_ID_NXT - 1] && dfa->tables[YYTD_ID_CHK - 1]))
 		goto out;
 
 	/* accept.size == default.size == base.size */
@@ -182,7 +181,7 @@ int verify_dfa(struct aa_dfa *dfa)
 			goto out;
 	}
 
-	for (i = 0; i < trans_count ; i++) {
+	for (i = 0; i < trans_count; i++) {
 		if (NEXT_TABLE(dfa)[i] >= state_count)
 			goto out;
 		if (CHECK_TABLE(dfa)[i] >= state_count)
@@ -251,7 +250,7 @@ unsigned int aa_dfa_match_len(struct aa_dfa *dfa, unsigned int start,
 	if (dfa->tables[YYTD_ID_EC - 1]) {
 		u8 *equiv = EQUIV_TABLE(dfa);
 		for (; len; len--) {
-			pos = base[state] + equiv[(u8)*str++];
+			pos = base[state] + equiv[(u8) * str++];
 			if (check[pos] == state)
 				state = next[pos];
 			else
@@ -259,7 +258,7 @@ unsigned int aa_dfa_match_len(struct aa_dfa *dfa, unsigned int start,
 		}
 	} else {
 		for (; len; len--) {
-			pos = base[state] + (u8)*str++;
+			pos = base[state] + (u8) * str++;
 			if (check[pos] == state)
 				state = next[pos];
 			else
@@ -268,7 +267,6 @@ unsigned int aa_dfa_match_len(struct aa_dfa *dfa, unsigned int start,
 	}
 	return state;
 }
-
 
 /**
  * aa_dfa_next_state - traverse @dfa to find state @str stops at
@@ -299,4 +297,3 @@ unsigned int aa_dfa_null_transition(struct aa_dfa *dfa, unsigned int start)
 {
 	return aa_dfa_match_len(dfa, start, "", 1);
 }
-

@@ -61,8 +61,7 @@ static struct aa_profile *next_profile(struct aa_profile *profile)
 	return NULL;
 }
 
-static void *p_start(struct seq_file *f, loff_t *pos)
-	__acquires(ns_list_lock)
+static void *p_start(struct seq_file *f, loff_t *pos) __acquires(ns_list_lock)
 {
 	struct aa_namespace *ns;
 	loff_t l = *pos;
@@ -75,7 +74,7 @@ static void *p_start(struct seq_file *f, loff_t *pos)
 		if (!list_empty(&ns->base.profiles)) {
 			profile = list_first_entry(&ns->base.profiles,
 						   typeof(*profile), base.list);
-			for ( ; profile && l > 0; l--)
+			for (; profile && l > 0; l--)
 				profile = next_profile(profile);
 			return profile;
 		} else
@@ -86,7 +85,7 @@ static void *p_start(struct seq_file *f, loff_t *pos)
 
 static void *p_next(struct seq_file *f, void *p, loff_t *pos)
 {
-	struct aa_profile *profile = (struct aa_profile *) p;
+	struct aa_profile *profile = (struct aa_profile *)p;
 
 	(*pos)++;
 	profile = next_profile(profile);
@@ -94,10 +93,9 @@ static void *p_next(struct seq_file *f, void *p, loff_t *pos)
 	return profile;
 }
 
-static void p_stop(struct seq_file *f, void *p)
-	__releases(ns_list_lock)
+static void p_stop(struct seq_file *f, void *p) __releases(ns_list_lock)
 {
-	struct aa_profile *profile = (struct aa_profile *) p;
+	struct aa_profile *profile = (struct aa_profile *)p;
 
 	if (profile)
 		read_unlock(&profile->ns->base.lock);
@@ -128,10 +126,10 @@ static int seq_show_profile(struct seq_file *f, void *p)
 
 /* Used in apparmorfs.c */
 static struct seq_operations apparmorfs_profiles_op = {
-	.start =	p_start,
-	.next =		p_next,
-	.stop =		p_stop,
-	.show =		seq_show_profile,
+	.start = p_start,
+	.next = p_next,
+	.stop = p_stop,
+	.show = seq_show_profile,
 };
 
 static int aa_profiles_open(struct inode *inode, struct file *file)
@@ -139,32 +137,31 @@ static int aa_profiles_open(struct inode *inode, struct file *file)
 	return seq_open(file, &apparmorfs_profiles_op);
 }
 
-
 static int aa_profiles_release(struct inode *inode, struct file *file)
 {
 	return seq_release(inode, file);
 }
 
 struct file_operations apparmorfs_profiles_fops = {
-	.open =		aa_profiles_open,
-	.read =		seq_read,
-	.llseek =	seq_lseek,
-	.release =	aa_profiles_release,
+	.open = aa_profiles_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = aa_profiles_release,
 };
 
 /* apparmor/matching */
 static ssize_t aa_matching_read(struct file *file, char __user *buf,
-			       size_t size, loff_t *ppos)
+				size_t size, loff_t *ppos)
 {
 	const char matching[] = "pattern=aadfa audit perms=crwxamlk/ "
-				"user::other";
+	    "user::other";
 
 	return simple_read_from_buffer(buf, size, ppos, matching,
 				       sizeof(matching) - 1);
 }
 
 struct file_operations apparmorfs_matching_fops = {
-	.read = 	aa_matching_read,
+	.read = aa_matching_read,
 };
 
 /* apparmor/features */
@@ -172,14 +169,12 @@ static ssize_t aa_features_read(struct file *file, char __user *buf,
 				size_t size, loff_t *ppos)
 {
 	const char features[] = "file=3.1 capability=2.0 network=1.0 "
-			        "change_hat=1.5 change_profile=1.1 "
-			        "aanamespaces=1.1 rlimit=1.1";
+	    "change_hat=1.5 change_profile=1.1 " "aanamespaces=1.1 rlimit=1.1";
 
 	return simple_read_from_buffer(buf, size, ppos, features,
 				       sizeof(features) - 1);
 }
 
 struct file_operations apparmorfs_features_fops = {
-	.read = 	aa_features_read,
+	.read = aa_features_read,
 };
-

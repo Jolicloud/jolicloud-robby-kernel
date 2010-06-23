@@ -38,9 +38,7 @@ static u16 global_sys_sid;
 static u16 global_usr_sid;
 static DEFINE_SPINLOCK(sid_lock);
 
-
 /* TODO FIXME: add sid to profile mapping, and sid recycling */
-
 
 /**
  * aa_alloc_sid - allocate a new sid for a profile
@@ -56,7 +54,7 @@ u32 aa_alloc_sid(int is_usr)
 	spin_lock(&sid_lock);
 	if (is_usr) {
 		sid = (++global_usr_sid) << 16;
-	        
+
 	} else {
 		sid = ++global_sys_sid;
 	}
@@ -70,7 +68,7 @@ u32 aa_alloc_sid(int is_usr)
  */
 void aa_free_sid(u32 sid)
 {
-	;	/* NOP ATM */
+	;			/* NOP ATM */
 }
 
 /**
@@ -110,4 +108,3 @@ struct aa_profile *aa_get_sid_profile(u32 sid)
 {
 	return ERR_PTR(-EINVAL);
 }
-

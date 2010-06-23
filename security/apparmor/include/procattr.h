@@ -23,4 +23,4 @@ int aa_setprocattr_changehat(char *args, int test);
 int aa_setprocattr_changeprofile(char *args, int onexec, int test);
 int aa_setprocattr_permipc(char *args);
 
-#endif	/* __AA_PROCATTR_H */
+#endif /* __AA_PROCATTR_H */

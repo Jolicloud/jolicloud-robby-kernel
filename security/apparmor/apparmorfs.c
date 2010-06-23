@@ -72,7 +72,6 @@ out:
 	return data;
 }
 
-
 /* apparmor/.load */
 static ssize_t aa_profile_load(struct file *f, const char __user *buf,
 			       size_t size, loff_t *pos)
@@ -90,7 +89,6 @@ static ssize_t aa_profile_load(struct file *f, const char __user *buf,
 
 	return error;
 }
-
 
 static struct file_operations apparmorfs_profile_load = {
 	.write = aa_profile_load
@@ -114,14 +112,13 @@ static ssize_t aa_profile_replace(struct file *f, const char __user *buf,
 	return error;
 }
 
-
 static struct file_operations apparmorfs_profile_replace = {
 	.write = aa_profile_replace
 };
 
 /* apparmor/.remove */
 static ssize_t aa_profile_remove(struct file *f, const char __user *buf,
-				  size_t size, loff_t *pos)
+				 size_t size, loff_t *pos)
 {
 	char *data;
 	ssize_t error;
@@ -241,4 +238,3 @@ error:
 }
 
 fs_initcall(create_apparmorfs);
-

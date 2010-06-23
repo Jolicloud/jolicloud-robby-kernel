@@ -21,7 +21,6 @@
 #define DFA_VALID_PERM_MASK		0xffffffff
 #define DFA_VALID_PERM2_MASK		0xffffffff
 
-
 /**
  * The format used for transition tables is based on the GNU flex table
  * file format (--tables-file option; see Table File Format in the flex
@@ -34,11 +33,11 @@
 #define YYTH_MAGIC	0x1B5E783D
 
 struct table_set_header {
-	u32		th_magic;	/* YYTH_MAGIC */
-	u32		th_hsize;
-	u32		th_ssize;
-	u16		th_flags;
-	char		th_version[];
+	u32 th_magic;		/* YYTH_MAGIC */
+	u32 th_hsize;
+	u32 th_ssize;
+	u16 th_flags;
+	char th_version[];
 };
 
 #define	YYTD_ID_ACCEPT	1
@@ -50,17 +49,16 @@ struct table_set_header {
 #define YYTD_ID_ACCEPT2 7
 #define YYTD_ID_NXT	8
 
-
 #define YYTD_DATA8	1
 #define YYTD_DATA16	2
 #define YYTD_DATA32	4
 
 struct table_header {
-	u16		td_id;
-	u16		td_flags;
-	u32		td_hilen;
-	u32		td_lolen;
-	char		td_data[];
+	u16 td_id;
+	u16 td_flags;
+	u32 td_hilen;
+	u32 td_lolen;
+	char td_data[];
 };
 
 #define DEFAULT_TABLE(DFA) ((u16 *)((DFA)->tables[YYTD_ID_DEF - 1]->td_data))

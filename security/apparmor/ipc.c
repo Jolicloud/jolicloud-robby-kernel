@@ -20,7 +20,6 @@
 #include "include/context.h"
 #include "include/policy.h"
 
-
 struct aa_audit_ptrace {
 	struct aa_audit base;
 

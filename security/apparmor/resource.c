@@ -77,7 +77,7 @@ void __aa_transition_rlimits(struct aa_profile *old, struct aa_profile *new)
 	 * to the less of the tasks hard limit and the init tasks soft limit
 	 */
 	if (old && old->rlimits.mask) {
-		for (i = 0, mask = 1; i < RLIM_NLIMITS; i++, mask <<=1) {
+		for (i = 0, mask = 1; i < RLIM_NLIMITS; i++, mask <<= 1) {
 			if (old->rlimits.mask & mask) {
 				rlim = current->signal->rlim + i;
 				initrlim = init_task.signal->rlim + i;
@@ -90,7 +90,7 @@ void __aa_transition_rlimits(struct aa_profile *old, struct aa_profile *new)
 	/* set any new hard limits as dictated by the new profile */
 	if (!(new && new->rlimits.mask))
 		return;
-	for (i = 0, mask = 1; i < RLIM_NLIMITS; i++, mask <<=1) {
+	for (i = 0, mask = 1; i < RLIM_NLIMITS; i++, mask <<= 1) {
 		if (!(new->rlimits.mask & mask))
 			continue;
 

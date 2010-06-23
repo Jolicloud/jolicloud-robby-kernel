@@ -39,7 +39,6 @@
 /* Flag indicating whether initialization completed */
 int apparmor_initialized;
 
-
 /*
  * LSM hook functions
  */
@@ -67,13 +66,11 @@ static void apparmor_cred_free(struct cred *cred)
 	aa_free_task_context(cxt);
 }
 
-
 static int apparmor_ptrace_access_check(struct task_struct *child,
 					unsigned int mode)
 {
 	return aa_ptrace(current, child, mode);
 }
-
 
 static int apparmor_ptrace_traceme(struct task_struct *parent)
 {
@@ -91,9 +88,9 @@ static int apparmor_capget(struct task_struct *target, kernel_cap_t *effective,
 	cred = __task_cred(target);
 	aa_cred_policy(cred, &profile);
 
-	*effective   = cred->cap_effective;
+	*effective = cred->cap_effective;
 	*inheritable = cred->cap_inheritable;
-	*permitted   = cred->cap_permitted;
+	*permitted = cred->cap_permitted;
 
 	if (profile) {
 		*effective = cap_combine(*effective, profile->caps.set);
@@ -128,7 +125,7 @@ static int apparmor_sysctl(struct ctl_table *table, int op)
 		int mask;
 
 		mask = 0;
- 		if (op & 4)
+		if (op & 4)
 			mask |= MAY_READ;
 		if (op & 2)
 			mask |= MAY_WRITE;
@@ -171,7 +168,7 @@ static int common_perm(const char *op, struct path *path, u16 mask,
 }
 
 static int common_perm_dentry(const char *op, struct path *dir,
-			      struct dentry *dentry, u16 mask, 
+			      struct dentry *dentry, u16 mask,
 			      struct path_cond *cond)
 {
 	struct path path = { dir->mnt, dentry };
@@ -183,7 +180,7 @@ static int common_perm_rm(const char *op, struct path *dir,
 			  struct dentry *dentry, u16 mask)
 {
 	struct inode *inode = dentry->d_inode;
-	struct path_cond cond = {};
+	struct path_cond cond = { };
 
 	if (!dir->mnt || !inode || !mediated_filesystem(inode))
 		return 0;
@@ -231,7 +228,8 @@ static int apparmor_path_truncate(struct path *path, loff_t length,
 				  unsigned int time_attrs)
 {
 	struct path_cond cond = { path->dentry->d_inode->i_uid,
-				  path->dentry->d_inode->i_mode };
+				  path->dentry->d_inode->i_mode
+	};
 
 	if (!path->mnt || !mediated_filesystem(path->dentry->d_inode))
 		return 0;
@@ -239,7 +237,7 @@ static int apparmor_path_truncate(struct path *path, loff_t length,
 }
 
 static int apparmor_path_symlink(struct path *dir, struct dentry *dentry,
-			  const char *old_name)
+				 const char *old_name)
 {
 	return common_perm_create("symlink_create", dir, dentry, AA_MAY_CREATE,
 				  S_IFLNK);
@@ -261,7 +259,7 @@ static int apparmor_path_link(struct dentry *old_dentry, struct path *new_dir,
 }
 
 static int apparmor_path_rename(struct path *old_dir, struct dentry *old_dentry,
-			 struct path *new_dir, struct dentry *new_dentry)
+				struct path *new_dir, struct dentry *new_dentry)
 {
 	struct aa_profile *profile;
 	int error = 0;
@@ -274,14 +272,15 @@ static int apparmor_path_rename(struct path *old_dir, struct dentry *old_dentry,
 		struct path old_path = { old_dir->mnt, old_dentry };
 		struct path new_path = { new_dir->mnt, new_dentry };
 		struct path_cond cond = { old_dentry->d_inode->i_uid,
-					  old_dentry->d_inode->i_mode };
+					  old_dentry->d_inode->i_mode
+		};
 
 		error = aa_path_perm(profile, "rename_src", &old_path,
 				     MAY_READ | MAY_WRITE, &cond);
 		if (!error)
 			error = aa_path_perm(profile, "rename_dest", &new_path,
 					     AA_MAY_CREATE | MAY_WRITE, &cond);
-					     
+
 	}
 	return error;
 }
@@ -290,7 +289,7 @@ static int apparmor_dentry_open(struct file *file, const struct cred *cred)
 {
 	struct aa_profile *profile;
 	int error = 0;
-	  
+
 	/* If in exec permission is handled by bprm hooks */
 	if (current->in_execve ||
 	    !mediated_filesystem(file->f_path.dentry->d_inode))
@@ -299,7 +298,7 @@ static int apparmor_dentry_open(struct file *file, const struct cred *cred)
 	aa_cred_policy(cred, &profile);
 	if (profile) {
 		struct aa_file_cxt *fcxt = file->f_security;
-		struct inode *inode = file->f_path.dentry->d_inode; 
+		struct inode *inode = file->f_path.dentry->d_inode;
 		struct path_cond cond = { inode->i_uid, inode->i_mode };
 
 		error = aa_path_perm(profile, "open", &file->f_path,
@@ -363,7 +362,7 @@ static int common_file_perm(const char *op, struct file *file, u16 mask)
 
 	if (!fprofile || !file->f_path.mnt ||
 	    !mediated_filesystem(file->f_path.dentry->d_inode))
- 		return 0;
+		return 0;
 
 	profile = aa_current_profile_wupd();
 	if (profile && ((fprofile != profile) || (mask & ~fcxt->allowed)))
@@ -383,7 +382,7 @@ static int apparmor_file_lock(struct file *file, unsigned int cmd)
 }
 
 static int common_mmap(struct file *file, const char *operation,
-		   unsigned long prot, unsigned long flags)
+		       unsigned long prot, unsigned long flags)
 {
 	struct dentry *dentry;
 	int mask = 0;
@@ -445,7 +444,7 @@ static int apparmor_file_mprotect(struct vm_area_struct *vma,
 				  unsigned long reqprot, unsigned long prot)
 {
 	return common_mmap(vma->vm_file, "file_mprotect", prot,
-		       !(vma->vm_flags & VM_SHARED) ? MAP_PRIVATE : 0);
+			   !(vma->vm_flags & VM_SHARED) ? MAP_PRIVATE : 0);
 }
 
 static int apparmor_getprocattr(struct task_struct *task, char *name,
@@ -553,7 +552,8 @@ static int apparmor_task_setrlimit(unsigned int resource,
 }
 
 #ifdef CONFIG_SECURITY_APPARMOR_NETWORK
-static int apparmor_socket_create(int family, int type, int protocol, int kern){
+static int apparmor_socket_create(int family, int type, int protocol, int kern)
+{
 	struct aa_profile *profile;
 	int error = 0;
 
@@ -563,12 +563,12 @@ static int apparmor_socket_create(int family, int type, int protocol, int kern){
 	profile = aa_current_profile();
 	if (profile)
 		error = aa_net_perm(profile, "socket_create", family,
-							type, protocol);
+				    type, protocol);
 	return error;
 }
 
 static int apparmor_socket_post_create(struct socket *sock, int family,
-					int type, int protocol, int kern)
+				       int type, int protocol, int kern)
 {
 	struct sock *sk = sock->sk;
 
@@ -587,7 +587,7 @@ static int apparmor_socket_bind(struct socket *sock,
 }
 
 static int apparmor_socket_connect(struct socket *sock,
-					struct sockaddr *address, int addrlen)
+				   struct sockaddr *address, int addrlen)
 {
 	struct sock *sk = sock->sk;
 
@@ -609,7 +609,7 @@ static int apparmor_socket_accept(struct socket *sock, struct socket *newsock)
 }
 
 static int apparmor_socket_sendmsg(struct socket *sock,
-					struct msghdr *msg, int size)
+				   struct msghdr *msg, int size)
 {
 	struct sock *sk = sock->sk;
 
@@ -639,7 +639,7 @@ static int apparmor_socket_getpeername(struct socket *sock)
 }
 
 static int apparmor_socket_getsockopt(struct socket *sock, int level,
-					int optname)
+				      int optname)
 {
 	struct sock *sk = sock->sk;
 
@@ -647,7 +647,7 @@ static int apparmor_socket_getsockopt(struct socket *sock, int level,
 }
 
 static int apparmor_socket_setsockopt(struct socket *sock, int level,
-					int optname)
+				      int optname)
 {
 	struct sock *sk = sock->sk;
 
@@ -663,61 +663,60 @@ static int apparmor_socket_shutdown(struct socket *sock, int how)
 #endif
 
 static struct security_operations apparmor_ops = {
-	.name =				"apparmor",
+	.name = "apparmor",
 
-	.ptrace_access_check =		apparmor_ptrace_access_check,
-	.ptrace_traceme =		apparmor_ptrace_traceme,
-	.capget =			apparmor_capget,
-	.sysctl =			apparmor_sysctl,
-	.capable =			apparmor_capable,
+	.ptrace_access_check = apparmor_ptrace_access_check,
+	.ptrace_traceme = apparmor_ptrace_traceme,
+	.capget = apparmor_capget,
+	.sysctl = apparmor_sysctl,
+	.capable = apparmor_capable,
 
-	.path_link =			apparmor_path_link,
-	.path_unlink =			apparmor_path_unlink,
-	.path_symlink =			apparmor_path_symlink,
-	.path_mkdir =			apparmor_path_mkdir,
-	.path_rmdir =			apparmor_path_rmdir,
-	.path_mknod =			apparmor_path_mknod,
-	.path_rename =			apparmor_path_rename,
-	.path_truncate =		apparmor_path_truncate,
-	.dentry_open =			apparmor_dentry_open,
+	.path_link = apparmor_path_link,
+	.path_unlink = apparmor_path_unlink,
+	.path_symlink = apparmor_path_symlink,
+	.path_mkdir = apparmor_path_mkdir,
+	.path_rmdir = apparmor_path_rmdir,
+	.path_mknod = apparmor_path_mknod,
+	.path_rename = apparmor_path_rename,
+	.path_truncate = apparmor_path_truncate,
+	.dentry_open = apparmor_dentry_open,
 
-	.file_permission =		apparmor_file_permission,
-	.file_alloc_security =		apparmor_file_alloc_security,
-	.file_free_security =		apparmor_file_free_security,
-	.file_mmap =			apparmor_file_mmap,
-	.file_mprotect =		apparmor_file_mprotect,
-	.file_lock =			apparmor_file_lock,
+	.file_permission = apparmor_file_permission,
+	.file_alloc_security = apparmor_file_alloc_security,
+	.file_free_security = apparmor_file_free_security,
+	.file_mmap = apparmor_file_mmap,
+	.file_mprotect = apparmor_file_mprotect,
+	.file_lock = apparmor_file_lock,
 
-	.getprocattr =			apparmor_getprocattr,
-	.setprocattr =			apparmor_setprocattr,
+	.getprocattr = apparmor_getprocattr,
+	.setprocattr = apparmor_setprocattr,
 
 #ifdef CONFIG_SECURITY_APPARMOR_NETWORK
-	.socket_create =		apparmor_socket_create,
-	.socket_post_create =		apparmor_socket_post_create,
-	.socket_bind =			apparmor_socket_bind,
-	.socket_connect =		apparmor_socket_connect,
-	.socket_listen =		apparmor_socket_listen,
-	.socket_accept =		apparmor_socket_accept,
-	.socket_sendmsg =		apparmor_socket_sendmsg,
-	.socket_recvmsg =		apparmor_socket_recvmsg,
-	.socket_getsockname =		apparmor_socket_getsockname,
-	.socket_getpeername =		apparmor_socket_getpeername,
-	.socket_getsockopt =		apparmor_socket_getsockopt,
-	.socket_setsockopt =		apparmor_socket_setsockopt,
-	.socket_shutdown =		apparmor_socket_shutdown,
+	.socket_create = apparmor_socket_create,
+	.socket_post_create = apparmor_socket_post_create,
+	.socket_bind = apparmor_socket_bind,
+	.socket_connect = apparmor_socket_connect,
+	.socket_listen = apparmor_socket_listen,
+	.socket_accept = apparmor_socket_accept,
+	.socket_sendmsg = apparmor_socket_sendmsg,
+	.socket_recvmsg = apparmor_socket_recvmsg,
+	.socket_getsockname = apparmor_socket_getsockname,
+	.socket_getpeername = apparmor_socket_getpeername,
+	.socket_getsockopt = apparmor_socket_getsockopt,
+	.socket_setsockopt = apparmor_socket_setsockopt,
+	.socket_shutdown = apparmor_socket_shutdown,
 #endif
 
-	.cred_free =			apparmor_cred_free,
-	.cred_prepare =			apparmor_cred_prepare,
+	.cred_free = apparmor_cred_free,
+	.cred_prepare = apparmor_cred_prepare,
 
-	.bprm_set_creds =		apparmor_bprm_set_creds,
-	.bprm_committing_creds =	apparmor_bprm_committing_creds,
-	.bprm_committed_creds =		apparmor_bprm_committed_creds,
-	.bprm_secureexec =		apparmor_bprm_secureexec,
+	.bprm_set_creds = apparmor_bprm_set_creds,
+	.bprm_committing_creds = apparmor_bprm_committing_creds,
+	.bprm_committed_creds = apparmor_bprm_committed_creds,
+	.bprm_secureexec = apparmor_bprm_secureexec,
 
-	.task_setrlimit =		apparmor_task_setrlimit,
+	.task_setrlimit = apparmor_task_setrlimit,
 };
-
 
 /*
  * AppArmor sysfs module parameters
@@ -801,6 +800,7 @@ static int __init apparmor_enabled_setup(char *str)
 	apparmor_enabled = simple_strtol(str, NULL, 0);
 	return 1;
 }
+
 __setup("apparmor=", apparmor_enabled_setup);
 
 static int param_set_aalockpolicy(const char *val, struct kernel_param *kp)
@@ -940,13 +940,12 @@ static int param_set_mode(const char *val, struct kernel_param *kp)
 	return -EINVAL;
 }
 
-
 /*
  * AppArmor init functions
  */
 static int set_init_cxt(void)
 {
-	struct cred *cred = (struct cred *) current->real_cred;
+	struct cred *cred = (struct cred *)current->real_cred;
 	struct aa_task_context *cxt;
 
 	cxt = aa_alloc_task_context(GFP_KERNEL);

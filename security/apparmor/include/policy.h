@@ -44,7 +44,6 @@ extern const char *profile_mode_names[];
 #define PROFILE_IS_HAT(_profile) \
 	((_profile) && (_profile)->flags & PFLAG_HAT)
 
-
 /*
  * FIXME: currently need a clean way to replace and remove profiles as a
  * set.  It should be done at the namespace level.
@@ -52,9 +51,9 @@ extern const char *profile_mode_names[];
  * a mark and remove marked interface.
  */
 enum profile_mode {
-	APPARMOR_ENFORCE,		/* enforce access rules */
-	APPARMOR_COMPLAIN,		/* allow and log access violations */
-	APPARMOR_KILL,			/* kill task on access violation */
+	APPARMOR_ENFORCE,	/* enforce access rules */
+	APPARMOR_COMPLAIN,	/* allow and log access violations */
+	APPARMOR_KILL,		/* kill task on access violation */
 };
 
 enum profile_flags {
@@ -128,7 +127,6 @@ struct aa_namespace {
 	struct aa_profile *unconfined;
 };
 
-
 /* struct aa_profile - basic confinement data
  * @base - base componets of the profile (name, refcount, lists, lock ...)
  * @fqname - The fully qualified profile name, less the namespace name
@@ -178,7 +176,6 @@ struct aa_profile {
 	u32 flags;
 	int size;
 
-	
 	unsigned long mmap_min_addr;
 
 	struct aa_file_rules file;
@@ -187,13 +184,11 @@ struct aa_profile {
 	struct aa_rlimit rlimits;
 };
 
-
 extern struct list_head ns_list;
 extern rwlock_t ns_list_lock;
 
 extern struct aa_namespace *default_namespace;
 extern enum profile_mode g_profile_mode;
- 
 
 void aa_add_profile(struct aa_policy_common *common,
 		    struct aa_profile *profile);
@@ -205,7 +200,7 @@ void free_aa_namespace_kref(struct kref *kref);
 void free_aa_namespace(struct aa_namespace *ns);
 struct aa_namespace *__aa_find_namespace(struct list_head *head,
 					 const char *name);
-					 
+
 struct aa_namespace *aa_find_namespace(const char *name);
 struct aa_namespace *aa_prepare_namespace(const char *name);
 void aa_remove_namespace(struct aa_namespace *ns);
@@ -213,7 +208,6 @@ struct aa_namespace *aa_prepare_namespace(const char *name);
 void aa_profile_list_release(struct list_head *head);
 void aa_profile_ns_list_release(void);
 void __aa_remove_namespace(struct aa_namespace *ns);
-
 
 static inline struct aa_policy_common *aa_get_common(struct aa_policy_common *c)
 {
@@ -236,8 +230,6 @@ static inline void aa_put_namespace(struct aa_namespace *ns)
 	if (ns)
 		kref_put(&ns->base.count, free_aa_namespace_kref);
 }
-
-
 
 struct aa_profile *alloc_aa_profile(const char *name);
 struct aa_profile *aa_alloc_null_profile(struct aa_profile *parent, int hat);
@@ -299,5 +291,4 @@ static inline int PROFILE_AUDIT_MODE(struct aa_profile *profile)
 	return AUDIT_NORMAL;
 }
 
-#endif	/* __AA_POLICY_H */
-
+#endif /* __AA_POLICY_H */

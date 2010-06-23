@@ -26,7 +26,6 @@ extern int g_apparmor_lock_policy;
 extern int g_apparmor_logsyscall;
 extern unsigned int g_apparmor_path_max;
 
-
 /*
  * DEBUG remains global (no per profile flag) since it is mostly used in sysctl
  * which is not related to profile accesses.
@@ -59,5 +58,4 @@ static inline int mediated_filesystem(struct inode *inode)
 	return !(inode->i_sb->s_flags & MS_NOUSER);
 }
 
-#endif	/* __APPARMOR_H */
-
+#endif /* __APPARMOR_H */
