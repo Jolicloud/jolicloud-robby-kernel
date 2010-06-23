@@ -63,7 +63,7 @@ struct aa_ext {
 	void *end;
 	void *pos;		/* pointer to current position in the buffer */
 	u32 version;
-	char *ns_name;
+	const char *ns_name;
 };
 
 struct aa_audit_iface {
@@ -258,7 +258,8 @@ static size_t unpack_blob(struct aa_ext *e, char **blob, const char *name)
 	return 0;
 }
 
-static int unpack_string(struct aa_ext *e, char **string, const char *name)
+static int unpack_string(struct aa_ext *e, const char **string,
+			 const char *name)
 {
 	char *src_str;
 	size_t size = 0;
@@ -282,7 +283,7 @@ fail:
 
 static int unpack_dynstring(struct aa_ext *e, char **string, const char *name)
 {
-	char *tmp;
+	const char *tmp;
 	void *pos = e->pos;
 	int res = unpack_string(e, &tmp, name);
 	*string = NULL;
@@ -425,7 +426,7 @@ static struct aa_profile *aa_unpack_profile(struct aa_ext *e,
 					    struct aa_audit_iface *sa)
 {
 	struct aa_profile *profile = NULL;
-	char *name;
+	const char *name;
 	size_t size = 0;
 	int i, error = -EPROTO;
 	u32 tmp;
