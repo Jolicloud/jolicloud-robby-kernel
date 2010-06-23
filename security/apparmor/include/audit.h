@@ -38,6 +38,16 @@ enum audit_mode {
 	AUDIT_ALL		/* audit all accesses */
 };
 
+enum audit_type {
+	AUDIT_APPARMOR_AUDIT,
+	AUDIT_APPARMOR_ALLOWED,
+	AUDIT_APPARMOR_DENIED,
+	AUDIT_APPARMOR_HINT,
+	AUDIT_APPARMOR_STATUS,
+	AUDIT_APPARMOR_ERROR,
+	AUDIT_APPARMOR_KILL
+};
+
 extern const char *op_table[];
 enum aa_ops {
 	OP_NULL,

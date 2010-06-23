@@ -115,7 +115,7 @@ static void audit_pre(struct audit_buffer *ab, void *ca)
 
 	if (aa_g_audit_header) {
 		audit_log_format(ab, " type=");
-		audit_log_string(ab, aa_audit_type[sa->aad.type - AUDIT_APPARMOR_AUDIT]);
+		audit_log_string(ab, aa_audit_type[sa->aad.type]);
 	}
 
 	if (sa->aad.op) {
