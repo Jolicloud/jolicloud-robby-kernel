@@ -190,7 +190,8 @@ int aa_pathstr_perm(struct aa_profile *profile, const char *op,
 		    const char *name, u16 request, struct path_cond *cond);
 
 int aa_path_perm(struct aa_profile *profile, const char *operation,
-		 struct path *path, u16 request, struct path_cond *cond);
+		 struct path *path, int flags, u16 request,
+		 struct path_cond *cond);
 
 int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 		 struct path *new_dir, struct dentry *new_dentry);

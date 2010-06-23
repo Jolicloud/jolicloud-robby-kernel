@@ -292,17 +292,32 @@ int aa_pathstr_perm(struct aa_profile *profile, const char *op,
 }
 
 /**
+ * is_deleted - test if a file has been completely unlinked
+ * @dentry: dentry of file to test for deletion  (NOT NULL)
+ *
+ * Returns: %1 if deleted else %0
+ */
+static inline bool is_deleted(struct dentry *dentry)
+{
+	if (d_unlinked(dentry) && dentry->d_inode->i_nlink == 0)
+		return 1;
+	return 0;
+}
+
+/**
  * aa_path_perm - do permissions check & audit for @path
  * @profile: profile being enforced  (NOT NULL)
  * @operation: name of the operation being enforced  (NOT NULL)
  * @path: path to check permissions of  (NOT NULL)
+ * @flags: any additional path flags beyond what the profile specifies
  * @request: requested permissions
  * @cond: conditional info for this request  (NOT NULL)
  *
  * Returns: %0 else error if access denied or other error
  */
 int aa_path_perm(struct aa_profile *profile, const char *operation,
-		 struct path *path, u16 request, struct path_cond *cond)
+		 struct path *path, int flags, u16 request,
+		 struct path_cond *cond)
 {
 	char *buffer, *name;
 	struct aa_audit_file sa = {
@@ -311,14 +326,18 @@ int aa_path_perm(struct aa_profile *profile, const char *operation,
 		.request = request,
 		.cond = cond,
 	};
-	int flags = profile->path_flags |
-		(S_ISDIR(cond->mode) ? PATH_IS_DIR : 0);
-	/* buffer freed below - name is pointer inside buffer */
+	flags |= profile->path_flags | (S_ISDIR(cond->mode) ? PATH_IS_DIR : 0);
 	sa.base.error = aa_get_name(path, flags, &buffer, &name);
 	sa.name = name;
 	if (sa.base.error) {
 		sa.perms = nullperms;
-		if (sa.base.error == -ENOENT)
+		if (sa.base.error == -ENOENT && is_deleted(path->dentry)) {
+			/* Access to open files that are deleted are
+			 * give a pass (implicit delegation)
+			 */
+			sa.base.error = 0;
+			sa.perms.allowed = sa.request;
+		} else if (sa.base.error == -ENOENT)
 			sa.base.info = "Failed name lookup - deleted entry";
 		else if (sa.base.error == -ESTALE)
 			sa.base.info = "Failed name lookup - disconnected path";
@@ -469,75 +488,6 @@ audit:
 }
 
 /**
- * aa_is_deleted_file - test if a file has been completely unlinked
- * @dentry: dentry of file to test for deletion  (NOT NULL)
- *
- * Returns: %1 if deleted else %0
- */
-static inline bool aa_is_deleted_file(struct dentry *dentry)
-{
-	if (d_unlinked(dentry) && dentry->d_inode->i_nlink == 0)
-		return 1;
-	return 0;
-}
-
-/**
- * aa_file_common_perm - core permission check & audit for files
- * @profile: profile being enforced   (NOT NULL)
- * @operation: name of operation      (NOT NULL)
- * @file: file to check permissions of  (NOT NULL)
- * @request: requested permissions
- * @name: path name to revalidate permission on  (MAYBE NULL if @error != 0)
- * @error: error result of name lookup when find @name
- *
- * Returns: %0 if access allowed else %1
- */
-static int aa_file_common_perm(struct aa_profile *profile,
-			       const char *operation, struct file *file,
-			       u16 request, const char *name, int error)
-{
-	struct path_cond cond = {
-		.uid = file->f_path.dentry->d_inode->i_uid,
-		.mode = file->f_path.dentry->d_inode->i_mode
-	};
-	struct aa_audit_file sa = {
-		.base.operation = operation,
-		.base.gfp_mask = GFP_KERNEL,
-		.request = request,
-		.base.error = error,
-		.name = name,
-		.cond = &cond,
-	};
-
-	if (sa.base.error) {
-		sa.perms = nullperms;
-		if (sa.base.error == -ENOENT &&
-		    aa_is_deleted_file(file->f_path.dentry)) {
-			/* Access to open files that are deleted are
-			 * give a pass (implicit delegation)
-			 */
-			sa.base.error = 0;
-			sa.perms.allowed = sa.request;
-		} else if (sa.base.error == -ENOENT)
-			sa.base.info = "Failed name lookup - deleted entry";
-		else if (sa.base.error == -ESTALE)
-			sa.base.info = "Failed name lookup - disconnected path";
-		else if (sa.base.error == -ENAMETOOLONG)
-			sa.base.info = "Failed name lookup - name too long";
-		else
-			sa.base.info = "Failed name lookup";
-	} else {
-		aa_str_perms(profile->file.dfa, profile->file.start, sa.name,
-			     &cond, &sa.perms);
-		if (request & ~sa.perms.allowed)
-			sa.base.error = -EACCES;
-	}
-	sa.base.error = aa_audit_file(profile, &sa);
-
-	return sa.base.error;
-}
-
-/**
  * aa_file_perm - do permission revalidation check & audit for @file
  * @profile: profile being enforced   (NOT NULL)
  * @operation: name of the operation  (NOT NULL)
@@ -549,14 +499,11 @@ static int aa_file_common_perm(struct aa_profile *profile,
 int aa_file_perm(struct aa_profile *profile, const char *operation,
 		 struct file *file, u16 request)
 {
-	char *buffer, *name;
-	umode_t mode = file->f_path.dentry->d_inode->i_mode;
-	/* buffer freed below, name is a pointer inside of buffer */
-	int flags = profile->path_flags | (S_ISDIR(mode) ? PATH_IS_DIR : 0);
-	int error = aa_get_name(&file->f_path, flags, &buffer, &name);
+	struct path_cond cond = {
+		.uid = file->f_path.dentry->d_inode->i_uid,
+		.mode = file->f_path.dentry->d_inode->i_mode
+	};
 
-	error = aa_file_common_perm(profile, operation, file, request, name,
-				    error);
-	kfree(buffer);
-	return error;
+	return aa_path_perm(profile, operation, &file->f_path,
+			    PATH_DELEGATE_DELETED, request, &cond);
 }

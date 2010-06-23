@@ -203,7 +203,7 @@ static int common_perm(const char *op, struct path *path, u16 mask,
 
 	profile = __aa_current_profile();
 	if (!unconfined(profile))
-		error = aa_path_perm(profile, op, path, mask, cond);
+		error = aa_path_perm(profile, op, path, 0, mask, cond);
 
 	return error;
 }
@@ -367,13 +367,13 @@ static int apparmor_path_rename(struct path *old_dir, struct dentry *old_dentry,
 					  old_dentry->d_inode->i_mode
 		};
 
-		error = aa_path_perm(profile, "rename_src", &old_path,
+		error = aa_path_perm(profile, "rename_src", &old_path, 0,
 				     MAY_READ | AA_MAY_META_READ | MAY_WRITE |
 				     AA_MAY_META_WRITE | AA_MAY_DELETE,
 				     &cond);
 		if (!error)
 			error = aa_path_perm(profile, "rename_dest", &new_path,
-					     MAY_WRITE | AA_MAY_META_WRITE |
+					     0, MAY_WRITE | AA_MAY_META_WRITE |
 					     AA_MAY_CREATE, &cond);
 
 	}
@@ -425,7 +425,7 @@ static int apparmor_dentry_open(struct file *file, const struct cred *cred)
 		struct inode *inode = file->f_path.dentry->d_inode;
 		struct path_cond cond = { inode->i_uid, inode->i_mode };
 
-		error = aa_path_perm(profile, "open", &file->f_path,
+		error = aa_path_perm(profile, "open", &file->f_path, 0,
 				     aa_map_file_to_perms(file), &cond);
 		/* released by aa_free_file_context */
 		fcxt->profile = aa_get_profile(profile);
