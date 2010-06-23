@@ -539,7 +539,7 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 	};
 	char *name = NULL;
 
-	cred = aa_current_policy(&profile);
+	cred = __aa_current_policy(&profile);
 	cxt = cred->security;
 	previous_profile = cxt->sys.previous;
 
@@ -657,7 +657,7 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 	else
 		sa.base.operation = "change_profile";
 
-	cred = aa_current_policy(&profile);
+	cred = __aa_current_policy(&profile);
 	cxt = cred->security;
 
 	if (ns_name) {

@@ -151,7 +151,7 @@ static int apparmor_capable(struct task_struct *task, const struct cred *cred,
 static int apparmor_sysctl(struct ctl_table *table, int op)
 {
 	int error = 0;
-	struct aa_profile *profile = aa_current_profile_wupd();
+	struct aa_profile *profile = aa_current_profile();
 
 	if (profile) {
 		char *buffer, *name;
@@ -194,7 +194,7 @@ static int common_perm(const char *op, struct path *path, u16 mask,
 	struct aa_profile *profile;
 	int error = 0;
 
-	profile = aa_current_profile();
+	profile = __aa_current_profile();
 	if (profile)
 		error = aa_path_perm(profile, op, path, mask, cond);
 
@@ -286,7 +286,7 @@ static int apparmor_path_link(struct dentry *old_dentry, struct path *new_dir,
 	if (!mediated_filesystem(old_dentry->d_inode))
 		return 0;
 
-	profile = aa_current_profile_wupd();
+	profile = aa_current_profile();
 	if (profile)
 		error = aa_path_link(profile, old_dentry, new_dir, new_dentry);
 	return error;
@@ -301,7 +301,7 @@ static int apparmor_path_rename(struct path *old_dir, struct dentry *old_dentry,
 	if (!mediated_filesystem(old_dentry->d_inode))
 		return 0;
 
-	profile = aa_current_profile_wupd();
+	profile = aa_current_profile();
 	if (profile) {
 		struct path old_path = { old_dir->mnt, old_dentry };
 		struct path new_path = { new_dir->mnt, new_dentry };
@@ -328,7 +328,7 @@ static int apparmor_path_chmod(struct dentry *dentry, struct vfsmount *mnt,
 	if (!mediated_filesystem(dentry->d_inode))
 		return 0;
 
-	profile = aa_current_profile_wupd();
+	profile = aa_current_profile();
 	if (profile) {
 		struct path path = { mnt, dentry };
 		struct path_cond cond = { dentry->d_inode->i_uid,
@@ -350,7 +350,7 @@ static int apparmor_path_chown(struct path *path, uid_t uid, gid_t gid)
 	if (!mediated_filesystem(path->dentry->d_inode))
 		return 0;
 
-	profile = aa_current_profile_wupd();
+	profile = aa_current_profile();
 	if (profile) {
 		struct path_cond cond =  { path->dentry->d_inode->i_uid,
 					   path->dentry->d_inode->i_mode
@@ -419,7 +419,7 @@ static int apparmor_file_permission(struct file *file, int mask)
 	    !mediated_filesystem(file->f_path.dentry->d_inode))
 		return 0;
 
-	profile = aa_current_profile();
+	profile = __aa_current_profile();
 
 #ifdef CONFIG_SECURITY_APPARMOR_COMPAT_24
 	/*
@@ -443,7 +443,7 @@ static int common_file_perm(const char *op, struct file *file, u16 mask)
 	    !mediated_filesystem(file->f_path.dentry->d_inode))
 		return 0;
 
-	profile = aa_current_profile_wupd();
+	profile = aa_current_profile();
 	if (profile && ((fprofile != profile) || (mask & ~fcxt->allowed)))
 		error = aa_file_perm(profile, op, file, mask);
 
@@ -599,7 +599,7 @@ static int apparmor_setprocattr(struct task_struct *task, char *name,
 static int apparmor_task_setrlimit(unsigned int resource,
 				   struct rlimit *new_rlim)
 {
-	struct aa_profile *profile = aa_current_profile_wupd();
+	struct aa_profile *profile = aa_current_profile();
 	int error = 0;
 
 	if (profile)
@@ -617,7 +617,7 @@ static int apparmor_socket_create(int family, int type, int protocol, int kern)
 	if (kern)
 		return 0;
 
-	profile = aa_current_profile();
+	profile = __aa_current_profile();
 	if (profile)
 		error = aa_net_perm(profile, "socket_create", family,
 				    type, protocol);

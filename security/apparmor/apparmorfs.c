@@ -65,7 +65,7 @@ static char *aa_simple_write_to_buffer(const char __user *userbuf,
 			.gfp_mask = GFP_KERNEL,
 			.error = -EACCES,
 		};
-		cred = aa_current_policy(&profile);
+		cred = __aa_current_policy(&profile);
 		data = ERR_PTR(aa_audit(AUDIT_APPARMOR_DENIED, profile, &sa,
 					NULL));
 		goto out;

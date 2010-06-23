@@ -103,7 +103,7 @@ static inline int __aa_task_is_confined(struct task_struct *task)
 	return rc;
 }
 
-static inline const struct cred *aa_current_policy(struct aa_profile **sys)
+static inline const struct cred *__aa_current_policy(struct aa_profile **sys)
 {
 	const struct cred *cred = current_cred();
 	struct aa_task_context *cxt = cred->security;
@@ -113,7 +113,7 @@ static inline const struct cred *aa_current_policy(struct aa_profile **sys)
 	return cred;
 }
 
-static inline const struct cred *aa_current_policy_wupd(struct aa_profile **sys)
+static inline const struct cred *aa_current_policy(struct aa_profile **sys)
 {
 	const struct cred *cred = current_cred();
 	struct aa_task_context *cxt = cred->security;
@@ -127,7 +127,7 @@ static inline const struct cred *aa_current_policy_wupd(struct aa_profile **sys)
 	return cred;
 }
 
-static inline struct aa_profile *aa_current_profile(void)
+static inline struct aa_profile *__aa_current_profile(void)
 {
 	const struct cred *cred = current_cred();
 	struct aa_task_context *cxt = cred->security;
@@ -135,10 +135,10 @@ static inline struct aa_profile *aa_current_profile(void)
 	return aa_confining_profile(cxt->sys.profile);
 }
 
-static inline struct aa_profile *aa_current_profile_wupd(void)
+static inline struct aa_profile *aa_current_profile(void)
 {
 	struct aa_profile *p;
-	aa_current_policy_wupd(&p);
+	aa_current_policy(&p);
 	return p;
 }
 
