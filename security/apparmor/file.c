@@ -35,9 +35,10 @@ static void aa_audit_file_sub_mask(char *buffer, u16 mask, u16 xindex)
 
 	if (mask & AA_EXEC_MMAP)
 		*m++ = 'm';
-	if (mask & MAY_READ)
+	if (mask & (MAY_READ | AA_MAY_META_READ))
 		*m++ = 'r';
-	if (mask & (MAY_WRITE | AA_MAY_CHMOD | AA_MAY_CHOWN))
+	if (mask & (MAY_WRITE | AA_MAY_META_WRITE | AA_MAY_CHMOD |
+		    AA_MAY_CHOWN))
 		*m++ = 'w';
 	else if (mask & MAY_APPEND)
 		*m++ = 'a';
@@ -198,17 +199,29 @@ static struct file_perms aa_compute_perms(struct aa_dfa *dfa,
 		perms.quiet = dfa_other_quiet(dfa, state);
 		perms.xindex = dfa_other_xindex(dfa, state);
 	}
+	/* in the old mapping MAY_READ implies
+	 * AA_MAY_META_READ
+	 */
+	if (perms.allowed & MAY_READ)
+		perms.allowed |= AA_MAY_META_READ;
+	if (perms.audit & MAY_READ)
+		perms.audit |= AA_MAY_META_READ;
+	if (perms.quiet & MAY_READ)
+		perms.quiet |= AA_MAY_META_READ;
+
 	/* in the old mapping MAY_WRITE implies
-	 * AA_MAY_CREATE | AA_MAY_CHMOD | AA_MAY_CHOWN */
+	 * AA_MAY_CREATE | AA_MAY_CHMOD | AA_MAY_CHOWN | AA_MAY_DELETE |
+	 * AA_MAY_META_WRITE
+	 */
 	if (perms.allowed & MAY_WRITE)
 		perms.allowed |= AA_MAY_CREATE | AA_MAY_CHMOD | AA_MAY_CHOWN |
-			AA_MAY_DELETE;
+			AA_MAY_DELETE | AA_MAY_META_WRITE;
 	if (perms.audit & MAY_WRITE)
 		perms.audit |= AA_MAY_CREATE | AA_MAY_CHMOD | AA_MAY_CHOWN |
-			AA_MAY_DELETE;
+			AA_MAY_DELETE | AA_MAY_META_WRITE;
 	if (perms.quiet & MAY_WRITE)
 		perms.quiet |= AA_MAY_CREATE | AA_MAY_CHMOD | AA_MAY_CHOWN |
-			AA_MAY_DELETE;
+			AA_MAY_DELETE | AA_MAY_META_WRITE;
 
 	/* in the old mapping AA_MAY_LOCK and link subset are overlayed
 	 * and only determined by which part of a pair they are  in
