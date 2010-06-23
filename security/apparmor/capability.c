@@ -40,6 +40,11 @@ struct aa_audit_caps {
 	int cap;
 };
 
+/**
+ * audit_cb - call back for capability components of audit struct
+ * @ab - audit buffer   (NOT NULL)
+ * @va - audit struct to audit data from  (NOT NULL)
+ */
 static void audit_cb(struct audit_buffer *ab, struct aa_audit *va)
 {
 	struct aa_audit_caps *sa = container_of(va, struct aa_audit_caps, base);
@@ -48,6 +53,16 @@ static void audit_cb(struct audit_buffer *ab, struct aa_audit *va)
 	audit_log_untrustedstring(ab, capability_names[sa->cap]);
 }
 
+/**
+ * aa_audit_caps - audit a capability
+ * @profile: profile confining task
+ * @sa: audit structure containing data to audit
+ *
+ * Do auditing of capability and handle, audit/complain/kill modes switching
+ * and duplicate message elimination.
+ *
+ * returns: 0 or sa->error on succes,  error code on failure
+ */
 static int aa_audit_caps(struct aa_profile *profile, struct aa_audit_caps *sa)
 {
 	struct audit_cache *ent;
@@ -85,6 +100,13 @@ static int aa_audit_caps(struct aa_profile *profile, struct aa_audit_caps *sa)
 	return aa_audit(type, profile, &sa->base, audit_cb);
 }
 
+/**
+ * aa_profile_capable - test if profile allows use of capability @cap
+ * @profile: profile being enforced    (NOT NULL, NOT unconfined)
+ * @cap: capability to test if allowed
+ *
+ * Returns: 0 if allowed else -EPERM
+ */
 static int aa_profile_capable(struct aa_profile *profile, int cap)
 {
 	return cap_raised(profile->caps.allowed, cap) ? 0 : -EPERM;
@@ -98,7 +120,8 @@ static int aa_profile_capable(struct aa_profile *profile, int cap)
  * @audit: whether an audit record should be generated
  *
  * Look up capability in profile capability set.
- * Returns 0 on success, or else an error code.
+ *
+ * Returns: 0 on success, or else an error code.
  */
 int aa_capable(struct task_struct *task, struct aa_profile *profile, int cap,
 	       int audit)
