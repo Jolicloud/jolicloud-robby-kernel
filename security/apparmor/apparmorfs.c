@@ -27,7 +27,12 @@
 
 static void *kvmalloc(size_t size)
 {
-	void *buffer = kmalloc(size, GFP_KERNEL);
+	void *buffer;
+
+	if (size == 0)
+		return NULL;
+
+	buffer = kmalloc(size, GFP_KERNEL);
 	if (!buffer)
 		buffer = vmalloc(size);
 	return buffer;
