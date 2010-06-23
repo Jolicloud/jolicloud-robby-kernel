@@ -91,24 +91,13 @@ static char *aa_simple_write_to_buffer(int op, const char __user *userbuf,
 	 * Don't allow profile load/replace/remove from profiles that don't
 	 * have CAP_MAC_ADMIN
 	 */
-	if (!capable(CAP_MAC_ADMIN)) {
-		struct aa_profile *profile = NULL;
-		struct common_audit_data sa;
-		COMMON_AUDIT_DATA_INIT_NONE(&sa);
-		sa.aad.op = op;
-		sa.aad.error = -EACCES,
+	if (!aa_may_manage_policy(op))
+		return ERR_PTR(-EACCES);
 
-		profile = aa_current_profile();
-		data = ERR_PTR(aa_audit(AUDIT_APPARMOR_DENIED, profile,
-					GFP_KERNEL, &sa, NULL));
-		goto out;
-	}
 	/* freed by caller to simple_write_to_buffer */
 	data = kvmalloc(alloc_size);
-	if (data == NULL) {
-		data = ERR_PTR(-ENOMEM);
-		goto out;
-	}
+	if (data == NULL)
+		return ERR_PTR(-ENOMEM);
 
 	if (copy_from_user(data, userbuf, copy_size)) {
 		kvfree(data);

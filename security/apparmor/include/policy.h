@@ -309,4 +309,6 @@ static inline int AUDIT_MODE(struct aa_profile *profile)
 	return AUDIT_NORMAL;
 }
 
+bool aa_may_manage_policy(int op);
+
 #endif /* __AA_POLICY_H */

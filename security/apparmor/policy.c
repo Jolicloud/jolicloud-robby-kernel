@@ -968,6 +968,41 @@ static int audit_policy(int op, gfp_t gfp, const char *name, const char *info,
 }
 
 /**
+ * aa_may_manage_policy - can the current task manage policy
+ * @op: the policy manipulation operation being done
+ *
+ * Returns: true if the task is allowed to manipulate policy
+ */
+bool aa_may_manage_policy(int op)
+{
+	struct aa_profile *profile = __aa_current_profile();
+	const char *info = NULL;
+	int error = 0;
+
+	/* check if loading policy is locked out */
+	if (aa_g_lock_policy) {
+		info = "policy locked";
+		error = -EACCES;
+	}
+
+	if (!capable(CAP_MAC_ADMIN))
+		error = -EACCES;
+
+
+	if (error) {
+		struct common_audit_data sa;
+		COMMON_AUDIT_DATA_INIT_NONE(&sa);
+		sa.aad.op = op;
+		sa.aad.error = error;
+
+		aa_audit(AUDIT_APPARMOR_DENIED, profile, GFP_KERNEL, &sa, NULL);
+		return 0;
+	}
+
+	return 1;
+}
+
+/**
  * aa_replace_profiles - replace profile(s) on the profile list
  * @udata: serialized data stream  (NOT NULL)
  * @size: size of the serialized data stream
@@ -988,13 +1023,6 @@ ssize_t aa_replace_profiles(void *udata, size_t size, bool noreplace)
 	const char *ns_name, *name = NULL, *info = NULL;
 	int op = OP_PROF_REPL;
 	ssize_t error;
-
-	/* check if loading policy is locked out */
-	if (aa_g_lock_policy) {
-		info = "policy locked";
-		error = -EACCES;
-		goto fail;
-	}
 
 	/* released below */
 	new_profile = aa_unpack(udata, size, &ns_name);
@@ -1104,13 +1132,6 @@ ssize_t aa_remove_profiles(char *fqname, size_t size)
 	struct aa_profile *profile = NULL;
 	const char *name = fqname, *info = NULL;
 	ssize_t error = 0;
-
-	/* check if loading policy is locked out */
-	if (aa_g_lock_policy) {
-		info = "policy locked";
-		error = -EACCES;
-		goto fail;
-	}
 
 	if (*fqname == 0) {
 		info = "no profile specified";
