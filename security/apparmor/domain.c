@@ -390,20 +390,20 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 		goto audit;
 	}
 
-	if (unconfined(profile)) {
+	if (cxt->onexec) {
+		/*
+		 * onexec permissions are stored in a pair, rewalk the
+		 * dfa to get start of the exec path match.  Drop the
+		 * returned permissions.
+		 */
+		change_profile_perms(profile, cxt->onexec->ns, sa.name, &state);
+		state = aa_dfa_null_transition(profile->file.dfa, state, 0);
+	} else if (unconfined(profile)) {
 		/* unconfined task - attach profile if one matches */
 		new_profile = aa_find_attach(ns, &ns->base.profiles, sa.name);
 		if (!new_profile)
 			goto cleanup;
 		goto apply;
-	} else if (cxt->onexec) {
-		/*
-		 * onexec permissions are stored in a pair, rewalk the
-		 * dfa to get start of the exec path match.
-		 */
-		sa.perms = change_profile_perms(profile, cxt->onexec->ns,
-						sa.name, &state);
-		state = aa_dfa_null_transition(profile->file.dfa, state, 0);
 	}
 	sa.perms = aa_str_perms(profile->file.dfa, state, sa.name, &cond, NULL);
 	if (cxt->onexec && sa.perms.allowed & AA_MAY_ONEXEC) {
