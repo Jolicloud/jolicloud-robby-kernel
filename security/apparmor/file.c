@@ -413,9 +413,6 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 	/* aa_str_perms - handles the case of the dfa being NULL */
 	state = aa_str_perms(profile->file.dfa, profile->file.start, lname,
 			     &cond, &sa.perms);
-	sa.perms.audit &= AA_MAY_LINK;
-	sa.perms.quiet &= AA_MAY_LINK;
-	sa.perms.kill &= AA_MAY_LINK;
 
 	if (!(sa.perms.allow & AA_MAY_LINK))
 		goto audit;
@@ -424,6 +421,14 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 	state = aa_dfa_null_transition(profile->file.dfa, state,
 				       profile->flags & PFLAG_OLD_NULL_TRANS);
 	aa_str_perms(profile->file.dfa, state, tname, &cond, &perms);
+
+	/* force audit/quiet masks for link are stored in the second entry
+	 * in the link pair.
+	 */
+	sa.perms.audit = perms.audit;
+	sa.perms.quiet = perms.quiet;
+	sa.perms.kill = perms.kill;
+
 	if (!(perms.allow & AA_MAY_LINK)) {
 		sa.base.info = "target restricted";
 		goto audit;
