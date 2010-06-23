@@ -157,12 +157,12 @@ static struct aa_profile *__aa_attach_match(const char *name,
 }
 
 /**
- * aa_sys_find_attach - do attachment search for sys unconfined processes
+ * aa_find_attach - do attachment search for sys unconfined processes
  * @base: the base to search
  * name: the executable name to match against
  */
-static struct aa_profile *aa_sys_find_attach(struct aa_policy *base,
-					     const char *name)
+static struct aa_profile *aa_find_attach(struct aa_policy *base,
+					 const char *name)
 {
 	struct aa_profile *profile;
 
@@ -238,11 +238,10 @@ static struct aa_profile *x_to_profile(struct aa_profile *profile,
 	case AA_X_NAME:
 		if (xindex & AA_X_CHILD)
 			/* released by caller */
-			new_profile = aa_sys_find_attach(&profile->base, name);
+			new_profile = aa_find_attach(&profile->base, name);
 		else
 			/* released by caller */
-			new_profile = aa_sys_find_attach(&profile->ns->base,
-							 name);
+			new_profile = aa_find_attach(&profile->ns->base, name);
 
 		goto out;
 	case AA_X_TABLE:
@@ -351,7 +350,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 
 	if (unconfined(profile)) {
 		/* unconfined task - attach profile if one matches */
-		new_profile = aa_sys_find_attach(&ns->base, sa.name);
+		new_profile = aa_find_attach(&ns->base, sa.name);
 		if (!new_profile)
 			goto cleanup;
 		goto apply;
