@@ -257,6 +257,16 @@ int aa_path_perm(struct aa_profile *profile, const char *operation,
 	return sa.base.error;
 }
 
+/* helper for aa_path_link - test target xindex == OR subset of link xindex */
+static inline bool xindex_is_subset(u16 link, u16 target)
+{
+	if (((link & ~AA_X_UNSAFE) != (target & ~AA_X_UNSAFE)) ||
+	    ((link & AA_X_UNSAFE) && !(target & AA_X_UNSAFE)))
+		return 0;
+
+	return 1;
+}
+
 /**
  * aa_path_link - Handle hard link permission check
  * @profile: the profile being enforced
@@ -306,29 +316,29 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 	if (sa.base.error)
 		goto audit;
 
+	sa.base.error = -EACCES;
+
+	/* aa_str_perms - handles the case of the dfa being NULL */
 	sa.perms = aa_str_perms(profile->file.dfa, DFA_START, sa.name, &cond,
 				&state);
 	sa.perms.audit &= AA_MAY_LINK;
 	sa.perms.quiet &= AA_MAY_LINK;
 	sa.perms.kill &= AA_MAY_LINK;
 
-	if (!(sa.perms.allowed & AA_MAY_LINK)) {
-		sa.base.error = -EACCES;
+	if (!(sa.perms.allowed & AA_MAY_LINK))
 		goto audit;
-	}
 
 	/* test to see if target can be paired with link */
 	state = aa_dfa_null_transition(profile->file.dfa, state);
 	perms = aa_str_perms(profile->file.dfa, state, sa.name2, &cond, NULL);
 	if (!(perms.allowed & AA_MAY_LINK)) {
-		sa.base.error = -EACCES;
 		sa.base.info = "target restricted";
 		goto audit;
 	}
 
 	/* done if link subset test is not required */
 	if (!(perms.allowed & AA_LINK_SUBSET))
-		goto audit;
+		goto done_tests;
 
 	/* Do link perm subset test requiring allowed permission on link are a
 	 * subset of the allowed permissions on target.
@@ -341,19 +351,18 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 	sa.perms.allowed &= perms.allowed | AA_MAY_LINK;
 
 	sa.request |= AA_AUDIT_FILE_MASK & (sa.perms.allowed & ~perms.allowed);
-	if (sa.request & ~sa.perms.allowed)
-		sa.base.error = -EACCES;
-	else if (sa.perms.allowed & MAY_EXEC) {
-		if (((sa.perms.xindex & ~AA_X_UNSAFE) !=
-		     (perms.xindex & ~AA_X_UNSAFE)) ||
-		    ((sa.perms.xindex & AA_X_UNSAFE) &&
-		     !(perms.xindex & AA_X_UNSAFE))) {
-			sa.perms.allowed &= ~MAY_EXEC;
-			sa.request |= MAY_EXEC;
-			sa.base.error = -EACCES;
-			sa.base.info = "link not subset of target";
-		}
+	if (sa.request & ~sa.perms.allowed) {
+		goto audit;
+	} else if ((sa.perms.allowed & MAY_EXEC) &&
+		   !xindex_is_subset(sa.perms.xindex, perms.xindex)) {
+		sa.perms.allowed &= ~MAY_EXEC;
+		sa.request |= MAY_EXEC;
+		sa.base.info = "link not subset of target";
+		goto audit;
 	}
+
+done_tests:
+	sa.base.error = 0;
 
 audit:
 	sa.base.error = aa_audit_file(profile, &sa);
