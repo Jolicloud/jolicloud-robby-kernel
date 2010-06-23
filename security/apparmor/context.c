@@ -47,20 +47,6 @@ void aa_dup_task_context(struct aa_task_context *new,
 }
 
 /**
- * aa_cred_policy - obtain cred's profiles
- * @cred: cred to obtain profiles from
- * @sys: return system profile
- *
- * does NOT increment reference count
- */
-void aa_cred_policy(const struct cred *cred, struct aa_profile **sys)
-{
-	struct aa_task_context *cxt = cred->security;
-	BUG_ON(!cxt);
-	*sys = aa_confining_profile(cxt->sys.profile);
-}
-
-/**
  * aa_get_task_cred - get the cred with the task policy, and current profiles
  * @task: task to get policy of
  * @sys: return - pointer to system profile
@@ -73,7 +59,7 @@ struct cred *aa_get_task_cred(const struct task_struct *task,
 			      struct aa_profile **sys)
 {
 	struct cred *cred = get_task_cred(task);
-	aa_cred_policy(cred, sys);
+	*sys = aa_cred_policy(cred);
 	return cred;
 }
 

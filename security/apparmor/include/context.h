@@ -71,7 +71,6 @@ struct aa_task_context *aa_alloc_task_context(gfp_t flags);
 void aa_free_task_context(struct aa_task_context *cxt);
 void aa_dup_task_context(struct aa_task_context *new,
 			 const struct aa_task_context *old);
-void aa_cred_policy(const struct cred *cred, struct aa_profile **sys);
 struct cred *aa_get_task_cred(const struct task_struct *task,
 				struct aa_profile **sys);
 int aa_replace_current_profiles(struct aa_profile *sys);
@@ -97,6 +96,21 @@ static inline bool __aa_task_is_confined(struct task_struct *task)
 }
 
 /**
+ * aa_cred_policy - obtain cred's profiles
+ * @cred: cred to obtain profiles from
+ *
+ * Returns: system confining profile
+ *
+ * does NOT increment reference count
+ */
+static inline struct aa_profile *aa_cred_policy(const struct cred *cred)
+{
+	struct aa_task_context *cxt = cred->security;
+	BUG_ON(!cxt);
+	return aa_confining_profile(cxt->sys.profile);
+}
+
+/**
  * __aa_current_profile - find the current tasks confining profile
  *
  * Returns: up to date confining profile or NULL if task is unconfined
@@ -106,9 +120,7 @@ static inline bool __aa_task_is_confined(struct task_struct *task)
  */
 static inline struct aa_profile *__aa_current_profile(void)
 {
-	const struct aa_task_context *cxt = current_cred()->security;
-	BUG_ON(!cxt);
-	return aa_confining_profile(cxt->sys.profile);
+	return aa_cred_policy(current_cred());
 }
 
 /**

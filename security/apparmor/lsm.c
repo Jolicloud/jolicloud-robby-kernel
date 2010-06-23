@@ -119,7 +119,7 @@ static int apparmor_capget(struct task_struct *target, kernel_cap_t *effective,
 
 	rcu_read_lock();
 	cred = __task_cred(target);
-	aa_cred_policy(cred, &profile);
+	profile = aa_cred_policy(cred);
 
 	*effective = cred->cap_effective;
 	*inheritable = cred->cap_inheritable;
@@ -141,7 +141,7 @@ static int apparmor_capable(struct task_struct *task, const struct cred *cred,
 	/* cap_capable returns 0 on success, else -EPERM */
 	int error = cap_capable(task, cred, cap, audit);
 
-	aa_cred_policy(cred, &profile);
+	profile = aa_cred_policy(cred);
 	if (profile && (!error || cap_raised(profile->caps.set, cap)))
 		error = aa_capable(task, profile, cap, audit);
 
@@ -372,7 +372,7 @@ static int apparmor_dentry_open(struct file *file, const struct cred *cred)
 	    !mediated_filesystem(file->f_path.dentry->d_inode))
 		return 0;
 
-	aa_cred_policy(cred, &profile);
+	profile = aa_cred_policy(cred);
 	if (profile) {
 		struct aa_file_cxt *fcxt = file->f_security;
 		struct inode *inode = file->f_path.dentry->d_inode;
