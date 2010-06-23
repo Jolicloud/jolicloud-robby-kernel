@@ -28,6 +28,9 @@
  */
 static void free_table(struct table_header *table)
 {
+	if (!table)
+		return;
+
 	if (is_vmalloc_addr(table))
 		vfree(table);
 	else
@@ -90,8 +93,7 @@ static struct table_header *unpack_table(void *blob, size_t bsize)
 out:
 	return table;
 fail:
-	if (table)
-		free_table(table);
+	free_table(table);
 	return NULL;
 }
 
