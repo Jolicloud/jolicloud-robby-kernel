@@ -125,6 +125,12 @@ int aa_replace_current_profiles(struct aa_profile *sys)
 	return 0;
 }
 
+/**
+ * aa_set_current_onexec - set the tasks change_profile to happen onexec
+ * @sys: system profile to set at exec
+ *
+ * Returns: error on failure
+ */
 int aa_set_current_onexec(struct aa_profile *sys)
 {
 	struct aa_task_context *cxt;
@@ -140,9 +146,15 @@ int aa_set_current_onexec(struct aa_profile *sys)
 	return 0;
 }
 
-/*
- * Do the actual cred switching of a changehat
- * profile must be valid
+/**
+ * aa_set_current_hat - set the current tasks hat
+ * @profile: profile to set as the current hat
+ * @token: token value that must be specified to change from the hat
+ *
+ * Do switch of tasks hat.  If the task is currently in a hat
+ * validate the token to match.
+ *
+ * Returns: error on failure
  */
 int aa_set_current_hat(struct aa_profile *profile, u64 token)
 {
@@ -171,8 +183,14 @@ int aa_set_current_hat(struct aa_profile *profile, u64 token)
 	return 0;
 }
 
-/*
- * Attempt to return out of a hat to the previous profile
+/**
+ * aa_restore_previous_profile - exit from hat context restoring the profile
+ * @token: the token that must be matched to exit hat context
+ *
+ * Attempt to return out of a hat to the previous profile.  The token
+ * must match the stored token value.
+ *
+ * Returns: error of failure
  */
 int aa_restore_previous_profile(u64 token)
 {

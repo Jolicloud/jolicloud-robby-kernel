@@ -38,10 +38,14 @@ static char* aa_audit_type[] = {
 };
 
 /*
+ * Currently AppArmor auditing is fed straight into the audit framework.
+ *
  * TODO:
- * user auditing - netlink interface
+ * netlink interface for complain mode
+ * user auditing, - send user auditing to netlink interface
  * system control of whether user audit messages go to system log
  */
+
 static int aa_audit_base(int type, struct aa_profile *profile,
 			 struct aa_audit *sa, struct audit_context *audit_cxt,
 			 void(*cb)(struct audit_buffer *, void *))
@@ -106,6 +110,7 @@ static int aa_audit_base(int type, struct aa_profile *profile,
  * @type: audit type for the message
  * @profile: profile to check against
  * @sa: audit event
+ * @cb: optional callback fn for type specific fields
  */
 int aa_audit(int type, struct aa_profile *profile, struct aa_audit *sa,
 	     void(*cb)(struct audit_buffer *, void *))
@@ -136,6 +141,7 @@ int aa_audit(int type, struct aa_profile *profile, struct aa_audit *sa,
  * @profile: profile to check against
  * @gfp: memory allocation flags
  * @msg: string describing syscall being rejected
+ * @cb:  optional callback fn for type specific fields
  */
 int aa_audit_syscallreject(struct aa_profile *profile, gfp_t gfp,
 			   const char *msg,
