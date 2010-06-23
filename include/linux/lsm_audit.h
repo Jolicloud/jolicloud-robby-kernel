@@ -23,7 +23,6 @@
 #include <linux/skbuff.h>
 #include <asm/system.h>
 
-
 /* Auxiliary data to use in generating the audit record. */
 struct common_audit_data {
 	char type;
@@ -93,6 +92,38 @@ struct common_audit_data {
 			struct av_decision *avd;
 			int result;
 		} selinux_audit_data;
+#endif
+#ifdef CONFIG_SECURITY_APPARMOR
+		struct {
+			int error;
+			int op;
+			int type;
+			void *profile;
+			const char *name;
+			const char *info;
+			union {
+				void *target;
+                                struct {
+					long pos;
+					void *target;
+				} iface;
+				struct {
+					int rlim;
+					unsigned long max;
+				} rlim;
+				struct {
+					const char *path;
+					const char *target;
+					u16 request;
+					u16 denied;
+					uid_t ouid;
+				} fs;
+				struct {
+					int type, protocol;
+					struct sock *sk;
+				} net;
+			};
+		} apparmor_audit_data;
 #endif
 	};
 	/* these callback will be implemented by a specific LSM */
