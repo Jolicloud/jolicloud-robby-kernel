@@ -899,7 +899,7 @@ static void __add_new_profile(struct aa_namespace *ns,
 }
 
 /**
- * aa_interface_replace_profiles - replace profile(s) on the profile list
+ * aa_replace_profiles - replace profile(s) on the profile list
  * @udata: serialized data stream  (NOT NULL)
  * @size: size of the serialized data stream
  * @noreplace: true if only doing addition, no replacement allowed
@@ -910,7 +910,7 @@ static void __add_new_profile(struct aa_namespace *ns,
  *
  * Returns: size of data consumed else error code on failure.
  */
-ssize_t aa_interface_replace_profiles(void *udata, size_t size, bool noreplace)
+ssize_t aa_replace_profiles(void *udata, size_t size, bool noreplace)
 {
 	struct aa_policy *policy;
 	struct aa_profile *old_profile = NULL, *new_profile = NULL;
@@ -1017,7 +1017,7 @@ fail:
 }
 
 /**
- * aa_interface_remove_profiles - remove profile(s) from the system
+ * aa_remove_profiles - remove profile(s) from the system
  * @fqname: name of the profile or namespace to remove  (NOT NULL)
  * @size: size of the name
  *
@@ -1028,7 +1028,7 @@ fail:
  *
  * Returns: size of data consume else error code if fails
  */
-ssize_t aa_interface_remove_profiles(char *fqname, size_t size)
+ssize_t aa_remove_profiles(char *fqname, size_t size)
 {
 	struct aa_namespace *root, *ns = NULL;
 	struct aa_profile *profile = NULL;

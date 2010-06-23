@@ -246,8 +246,8 @@ struct aa_profile *aa_find_child(struct aa_profile *parent, const char *name);
 struct aa_profile *aa_lookup_profile(struct aa_namespace *ns, const char *name);
 struct aa_profile *aa_match_profile(struct aa_namespace *ns, const char *name);
 
-ssize_t aa_interface_replace_profiles(void *udata, size_t size, bool noreplace);
-ssize_t aa_interface_remove_profiles(char *name, size_t size);
+ssize_t aa_replace_profiles(void *udata, size_t size, bool noreplace);
+ssize_t aa_remove_profiles(char *name, size_t size);
 
 #define PROF_ADD 1
 #define PROF_REPLACE 0
