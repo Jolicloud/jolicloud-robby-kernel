@@ -74,7 +74,11 @@ static int aa_may_change_ptraced_domain(struct task_struct *task,
 }
 
 /**
- * change_profile_perms
+ * change_profile_perms - find permissions for change_profile
+ * @profile: the current profile
+ * @ns: the namespace being switched to
+ * @name: the name of the profile to change to
+ * @rstate: if !NULL will contain the state the match finished in
  */
 static struct file_perms change_profile_perms(struct aa_profile *profile,
 					      struct aa_namespace *ns,
@@ -109,31 +113,9 @@ static struct file_perms change_profile_perms(struct aa_profile *profile,
 	return aa_str_perms(profile->file.dfa, state, name, &cond, rstate);
 }
 
-/*
- * TODO: fix parser to detect unconfined, inherit,
- * check for next name in list of names that is double null terminated
- * The names list is a set of strings that \0 seperated with a double
- * \0 terminating the list
- * names that belong to namespaces begin with a :
- * and are followed by a name a \0 seperated name.  If the name is
- * unspecified it is 0 length.  This double \0\0 does not count as
- * the end of the list
- *
- * profile\0\0			# single profile
- * profile\0profile\0\0		# 2 profiles in list
- * :namespace\0profile\0\0	# profile & namespace
- * :namespace\0\0\0		# namespace without profile
- * :namespace\0\0profile\0\0	# namespace without profile followed by profile
-*/
+
 static const char *next_name(int xtype, const char *name)
 {
-/* TODO: fix parser and enable
-	if (xtype == AA_X_TABLE) {
-		name = name + strlen(name) + 1;
-		if (*name != 0)
-			return name;
-	}
-*/
 	return NULL;
 }
 
@@ -189,6 +171,7 @@ static struct aa_profile *aa_sys_find_attach(struct aa_policy_common *base,
 
 	return profile;
 }
+
 
 /*
  * get target profile for xindex
@@ -486,6 +469,9 @@ static void revalidate_file(struct aa_profile *profile, struct file *file,
 /* 
  * derived from security/selinux/hooks.c: flush_unauthorized_files &&
  * fs/exec.c:flush_old_files
+ *
+ * TODO: update for selective revalidation based of AppArmor 2.4
+ *       compatability
  */
 static int revalidate_files(struct aa_profile *profile,
 			    struct files_struct *files, gfp_t gfp,
@@ -535,6 +521,7 @@ int apparmor_bprm_committing_creds(struct linux_binprm *bprm)
 	struct aa_task_context *new_cxt = bprm->cred->security;
 	int error;
 
+	/* bail out if unconfiged or not changing profile */
 	if ((new_cxt->sys.profile == profile) ||
 	    (new_cxt->sys.profile->flags & PFLAG_UNCONFINED)) {
 		put_cred(cred);
@@ -559,6 +546,12 @@ void apparmor_bprm_committed_creds(struct linux_binprm *bprm)
 	/* TODO: cleanup signals - ipc mediation */
 	return;
 }
+
+
+/*
+ * Functions for self directed profile change
+ */
+
 
 /**
  * aa_change_hat - change hat to/from subprofile
@@ -656,6 +649,7 @@ out:
 
 	return sa.base.error;
 }
+
 
 /**
  * aa_change_profile - perform a one-way profile transition
