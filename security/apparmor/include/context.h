@@ -79,7 +79,7 @@ static inline bool __aa_task_is_confined(struct task_struct *task)
 {
 	struct aa_task_cxt *cxt = __task_cred(task)->security;
 
-	BUG_ON(!cxt);
+	BUG_ON(!cxt || !cxt->profile);
 	if (unconfined(aa_newest_version(cxt->profile)))
 		return 0;
 
@@ -97,7 +97,7 @@ static inline bool __aa_task_is_confined(struct task_struct *task)
 static inline struct aa_profile *aa_cred_profile(const struct cred *cred)
 {
 	struct aa_task_cxt *cxt = cred->security;
-	BUG_ON(!cxt);
+	BUG_ON(!cxt || !cxt->profile);
 	return aa_newest_version(cxt->profile);
 }
 
@@ -126,7 +126,7 @@ static inline struct aa_profile *aa_current_profile(void)
 {
 	const struct aa_task_cxt *cxt = current_cred()->security;
 	struct aa_profile *profile;
-	BUG_ON(!cxt);
+	BUG_ON(!cxt || !cxt->profile);
 
 	profile = aa_newest_version(cxt->profile);
 	/*

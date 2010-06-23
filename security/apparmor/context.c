@@ -130,6 +130,7 @@ int aa_set_current_hat(struct aa_profile *profile, u64 token)
 	struct cred *new = prepare_creds();
 	if (!new)
 		return -ENOMEM;
+	BUG_ON(!profile);
 
 	cxt = new->security;
 	if (!cxt->previous) {
@@ -180,6 +181,7 @@ int aa_restore_previous_profile(u64 token)
 
 	aa_put_profile(cxt->profile);
 	cxt->profile = aa_newest_version(cxt->previous);
+	BUG_ON(!cxt->profile);
 	if (unlikely(cxt->profile != cxt->previous)) {
 		aa_get_profile(cxt->profile);
 		aa_put_profile(cxt->previous);
