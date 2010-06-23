@@ -66,6 +66,7 @@ struct aa_ext {
 	u32 version;
 };
 
+/* audit callback for unpack fields */
 static void audit_cb(struct audit_buffer *ab, struct aa_audit *va)
 {
 	struct aa_audit_iface *sa = container_of(va, struct aa_audit_iface,
@@ -83,6 +84,12 @@ static void audit_cb(struct audit_buffer *ab, struct aa_audit *va)
 		audit_log_format(ab, " offset=%ld", sa->pos);
 }
 
+/**
+ * aa_audit_iface - do audit message for policy unpacking/load/replace/remove
+ * @sa: audit date to send to audit  (NOT NULL)
+ *
+ * Returns: %0 or error
+ */
 int aa_audit_iface(struct aa_audit_iface *sa)
 {
 	struct aa_profile *profile;
@@ -94,6 +101,7 @@ int aa_audit_iface(struct aa_audit_iface *sa)
 	return error;
 }
 
+/* test if read will be in packed data bounds */
 static bool aa_inbounds(struct aa_ext *e, size_t size)
 {
 	return (size <= e->end - e->pos);
@@ -104,8 +112,7 @@ static bool aa_inbounds(struct aa_ext *e, size_t size)
  * @e: serialized data read head
  * @chunk: start address for chunk of data
  *
- * return the size of chunk found with the read head at the end of
- * the chunk.
+ * Returns: the size of chunk found with the read head at the end of the chunk.
  */
 static size_t unpack_u16_chunk(struct aa_ext *e, char **chunk)
 {
@@ -122,6 +129,7 @@ static size_t unpack_u16_chunk(struct aa_ext *e, char **chunk)
 	return size;
 }
 
+/* unpack control byte */
 static bool unpack_X(struct aa_ext *e, enum aa_code code)
 {
 	if (!aa_inbounds(e, 1))
@@ -134,9 +142,9 @@ static bool unpack_X(struct aa_ext *e, enum aa_code code)
 
 /**
  * unpack_nameX - check is the next element is of type X with a name of @name
- * @e: serialized data extent information
+ * @e: serialized data extent information  (NOT NULL)
  * @code: type code
- * @name: name to match to the serialized element.
+ * @name: name to match to the serialized element.  (MAYBE NULL)
  *
  * check that the next serialized data element is of type X and has a tag
  * name @name.  If @name is specified then there must be a matching
@@ -442,7 +450,7 @@ fail:
  * NOTE: unpack profile sets audit struct if there is a failure
  */
 static struct aa_profile *unpack_profile(struct aa_ext *e,
-					    struct aa_audit_iface *sa)
+					 struct aa_audit_iface *sa)
 {
 	struct aa_profile *profile = NULL;
 	const char *name = NULL;
@@ -675,11 +683,13 @@ static int verify_profile(struct aa_profile *profile, struct aa_audit_iface *sa)
 
 /**
  * aa_unpack - unpack packed binary profile data loaded from user space
- * @udata: user data copied to kmem
+ * @udata: user data copied to kmem  (NOT NULL)
  * @size: the size of the user data
- * @sa: audit struct for unpacking
+ * @sa: audit struct for unpacking  (NOT NULL)
  *
  * Unpack user data and return refcounted allocated profile or ERR_PTR
+ *
+ * Returns: profile else error pointer if fails to unpack
  */
 struct aa_profile *aa_unpack(void *udata, size_t size,
 			     struct aa_audit_iface *sa)
