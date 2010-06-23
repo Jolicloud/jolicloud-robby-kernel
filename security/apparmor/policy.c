@@ -101,16 +101,21 @@ const char *profile_mode_names[] = {
 	"kill",
 };
 
-/* hname in this context does not have a namespace name prepended */
-static const char *hname_subname(const char *name)
+/**
+ * hname_tail - find the last component of an hname
+ * @name: hname to find the tail component of
+ *
+ * Returns: the tail name component of an hname
+ */
+static const char *hname_tail(const char *hname)
 {
 	char *split;
 	/* check for namespace which begins with a : and ends with : or \0 */
-	name = strstrip((char *)name);
-	for (split = strstr(name, "//"); split; split = strstr(name, "//"))
-		name = split + 2;
+	hname = strstrip((char *)hname);
+	for (split = strstr(hname, "//"); split; split = strstr(hname, "//"))
+		hname = split + 2;
 
-	return name;
+	return hname;
 }
 
 static bool common_init(struct aa_policy_common *common, const char *name)
@@ -120,7 +125,7 @@ static bool common_init(struct aa_policy_common *common, const char *name)
 	if (!common->hname)
 		return 0;
 	/* base.name is a substring of fqname */
-	common->name = (char *)hname_subname(common->hname);
+	common->name = (char *)hname_tail(common->hname);
 
 	INIT_LIST_HEAD(&common->list);
 	INIT_LIST_HEAD(&common->profiles);
