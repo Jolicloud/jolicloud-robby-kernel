@@ -401,6 +401,14 @@ static int apparmor_path_chown(struct path *path, uid_t uid, gid_t gid)
 	return common_perm("chown", path, AA_MAY_CHOWN, &cond);
 }
 
+static int apparmor_inode_getattr(struct vfsmount *mnt, struct dentry *dentry)
+{
+	if (!mediated_filesystem(dentry->d_inode))
+		return 0;
+
+	return common_perm_mnt_dentry("getattr", mnt, dentry, AA_MAY_META_READ);
+}
+
 static int apparmor_dentry_open(struct file *file, const struct cred *cred)
 {
 	struct aa_profile *profile;
@@ -775,6 +783,7 @@ static struct security_operations apparmor_ops = {
 	.path_chown =			apparmor_path_chown,
 	.path_truncate =		apparmor_path_truncate,
 	.dentry_open =			apparmor_dentry_open,
+	.inode_getattr =                apparmor_inode_getattr,
 
 	.file_permission =		apparmor_file_permission,
 	.file_alloc_security =		apparmor_file_alloc_security,
