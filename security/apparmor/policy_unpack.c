@@ -401,12 +401,14 @@ fail:
  * aa_unpack_profile - unpack a serialized profile
  * @e: serialized data extent information
  * @sa: audit struct for the operation
+ *
+ * NOTE: unpack profile sets audit struct if there is a failure
  */
 static struct aa_profile *aa_unpack_profile(struct aa_ext *e,
 					    struct aa_audit_iface *sa)
 {
 	struct aa_profile *profile = NULL;
-	const char *name;
+	const char *name = NULL;
 	size_t size = 0;
 	int i, error = -EPROTO;
 	u32 tmp;
@@ -530,11 +532,9 @@ static struct aa_profile *aa_unpack_profile(struct aa_ext *e,
 	return profile;
 
 fail:
-	sa->name = profile && profile->base.name ? profile->base.name :
-	    "unknown";
+	sa->name = name ? name : "unknown";
 	if (!sa->base.info)
 		sa->base.info = "failed to unpack profile";
-	aa_audit_iface(sa);
 
 	free_aa_profile(profile);
 

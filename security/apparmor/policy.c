@@ -799,23 +799,28 @@ struct aa_profile *aa_find_profile(struct aa_namespace *ns, const char *fqname)
  */
 ssize_t aa_interface_add_profiles(void *udata, size_t size)
 {
-	struct aa_profile *profile;
+	struct aa_profile *profile = NULL;
 	struct aa_namespace *ns = NULL;
 	struct aa_policy_common *common;
 	ssize_t error;
 	struct aa_audit_iface sa = {
 		.base.operation = "profile_load",
-		.base.gfp_mask = GFP_KERNEL,
+		.base.gfp_mask = GFP_ATOMIC,
 	};
 
 	/* check if loading policy is locked out */
-	if (aa_g_lock_policy)
-		return -EACCES;
+	if (aa_g_lock_policy) {
+		sa.base.info = "policy locked";
+		sa.base.error = -EACCES;
+		goto fail;
+	}
 
 	/* released below */
 	profile = aa_unpack(udata, size, &sa);
-	if (IS_ERR(profile))
-		return PTR_ERR(profile);
+	if (IS_ERR(profile)) {
+		sa.base.error = PTR_ERR(profile);
+		goto fail;
+	}
 
 	/* released below */
 	ns = aa_prepare_namespace(sa.name2);
@@ -834,7 +839,7 @@ ssize_t aa_interface_add_profiles(void *udata, size_t size)
 	if (!common) {
 		sa.base.info = "parent does not exist";
 		sa.base.error = -ENOENT;
-		goto fail2;
+		goto audit;
 	}
 
 	if (common != &ns->base)
@@ -845,27 +850,30 @@ ssize_t aa_interface_add_profiles(void *udata, size_t size)
 		/* A profile with this name exists already. */
 		sa.base.info = "profile already exists";
 		sa.base.error = -EEXIST;
-		goto fail2;
 	}
-	/* released on free_aa_profile */
-	profile->sid = aa_alloc_sid(AA_ALLOC_SYS_SID);
-	profile->ns = aa_get_namespace(ns);
-	__aa_add_profile(common, profile);
+
+audit:
+	error = aa_audit_iface(&sa);
+	if (!error) {
+		/* released on free_aa_profile */
+		profile->sid = aa_alloc_sid(AA_ALLOC_SYS_SID);
+		profile->ns = aa_get_namespace(ns);
+		__aa_add_profile(common, profile);
+	}
+
 	write_unlock(&ns->base.lock);
 
-	aa_audit_iface(&sa);
+out:
 	aa_put_namespace(ns);
 	aa_put_profile(profile);
-	return size;
 
-fail2:
-	write_unlock(&ns->base.lock);
+	if (error)
+		return error;
+	return size;
 
 fail:
 	error = aa_audit_iface(&sa);
-	aa_put_namespace(ns);
-	aa_put_profile(profile);
-	return error;
+	goto out;
 }
 
 /**
@@ -880,20 +888,26 @@ fail:
 ssize_t aa_interface_replace_profiles(void *udata, size_t size)
 {
 	struct aa_policy_common *common;
-	struct aa_profile *old_profile = NULL, *new_profile;
+	struct aa_profile *old_profile = NULL, *new_profile = NULL;
 	struct aa_namespace *ns;
 	ssize_t error;
 	struct aa_audit_iface sa = {
 		.base.operation = "profile_replace",
-		.base.gfp_mask = GFP_KERNEL,
+		.base.gfp_mask = GFP_ATOMIC,
 	};
 
-	if (aa_g_lock_policy)
-		return -EACCES;
+	/* check if loading policy is locked out */
+	if (aa_g_lock_policy) {
+		sa.base.info = "policy locked";
+		sa.base.error = -EACCES;
+		goto fail;
+	}
 
 	new_profile = aa_unpack(udata, size, &sa);
-	if (IS_ERR(new_profile))
-		return PTR_ERR(new_profile);
+	if (IS_ERR(new_profile)) {
+		sa.base.error = PTR_ERR(new_profile);
+		goto fail;
+	}
 
 	ns = aa_prepare_namespace(sa.name2);
 	if (!ns) {
@@ -911,7 +925,7 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size)
 	if (!common) {
 		sa.base.info = "parent does not exist";
 		sa.base.error = -ENOENT;
-		goto fail2;
+		goto audit;
 	}
 
 	old_profile = __aa_find_child(&common->profiles,
@@ -921,38 +935,39 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size)
 	if (old_profile && old_profile->flags & PFLAG_IMMUTABLE) {
 		sa.base.info = "cannot replace immutible profile";
 		sa.base.error = -EPERM;
-		goto fail2;
-	} else if (old_profile) {
-		__aa_replace_profile(old_profile, new_profile);
-	} else {
-		if (common != &ns->base)
-			new_profile->parent =
-				aa_get_profile((struct aa_profile *) common);
-		__aa_add_profile(common, new_profile);
-		new_profile->sid = aa_alloc_sid(AA_ALLOC_SYS_SID);
-		new_profile->ns = aa_get_namespace(ns);
-
 	}
 
-	write_unlock(&ns->base.lock);
-
+audit:
 	if (!old_profile)
 		sa.base.operation = "profile_load";
 
-	aa_audit_iface(&sa);
+	error = aa_audit_iface(&sa);
+
+	if (!error) {
+		if (old_profile) {
+			__aa_replace_profile(old_profile, new_profile);
+		} else {
+			if (common != &ns->base)
+				new_profile->parent = aa_get_profile(
+					(struct aa_profile *) common);
+			__aa_add_profile(common, new_profile);
+			new_profile->sid = aa_alloc_sid(AA_ALLOC_SYS_SID);
+			new_profile->ns = aa_get_namespace(ns);
+		}
+	}
+	write_unlock(&ns->base.lock);
+
+out:
 	aa_put_namespace(ns);
 	aa_put_profile(old_profile);
 	aa_put_profile(new_profile);
+	if (error)
+		return error;
 	return size;
 
-fail2:
-	write_unlock(&ns->base.lock);
 fail:
 	error = aa_audit_iface(&sa);
-	aa_put_namespace(ns);
-	aa_put_profile(old_profile);
-	aa_put_profile(new_profile);
-	return error;
+	goto out;
 }
 
 /**
@@ -970,12 +985,16 @@ ssize_t aa_interface_remove_profiles(char *name, size_t size)
 	struct aa_profile *profile = NULL;
 	struct aa_audit_iface sa = {
 		.base.operation = "profile_remove",
-		.base.gfp_mask = GFP_KERNEL,
+		.base.gfp_mask = GFP_ATOMIC,
 	};
+	int error;
 
 	/* check if loading policy is locked out */
-	if (aa_g_lock_policy)
-		return -EACCES;
+	if (aa_g_lock_policy) {
+		sa.base.info = "policy locked";
+		sa.base.error = -EACCES;
+		goto fail;
+	}
 
 	write_lock(&ns_list_lock);
 	if (name[0] == ':') {
@@ -990,6 +1009,7 @@ ssize_t aa_interface_remove_profiles(char *name, size_t size)
 
 	if (!ns) {
 		sa.base.info = "failed: namespace does not exist";
+		sa.base.error = -ENOENT;
 		goto fail_ns_list_lock;
 	}
 
@@ -1006,6 +1026,7 @@ ssize_t aa_interface_remove_profiles(char *name, size_t size)
 		profile = aa_get_profile(__aa_find_profile(ns, name));
 		if (!profile) {
 			sa.name = name;
+			sa.base.error = -ENOENT;
 			sa.base.info = "failed: profile does not exist";
 			goto fail_ns_lock;
 		}
@@ -1016,7 +1037,8 @@ ssize_t aa_interface_remove_profiles(char *name, size_t size)
 	write_unlock(&ns->base.lock);
 	write_unlock(&ns_list_lock);
 
-	aa_audit_iface(&sa);
+	/* don't fail removal if audit fails */
+	(void) aa_audit_iface(&sa);
 	aa_put_namespace(ns);
 	aa_put_profile(profile);
 	return size;
@@ -1026,6 +1048,8 @@ fail_ns_lock:
 
 fail_ns_list_lock:
 	write_unlock(&ns_list_lock);
-	aa_audit_iface(&sa);
-	return -ENOENT;
+
+fail:
+	error = aa_audit_iface(&sa);
+	return error;
 }
