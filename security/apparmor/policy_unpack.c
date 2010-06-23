@@ -360,15 +360,24 @@ static bool aa_unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
 
 		profile->file.trans.size = size;
 		for (i = 0; i < size; i++) {
-			char *tmp;
-			if (!unpack_strdup(e, &tmp, NULL))
+			char *str;
+			int c, j, size = unpack_strdup(e, &str, NULL);
+			if (!size)
 				goto fail;
 			/*
-			 * note: strings beginning with a : have an embedded
-			 * \0 seperating the profile ns name from the profile
-			 * name
+			 * verify: transition names string
 			 */
-			profile->file.trans.table[i] = tmp;
+			for (c = j = 0; j < size - 1; j++) {
+				if (!str[j])
+					c++;
+			}
+			/* names beginning with : require an embedded \0 */
+			if (*str == ':' && c != 1)
+				goto fail;
+			/* fail - all other cases with embedded \0 */
+			else if (c)
+				goto fail;
+			profile->file.trans.table[i] = str;
 		}
 		if (!unpack_nameX(e, AA_ARRAYEND, NULL))
 			goto fail;
