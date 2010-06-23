@@ -554,6 +554,8 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 		/* released below */
 		hat = aa_find_child(root, hat_name);
 		if (!hat) {
+			if (list_empty(&root->base.profiles))
+				sa.base.error = -ECHILD;
 			if (permtest || !PROFILE_COMPLAIN(root))
 				/* probing is an expected unfortunate behavior
 				 * of the change_hat api is traditionally quiet
