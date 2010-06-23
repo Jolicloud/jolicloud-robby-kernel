@@ -975,8 +975,6 @@ static int audit_policy(int op, gfp_t gfp, const char *name, const char *info,
  */
 bool aa_may_manage_policy(int op)
 {
-	struct aa_profile *profile = __aa_current_profile();
-
 	/* check if loading policy is locked out */
 	if (aa_g_lock_policy) {
 		audit_policy(op, GFP_KERNEL, NULL, "policy_locked", -EACCES);

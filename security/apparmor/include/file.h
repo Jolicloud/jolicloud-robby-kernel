@@ -150,7 +150,8 @@ static inline u16 dfa_map_xindex(u16 mask)
 	dfa_map_xindex((ACCEPT_TABLE(dfa)[state] >> 14) & 0x3fff)
 
 int aa_audit_file(struct aa_profile *profile, struct file_perms *perms,
-		  gfp_t gfp, struct common_audit_data *sa);
+		  gfp_t gfp, int op, u16 request, const char *name,
+		  const char *target, uid_t ouid, const char *info, int error);
 
 /**
  * struct aa_file_rules - components used for file rule permissions
