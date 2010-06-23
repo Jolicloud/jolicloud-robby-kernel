@@ -213,7 +213,6 @@ static const char *next_name(int xtype, const char *name)
 
 /**
  * x_to_profile - get target profile for a given xindex
- * @ns: namespace of profile
  * @profile: current profile
  * @name: to to lookup if specified
  * @xindex: index into x transition table
@@ -222,16 +221,12 @@ static const char *next_name(int xtype, const char *name)
  *
  * Returns: refcounted profile or NULL if not found available
  */
-static struct aa_profile *x_to_profile(struct aa_namespace *ns,
-				       struct aa_profile *profile,
+static struct aa_profile *x_to_profile(struct aa_profile *profile,
 				       const char *name, u16 xindex)
 {
 	struct aa_profile *new_profile = NULL;
 	u16 xtype = xindex & AA_X_TYPE_MASK;
 	int index = xindex & AA_X_INDEX_MASK;
-
-	if (unconfined(profile))
-		profile = ns->unconfined;
 
 	switch (xtype) {
 	case AA_X_NONE:
@@ -243,7 +238,8 @@ static struct aa_profile *x_to_profile(struct aa_namespace *ns,
 			new_profile = aa_sys_find_attach(&profile->base, name);
 		else
 			/* released by caller */
-			new_profile = aa_sys_find_attach(&ns->base, name);
+			new_profile = aa_sys_find_attach(&profile->ns->base,
+							 name);
 
 		goto out;
 	case AA_X_TABLE:
@@ -286,7 +282,8 @@ static struct aa_profile *x_to_profile(struct aa_namespace *ns,
 		}
 
 		/* released by caller */
-		new_profile = aa_find_profile(new_ns ? new_ns : ns, xname);
+		new_profile = aa_find_profile(new_ns ? new_ns : profile->ns,
+					      xname);
 		aa_put_namespace(new_ns);
 	}
 
@@ -372,8 +369,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 		cxt->sys.onexec = NULL;
 		sa.base.info = "change_profile onexec";
 	} else if (sa.perms.allowed & MAY_EXEC) {
-		new_profile = x_to_profile(ns, profile, sa.name,
-					   sa.perms.xindex);
+		new_profile = x_to_profile(profile, sa.name, sa.perms.xindex);
 		if (!new_profile) {
 			if (sa.perms.xindex & AA_X_INHERIT) {
 				/* (p|c|n)ix - don't change profile */
