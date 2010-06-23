@@ -61,7 +61,7 @@ void aa_cred_policy(const struct cred *cred, struct aa_profile **sys)
 }
 
 /**
- * aa_get_task_policy - get the cred with the task policy, and current profiles
+ * aa_get_task_cred - get the cred with the task policy, and current profiles
  * @task: task to get policy of
  * @sys: return - pointer to system profile
  *
@@ -69,8 +69,8 @@ void aa_cred_policy(const struct cred *cred, struct aa_profile **sys)
  *
  * Only gets the cred ref count which has ref counts on the profiles returned
  */
-struct cred *aa_get_task_policy(const struct task_struct *task,
-				struct aa_profile **sys)
+struct cred *aa_get_task_cred(const struct task_struct *task,
+			      struct aa_profile **sys)
 {
 	struct cred *cred = get_task_cred(task);
 	aa_cred_policy(cred, sys);

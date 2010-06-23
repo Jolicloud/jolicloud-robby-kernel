@@ -511,7 +511,7 @@ static int apparmor_getprocattr(struct task_struct *task, char *name,
 	int error = -ENOENT;
 	struct aa_profile *profile, *onexec, *prev;
 	/* released below */
-	const struct cred *cred = aa_get_task_policy(task, &profile);
+	const struct cred *cred = aa_get_task_cred(task, &profile);
 	struct aa_task_context *cxt = cred->security;
 	onexec = cxt->sys.onexec;
 	prev = cxt->sys.previous;

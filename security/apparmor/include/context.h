@@ -72,7 +72,7 @@ void aa_free_task_context(struct aa_task_context *cxt);
 void aa_dup_task_context(struct aa_task_context *new,
 			 const struct aa_task_context *old);
 void aa_cred_policy(const struct cred *cred, struct aa_profile **sys);
-struct cred *aa_get_task_policy(const struct task_struct *task,
+struct cred *aa_get_task_cred(const struct task_struct *task,
 				struct aa_profile **sys);
 int aa_replace_current_profiles(struct aa_profile *sys);
 void aa_put_task_policy(struct cred *cred);

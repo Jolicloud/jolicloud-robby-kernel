@@ -63,7 +63,7 @@ static int aa_may_change_ptraced_domain(struct task_struct *task,
 	tracer = tracehook_tracer_task(task);
 	if (tracer)
 		/* released below */
-		cred = aa_get_task_policy(tracer, &tracerp);
+		cred = aa_get_task_cred(tracer, &tracerp);
 	rcu_read_unlock();
 
 	/* not ptraced */
@@ -480,7 +480,7 @@ void apparmor_bprm_committing_creds(struct linux_binprm *bprm)
 {
 	struct aa_profile *profile;
 	/* ref released below */
-	struct cred *cred = aa_get_task_policy(current, &profile);
+	struct cred *cred = aa_get_task_cred(current, &profile);
 	struct aa_task_context *new_cxt = bprm->cred->security;
 
 	/* bail out if unconfiged or not changing profile */
