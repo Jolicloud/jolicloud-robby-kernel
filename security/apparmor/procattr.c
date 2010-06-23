@@ -103,7 +103,7 @@ int aa_setprocattr_changeprofile(char *fqname, int onexec, int test)
 {
 	char *name, *ns_name;
 
-	name = aa_split_name_from_ns(fqname, &ns_name);
+	name = aa_split_fqname(fqname, &ns_name);
 	return aa_change_profile(ns_name, name, onexec, test);
 }
 

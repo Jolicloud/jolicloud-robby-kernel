@@ -985,7 +985,7 @@ ssize_t aa_interface_remove_profiles(char *fqname, size_t size)
 		.base.operation = "profile_remove",
 		.base.gfp_mask = GFP_ATOMIC,
 	};
-	const char *name;
+	const char *name = fqname;
 	int error;
 
 	/* check if loading policy is locked out */
@@ -998,7 +998,7 @@ ssize_t aa_interface_remove_profiles(char *fqname, size_t size)
 	write_lock(&ns_list_lock);
 	if (fqname[0] == ':') {
 		char *ns_name;
-		name = aa_split_name_from_ns(fqname, &ns_name);
+		name = aa_split_fqname(fqname, &ns_name);
 		if (fqname)
 			/* released below */
 			ns = aa_get_namespace(__aa_find_namespace(&ns_list,

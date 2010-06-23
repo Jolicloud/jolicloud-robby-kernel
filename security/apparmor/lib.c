@@ -19,7 +19,7 @@
 
 
 /**
- * aa_split_name_from_ns - split a profile name from a fqname
+ * aa_split_fqname - split a fqname into a profile and namespace name
  * @fqname: a full qualified name in namespace profile format
  * @ns_name: pointer to portion of the string containing the ns name
  *
@@ -32,7 +32,7 @@
  * NOTE: may modifiy the @fqname string.  The pointers returned point
  *       into the @fqname string.
  */
-char *aa_split_name_from_ns(char *fqname, char **ns_name)
+char *aa_split_fqname(char *fqname, char **ns_name)
 {
 	char *name = strstrip(fqname);
 
