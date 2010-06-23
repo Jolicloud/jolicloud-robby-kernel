@@ -990,10 +990,16 @@ audit:
 	error = aa_audit_iface(&sa);
 
 	if (!error) {
-		if (old_profile)
-			__aa_replace_profile(old_profile, new_profile);
 		if (rename_profile)
 			__aa_replace_profile(rename_profile, new_profile);
+		if (old_profile) {
+			/* when there are both rename and old profiles
+			 * inherit old profiles sid
+			 */
+			if (rename_profile)
+				aa_free_sid(new_profile->sid);
+			__aa_replace_profile(old_profile, new_profile);
+		}
 		if (!(old_profile || rename_profile))
 			__add_new_profile(ns, policy, new_profile);
 	}
