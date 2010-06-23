@@ -123,7 +123,9 @@ out:
 	if (type == AUDIT_APPARMOR_KILL)
 		(void)send_sig_info(SIGKILL, NULL, task);
 
-	return type == AUDIT_APPARMOR_ALLOWED ? 0 : sa->error;
+	if (type == AUDIT_APPARMOR_ALLOWED)
+		return complain_error(sa->error);
+	return sa->error;
 }
 
 /**

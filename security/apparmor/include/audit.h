@@ -51,4 +51,11 @@ struct aa_audit {
 int aa_audit(int type, struct aa_profile *profile, struct aa_audit *sa,
 	     void (*cb) (struct audit_buffer *, struct aa_audit *));
 
+static inline int complain_error(int error)
+{
+	if (error == -EPERM || error == -EACCES)
+		return 0;
+	return error;
+}
+
 #endif /* __AA_AUDIT_H */
