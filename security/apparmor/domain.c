@@ -176,6 +176,42 @@ static struct aa_profile *aa_sys_find_attach(struct aa_policy_common *base,
 }
 
 /**
+ * separate_fqname - separate the namespace and profile names
+ * @fqname: the fqname name to split
+ * @ns_name: the namespace name if it exists
+ *
+ * Returns: profile name if it is specified
+ *
+ * This is the xtable equivalent routine of aa_split_fqname.  It finds the
+ * split in an xtable fqname which contains an embedded \0 instead of a :
+ * if a namespace is specified.  This is done so the xtable is constant and
+ * isn't resplit on every lookup.
+ *
+ * Either the profile or namespace name may be optional but if the namespace
+ * is specified the profile name termination must be present.  This results
+ * in the following possible encodings:
+ * profile_name\0
+ * :ns_name\0profile_name\0
+ * :ns_name\0\0
+ */
+static const char *separate_fqname(const char *fqname, const char **ns_name)
+{
+	const char *name;
+
+	if (fqname[0] == ':') {
+		*ns_name = fqname + 1;		/* skip : */
+		name = *ns_name + strlen(*ns_name) + 1;
+		if (!*name)
+			name = NULL;
+	} else {
+		*ns_name = NULL;
+		name = fqname;
+	}
+
+	return name;
+}
+
+/**
  * x_to_profile - get target profile for a given xindex
  * @ns: namespace of profile
  * @profile: current profile
@@ -229,9 +265,9 @@ static struct aa_profile *x_to_profile(struct aa_namespace *ns,
 			continue;
 		} else if (*name == ':') {
 			/* switching namespace */
-			const char *ns_name = name + 1;
-			name = xname = ns_name + strlen(ns_name) + 1;
-			if (!*xname)
+			const char *ns_name;
+			xname = name = separate_fqname(name, &ns_name);
+			if (!xname)
 				/* no name so use profile name */
 				xname = profile->base.hname;
 			if (*ns_name == '@') {
