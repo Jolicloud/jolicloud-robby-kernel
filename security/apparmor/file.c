@@ -297,7 +297,8 @@ static inline bool is_deleted(struct dentry *dentry)
 int aa_path_perm(int op, struct aa_profile *profile, struct path *path,
 		 int flags, u16 request, struct path_cond *cond)
 {
-	char *buffer, *name;
+	char *buffer;
+	const char *name;
 	struct aa_audit_file sa = {
 		.base.op = op,
 		.base.gfp_mask = GFP_KERNEL,
@@ -383,7 +384,7 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 		old_dentry->d_inode->i_mode
 	};
 	char *buffer = NULL, *buffer2 = NULL;
-	char *lname, *tname;
+	const char *lname, *tname;
 	struct file_perms perms;
 	unsigned int state;
 

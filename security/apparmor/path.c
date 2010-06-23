@@ -179,7 +179,7 @@ static int get_name_to_buffer(struct path *path, int flags, char *buffer,
  *
  * Returns: %0 else error code if could retrieve name
  */
-int aa_get_name(struct path *path, int flags, char **buffer, char **name)
+int aa_get_name(struct path *path, int flags, char **buffer, const char **name)
 {
 	char *buf, *str = NULL;
 	int size = 256;

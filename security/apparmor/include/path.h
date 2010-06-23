@@ -26,7 +26,7 @@ enum path_flags {
 	PATH_MEDIATE_DELETED = 0x10000,	/* mediate deleted paths */
 };
 
-int aa_get_name(struct path *path, int flags, char **buffer, char **name);
+int aa_get_name(struct path *path, int flags, char **buffer, const char **name);
 char *sysctl_pathname(struct ctl_table *table, char *buffer, int buflen);
 
 #endif /* __AA_PATH_H */
