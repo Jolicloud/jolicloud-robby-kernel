@@ -109,7 +109,10 @@ struct aa_audit {
 	union {
 		long pos;
 		int cap;
-		int rlimit;
+		struct {
+			int rlim;
+			unsigned long max;
+		} rlim;
 		struct {
 			pid_t tracer, tracee;
 		} ptrace;

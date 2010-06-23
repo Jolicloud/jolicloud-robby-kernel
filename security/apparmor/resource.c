@@ -18,11 +18,16 @@
 #include "include/resource.h"
 #include "include/policy.h"
 
+/*
+ * Table of rlimit names: we generate it from resource.h.
+ */
+#include "rlim_names.h"
+
 /* audit callback for resource specific fields */
 static void audit_cb(struct audit_buffer *ab, struct aa_audit *sa)
 {
-	if (sa->rlimit)
-		audit_log_format(ab, " rlimit=%d", sa->rlimit - 1);
+	audit_log_format(ab, " rlimit=%s value=%lu", rlim_names[sa->rlim.rlim],
+			 sa->rlim.max);
 }
 
 /**
@@ -54,7 +59,8 @@ int aa_task_setrlimit(struct aa_profile *profile, unsigned int resource,
 	struct aa_audit sa = {
 		.op = OP_SETRLIMIT,
 	};
-	sa.rlimit = resource + 1;
+	sa.rlim.rlim = resource;
+	sa.rlim.max = new_rlim->rlim_max;
 
 	if (profile->rlimits.mask & (1 << resource) &&
 	    new_rlim->rlim_max > profile->rlimits.limits[resource].rlim_max) {
