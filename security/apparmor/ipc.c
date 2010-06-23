@@ -31,14 +31,24 @@ static void audit_cb(struct audit_buffer *ab, void *va)
 /**
  * aa_audit_ptrace - do auditing for ptrace
  * @profile: profile being enforced  (NOT NULL)
- * @sa: audit structure  (NOT NULL)
+ * @tracer: pid of tracer
+ * @tracee: pid of tracee
+ * @error: error condition
  *
  * Returns: %0 or error code
  */
-static int aa_audit_ptrace(struct aa_profile *profile,
-			   struct common_audit_data *sa)
+static int aa_audit_ptrace(struct aa_profile *profile, pid_t tracer,
+			   pid_t tracee, int error)
 {
-	return aa_audit(AUDIT_APPARMOR_AUTO, profile, GFP_ATOMIC, sa, audit_cb);
+	struct common_audit_data sa;
+	COMMON_AUDIT_DATA_INIT_NONE(&sa);
+	sa.aad.op = OP_PTRACE;
+	sa.aad.ptrace.tracer = tracer;
+	sa.aad.ptrace.tracee = tracee;
+	sa.aad.error = error;
+
+	return aa_audit(AUDIT_APPARMOR_AUTO, profile, GFP_ATOMIC, &sa,
+			audit_cb);
 }
 
 /**
@@ -93,20 +103,12 @@ int aa_ptrace(struct task_struct *tracer, struct task_struct *tracee,
 	if (!unconfined(tracer_p)) {
 		/* lcred released below */
 		struct cred *lcred = get_task_cred(tracee);
-		struct aa_profile *tracee_p;
-		struct common_audit_data sa;
-		COMMON_AUDIT_DATA_INIT_NONE(&sa);
-		sa.aad.op = OP_PTRACE;
-		sa.aad.ptrace.tracer = tracer->pid;
-		sa.aad.ptrace.tracee = tracee->pid;
+		struct aa_profile *tracee_p = aa_cred_profile(lcred);
 
-		tracee_p = aa_cred_profile(lcred);
-
-		sa.aad.error = aa_may_ptrace(tracer, tracer_p, tracee_p, mode);
-		sa.aad.error = aa_audit_ptrace(tracer_p, &sa);
+		error = aa_may_ptrace(tracer, tracer_p, tracee_p, mode);
+		error = aa_audit_ptrace(tracer_p, tracer->pid, tracee->pid, error);
 
 		put_cred(lcred);
-		error = sa.aad.error;
 	}
 	put_cred(cred);
 
