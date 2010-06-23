@@ -662,6 +662,11 @@ int aa_change_profile(const char *ns_name, const char *fqname, int onexec,
 			goto audit;
 		/* release below */
 		target = aa_alloc_null_profile(profile, 0);
+		if (!target) {
+			sa.base.info = "failed null profile create";
+			sa.base.error = -ENOMEM;
+			goto audit;
+		}
 	}
 
 	/* check if tracing task is allowed to trace target domain */
