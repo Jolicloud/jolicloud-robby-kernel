@@ -236,7 +236,7 @@ void free_aa_namespace_kref(struct kref *kref)
  * Returns 0 on success else error
  *
  */
-int aa_alloc_default_namespace(void)
+int __init aa_alloc_default_namespace(void)
 {
 	struct aa_namespace *ns;
 	/* released by aa_free_default_namespace - used as list ref*/
