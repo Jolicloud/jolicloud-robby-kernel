@@ -47,8 +47,10 @@ static inline struct aa_file_cxt *aa_alloc_file_context(gfp_t gfp)
  */
 static inline void aa_free_file_context(struct aa_file_cxt *cxt)
 {
-	aa_put_profile(cxt->profile);
-	kzfree(cxt);
+	if (cxt) {
+		aa_put_profile(cxt->profile);
+		kzfree(cxt);
+	}
 }
 
 /**
