@@ -441,6 +441,7 @@ static struct aa_profile *unpack_profile(struct aa_ext *e,
 	const char *name = NULL;
 	size_t size = 0;
 	int i, error = -EPROTO;
+	kernel_cap_t tmpcap;
 	u32 tmp;
 	u64 tmp64;
 
@@ -505,7 +506,7 @@ static struct aa_profile *unpack_profile(struct aa_ext *e,
 		goto fail;
 	if (!unpack_u32(e, &(profile->caps.quiet.cap[0]), NULL))
 		goto fail;
-	if (!unpack_u32(e, &(profile->caps.set.cap[0]), NULL))
+	if (!unpack_u32(e, &tmpcap.cap[0], NULL))
 		goto fail;
 
 	if (unpack_nameX(e, AA_STRUCT, "caps64")) {
@@ -516,7 +517,7 @@ static struct aa_profile *unpack_profile(struct aa_ext *e,
 			goto fail;
 		if (!unpack_u32(e, &(profile->caps.quiet.cap[1]), NULL))
 			goto fail;
-		if (!unpack_u32(e, &(profile->caps.set.cap[1]), NULL))
+		if (!unpack_u32(e, &(tmpcap.cap[1]), NULL))
 			goto fail;
 		if (!unpack_nameX(e, AA_STRUCTEND, NULL))
 			goto fail;

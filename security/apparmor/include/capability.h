@@ -20,7 +20,6 @@
 struct aa_profile;
 
 /* aa_caps - confinement data for capabilities
- * @set: capabilities that are being set
  * @allowed: capabilities mask
  * @audit: caps that are to be audited
  * @quiet: caps that should not be audited
@@ -28,7 +27,6 @@ struct aa_profile;
  * @extended: caps that are subject finer grained mediation
  */
 struct aa_caps {
-	kernel_cap_t set;
 	kernel_cap_t allowed;
 	kernel_cap_t audit;
 	kernel_cap_t quiet;

@@ -125,10 +125,8 @@ static int apparmor_capget(struct task_struct *target, kernel_cap_t *effective,
 	*inheritable = cred->cap_inheritable;
 	*permitted = cred->cap_permitted;
 
-	if (!unconfined(profile)) {
-		*effective = cap_combine(*effective, profile->caps.set);
+	if (!unconfined(profile))
 		*effective = cap_intersect(*effective, profile->caps.allowed);
-	}
 	rcu_read_unlock();
 
 	return 0;
@@ -142,8 +140,7 @@ static int apparmor_capable(struct task_struct *task, const struct cred *cred,
 	int error = cap_capable(task, cred, cap, audit);
 
 	profile = aa_cred_profile(cred);
-	if (!unconfined(profile) &&
-	    (!error || cap_raised(profile->caps.set, cap)))
+	if (!error  && !unconfined(profile))
 		error = aa_capable(task, profile, cap, audit);
 
 	return error;
