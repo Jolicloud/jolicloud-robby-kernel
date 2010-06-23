@@ -103,8 +103,6 @@ static char *aa_audit_type[] = {
 
 /**
  * audit_base - core AppArmor function.
- * @type: type of audit message (see include/linux/apparmor.h)
- * @profile: active profile for event (MAY BE NULL)
  * @sa: audit structure containing data to audit
  * @audit_cxt: audit_cxt that event is under
  * @cb: audit cb for this event
@@ -114,29 +112,25 @@ static char *aa_audit_type[] = {
  *
  * Returns: 0 or sa->error on success, else error
  */
-static int audit_base(int type, struct aa_profile *profile, struct aa_audit *sa,
-		      struct audit_context *audit_cxt,
+static int audit_base(struct aa_audit *sa, struct audit_context *audit_cxt,
 		      void (*cb) (struct audit_buffer *, struct aa_audit *))
 {
 	struct audit_buffer *ab = NULL;
 	struct task_struct *task = sa->task ? sa->task : current;
 
-	if (profile && DO_KILL(profile) && type == AUDIT_APPARMOR_DENIED)
-		type = AUDIT_APPARMOR_KILL;
-
 	/* ab freed below in audit_log_end */
-	ab = audit_log_start(audit_cxt, GFP_ATOMIC, type);
+	ab = audit_log_start(audit_cxt, GFP_ATOMIC, sa->type);
 
 	if (!ab) {
 		AA_ERROR("(%d) Unable to log event of type (%d)\n",
-			 -ENOMEM, type);
+			 -ENOMEM, sa->type);
 		sa->error = -ENOMEM;
 		goto out;
 	}
 
 	if (aa_g_audit_header) {
 		audit_log_format(ab, " type=");
-		audit_log_string(ab, aa_audit_type[type - AUDIT_APPARMOR_AUDIT]);
+		audit_log_string(ab, aa_audit_type[sa->type - AUDIT_APPARMOR_AUDIT]);
 	}
 
 	if (sa->op) {
@@ -153,19 +147,19 @@ static int audit_base(int type, struct aa_profile *profile, struct aa_audit *sa,
 
 	audit_log_format(ab, " pid=%d", task->pid);
 
-	if (profile && !unconfined(profile)) {
+	if (sa->profile) {
 		pid_t pid;
 		rcu_read_lock();
 		pid = task->real_parent->pid;
 		rcu_read_unlock();
 		audit_log_format(ab, " parent=%d", pid);
-		if (profile->ns != root_ns) {
-			audit_log_format(ab, " profile=:");
-			audit_log_untrustedstring(ab, profile->ns->base.hname);
+		audit_log_format(ab, " profile=");
+		if (sa->ns) {
+			audit_log_format(ab, ":");
+			audit_log_untrustedstring(ab, sa->ns);
 			audit_log_format(ab, "://");
-		} else
-			audit_log_format(ab, " profile=");
-		audit_log_untrustedstring(ab, profile->base.hname);
+		}
+		audit_log_untrustedstring(ab, sa->profile);
 	}
 
 	if (sa->name) {
@@ -179,12 +173,28 @@ static int audit_base(int type, struct aa_profile *profile, struct aa_audit *sa,
 	audit_log_end(ab);
 
 out:
-	if (type == AUDIT_APPARMOR_KILL)
+	if (sa->type == AUDIT_APPARMOR_KILL)
 		(void)send_sig_info(SIGKILL, NULL, task);
 
-	if (type == AUDIT_APPARMOR_ALLOWED)
+	if (sa->type == AUDIT_APPARMOR_ALLOWED)
 		return complain_error(sa->error);
 	return sa->error;
+}
+
+static int audit_wrapper(int type, struct aa_profile *profile,
+			 struct aa_audit *sa, struct audit_context *audit_cxt,
+			 void (*cb) (struct audit_buffer *, struct aa_audit *))
+{
+	if (profile && DO_KILL(profile) && type == AUDIT_APPARMOR_DENIED)
+		type = AUDIT_APPARMOR_KILL;
+	sa->type = type;
+
+	if (profile && !unconfined(profile))
+		sa->profile = profile->base.hname;
+	if (profile->ns != root_ns)
+		sa->ns = profile->ns->base.hname;
+
+	return audit_base(sa, audit_cxt, cb);
 }
 
 /**
@@ -221,5 +231,5 @@ int aa_audit(int type, struct aa_profile *profile, gfp_t gfp,
 	     AUDIT_MODE(profile) == AUDIT_QUIET))
 		return sa->error;
 
-	return audit_base(type, profile, sa, audit_cxt, cb);
+	return audit_wrapper(type, profile, sa, audit_cxt, cb);
 }

@@ -101,6 +101,9 @@ struct aa_audit {
 	struct task_struct *task;
 	int error;
 	int op;
+	int type;
+	const char *ns;
+	const char *profile;
 	const char *name;
 	const char *info;
 	union {
