@@ -519,13 +519,13 @@ static int apparmor_getprocattr(struct task_struct *task, char *name,
 	profile = aa_cred_profile(cred);
 
 	if (strcmp(name, "current") == 0)
-		error = aa_getprocattr(aa_newest_version(cxt->sys.profile),
+		error = aa_getprocattr(aa_newest_version(cxt->profile),
 				       value);
-	else if (strcmp(name, "prev") == 0  && cxt->sys.previous)
-		error = aa_getprocattr(aa_newest_version(cxt->sys.previous),
+	else if (strcmp(name, "prev") == 0  && cxt->previous)
+		error = aa_getprocattr(aa_newest_version(cxt->previous),
 				       value);
-	else if (strcmp(name, "exec") == 0 && cxt->sys.onexec)
-		error = aa_getprocattr(aa_newest_version(cxt->sys.onexec),
+	else if (strcmp(name, "exec") == 0 && cxt->onexec)
+		error = aa_getprocattr(aa_newest_version(cxt->onexec),
 				       value);
 	else
 		error = -EINVAL;
@@ -1024,7 +1024,7 @@ static int __init set_init_cxt(void)
 	if (!cxt)
 		return -ENOMEM;
 
-	cxt->sys.profile = aa_get_profile(default_namespace->unconfined);
+	cxt->profile = aa_get_profile(default_namespace->unconfined);
 	cred->security = cxt;
 
 	return 0;

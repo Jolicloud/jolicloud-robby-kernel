@@ -328,7 +328,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	cxt = bprm->cred->security;
 	BUG_ON(!cxt);
 
-	profile = aa_newest_version(cxt->sys.profile);
+	profile = aa_newest_version(cxt->profile);
 	/*
 	 * get the namespace from the replacement profile as replacement
 	 * can change the namespace
@@ -353,22 +353,22 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 		if (!new_profile)
 			goto cleanup;
 		goto apply;
-	} else if (cxt->sys.onexec) {
+	} else if (cxt->onexec) {
 		/*
 		 * onexec permissions are stored in a pair, rewalk the
 		 * dfa to get start of the exec path match.
 		 */
-		sa.perms = change_profile_perms(profile, cxt->sys.onexec->ns,
+		sa.perms = change_profile_perms(profile, cxt->onexec->ns,
 						sa.name, &state);
 		state = aa_dfa_null_transition(profile->file.dfa, state, 0);
 	}
 	sa.perms = aa_str_perms(profile->file.dfa, state, sa.name, &cond, NULL);
-	if (cxt->sys.onexec && sa.perms.allowed & AA_MAY_ONEXEC) {
+	if (cxt->onexec && sa.perms.allowed & AA_MAY_ONEXEC) {
 		/* transfer the onexec reference, this is allowed as the
 		 * cred is being prepared, and isn't committed yet.
 		 */
-		new_profile = cxt->sys.onexec;
-		cxt->sys.onexec = NULL;
+		new_profile = cxt->onexec;
+		cxt->onexec = NULL;
 		sa.base.info = "change_profile onexec";
 	} else if (sa.perms.allowed & MAY_EXEC) {
 		new_profile = x_to_profile(profile, sa.name, sa.perms.xindex);
@@ -442,16 +442,16 @@ apply:
 	/* when transitioning profiles clear unsafe personality bits */
 	bprm->per_clear |= PER_CLEAR_ON_SETID;
 
-	aa_put_profile(cxt->sys.profile);
+	aa_put_profile(cxt->profile);
 	/* transfer new profile reference will be released when cxt is freed */
-	cxt->sys.profile = new_profile;
+	cxt->profile = new_profile;
 
 x_clear:
-	aa_put_profile(cxt->sys.previous);
-	aa_put_profile(cxt->sys.onexec);
-	cxt->sys.previous = NULL;
-	cxt->sys.onexec = NULL;
-	cxt->sys.token = 0;
+	aa_put_profile(cxt->previous);
+	aa_put_profile(cxt->onexec);
+	cxt->previous = NULL;
+	cxt->onexec = NULL;
+	cxt->token = 0;
 
 audit:
 	sa.base.error = aa_audit_file(profile, &sa);
@@ -481,14 +481,14 @@ void apparmor_bprm_committing_creds(struct linux_binprm *bprm)
 	struct aa_task_context *new_cxt = bprm->cred->security;
 
 	/* bail out if unconfined or not changing profile */
-	if ((new_cxt->sys.profile == profile) ||
-	    (unconfined(new_cxt->sys.profile)))
+	if ((new_cxt->profile == profile) ||
+	    (unconfined(new_cxt->profile)))
 		return;
 
 	current->pdeath_signal = 0;
 
 	/* reset soft limits and set hard limits for the new profile */
-	__aa_transition_rlimits(profile, new_cxt->sys.profile);
+	__aa_transition_rlimits(profile, new_cxt->profile);
 }
 
 void apparmor_bprm_committed_creds(struct linux_binprm *bprm)
@@ -540,7 +540,7 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 	cred = get_current_cred();
 	cxt = cred->security;
 	profile = aa_cred_profile(cred);
-	previous_profile = cxt->sys.previous;
+	previous_profile = cxt->previous;
 
 	if (unconfined(profile)) {
 		sa.base.info = "unconfined";
@@ -675,7 +675,7 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 		sa.name2 = ns->base.hname;
 	} else {
 		/* released below */
-		ns = aa_get_namespace(cxt->sys.profile->ns);
+		ns = aa_get_namespace(cxt->profile->ns);
 		sa.name2 = ns->base.hname;
 	}
 

@@ -41,7 +41,8 @@ static inline void aa_free_file_context(struct aa_file_cxt *cxt)
 	kzfree(cxt);
 }
 
-/* struct aa_task_cxt_group - a grouping label data for confined tasks
+/**
+ * struct aa_task_context - primary label for confined tasks
  * @profile: the current profile
  * @exec: profile to transition to on next exec
  * @previous: profile the task may return to
@@ -49,22 +50,14 @@ static inline void aa_free_file_context(struct aa_file_cxt *cxt)
  *
  * Contains the task's current profile (which could change due to
  * change_hat).  Plus the hat_magic needed during change_hat.
+ *
+ * TODO: make so a task can be confined by a stack of contexts
  */
-struct aa_task_cxt_group {
+struct aa_task_context {
 	struct aa_profile *profile;
 	struct aa_profile *onexec;
 	struct aa_profile *previous;
 	u64 token;
-};
-
-/**
- * struct aa_task_context - primary label for confined tasks
- * @sys: the system labeling for the task
- *
- * A task is confined by the intersection of its system and user profiles
- */
-struct aa_task_context {
-	struct aa_task_cxt_group sys;
 };
 
 struct aa_task_context *aa_alloc_task_context(gfp_t flags);
@@ -87,7 +80,7 @@ static inline bool __aa_task_is_confined(struct task_struct *task)
 	struct aa_task_context *cxt = __task_cred(task)->security;
 
 	BUG_ON(!cxt);
-	if (unconfined(aa_newest_version(cxt->sys.profile)))
+	if (unconfined(aa_newest_version(cxt->profile)))
 		return 0;
 
 	return 1;
@@ -105,7 +98,7 @@ static inline struct aa_profile *aa_cred_profile(const struct cred *cred)
 {
 	struct aa_task_context *cxt = cred->security;
 	BUG_ON(!cxt);
-	return aa_newest_version(cxt->sys.profile);
+	return aa_newest_version(cxt->profile);
 }
 
 /**
@@ -135,12 +128,12 @@ static inline struct aa_profile *aa_current_profile(void)
 	struct aa_profile *profile;
 	BUG_ON(!cxt);
 
-	profile = aa_newest_version(cxt->sys.profile);
+	profile = aa_newest_version(cxt->profile);
 	/*
 	 * Whether or not replacement succeeds, use newest profile so
 	 * there is no need to update it after replacement.
 	 */
-	if (unlikely((cxt->sys.profile != profile)))
+	if (unlikely((cxt->profile != profile)))
 		aa_replace_current_profiles(profile);
 
 	return profile;
