@@ -75,9 +75,9 @@ static void kvfree(void *buffer)
  * Returns: kernel buffer containing copy of user buffer data or an
  *          ERR_PTR on failure.
  */
-static char *simple_write_to_buffer(int op, const char __user *userbuf,
-				    size_t alloc_size, size_t copy_size,
-				    loff_t *pos)
+static char *aa_simple_write_to_buffer(int op, const char __user *userbuf,
+				       size_t alloc_size, size_t copy_size,
+				       loff_t *pos)
 {
 	char *data;
 
@@ -128,7 +128,7 @@ static ssize_t profile_load(struct file *f, const char __user *buf, size_t size,
 	char *data;
 	ssize_t error;
 
-	data = simple_write_to_buffer(OP_PROF_LOAD, buf, size, size, pos);
+	data = aa_simple_write_to_buffer(OP_PROF_LOAD, buf, size, size, pos);
 
 	error = PTR_ERR(data);
 	if (!IS_ERR(data)) {
@@ -150,7 +150,7 @@ static ssize_t profile_replace(struct file *f, const char __user *buf,
 	char *data;
 	ssize_t error;
 
-	data = simple_write_to_buffer(OP_PROF_REPL, buf, size, size, pos);
+	data = aa_simple_write_to_buffer(OP_PROF_REPL, buf, size, size, pos);
 	error = PTR_ERR(data);
 	if (!IS_ERR(data)) {
 		error = aa_replace_profiles(data, size, PROF_REPLACE);
@@ -175,7 +175,7 @@ static ssize_t profile_remove(struct file *f, const char __user *buf,
 	 * aa_remove_profile needs a null terminated string so 1 extra
 	 * byte is allocated and the copied data is null terminated.
 	 */
-	data = simple_write_to_buffer(OP_PROF_RM, buf, size + 1, size, pos);
+	data = aa_simple_write_to_buffer(OP_PROF_RM, buf, size + 1, size, pos);
 
 	error = PTR_ERR(data);
 	if (!IS_ERR(data)) {
