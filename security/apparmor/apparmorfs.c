@@ -167,7 +167,7 @@ static const struct file_operations aa_fs_profile_remove = {
  * Find the next namespace and to list and handle all locking needed
  * while switching current namespace.
  *
- * NOTE: will not unlock root->base.lock
+ * NOTE: will not unlock root->lock
  */
 static struct aa_namespace *__next_namespace(struct aa_namespace *root,
 					     struct aa_namespace *ns)
@@ -178,15 +178,15 @@ static struct aa_namespace *__next_namespace(struct aa_namespace *root,
 	if (!list_empty(&ns->sub_ns)) {
 		struct aa_namespace *next;
 		next = list_first_entry(&ns->sub_ns, typeof(*ns), base.list);
-		read_lock(&next->base.lock);
+		read_lock(&next->lock);
 		return next;
 	}
 
 	parent = ns->parent;
 	while (parent) {
-		read_unlock(&ns->base.lock);
+		read_unlock(&ns->lock);
 		list_for_each_entry_continue(ns, &parent->sub_ns, base.list) {
-			read_lock(&ns->base.lock);
+			read_lock(&ns->lock);
 			return ns;
 		}
 		if (parent == root)
@@ -221,7 +221,7 @@ static struct aa_namespace *__next_namespace(struct aa_namespace *root,
  * Perform a depth first taversal on the profile tree in a namespace
  *
  * Returns: next profile or NULL if done
- * Requires: profile->bs.base.lock to be held
+ * Requires: profile->ns.lock to be held
  */
 static struct aa_profile *__next_profile(struct aa_profile *p)
 {
@@ -273,10 +273,10 @@ static struct aa_profile *next_profile(struct aa_namespace *root,
  * @f: seq_file to fill
  * @pos: current position
  *
- * acquires first ns->base.lock
+ * acquires first ns->lock
  */
 static void *p_start(struct seq_file *f, loff_t *pos)
-	__acquires(root->base.lock)
+	__acquires(root->lock)
 {
 	struct aa_profile *profile = NULL;
 	struct aa_namespace *root = aa_current_profile()->ns;
@@ -285,7 +285,7 @@ static void *p_start(struct seq_file *f, loff_t *pos)
 
 
 	/* find the first profile */
-	read_lock(&root->base.lock);
+	read_lock(&root->lock);
 	profile = __first_profile(root, root);
 
 	/* skip to position */
@@ -313,16 +313,16 @@ static void *p_next(struct seq_file *f, void *p, loff_t *pos)
  * locking.
  */
 static void p_stop(struct seq_file *f, void *p)
-	__releases(root->base.lock)
+	__releases(root->lock)
 {
 	struct aa_profile *profile = p;
 	struct aa_namespace *root = f->private, *ns;
 
 	if (profile) {
 		for (ns = profile->ns; ns && ns != root; ns = ns->parent)
-			read_unlock(&ns->base.lock);
+			read_unlock(&ns->lock);
 	}
-	read_unlock(&root->base.lock);
+	read_unlock(&root->lock);
 	aa_put_namespace(root);
 }
 

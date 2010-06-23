@@ -70,6 +70,7 @@
  * NOTES:
  *   - locking of profile lists is currently fairly coarse.  All profile
  *     lists within a namespace use the namespace lock.
+ * FIXME: move profile lists to using rcu_lists
  */
 
 #include <linux/slab.h>
@@ -131,7 +132,6 @@ static bool policy_init(struct aa_policy *policy, const char *name)
 	INIT_LIST_HEAD(&policy->list);
 	INIT_LIST_HEAD(&policy->profiles);
 	kref_init(&policy->count);
-	rwlock_init(&policy->lock);
 
 	return 1;
 }
@@ -226,6 +226,7 @@ static struct aa_namespace *aa_alloc_namespace(const char *name)
 	if (!policy_init(&ns->base, name))
 		goto fail_ns;
 	INIT_LIST_HEAD(&ns->sub_ns);
+	rwlock_init(&ns->lock);
 
 	/*
 	 * null profile is not added to the profile list,
@@ -315,9 +316,9 @@ struct aa_namespace *aa_find_namespace(struct aa_namespace *root,
 {
 	struct aa_namespace *ns = NULL;
 
-	read_lock(&root->base.lock);
+	read_lock(&root->lock);
 	ns = aa_get_namespace(__aa_find_namespace(&root->sub_ns, name));
-	read_unlock(&root->base.lock);
+	read_unlock(&root->lock);
 
 	return ns;
 }
@@ -334,7 +335,7 @@ static struct aa_namespace *aa_prepare_namespace(const char *name)
 
 	root = aa_current_profile()->ns;
 
-	write_lock(&root->base.lock);
+	write_lock(&root->lock);
 	if (name)
 		/* released by caller */
 		ns = aa_get_namespace(__aa_find_namespace(&root->sub_ns, name));
@@ -344,11 +345,11 @@ static struct aa_namespace *aa_prepare_namespace(const char *name)
 	if (!ns) {
 		/* name && namespace not found */
 		struct aa_namespace *new_ns;
-		write_unlock(&root->base.lock);
+		write_unlock(&root->lock);
 		new_ns = aa_alloc_namespace(name);
 		if (!new_ns)
 			return NULL;
-		write_lock(&root->base.lock);
+		write_lock(&root->lock);
 		/* test for race when new_ns was allocated */
 		ns = __aa_find_namespace(&root->sub_ns, name);
 		if (!ns) {
@@ -365,7 +366,7 @@ static struct aa_namespace *aa_prepare_namespace(const char *name)
 			aa_get_namespace(ns);
 		}
 	}
-	write_unlock(&root->base.lock);
+	write_unlock(&root->lock);
 
 	/* return ref */
 	return ns;
@@ -498,21 +499,21 @@ static void aa_destroy_namespace(struct aa_namespace *ns)
 	if (!ns)
 		return;
 
-	write_lock(&ns->base.lock);
+	write_lock(&ns->lock);
 	/* release all profiles in this namespace */
 	__aa_profile_list_release(&ns->base.profiles);
 
 	/* release all sub namespaces */
 	__aa_ns_list_release(&ns->sub_ns);
 
-	write_unlock(&ns->base.lock);
+	write_unlock(&ns->lock);
 }
 
 /**
  * __aa_remove_namespace - remove a namespace and all its children
  * @ns: namespace to be removed
  * 
- * Requires: ns->parent->base.lock be held and ns removed from parent.
+ * Requires: ns->parent->lock be held and ns removed from parent.
  */
 static void __aa_remove_namespace(struct aa_namespace *ns)
 {
@@ -629,9 +630,9 @@ struct aa_profile *aa_new_null_profile(struct aa_profile *parent, int hat)
 	profile->parent = aa_get_profile(parent);
 	profile->ns = aa_get_namespace(parent->ns);
 
-	write_lock(&profile->ns->base.lock);
+	write_lock(&profile->ns->lock);
 	__aa_add_profile(&parent->base, profile);
-	write_unlock(&profile->ns->base.lock);
+	write_unlock(&profile->ns->lock);
 
 	return profile;
 
@@ -663,9 +664,9 @@ static void aa_free_profile(struct aa_profile *profile)
 	 */
 	if (!list_empty(&profile->base.list)) {
 		if ((profile->flags & PFLAG_NULL) && profile->ns) {
-			write_lock(&profile->ns->base.lock);
+			write_lock(&profile->ns->lock);
 			list_del_init(&profile->base.list);
-			write_unlock(&profile->ns->base.lock);
+			write_unlock(&profile->ns->lock);
 		} else {
 			AA_ERROR("%s: internal error, "
 				 "profile '%s' still on ns list\n",
@@ -750,9 +751,9 @@ struct aa_profile *aa_find_child(struct aa_profile *parent, const char *name)
 {
 	struct aa_profile *profile;
 
-	read_lock(&parent->ns->base.lock);
+	read_lock(&parent->ns->lock);
 	profile = aa_get_profile(__aa_find_child(&parent->base.profiles, name));
-	read_unlock(&parent->ns->base.lock);
+	read_unlock(&parent->ns->lock);
 
 	return profile;
 }
@@ -766,7 +767,7 @@ struct aa_profile *aa_find_child(struct aa_profile *parent, const char *name)
  * that matches hname does not need to exist, in general this
  * is used to load a new profile.
  *
- * Requires: ns->base.lock be held
+ * Requires: ns->lock be held
  *
  * Returns: unrefcounted policy or NULL if not found
  */
@@ -798,7 +799,7 @@ static struct aa_policy *__aa_find_parent(struct aa_namespace *ns,
  * @base: base list to start looking up profile name from
  * @hname: hierarchical profile name
  *
- * Requires: ns->base.lock be held
+ * Requires: ns->lock be held
  *
  * Returns: unrefcounted profile pointer or NULL if not found
  *
@@ -837,9 +838,9 @@ struct aa_profile *aa_find_profile(struct aa_namespace *ns, const char *hname)
 {
 	struct aa_profile *profile;
 
-	read_lock(&ns->base.lock);
+	read_lock(&ns->lock);
 	profile = aa_get_profile(__aa_find_profile(&ns->base, hname));
-	read_unlock(&ns->base.lock);
+	read_unlock(&ns->lock);
 	return profile;
 }
 
@@ -931,7 +932,7 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size, bool add_only)
 
 	sa.name = new_profile->base.hname;
 
-	write_lock(&ns->base.lock);
+	write_lock(&ns->lock);
 	/* no ref on policy only use inside lock */
 	policy = __aa_find_parent(ns, new_profile->base.hname);
 
@@ -983,7 +984,7 @@ audit:
 		if (!(old_profile || rename_profile))
 			__add_new_profile(ns, policy, new_profile);
 	}
-	write_unlock(&ns->base.lock);
+	write_unlock(&ns->lock);
 
 out:
 	aa_put_namespace(ns);
@@ -1053,7 +1054,7 @@ ssize_t aa_interface_remove_profiles(char *fqname, size_t size)
 	}
 
 	sa.name2 = ns->base.name;
-	write_lock(&ns->base.lock);
+	write_lock(&ns->lock);
 	if (!name) {
 		/* remove namespace - can only happen if fqname[0] == ':' */
 		__aa_remove_namespace(ns);
@@ -1070,7 +1071,7 @@ ssize_t aa_interface_remove_profiles(char *fqname, size_t size)
 		__aa_profile_list_release(&profile->base.profiles);
 		__aa_replace_profile(profile, NULL);
 	}
-	write_unlock(&ns->base.lock);
+	write_unlock(&ns->lock);
 
 	/* don't fail removal if audit fails */
 	(void) aa_audit_iface(&sa);
@@ -1079,7 +1080,7 @@ ssize_t aa_interface_remove_profiles(char *fqname, size_t size)
 	return size;
 
 fail_ns_lock:
-	write_unlock(&ns->base.lock);
+	write_unlock(&ns->lock);
 	aa_put_namespace(ns);
 
 fail:

@@ -168,9 +168,9 @@ static struct aa_profile *aa_find_attach(struct aa_namespace *ns,
 {
 	struct aa_profile *profile;
 
-	read_lock(&ns->base.lock);
+	read_lock(&ns->lock);
 	profile = aa_get_profile(__aa_attach_match(name, &base->profiles));
-	read_unlock(&ns->base.lock);
+	read_unlock(&ns->lock);
 
 	return profile;
 }

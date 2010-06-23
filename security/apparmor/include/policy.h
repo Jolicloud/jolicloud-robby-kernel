@@ -78,7 +78,6 @@ struct aa_profile;
  * @name: name of the object
  * @hname - The hierarchical name
  * @count: reference count of the obj
- * @lock: lock for modifying the object
  * @list: list policy object is on
  * @profiles: head of the profiles list contained in the object
  */
@@ -86,7 +85,6 @@ struct aa_policy {
 	char *name;
 	char *hname;
 	struct kref count;
-	rwlock_t lock;
 	struct list_head list;
 	struct list_head profiles;
 };
@@ -107,6 +105,7 @@ struct aa_ns_acct {
 /* struct aa_namespace - namespace for a set of profiles
  * @base: common policy
  * @parent: parent of namespace
+ * @lock: lock for modifying the object
  * @acct: accounting for the namespace
  * @unconfined: special unconfined profile for the namespace
  * @sub_ns: list of namespaces under the current namespace.
@@ -127,6 +126,7 @@ struct aa_ns_acct {
 struct aa_namespace {
 	struct aa_policy base;
 	struct aa_namespace *parent;
+	rwlock_t lock;
 	struct aa_ns_acct acct;
 	struct aa_profile *unconfined;
 	struct list_head sub_ns;
