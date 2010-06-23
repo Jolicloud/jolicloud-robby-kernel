@@ -160,7 +160,7 @@ static struct aa_profile *__aa_attach_match(const char *name,
  * @base: the base to search
  * name: the executable name to match against
  */
-static struct aa_profile *aa_sys_find_attach(struct aa_policy_common *base,
+static struct aa_profile *aa_sys_find_attach(struct aa_policy *base,
 					     const char *name)
 {
 	struct aa_profile *profile;

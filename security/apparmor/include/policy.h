@@ -74,7 +74,7 @@ enum profile_flags {
 
 struct aa_profile;
 
-/* struct aa_policy_common - common part of both namespaces and profiles
+/* struct aa_policy - common part of both namespaces and profiles
  * @name: name of the object
  * @hname - The hierarchical name
  * @count: reference count of the obj
@@ -82,7 +82,7 @@ struct aa_profile;
  * @list: list object is on
  * @profiles: head of the profiles list contained in the object
  */
-struct aa_policy_common {
+struct aa_policy {
 	char *name;
 	char *hname;
 	struct kref count;
@@ -126,7 +126,7 @@ struct aa_ns_acct {
  * FIXME TODO: add vserver support so a vserer gets a default namespace
  */
 struct aa_namespace {
-	struct aa_policy_common base;
+	struct aa_policy base;
 	struct aa_ns_acct acct;
 	int is_stale;
 	struct aa_profile *unconfined;
@@ -165,7 +165,7 @@ struct aa_namespace {
  * determining profile attachment on "unconfined" tasks.
  */
 struct aa_profile {
-	struct aa_policy_common base;
+	struct aa_policy base;
 
 	struct aa_namespace *ns;
 	struct aa_profile *parent;
@@ -195,8 +195,7 @@ extern rwlock_t ns_list_lock;
 extern struct aa_namespace *default_namespace;
 extern enum profile_mode aa_g_profile_mode;
 
-void aa_add_profile(struct aa_policy_common *common,
-		    struct aa_profile *profile);
+void aa_add_profile(struct aa_policy *common, struct aa_profile *profile);
 
 int aa_alloc_default_namespace(void);
 void aa_free_default_namespace(void);
@@ -205,7 +204,7 @@ void aa_free_namespace_kref(struct kref *kref);
 struct aa_namespace *aa_find_namespace(const char *name);
 void aa_profile_ns_list_release(void);
 
-static inline struct aa_policy_common *aa_get_common(struct aa_policy_common *c)
+static inline struct aa_policy *aa_get_common(struct aa_policy *c)
 {
 	if (c)
 		kref_get(&c->count);
