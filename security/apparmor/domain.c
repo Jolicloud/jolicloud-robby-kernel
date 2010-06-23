@@ -115,7 +115,7 @@ static struct file_perms change_profile_perms(struct aa_profile *profile,
 
 	/* try matching with namespace name and then profile */
 	state = aa_dfa_match(profile->file.dfa, DFA_START, ns->base.name);
-	state = aa_dfa_null_transition(profile->file.dfa, state);
+	state = aa_dfa_null_transition(profile->file.dfa, state, 0);
 	return aa_str_perms(profile->file.dfa, state, name, &cond, rstate);
 }
 
@@ -363,7 +363,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 		 */
 		sa.perms = change_profile_perms(profile, cxt->sys.onexec->ns,
 						sa.name, &state);
-		state = aa_dfa_null_transition(profile->file.dfa, state);
+		state = aa_dfa_null_transition(profile->file.dfa, state, 0);
 	}
 	sa.perms = aa_str_perms(profile->file.dfa, state, sa.name, &cond, NULL);
 	if (cxt->sys.onexec && sa.perms.allowed & AA_MAY_ONEXEC) {

@@ -67,6 +67,7 @@ enum profile_flags {
 	PFLAG_MMAP_MIN_ADDR = 0x80,	/* profile controls mmap_min_addr */
 	PFLAG_DELETED_NAMES = 0x100,	/* mediate deleted paths */
 	PFLAG_CONNECT_PATH = 0x200,	/* connect disconnected paths to / */
+	PFLAG_OLD_NULL_TRANS = 0x400,	/* use // as the null transition */
 };
 
 #define AA_NEW_SID 0
