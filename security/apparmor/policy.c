@@ -1061,18 +1061,18 @@ ssize_t aa_interface_remove_profiles(char *fqname, size_t size)
 	if (fqname[0] == ':') {
 		char *ns_name;
 		name = aa_split_fqname(fqname, &ns_name);
-		if (ns_name)
+		if (ns_name) {
 			/* released below */
 			ns = aa_find_namespace(root, ns_name);
+			if (!ns) {
+				sa.base.info = "namespace does not exist";
+				sa.base.error = -ENOENT;
+				goto fail;
+			}
+		}
 	} else
 		/* released below */
 		ns = aa_get_namespace(root);
-
-	if (!ns) {
-		sa.base.info = "namespace does not exist";
-		sa.base.error = -ENOENT;
-		goto fail;
-	}
 
 	sa.name2 = ns->base.name;
 	write_lock(&ns->lock);
