@@ -112,13 +112,11 @@ int d_namespace_path(struct path *path, char *buf, int buflen, char **name)
 		*name = buf;
 	} else if (d_unlinked(path->dentry)) {
 		error = -ENOENT;
-#if 0
 	} else if (tmp.dentry != ns_root.dentry && tmp.mnt != ns_root.mnt) {
-		/* disconnected path don return pathname starting with '/' */
+		/* disconnected path, don't return pathname starting with '/' */
 		error = -ESTALE;
 		if (*res == '/')
 			*name = res + 1;
-#endif
 	}
 
 	spin_unlock(&dcache_lock);
