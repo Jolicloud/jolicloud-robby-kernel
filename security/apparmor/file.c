@@ -225,6 +225,7 @@ int aa_path_perm(struct aa_profile *profile, const char *operation,
 		.cond = cond,
 	};
 
+	/* buffer freed below - name is pointer inside buffer */
 	sa.base.error = aa_get_name(path, S_ISDIR(cond->mode), &buffer, &name);
 	sa.name = name;
 	if (sa.base.error) {
@@ -286,11 +287,13 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 		.cond = &cond,
 		.perms = nullperms,
 	};
+	/* buffer freed below, lname is pointer in buffer */
 	sa.base.error = aa_get_name(&link, 0, &buffer, &lname);
 	sa.name = lname;
 	if (sa.base.error)
 		goto audit;
 
+	/* buffer2 freed below, tname is pointer in buffer2 */
 	sa.base.error = aa_get_name(&target, 0, &buffer2, &tname);
 	sa.name2 = tname;
 	if (sa.base.error)
@@ -410,6 +413,7 @@ int aa_file_perm(struct aa_profile *profile, const char *operation,
 {
 	char *buffer, *name;
 	umode_t mode = file->f_path.dentry->d_inode->i_mode;
+	/* buffer freed below, name is a pointer inside of buffer */
 	int error = aa_get_name(&file->f_path, S_ISDIR(mode), &buffer, &name);
 
 	error = aa_file_common_perm(profile, operation, file, request, name,

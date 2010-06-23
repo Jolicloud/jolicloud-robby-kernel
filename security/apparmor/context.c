@@ -32,8 +32,10 @@ void aa_free_task_context(struct aa_task_context *cxt)
 	}
 }
 
-/*
- * duplicate a task context, incrementing reference counts
+/**
+ * aa_dup_task_context - duplicate a task context, incrementing reference counts
+ * @new: a blank task context
+ * @old: the task context to copy
  */
 void aa_dup_task_context(struct aa_task_context *new,
 			 const struct aa_task_context *old)
@@ -48,6 +50,7 @@ void aa_dup_task_context(struct aa_task_context *new,
  * aa_cred_policy - obtain cred's profiles
  * @cred: cred to obtain profiles from
  * @sys: return system profile
+ *
  * does NOT increment reference count
  */
 void aa_cred_policy(const struct cred *cred, struct aa_profile **sys)
@@ -62,6 +65,8 @@ void aa_cred_policy(const struct cred *cred, struct aa_profile **sys)
  * @task: task to get policy of
  * @sys: return - pointer to system profile
  *
+ * Returns: a refcounted task cred
+ *
  * Only gets the cred ref count which has ref counts on the profiles returned
  */
 struct cred *aa_get_task_policy(const struct task_struct *task,
@@ -72,11 +77,13 @@ struct cred *aa_get_task_policy(const struct task_struct *task,
 	return cred;
 }
 
-void aa_put_task_policy(struct cred *cred)
-{
-	put_cred(cred);
-}
-
+/**
+ * replace_group - replace a context group profile
+ * @cgrp: profile
+ * @profile: profile to replace cxt group
+ *
+ * Replace context grouping profile reference with @profile
+ */
 static void replace_group(struct aa_task_cxt_group *cgrp,
 			  struct aa_profile *profile)
 {
@@ -110,6 +117,7 @@ int aa_replace_current_profiles(struct aa_profile *sys)
 
 	cxt = new->security;
 	replace_group(&cxt->sys, sys);
+	/* todo add user group */
 
 	commit_creds(new);
 	return 0;

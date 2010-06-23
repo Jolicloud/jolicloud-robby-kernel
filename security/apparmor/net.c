@@ -133,6 +133,7 @@ int aa_revalidate_sk(struct sock *sk, char *operation)
 	if (in_interrupt())
 		return 0;
 
+	/* cred released below */
 	cred = aa_get_task_policy(current, &profile);
 	if (profile)
 		error = aa_net_perm(profile, operation,

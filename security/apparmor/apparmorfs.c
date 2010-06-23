@@ -56,6 +56,7 @@ static char *aa_simple_write_to_buffer(const char __user *userbuf,
 		goto out;
 	}
 
+	/* freed by caller to aa_simple_write_to_buffer */
 	data = vmalloc(alloc_size);
 	if (data == NULL) {
 		data = ERR_PTR(-ENOMEM);
@@ -159,6 +160,14 @@ static void aafs_remove(const char *name)
 	}
 }
 
+/**
+ * aafs_create - create an entry in the apparmor filesystem
+ * @name: name of the entry
+ * @mask: file permission mask of the file
+ * @fops: file operations for the file
+ *
+ * Used aafs_remove to remove entries created with this fn.
+ */
 static int aafs_create(const char *name, int mask,
 		       const struct file_operations *fops)
 {
@@ -170,6 +179,11 @@ static int aafs_create(const char *name, int mask,
 	return IS_ERR(dentry) ? PTR_ERR(dentry) : 0;
 }
 
+/**
+ * aa_destroy_aafs - cleanup and free aafs
+ *
+ * releases dentries allocated by aa_create_aafs
+ */
 void aa_destroy_aafs(void)
 {
 	if (aa_fs_dentry) {
@@ -186,6 +200,11 @@ void aa_destroy_aafs(void)
 	}
 }
 
+/**
+ * aa_create_aafs - create the apparmor security filesystem
+ *
+ * dentries created here are released by aa_destroy_aafs
+ */
 int aa_create_aafs(void)
 {
 	int error;

@@ -29,15 +29,28 @@
 #include "include/context.h"
 #include "include/policy.h"
 
+/**
+ * next_profile - step to the next profile to be output
+ * @profile: profile that was last output
+ *
+ * Perform a depth first traversal over profile tree.
+ *
+ * Returns: next profile or NULL if done
+ * Requires: ns_list_lock, and profile->ns->base.lock be held
+ *           will unlock profile->ns.base.lock and aquire lock for next ns
+ *           __releases(last ns lock);
+ */
 static struct aa_profile *next_profile(struct aa_profile *profile)
 {
 	struct aa_profile *parent;
 	struct aa_namespace *ns = profile->ns;
 
+	/* is next profile a child */
 	if (!list_empty(&profile->base.profiles))
 		return list_first_entry(&profile->base.profiles,
 					struct aa_profile, base.list);
 
+	/* is next a sibling, parent sibling, gp sibling */
 	parent = profile->parent;
 	while (parent) {
 		list_for_each_entry_continue(profile, &parent->base.profiles,
@@ -47,18 +60,29 @@ static struct aa_profile *next_profile(struct aa_profile *profile)
 		parent = parent->parent;
 	}
 
+	/* is next the another profile in the namespace */
 	list_for_each_entry_continue(profile, &ns->base.profiles, base.list)
 		return profile;
 
+	/* finished all profiles in namespace move to next namespace */
 	read_unlock(&ns->base.lock);
 	list_for_each_entry_continue(ns, &ns_list, base.list) {
 		read_lock(&ns->base.lock);
 		return list_first_entry(&ns->base.profiles, struct aa_profile,
 					base.list);
 	}
+
+	/* done all profiles */
 	return NULL;
 }
 
+/**
+ * p_start - start a depth first traversal of profile tree
+ * @f: seq_file to fill
+ * @pos: current position
+ *
+ * acquires first ns->base.lock
+ */
 static void *p_start(struct seq_file *f, loff_t *pos) __acquires(ns_list_lock)
 {
 	struct aa_namespace *ns;
@@ -72,6 +96,7 @@ static void *p_start(struct seq_file *f, loff_t *pos) __acquires(ns_list_lock)
 		if (!list_empty(&ns->base.profiles)) {
 			profile = list_first_entry(&ns->base.profiles,
 						   typeof(*profile), base.list);
+			/* skip to position */
 			for (; profile && l > 0; l--)
 				profile = next_profile(profile);
 			return profile;
@@ -91,6 +116,14 @@ static void *p_next(struct seq_file *f, void *p, loff_t *pos)
 	return profile;
 }
 
+/**
+ * p_stop - stop depth first traversal
+ * @f: seq_file we are filling
+ * @p: the last profile writen
+ *
+ * if we haven't completely traversed the profile tree will release the
+ * ns->base.lock, if we have the ns->base.lock was released in next_profile
+ */
 static void p_stop(struct seq_file *f, void *p) __releases(ns_list_lock)
 {
 	struct aa_profile *profile = (struct aa_profile *)p;

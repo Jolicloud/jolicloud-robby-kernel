@@ -56,6 +56,7 @@ static int aa_audit_base(int type, struct aa_profile *profile,
 	if (profile && PROFILE_KILL(profile) && type == AUDIT_APPARMOR_DENIED)
 		type = AUDIT_APPARMOR_KILL;
 
+	/* ab freed below in audit_log_end */
 	ab = audit_log_start(audit_cxt, sa->gfp_mask, type);
 
 	if (!ab) {
@@ -110,6 +111,8 @@ out:
  * @profile: profile to check against
  * @sa: audit event
  * @cb: optional callback fn for type specific fields
+ *
+ * Handle default message switching based off of audit mode flags
  */
 int aa_audit(int type, struct aa_profile *profile, struct aa_audit *sa,
 	     void (*cb) (struct audit_buffer *, void *))

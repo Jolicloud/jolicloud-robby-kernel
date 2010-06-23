@@ -52,6 +52,7 @@ static struct table_header *unpack_table(void *blob, size_t bsize)
 	if (bsize < tsize)
 		goto out;
 
+	/* freed by free_table */
 	table = kmalloc(tsize, GFP_KERNEL);
 	if (!table)
 		table = vmalloc(tsize);
@@ -206,6 +207,7 @@ out:
 
 struct aa_dfa *aa_match_alloc(void)
 {
+	/* freed by aa_match_free, by caller */
 	return kzalloc(sizeof(struct aa_dfa), GFP_KERNEL);
 }
 

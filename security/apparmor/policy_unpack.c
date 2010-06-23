@@ -571,6 +571,14 @@ static int aa_verify_header(struct aa_ext *e, struct aa_audit_iface *sa)
 	return 0;
 }
 
+/**
+ * aa_unpack - unpack packed binary profile data loaded from user space
+ * @udata: user data copied to kmem
+ * @size: the size of the user data
+ * @sa: audit struct for unpacking
+ *
+ * Unpack user data and return refcounted allocated profile or ERR_PTR
+ */
 struct aa_profile *aa_unpack(void *udata, size_t size,
 			     struct aa_audit_iface *sa)
 {
@@ -589,5 +597,6 @@ struct aa_profile *aa_unpack(void *udata, size_t size,
 	profile = aa_unpack_profile(&e, sa);
 	if (IS_ERR(profile))
 		sa->pos = e.pos - e.start;
+	/* return refcount */
 	return profile;
 }

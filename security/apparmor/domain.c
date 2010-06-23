@@ -61,6 +61,7 @@ static int aa_may_change_ptraced_domain(struct task_struct *task,
 	rcu_read_lock();
 	tracer = tracehook_tracer_task(task);
 	if (tracer)
+		/* released below */
 		cred = aa_get_task_policy(tracer, &tracerp);
 	rcu_read_unlock();
 
@@ -174,8 +175,16 @@ static struct aa_profile *aa_sys_find_attach(struct aa_policy_common *base,
 	return profile;
 }
 
-/*
- * get target profile for xindex
+/**
+ * x_to_profile - get target profile for a given xindex
+ * @ns: namespace of profile
+ * @profile: current profile
+ * @name: to to lookup if specified
+ * @xindex: index into x transition table
+ *
+ * find profile for a transition index
+ *
+ * Returns: refcounted profile or ERR_PTR
  */
 static struct aa_profile *x_to_profile(struct aa_namespace *ns,
 				       struct aa_profile *profile,
@@ -194,8 +203,10 @@ static struct aa_profile *x_to_profile(struct aa_namespace *ns,
 		return ERR_PTR(-EACCES);
 	case AA_X_NAME:
 		if (xindex & AA_X_CHILD)
+			/* released by caller */
 			new_profile = aa_sys_find_attach(&profile->base, name);
 		else
+			/* released by caller */
 			new_profile = aa_sys_find_attach(&ns->base, name);
 
 		goto out;
@@ -214,6 +225,7 @@ static struct aa_profile *x_to_profile(struct aa_namespace *ns,
 
 		new_ns = NULL;
 		if (xindex & AA_X_CHILD) {
+			/* release by caller */
 			new_profile = aa_find_child(profile, name);
 			if (new_profile)
 				return new_profile;
@@ -229,6 +241,7 @@ static struct aa_profile *x_to_profile(struct aa_namespace *ns,
 				/* TODO: variable support */
 				;
 			}
+			/* released below */
 			new_ns = aa_find_namespace(ns_name);
 			if (!new_ns)
 				continue;
@@ -239,6 +252,7 @@ static struct aa_profile *x_to_profile(struct aa_namespace *ns,
 			xname = name;
 		}
 
+		/* released by caller */
 		new_profile = aa_find_profile(new_ns ? new_ns : ns, xname);
 		aa_put_namespace(new_ns);
 	}
@@ -247,9 +261,14 @@ out:
 	if (!new_profile)
 		return ERR_PTR(-ENOENT);
 
+	/* released by caller */
 	return new_profile;
 }
 
+/**
+ * apparmor_bprm_set_creds - set the new creds on the bprm struct
+ * @bprm: binprm for the exec
+ */
 int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 {
 	struct aa_task_context *cxt;
@@ -281,6 +300,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	profile = aa_confining_profile(cxt->sys.profile);
 	ns = cxt->sys.profile->ns;
 
+	/* buffer freed below, name is pointer inside of buffer */
 	sa.base.error = aa_get_name(&bprm->file->f_path, 0, &buffer,
 				    (char **)&sa.name);
 	if (sa.base.error) {
@@ -385,6 +405,7 @@ apply:
 	bprm->per_clear |= PER_CLEAR_ON_SETID;
 
 	aa_put_profile(cxt->sys.profile);
+	/* transfer new profile reference will be released when cxt is freed */
 	cxt->sys.profile = new_profile;
 
 x_clear:
@@ -419,6 +440,7 @@ int apparmor_bprm_secureexec(struct linux_binprm *bprm)
 void apparmor_bprm_committing_creds(struct linux_binprm *bprm)
 {
 	struct aa_profile *profile;
+	/* ref released below */
 	struct cred *cred = aa_get_task_policy(current, &profile);
 	struct aa_task_context *new_cxt = bprm->cred->security;
 
@@ -493,6 +515,7 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 		root = PROFILE_IS_HAT(profile) ? profile->parent : profile;
 		sa.name2 = profile->ns->base.name;
 
+		/* released below */
 		hat = aa_find_child(root, hat_name);
 		if (!hat) {
 			if (permtest || !PROFILE_COMPLAIN(root))
@@ -501,11 +524,13 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 				 */
 				goto out;
 
+			/* freed below */
 			name = new_compound_name(root->fqname, hat_name);
 
 			sa.name = name;
 			sa.base.info = "hat not found";
 			sa.base.error = -ENOENT;
+			/* released below */
 			hat = aa_alloc_null_profile(profile, 1);
 			if (!hat) {
 				sa.base.info = "failed null profile create";
@@ -593,6 +618,7 @@ int aa_change_profile(const char *ns_name, const char *fqname, int onexec,
 
 	if (ns_name) {
 		sa.name2 = ns_name;
+		/* released below */
 		ns = aa_find_namespace(ns_name);
 		if (!ns) {
 			/* we don't create new namespace in complain mode */
@@ -601,6 +627,7 @@ int aa_change_profile(const char *ns_name, const char *fqname, int onexec,
 			goto audit;
 		}
 	} else {
+		/* released below */
 		ns = aa_get_namespace(cxt->sys.profile->ns);
 		sa.name2 = ns->base.name;
 	}
@@ -620,12 +647,14 @@ int aa_change_profile(const char *ns_name, const char *fqname, int onexec,
 		goto audit;
 	}
 
+	/* released below */
 	target = aa_find_profile(ns, fqname);
 	if (!target) {
 		sa.base.info = "profile not found";
 		sa.base.error = -ENOENT;
 		if (permtest || !PROFILE_COMPLAIN(profile))
 			goto audit;
+		/* release below */
 		target = aa_alloc_null_profile(profile, 0);
 	}
 

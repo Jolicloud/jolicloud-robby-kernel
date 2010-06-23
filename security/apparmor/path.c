@@ -24,6 +24,15 @@
 #include "include/path.h"
 #include "include/policy.h"
 
+/**
+ * d_namespace_path - lookup a name associated with a given path
+ * @path: path to lookup
+ * @buf:  buffer to store path to
+ * @buflen: length of @buf
+ * @name: returns pointer for start of path name with in @buf
+ * @flags: flags controling path lookup
+ *
+ */
 static int d_namespace_path(struct path *path, char *buf, int buflen,
 			    char **name, int flags)
 {
@@ -34,12 +43,15 @@ static int d_namespace_path(struct path *path, char *buf, int buflen,
 
 	read_lock(&current->fs->lock);
 	root = current->fs->root;
+	/* released below */
 	path_get(&current->fs->root);
 	read_unlock(&current->fs->lock);
 	spin_lock(&vfsmount_lock);
 	if (root.mnt && root.mnt->mnt_ns)
+		/* released below */
 		ns_root.mnt = mntget(root.mnt->mnt_ns->root);
 	if (ns_root.mnt)
+		/* released below */
 		ns_root.dentry = dget(ns_root.mnt->mnt_root);
 	spin_unlock(&vfsmount_lock);
 	spin_lock(&dcache_lock);
@@ -137,6 +149,7 @@ int aa_get_name(struct path *path, int is_dir, char **buffer, char **name)
 	*name = NULL;
 	*buffer = NULL;
 	for (;;) {
+		/* freed by caller */
 		buf = kmalloc(size, GFP_KERNEL);
 		if (!buf)
 			return -ENOMEM;

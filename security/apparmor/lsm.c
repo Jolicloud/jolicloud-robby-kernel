@@ -58,6 +58,7 @@ static void apparmor_cred_free(struct cred *cred)
  */
 static int apparmor_cred_alloc_blank(struct cred *cred, gfp_t gfp)
 {
+	/* freed by apparmor_cred_free */
 	struct aa_task_context *cxt = aa_alloc_task_context(gfp);
 	if (cxt)
 		return -ENOMEM;
@@ -72,6 +73,7 @@ static int apparmor_cred_alloc_blank(struct cred *cred, gfp_t gfp)
 static int apparmor_cred_prepare(struct cred *new, const struct cred *old,
 				 gfp_t gfp)
 {
+	/* freed by apparmor_cred_free */
 	struct aa_task_context *cxt = aa_alloc_task_context(gfp);
 	if (!cxt)
 		return -ENOMEM;
@@ -157,6 +159,7 @@ static int apparmor_sysctl(struct ctl_table *table, int op)
 			mask |= MAY_WRITE;
 
 		error = -ENOMEM;
+		/* freed below */
 		buffer = (char *)__get_free_page(GFP_KERNEL);
 		if (!buffer)
 			goto out;
@@ -329,6 +332,7 @@ static int apparmor_dentry_open(struct file *file, const struct cred *cred)
 
 		error = aa_path_perm(profile, "open", &file->f_path,
 				     aa_map_file_to_perms(file), &cond);
+		/* released by aa_free_file_context */
 		fcxt->profile = aa_get_profile(profile);
 		/* todo cache actual allowed permissions */
 		fcxt->allowed = 0;
@@ -339,6 +343,7 @@ static int apparmor_dentry_open(struct file *file, const struct cred *cred)
 
 static int apparmor_file_alloc_security(struct file *file)
 {
+	/* freed by apparmor_file_free_security */
 	file->f_security = aa_alloc_file_context(GFP_KERNEL);
 	if (!file->f_security)
 		return -ENOMEM;
@@ -480,6 +485,7 @@ static int apparmor_getprocattr(struct task_struct *task, char *name,
 	int error = -ENOENT;
 	struct aa_namespace *ns;
 	struct aa_profile *profile, *onexec, *prev;
+	/* released below */
 	const struct cred *cred = aa_get_task_policy(task, &profile);
 	struct aa_task_context *cxt = cred->security;
 	ns = cxt->sys.profile->ns;
@@ -835,6 +841,7 @@ static int __init apparmor_enabled_setup(char *str)
 
 __setup("apparmor=", apparmor_enabled_setup);
 
+/* set global flag turning off the ability to load policy */
 static int param_set_aalockpolicy(const char *val, struct kernel_param *kp)
 {
 	if (__aa_task_is_confined(current))

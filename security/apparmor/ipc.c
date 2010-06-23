@@ -68,6 +68,7 @@ int aa_ptrace(struct task_struct *tracer, struct task_struct *tracee,
 	 */
 
 	struct aa_profile *tracer_p;
+	/* cred released below */
 	const struct cred *cred = aa_get_task_policy(tracer, &tracer_p);
 	int error = 0;
 
@@ -88,6 +89,7 @@ int aa_ptrace(struct task_struct *tracer, struct task_struct *tracee,
 				 audit_cb);
 		} else {
 			struct aa_profile *tracee_p;
+			/* lcred released below */
 			struct cred *lcred = aa_get_task_policy(tracee,
 								&tracee_p);
 
