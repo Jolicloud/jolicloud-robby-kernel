@@ -22,6 +22,10 @@
 
 #include "include/match.h"
 
+/**
+ * free_table - free a table allocated by unpack table
+ * @table: table to unpack  (MAYBE NULL)
+ */
 static void free_table(struct table_header *table)
 {
 	if (is_vmalloc_addr(table))
@@ -30,6 +34,15 @@ static void free_table(struct table_header *table)
 		kzfree(table);
 }
 
+/**
+ * unpack_table - unpack a dfa table (one of accept, default, base, next check)
+ * @blob: data to unpack
+ * @bsize: size of blob
+ *
+ * Returns: pointer to table else NULL on failure
+ *
+ * NOTE: must be freed by free_table (not kmalloc)
+ */
 static struct table_header *unpack_table(void *blob, size_t bsize)
 {
 	struct table_header *table = NULL;
@@ -85,10 +98,13 @@ fail:
 /**
  * verify_dfa - verify that all the transitions and states in the dfa tables
  *              are in bounds.
- * @dfa: dfa to test
+ * @dfa: dfa to test  (NOT NULL)
  * @flags: flags controlling what type of accept table are acceptable
  *
- * assumes dfa has gone through the verification done by unpacking
+ * Assumes dfa has gone through the first pass verification done by unpacking
+ * NOTE: this does not valid accept table values
+ *
+ * Returns: %0 else error code on failure to verify
  */
 static int verify_dfa(struct aa_dfa *dfa, int flags)
 {
@@ -150,6 +166,12 @@ out:
 	return error;
 }
 
+/**
+ * aa_dfa_free - free a dfa allocated by aa_dfa_unpack
+ * @dfa: the dfa to free  (MAYBE NULL)
+ *
+ * Requires: reference count to dfa == 0
+ */
 static void aa_dfa_free(struct aa_dfa *dfa)
 {
 	if (dfa) {
@@ -165,7 +187,7 @@ static void aa_dfa_free(struct aa_dfa *dfa)
 
 /**
  * aa_dfa_free_kref - free aa_dfa by kref (called by aa_put_dfa)
- * @kr: kref callback for freeing of a dfa
+ * @kr: kref callback for freeing of a dfa  (NOT NULL)
  */
 void aa_dfa_free_kref(struct kref *kref)
 {
@@ -175,7 +197,7 @@ void aa_dfa_free_kref(struct kref *kref)
 
 /**
  * aa_dfa_unpack - unpack the binary tables of a serialized dfa
- * @blob: aligned serialized stream of data to unpack
+ * @blob: aligned serialized stream of data to unpack  (NOT NULL)
  * @size: size of data to unpack
  * @flags: flags controlling what type of accept tables are acceptable
  *
@@ -263,9 +285,9 @@ fail:
 
 /**
  * aa_dfa_match_len - traverse @dfa to find state @str stops at
- * @dfa: the dfa to match @str against
+ * @dfa: the dfa to match @str against  (NOT NULL)
  * @start: the state of the dfa to start matching in
- * @str: the string of bytes to match against the dfa
+ * @str: the string of bytes to match against the dfa  (NOT NULL)
  * @len: length of the string of bytes to match
  *
  * aa_dfa_match_len will match @str against the dfa and return the state it
@@ -274,6 +296,8 @@ fail:
  *
  * This function will happily match again the 0 byte and only finishes
  * when @len input is consumed.
+ *
+ * Returns: final state reached after input is consumed
  */
 unsigned int aa_dfa_match_len(struct aa_dfa *dfa, unsigned int start,
 			      const char *str, int len)
@@ -315,13 +339,15 @@ unsigned int aa_dfa_match_len(struct aa_dfa *dfa, unsigned int start,
 
 /**
  * aa_dfa_next_state - traverse @dfa to find state @str stops at
- * @dfa: the dfa to match @str against
+ * @dfa: the dfa to match @str against  (NOT NULL)
  * @start: the state of the dfa to start matching in
- * @str: the null terminated string of bytes to match against the dfa
+ * @str: the null terminated string of bytes to match against the dfa (NOT NULL)
  *
  * aa_dfa_next_state will match @str against the dfa and return the state it
  * finished matching in. The final state can be used to look up the accepting
  * label, or as the start state of a continuing match.
+ *
+ * Returns: final state reached after input is consumed
  */
 unsigned int aa_dfa_match(struct aa_dfa *dfa, unsigned int start,
 			  const char *str)
