@@ -415,9 +415,10 @@ static bool unpack_rlimits(struct aa_ext *e, struct aa_profile *profile)
 			goto fail;
 		for (i = 0; i < size; i++) {
 			u64 tmp = 0;
+			int a = aa_map_resource(i);
 			if (!unpack_u64(e, &tmp, NULL))
 				goto fail;
-			profile->rlimits.limits[i].rlim_max = tmp;
+			profile->rlimits.limits[a].rlim_max = tmp;
 		}
 		if (!unpack_nameX(e, AA_ARRAYEND, NULL))
 			goto fail;

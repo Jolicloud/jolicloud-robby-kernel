@@ -43,6 +43,20 @@ static int audit_resource(struct aa_profile *profile, struct aa_audit *sa)
 }
 
 /**
+ * aa_map_resouce - map compiled policy resource to internal #
+ * @resource: flattened policy resource number
+ *
+ * Returns: resource # for the current architecture.
+ *
+ * rlimit resource can vary based on architecture map the compiled policy
+ * resource # to the internal representation for the architecture.
+ */
+int aa_map_resource(int resource)
+{
+	return rlim_map[resource];
+}
+
+/**
  * aa_task_setrlimit - test permission to set an rlimit
  * @profile - profile confining the task  (NOT NULL)
  * @resource - the resource being set
