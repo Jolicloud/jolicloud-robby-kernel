@@ -15,8 +15,16 @@
 #ifndef __POLICY_INTERFACE_H
 #define __POLICY_INTERFACE_H
 
-ssize_t aa_interface_add_profiles(void *data, size_t size);
-ssize_t aa_interface_replace_profiles(void *udata, size_t size);
-ssize_t aa_interface_remove_profiles(char *name, size_t size);
+struct aa_audit_iface {
+	struct aa_audit base;
+
+	const char *name;
+	const char *name2;
+	long pos;
+};
+
+int aa_audit_iface(struct aa_audit_iface *sa);
+struct aa_profile *aa_unpack(void *udata, size_t size,
+			     struct aa_audit_iface *sa);
 
 #endif /* __POLICY_INTERFACE_H */

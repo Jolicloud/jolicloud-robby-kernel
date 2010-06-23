@@ -28,7 +28,6 @@
 #include "include/audit.h"
 #include "include/context.h"
 #include "include/policy.h"
-#include "include/policy_unpack.h"
 
 static struct aa_profile *next_profile(struct aa_profile *profile)
 {

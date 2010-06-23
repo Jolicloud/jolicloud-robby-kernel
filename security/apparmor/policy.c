@@ -78,6 +78,7 @@
 #include "include/ipc.h"
 #include "include/match.h"
 #include "include/policy.h"
+#include "include/policy_unpack.h"
 #include "include/resource.h"
 #include "include/sid.h"
 
@@ -136,7 +137,7 @@ static struct aa_policy_common *__common_find(struct list_head *head,
 	return NULL;
 }
 
-static struct aa_policy_common *__common_find_strn(struct list_head *head,
+static struct aa_policy_common *__common_strn_find(struct list_head *head,
 						   const char *str, int len)
 {
 	struct aa_policy_common *common;
@@ -253,8 +254,8 @@ void free_aa_namespace(struct aa_namespace *ns)
  *
  * Requires: ns_list_lock be held
  */
-struct aa_namespace *__aa_find_namespace(struct list_head *head,
-					 const char *name)
+static struct aa_namespace *__aa_find_namespace(struct list_head *head,
+						const char *name)
 {
 	return (struct aa_namespace *)__common_find(head, name);
 }
@@ -616,15 +617,16 @@ void free_aa_profile(struct aa_profile *profile)
 
 /* TODO: profile count accounting - setup in remove */
 
-struct aa_profile *__aa_find_profile(struct list_head *head, const char *name)
+static struct aa_profile *__aa_find_child(struct list_head *head,
+					  const char *name)
 {
 	return (struct aa_profile *)__common_find(head, name);
 }
 
-struct aa_profile *__aa_find_profile_by_strn(struct list_head *head,
-					     const char *name, int len)
+static struct aa_profile *__aa_strn_find_child(struct list_head *head,
+					       const char *name, int len)
 {
-	return (struct aa_profile *)__common_find_strn(head, name, len);
+	return (struct aa_profile *)__common_strn_find(head, name, len);
 }
 
 /**
@@ -639,15 +641,14 @@ struct aa_profile *aa_find_child(struct aa_profile *parent, const char *name)
 	struct aa_profile *profile;
 
 	read_lock(&parent->ns->base.lock);
-	profile = aa_get_profile(__aa_find_profile(&parent->base.profiles,
-						   name));
+	profile = aa_get_profile(__aa_find_child(&parent->base.profiles, name));
 	read_unlock(&parent->ns->base.lock);
 
 	return profile;
 }
 
-struct aa_policy_common *__aa_find_parent_by_fqname(struct aa_namespace *ns,
-						    const char *fqname)
+static struct aa_policy_common *__aa_find_parent(struct aa_namespace *ns,
+						 const char *fqname)
 {
 	struct aa_policy_common *common;
 	struct aa_profile *profile = NULL;
@@ -656,8 +657,8 @@ struct aa_policy_common *__aa_find_parent_by_fqname(struct aa_namespace *ns,
 	common = &ns->base;
 
 	for (split = strstr(fqname, "//"); split;) {
-		profile = __aa_find_profile_by_strn(&common->profiles, fqname,
-						    split - fqname);
+		profile = __aa_strn_find_child(&common->profiles, fqname,
+					       split - fqname);
 		if (!profile)
 			return NULL;
 		common = &profile->base;
@@ -669,8 +670,8 @@ struct aa_policy_common *__aa_find_parent_by_fqname(struct aa_namespace *ns,
 	return &profile->base;
 }
 
-struct aa_profile *__aa_find_profile_by_fqname(struct aa_namespace *ns,
-					       const char *fqname)
+static struct aa_profile *__aa_find_profile(struct aa_namespace *ns,
+					    const char *fqname)
 {
 	struct aa_policy_common *common;
 	struct aa_profile *profile = NULL;
@@ -678,8 +679,8 @@ struct aa_profile *__aa_find_profile_by_fqname(struct aa_namespace *ns,
 
 	common = &ns->base;
 	for (split = strstr(fqname, "//"); split;) {
-		profile = __aa_find_profile_by_strn(&common->profiles, fqname,
-						    split - fqname);
+		profile = __aa_strn_find_child(&common->profiles, fqname,
+						 split - fqname);
 		if (!profile)
 			return NULL;
 
@@ -688,7 +689,7 @@ struct aa_profile *__aa_find_profile_by_fqname(struct aa_namespace *ns,
 		split = strstr(fqname, "//");
 	}
 
-	profile = __aa_find_profile(&common->profiles, fqname);
+	profile = __aa_find_child(&common->profiles, fqname);
 
 	return profile;
 }
@@ -698,13 +699,12 @@ struct aa_profile *__aa_find_profile_by_fqname(struct aa_namespace *ns,
  * @ns: the namespace to start from
  * @fqname: name to do lookup on.  Does not contain namespace prefix
  */
-struct aa_profile *aa_find_profile_by_fqname(struct aa_namespace *ns,
-					     const char *fqname)
+struct aa_profile *aa_find_profile(struct aa_namespace *ns, const char *fqname)
 {
 	struct aa_profile *profile;
 
 	read_lock(&ns->base.lock);
-	profile = aa_get_profile(__aa_find_profile_by_fqname(ns, fqname));
+	profile = aa_get_profile(__aa_find_profile(ns, fqname));
 	read_unlock(&ns->base.lock);
 	return profile;
 }
@@ -714,31 +714,22 @@ struct aa_profile *aa_find_profile_by_fqname(struct aa_namespace *ns,
  * @data: serialized data stream
  * @size: size of the serialized data stream
  */
-ssize_t aa_interface_add_profiles(void *data, size_t size)
+ssize_t aa_interface_add_profiles(void *udata, size_t size)
 {
 	struct aa_profile *profile;
 	struct aa_namespace *ns = NULL;
 	struct aa_policy_common *common;
-	struct aa_ext e = {
-		.start = data,
-		.end = data + size,
-		.pos = data,
-		.ns_name = NULL
-	};
 	ssize_t error;
-	struct aa_audit_iface sa;
-	aa_audit_init(&sa, "profile_load", &e);
+	struct aa_audit_iface sa = {
+		.base.operation = "profile_load",
+		.base.gfp_mask = GFP_KERNEL,
+	};
 
-	error = aa_verify_header(&e, &sa);
-	if (error)
-		return error;
-
-	profile = aa_unpack_profile(&e, &sa);
+	profile = aa_unpack(udata, size, &sa);
 	if (IS_ERR(profile))
 		return PTR_ERR(profile);
 
-	sa.name2 = e.ns_name;
-	ns = aa_prepare_namespace(e.ns_name);
+	ns = aa_prepare_namespace(sa.name2);
 	if (IS_ERR(ns)) {
 		sa.base.info = "failed to prepare namespace";
 		sa.base.error = PTR_ERR(ns);
@@ -749,7 +740,7 @@ ssize_t aa_interface_add_profiles(void *data, size_t size)
 
 	write_lock(&ns->base.lock);
 
-	common = __aa_find_parent_by_fqname(ns, sa.name);
+	common = __aa_find_parent(ns, sa.name);
 	if (!common) {
 		sa.base.info = "parent does not exist";
 		sa.base.error = -ENOENT;
@@ -759,7 +750,7 @@ ssize_t aa_interface_add_profiles(void *data, size_t size)
 	if (common != &ns->base)
 		profile->parent = aa_get_profile((struct aa_profile *)common);
 
-	if (__aa_find_profile(&common->profiles, profile->base.name)) {
+	if (__aa_find_child(&common->profiles, profile->base.name)) {
 		/* A profile with this name exists already. */
 		sa.base.info = "profile already exists";
 		sa.base.error = -EEXIST;
@@ -799,29 +790,20 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size)
 	struct aa_policy_common *common;
 	struct aa_profile *old_profile = NULL, *new_profile;
 	struct aa_namespace *ns;
-	struct aa_ext e = {
-		.start = udata,
-		.end = udata + size,
-		.pos = udata,
-		.ns_name = NULL
-	};
 	ssize_t error;
-	struct aa_audit_iface sa;
-	aa_audit_init(&sa, "profile_replace", &e);
+	struct aa_audit_iface sa = {
+		.base.operation = "profile_replace",
+		.base.gfp_mask = GFP_KERNEL,
+	};
 
 	if (aa_g_lock_policy)
 		return -EACCES;
 
-	error = aa_verify_header(&e, &sa);
-	if (error)
-		return error;
-
-	new_profile = aa_unpack_profile(&e, &sa);
+	new_profile = aa_unpack(udata, size, &sa);
 	if (IS_ERR(new_profile))
 		return PTR_ERR(new_profile);
 
-	sa.name2 = e.ns_name;
-	ns = aa_prepare_namespace(e.ns_name);
+	ns = aa_prepare_namespace(sa.name2);
 	if (!ns) {
 		sa.base.info = "failed to prepare namespace";
 		sa.base.error = -ENOMEM;
@@ -831,7 +813,7 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size)
 	sa.name = new_profile->fqname;
 
 	write_lock(&ns->base.lock);
-	common = __aa_find_parent_by_fqname(ns, sa.name);
+	common = __aa_find_parent(ns, sa.name);
 
 	if (!common) {
 		sa.base.info = "parent does not exist";
@@ -839,8 +821,8 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size)
 		goto fail2;
 	}
 
-	old_profile = __aa_find_profile(&common->profiles,
-					new_profile->base.name);
+	old_profile = __aa_find_child(&common->profiles,
+				      new_profile->base.name);
 	aa_get_profile(old_profile);
 	if (old_profile && old_profile->flags & PFLAG_IMMUTABLE) {
 		sa.base.info = "cannot replace immutible profile";
@@ -891,8 +873,10 @@ ssize_t aa_interface_remove_profiles(char *name, size_t size)
 {
 	struct aa_namespace *ns;
 	struct aa_profile *profile;
-	struct aa_audit_iface sa;
-	aa_audit_init(&sa, "profile_remove", NULL);
+	struct aa_audit_iface sa = {
+		.base.operation = "profile_remove",
+		.base.gfp_mask = GFP_KERNEL,
+	};
 
 	if (aa_g_lock_policy)
 		return -EACCES;
@@ -921,7 +905,7 @@ ssize_t aa_interface_remove_profiles(char *name, size_t size)
 			__aa_remove_namespace(ns);
 	} else {
 		/* remove profile */
-		profile = __aa_find_profile_by_fqname(ns, name);
+		profile = __aa_find_profile(ns, name);
 		if (!profile) {
 			sa.name = name;
 			sa.base.info = "failed: profile does not exist";

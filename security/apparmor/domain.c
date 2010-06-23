@@ -239,8 +239,7 @@ static struct aa_profile *x_to_profile(struct aa_namespace *ns,
 			xname = name;
 		}
 
-		new_profile = aa_find_profile_by_fqname(new_ns ? new_ns : ns,
-							xname);
+		new_profile = aa_find_profile(new_ns ? new_ns : ns, xname);
 		aa_put_namespace(new_ns);
 	}
 
@@ -621,7 +620,7 @@ int aa_change_profile(const char *ns_name, const char *fqname, int onexec,
 		goto audit;
 	}
 
-	target = aa_find_profile_by_fqname(ns, fqname);
+	target = aa_find_profile(ns, fqname);
 	if (!target) {
 		sa.base.info = "profile not found";
 		sa.base.error = -ENOENT;

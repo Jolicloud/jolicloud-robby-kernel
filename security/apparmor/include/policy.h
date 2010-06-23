@@ -200,16 +200,10 @@ void aa_free_default_namespace(void);
 struct aa_namespace *alloc_aa_namespace(const char *name);
 void free_aa_namespace_kref(struct kref *kref);
 void free_aa_namespace(struct aa_namespace *ns);
-struct aa_namespace *__aa_find_namespace(struct list_head *head,
-					 const char *name);
 
 struct aa_namespace *aa_find_namespace(const char *name);
 struct aa_namespace *aa_prepare_namespace(const char *name);
-void aa_remove_namespace(struct aa_namespace *ns);
-struct aa_namespace *aa_prepare_namespace(const char *name);
-void aa_profile_list_release(struct list_head *head);
 void aa_profile_ns_list_release(void);
-void __aa_remove_namespace(struct aa_namespace *ns);
 
 static inline struct aa_policy_common *aa_get_common(struct aa_policy_common *c)
 {
@@ -237,21 +231,13 @@ struct aa_profile *alloc_aa_profile(const char *name);
 struct aa_profile *aa_alloc_null_profile(struct aa_profile *parent, int hat);
 void free_aa_profile_kref(struct kref *kref);
 void free_aa_profile(struct aa_profile *profile);
-struct aa_profile *__aa_find_profile(struct list_head *head, const char *name);
 struct aa_profile *aa_find_child(struct aa_profile *parent, const char *name);
-struct aa_policy_common *__aa_find_parent_by_fqname(struct aa_namespace *ns,
-						    const char *fqname);
-struct aa_profile *__aa_find_profile_by_fqname(struct aa_namespace *ns,
-					       const char *fqname);
-struct aa_profile *aa_find_profile_by_fqname(struct aa_namespace *ns,
-					     const char *name);
+struct aa_profile *aa_find_profile(struct aa_namespace *ns, const char *name);
 struct aa_profile *aa_match_profile(struct aa_namespace *ns, const char *name);
-void __aa_add_profile(struct aa_policy_common *common,
-		      struct aa_profile *profile);
-void __aa_remove_profile(struct aa_profile *profile);
-void __aa_replace_profile(struct aa_profile *profile,
-			  struct aa_profile *replacement);
-void __aa_profile_list_release(struct list_head *head);
+
+ssize_t aa_interface_add_profiles(void *data, size_t size);
+ssize_t aa_interface_replace_profiles(void *udata, size_t size);
+ssize_t aa_interface_remove_profiles(char *name, size_t size);
 
 /**
  * aa_filter_profile - filter out profiles that shouldn't be used to mediate

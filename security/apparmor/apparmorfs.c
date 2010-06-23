@@ -24,7 +24,6 @@
 #include "include/audit.h"
 #include "include/context.h"
 #include "include/policy.h"
-#include "include/policy_unpack.h"
 
 static char *aa_simple_write_to_buffer(const char __user *userbuf,
 				       size_t alloc_size, size_t copy_size,

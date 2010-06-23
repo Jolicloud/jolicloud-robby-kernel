@@ -63,25 +63,7 @@ struct aa_ext {
 	void *end;
 	void *pos;		/* pointer to current position in the buffer */
 	u32 version;
-	const char *ns_name;
 };
-
-struct aa_audit_iface {
-	struct aa_audit base;
-
-	const char *name;
-	const char *name2;
-	const struct aa_ext *e;
-};
-
-static void aa_audit_init(struct aa_audit_iface *sa, const char *operation,
-			  struct aa_ext *e)
-{
-	memset(sa, 0, sizeof(*sa));
-	sa->base.operation = operation;
-	sa->base.gfp_mask = GFP_KERNEL;
-	sa->e = e;
-}
 
 static void audit_cb(struct audit_buffer *ab, void *va)
 {
@@ -91,13 +73,11 @@ static void audit_cb(struct audit_buffer *ab, void *va)
 		audit_log_format(ab, " name=%s", sa->name);
 	if (sa->name2)
 		audit_log_format(ab, " namespace=%s", sa->name2);
-	if (sa->base.error && sa->e) {
-		long len = sa->e->pos - sa->e->start;
-		audit_log_format(ab, " offset=%ld", len);
-	}
+	if (sa->base.error && sa->pos)
+		audit_log_format(ab, " offset=%ld", sa->pos);
 }
 
-static int aa_audit_iface(struct aa_audit_iface *sa)
+int aa_audit_iface(struct aa_audit_iface *sa)
 {
 	struct aa_profile *profile;
 	struct cred *cred = aa_get_task_policy(current, &profile);
@@ -585,8 +565,29 @@ static int aa_verify_header(struct aa_ext *e, struct aa_audit_iface *sa)
 	}
 
 	/* read the namespace if present */
-	if (!unpack_string(e, &e->ns_name, "namespace"))
-		e->ns_name = NULL;
+	if (!unpack_string(e, &sa->name2, "namespace"))
+		sa->name2 = NULL;
 
 	return 0;
+}
+
+struct aa_profile *aa_unpack(void *udata, size_t size,
+			     struct aa_audit_iface *sa)
+{
+	struct aa_profile *profile;
+	int error;
+	struct aa_ext e = {
+		.start = udata,
+		.end = udata + size,
+		.pos = udata,
+	};
+
+	error = aa_verify_header(&e, sa);
+	if (error)
+		return ERR_PTR(error);
+
+	profile = aa_unpack_profile(&e, sa);
+	if (IS_ERR(profile))
+		sa->pos = e.pos - e.start;
+	return profile;
 }
