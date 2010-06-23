@@ -149,6 +149,29 @@ out:
 	return error;
 }
 
+static void aa_dfa_free(struct aa_dfa *dfa)
+{
+	if (dfa) {
+		int i;
+
+		for (i = 0; i < ARRAY_SIZE(dfa->tables); i++) {
+			free_table(dfa->tables[i]);
+			dfa->tables[i] = NULL;
+		}
+	}
+	kfree(dfa);
+}
+
+/**
+ * aa_dfa_free_kref - free aa_dfa by kref (called by aa_put_dfa)
+ * @kr: kref callback for freeing of a dfa
+ */
+void aa_dfa_free_kref(struct kref *kref)
+{
+	struct aa_dfa *dfa = container_of(kref, struct aa_dfa, count);
+	aa_dfa_free(dfa);
+}
+
 /**
  * aa_dfa_unpack - unpack the binary tables of a serialized dfa
  * @blob: aligned serialized stream of data to unpack
@@ -168,6 +191,8 @@ struct aa_dfa *aa_dfa_unpack(void *blob, size_t size, int flags)
 	struct aa_dfa *dfa = kzalloc(sizeof(struct aa_dfa), GFP_KERNEL);
 	if (!dfa)
 		goto fail;
+
+	kref_init(&dfa->count);
 
 	/* get dfa table set header */
 	if (size < sizeof(struct table_set_header))
@@ -232,19 +257,6 @@ struct aa_dfa *aa_dfa_unpack(void *blob, size_t size, int flags)
 fail:
 	aa_dfa_free(dfa);
 	return ERR_PTR(error);
-}
-
-void aa_dfa_free(struct aa_dfa *dfa)
-{
-	if (dfa) {
-		int i;
-
-		for (i = 0; i < ARRAY_SIZE(dfa->tables); i++) {
-			free_table(dfa->tables[i]);
-			dfa->tables[i] = NULL;
-		}
-	}
-	kfree(dfa);
 }
 
 /**

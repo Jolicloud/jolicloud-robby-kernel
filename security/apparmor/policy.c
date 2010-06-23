@@ -637,7 +637,7 @@ static void aa_free_profile(struct aa_profile *profile)
 	aa_free_rlimit_rules(&profile->rlimits);
 
 	aa_free_sid(profile->sid);
-	aa_dfa_free(profile->xmatch);
+	aa_put_dfa(profile->xmatch);
 
 	if (profile->replacedby)
 		aa_put_profile(profile->replacedby);

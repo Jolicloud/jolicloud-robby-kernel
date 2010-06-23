@@ -193,7 +193,7 @@ int aa_file_perm(struct aa_profile *profile, const char *operation,
 
 static inline void aa_free_file_rules(struct aa_file_rules *rules)
 {
-	aa_dfa_free(rules->dfa);
+	aa_put_dfa(rules->dfa);
 	aa_free_domain_entries(&rules->trans);
 }
 
