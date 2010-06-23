@@ -750,7 +750,7 @@ static struct security_operations apparmor_ops = {
 	.cred_prepare =			apparmor_cred_prepare,
 
 	.bprm_set_creds =		apparmor_bprm_set_creds,
-	//	.bprm_committing_creds =	apparmor_bprm_committing_creds,
+	.bprm_committing_creds =	apparmor_bprm_committing_creds,
 	.bprm_committed_creds =		apparmor_bprm_committed_creds,
 	.bprm_secureexec =		apparmor_bprm_secureexec,
 

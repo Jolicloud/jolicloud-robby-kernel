@@ -172,7 +172,6 @@ static struct aa_profile *aa_sys_find_attach(struct aa_policy_common *base,
 	return profile;
 }
 
-
 /*
  * get target profile for xindex
  */
@@ -514,7 +513,7 @@ static int revalidate_files(struct aa_profile *profile,
 	return 0;
 }
 
-int apparmor_bprm_committing_creds(struct linux_binprm *bprm)
+void apparmor_bprm_committing_creds(struct linux_binprm *bprm)
 {
 	struct aa_profile *profile;
 	struct cred *cred = aa_get_task_policy(current, &profile);
@@ -525,20 +524,20 @@ int apparmor_bprm_committing_creds(struct linux_binprm *bprm)
 	if ((new_cxt->sys.profile == profile) ||
 	    (new_cxt->sys.profile->flags & PFLAG_UNCONFINED)) {
 		put_cred(cred);
-		return 0;
+		return;
 	}
 	put_cred(cred);
 
+	/*
 	error = revalidate_files(new_cxt->sys.profile, current->files,
 				 GFP_KERNEL, bprm->cred);
 	if (error)
 		return error;
-
+	*/
 	current->pdeath_signal = 0;
 
 	/* reset soft limits and set hard limits for the new profile */
 	__aa_transition_rlimits(profile, new_cxt->sys.profile);
-	return 0;
 }
 
 void apparmor_bprm_committed_creds(struct linux_binprm *bprm)
@@ -649,7 +648,6 @@ out:
 
 	return sa.base.error;
 }
-
 
 /**
  * aa_change_profile - perform a one-way profile transition
