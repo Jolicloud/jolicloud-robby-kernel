@@ -16,9 +16,6 @@
 #include <linux/slab.h>
 #include <linux/errno.h>
 
-/* TODO: remove !!!! */
-// #include <linux/fs.h>
-
 #include "include/apparmor.h"
 #include "include/match.h"
 #include "include/file.h"
