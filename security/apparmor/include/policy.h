@@ -197,7 +197,7 @@ void aa_add_profile(struct aa_policy_common *common,
 
 int aa_alloc_default_namespace(void);
 void aa_free_default_namespace(void);
-void free_aa_namespace_kref(struct kref *kref);
+void aa_free_namespace_kref(struct kref *kref);
 
 struct aa_namespace *aa_find_namespace(const char *name);
 void aa_profile_ns_list_release(void);
@@ -221,12 +221,12 @@ static inline struct aa_namespace *aa_get_namespace(struct aa_namespace *ns)
 static inline void aa_put_namespace(struct aa_namespace *ns)
 {
 	if (ns)
-		kref_put(&ns->base.count, free_aa_namespace_kref);
+		kref_put(&ns->base.count, aa_free_namespace_kref);
 }
 
-struct aa_profile *alloc_aa_profile(const char *name);
+struct aa_profile *aa_alloc_profile(const char *name);
 struct aa_profile *aa_new_null_profile(struct aa_profile *parent, int hat);
-void free_aa_profile_kref(struct kref *kref);
+void aa_free_profile_kref(struct kref *kref);
 struct aa_profile *aa_find_child(struct aa_profile *parent, const char *name);
 struct aa_profile *aa_find_profile(struct aa_namespace *ns, const char *name);
 struct aa_profile *aa_match_profile(struct aa_namespace *ns, const char *name);
@@ -301,7 +301,7 @@ static inline struct aa_profile *aa_get_profile(struct aa_profile *p)
 static inline void aa_put_profile(struct aa_profile *p)
 {
 	if (p)
-		kref_put(&p->base.count, free_aa_profile_kref);
+		kref_put(&p->base.count, aa_free_profile_kref);
 }
 
 static inline int PROFILE_AUDIT_MODE(struct aa_profile *profile)

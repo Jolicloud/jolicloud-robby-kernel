@@ -184,11 +184,11 @@ static struct aa_policy_common *__common_strn_find(struct list_head *head,
  */
 
 /**
- * alloc_aa_namespace - allocate, initialize and return a new namespace
+ * aa_alloc_namespace - allocate, initialize and return a new namespace
  * @name: a preallocated name
  * Returns NULL on failure.
  */
-static struct aa_namespace *alloc_aa_namespace(const char *name)
+static struct aa_namespace *aa_alloc_namespace(const char *name)
 {
 	struct aa_namespace *ns;
 
@@ -202,9 +202,9 @@ static struct aa_namespace *alloc_aa_namespace(const char *name)
 
 	/*
 	 * null profile is not added to the profile list,
-	 * released by free_aa_namespace
+	 * released by aa_free_namespace
 	 */
-	ns->unconfined = alloc_aa_profile("unconfined");
+	ns->unconfined = aa_alloc_profile("unconfined");
 	if (!ns->unconfined)
 		goto fail_unconfined;
 
@@ -213,7 +213,7 @@ static struct aa_namespace *alloc_aa_namespace(const char *name)
 	    PFLAG_IMMUTABLE;
 
 	/*
-	 * released by free_aa_namespace, however aa_remove_namespace breaks
+	 * released by aa_free_namespace, however aa_remove_namespace breaks
 	 * the cyclic references (ns->unconfined, and unconfinged->ns) and
 	 * replaces with refs to default namespace unconfined
 	 */
@@ -229,13 +229,13 @@ fail_ns:
 }
 
 /**
- * free_aa_namespace - free a profile namespace
+ * aa_free_namespace - free a profile namespace
  * @namespace: the namespace to free
  *
  * Requires: All references to the namespace must have been put, if the
  *           namespace was referenced by a profile confining a task,
  */
-static void free_aa_namespace(struct aa_namespace *ns)
+static void aa_free_namespace(struct aa_namespace *ns)
 {
 	if (!ns)
 		return;
@@ -250,12 +250,12 @@ static void free_aa_namespace(struct aa_namespace *ns)
 }
 
 /**
- * free_aa_namespace_kref - free aa_namespace by kref (see aa_put_namespace)
+ * aa_free_namespace_kref - free aa_namespace by kref (see aa_put_namespace)
  * @kr: kref callback for freeing of a namespace
  */
-void free_aa_namespace_kref(struct kref *kref)
+void aa_free_namespace_kref(struct kref *kref)
 {
-	free_aa_namespace(container_of(kref, struct aa_namespace, base.count));
+	aa_free_namespace(container_of(kref, struct aa_namespace, base.count));
 }
 
 /**
@@ -268,7 +268,7 @@ int __init aa_alloc_default_namespace(void)
 {
 	struct aa_namespace *ns;
 	/* released by aa_free_default_namespace - used as list ref*/
-	ns = alloc_aa_namespace("default");
+	ns = aa_alloc_namespace("default");
 	if (!ns)
 		return -ENOMEM;
 
@@ -347,7 +347,7 @@ static struct aa_namespace *aa_prepare_namespace(const char *name)
 		/* name && namespace not found */
 		struct aa_namespace *new_ns;
 		write_unlock(&ns_list_lock);
-		new_ns = alloc_aa_namespace(name);
+		new_ns = aa_alloc_namespace(name);
 		if (!new_ns)
 			return NULL;
 		write_lock(&ns_list_lock);
@@ -359,7 +359,7 @@ static struct aa_namespace *aa_prepare_namespace(const char *name)
 			ns = aa_get_namespace(new_ns);
 		} else {
 			/* raced so free the new one */
-			free_aa_namespace(new_ns);
+			aa_free_namespace(new_ns);
 			/* get reference on namespace */
 			aa_get_namespace(ns);
 		}
@@ -451,7 +451,7 @@ static void __aa_replace_profile(struct aa_profile *old,
 		list_move(&child->base.list, &new->base.profiles);
 	}
 
-	/* released by free_aa_profile */
+	/* released by aa_free_profile */
 	old->replacedby = aa_get_profile(new);
 	__aa_remove_profile(old);
 }
@@ -517,16 +517,16 @@ void aa_profile_ns_list_release(void)
 }
 
 /**
- * alloc_aa_profile - allocate, initialize and return a new profile
+ * aa_alloc_profile - allocate, initialize and return a new profile
  * @hname: name of the profile
  *
  * Returns NULL on failure, else refcounted profile
  */
-struct aa_profile *alloc_aa_profile(const char *hname)
+struct aa_profile *aa_alloc_profile(const char *hname)
 {
 	struct aa_profile *profile;
 
-	/* freed by free_aa_profile - usually through aa_put_profile */
+	/* freed by aa_free_profile - usually through aa_put_profile */
 	profile = kzalloc(sizeof(*profile), GFP_KERNEL);
 	if (!profile)
 		return NULL;
@@ -564,7 +564,7 @@ struct aa_profile *aa_new_null_profile(struct aa_profile *parent, int hat)
 		goto fail;
 	sprintf(name, "%s//null-%x", parent->base.hname, sid);
 
-	profile = alloc_aa_profile(name);
+	profile = aa_alloc_profile(name);
 	kfree(name);
 	if (!profile)
 		goto fail;
@@ -575,7 +575,7 @@ struct aa_profile *aa_new_null_profile(struct aa_profile *parent, int hat)
 	if (hat)
 		profile->flags |= PFLAG_HAT;
 
-	/* released on free_aa_profile */
+	/* released on aa_free_profile */
 	profile->parent = aa_get_profile(parent);
 	profile->ns = aa_get_namespace(parent->ns);
 
@@ -591,16 +591,16 @@ fail:
 }
 
 /**
- * free_aa_profile - free a profile
+ * aa_free_profile - free a profile
  * @profile: the profile to free
  *
  * Free a profile, its hats and null_profile. All references to the profile,
  * its hats and null_profile must have been put.
  *
- * If the profile was referenced from a task context, free_aa_profile() will
+ * If the profile was referenced from a task context, aa_free_profile() will
  * be called from an rcu callback routine, so we must not sleep here.
  */
-static void free_aa_profile(struct aa_profile *profile)
+static void aa_free_profile(struct aa_profile *profile)
 {
 	AA_DEBUG("%s(%p)\n", __func__, profile);
 
@@ -647,15 +647,15 @@ static void free_aa_profile(struct aa_profile *profile)
 }
 
 /**
- * free_aa_profile_kref - free aa_profile by kref (called by aa_put_profile)
+ * aa_free_profile_kref - free aa_profile by kref (called by aa_put_profile)
  * @kr: kref callback for freeing of a profile
  */
-void free_aa_profile_kref(struct kref *kref)
+void aa_free_profile_kref(struct kref *kref)
 {
 	struct aa_profile *p = container_of(kref, struct aa_profile,
 					    base.count);
 
-	free_aa_profile(p);
+	aa_free_profile(p);
 }
 
 /* TODO: profile count accounting - setup in remove */
@@ -875,11 +875,11 @@ audit:
 			__aa_replace_profile(old_profile, new_profile);
 		} else {
 			if (common != &ns->base)
-				/* released on profile replacement or free_aa_profile */
+				/* released on profile replacement or aa_free_profile */
 				new_profile->parent = aa_get_profile(
 					(struct aa_profile *) common);
 			__aa_add_profile(common, new_profile);
-			/* released on free_aa_profile */
+			/* released on aa_free_profile */
 			new_profile->sid = aa_alloc_sid(AA_ALLOC_SYS_SID);
 			new_profile->ns = aa_get_namespace(ns);
 		}
