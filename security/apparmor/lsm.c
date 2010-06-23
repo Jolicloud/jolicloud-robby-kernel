@@ -509,12 +509,10 @@ static int apparmor_getprocattr(struct task_struct *task, char *name,
 				char **value)
 {
 	int error = -ENOENT;
-	struct aa_namespace *ns;
 	struct aa_profile *profile, *onexec, *prev;
 	/* released below */
 	const struct cred *cred = aa_get_task_policy(task, &profile);
 	struct aa_task_context *cxt = cred->security;
-	ns = cxt->sys.profile->ns;
 	onexec = cxt->sys.onexec;
 	prev = cxt->sys.previous;
 
@@ -523,13 +521,13 @@ static int apparmor_getprocattr(struct task_struct *task, char *name,
 		error = -EPERM;
 	} else {
 		if (strcmp(name, "current") == 0) {
-			error = aa_getprocattr(ns, profile, value);
+			error = aa_getprocattr(profile, value);
 		} else if (strcmp(name, "prev") == 0) {
 			if (prev)
-				error = aa_getprocattr(ns, prev, value);
+				error = aa_getprocattr(prev, value);
 		} else if (strcmp(name, "exec") == 0) {
 			if (onexec)
-				error = aa_getprocattr(ns, onexec, value);
+				error = aa_getprocattr(onexec, value);
 		} else {
 			error = -EINVAL;
 		}

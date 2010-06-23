@@ -17,8 +17,7 @@
 
 #define AA_DO_TEST 1
 
-int aa_getprocattr(struct aa_namespace *ns, struct aa_profile *profile,
-		   char **string);
+int aa_getprocattr(struct aa_profile *profile, char **string);
 int aa_setprocattr_changehat(char *args, int test);
 int aa_setprocattr_changeprofile(char *fqname, int onexec, int test);
 int aa_setprocattr_permipc(char *fqname);

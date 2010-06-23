@@ -16,8 +16,17 @@
 #include "include/policy.h"
 #include "include/domain.h"
 
-int aa_getprocattr(struct aa_namespace *ns, struct aa_profile *profile,
-		   char **string)
+/**
+ * aa_getprocattr - Return the profile information for @profile
+ * @profile: the profile to print profile info about
+ * @string: the string that will contain the profile and namespace info
+ *
+ * Returns: length of @string on success else error on failure
+ *
+ * Creates a string containing the namespace_name://profile_name for
+ * @profile.
+ */
+int aa_getprocattr(struct aa_profile *profile, char **string)
 {
 	char *str;
 	int len = 0;
@@ -25,6 +34,7 @@ int aa_getprocattr(struct aa_namespace *ns, struct aa_profile *profile,
 	if (profile) {
 		int mode_len, name_len, ns_len = 0;
 		const char *mode_str = profile_mode_names[profile->mode];
+		struct aa_namespace *ns = profile->ns;
 		char *s;
 
 		mode_len = strlen(mode_str) + 3;	/* + 3 for _() */
@@ -45,17 +55,12 @@ int aa_getprocattr(struct aa_namespace *ns, struct aa_profile *profile,
 		const char unconfined_str[] = "unconfined\n";
 
 		len = sizeof(unconfined_str) - 1;	/* - 1 for \0 */
-		if (ns != default_namespace)
-			len += strlen(ns->base.name) + 3; /* + 3 for :// */
 
 		str = kmalloc(len + 1, GFP_ATOMIC);
 		if (!str)
 			return -ENOMEM;
 
-		if (ns != default_namespace)
-			sprintf(str, "%s://%s", ns->base.name, unconfined_str);
-		else
-			memcpy(str, unconfined_str, len);
+		memcpy(str, unconfined_str, len);
 	}
 	*string = str;
 
