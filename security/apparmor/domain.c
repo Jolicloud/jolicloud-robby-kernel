@@ -274,7 +274,7 @@ static struct aa_profile *x_to_profile(struct aa_profile *profile,
 				;
 			}
 			/* released below */
-			new_ns = aa_find_namespace(ns_name);
+			new_ns = aa_find_namespace(profile->ns, ns_name);
 			if (!new_ns)
 				continue;
 		} else if (*name == '@') {
@@ -553,7 +553,7 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 	if (count) {
 		/* attempting to change into a new hat or switch to a sibling */
 		struct aa_profile *root;
-		root = PROFILE_IS_HAT(profile) ? profile->base.parent : profile;
+		root = PROFILE_IS_HAT(profile) ? profile->parent : profile;
 		sa.name2 = profile->ns->base.hname;
 
 		/* find first matching hat */
@@ -666,7 +666,7 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 
 	if (ns_name) {
 		/* released below */
-		ns = aa_find_namespace(ns_name);
+		ns = aa_find_namespace(profile->ns, ns_name);
 		if (!ns) {
 			/* we don't create new namespace in complain mode */
 			sa.name2 = ns_name;
@@ -677,7 +677,7 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 		sa.name2 = ns->base.hname;
 	} else {
 		/* released below */
-		ns = aa_get_namespace(cxt->profile->ns);
+		ns = aa_get_namespace(profile->ns);
 		sa.name2 = ns->base.hname;
 	}
 

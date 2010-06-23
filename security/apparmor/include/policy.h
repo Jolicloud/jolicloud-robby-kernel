@@ -75,7 +75,6 @@ enum profile_flags {
 struct aa_profile;
 
 /* struct aa_policy - common part of both namespaces and profiles
- * @parent: parent of the namespace or profile
  * @name: name of the object
  * @hname - The hierarchical name
  * @count: reference count of the obj
@@ -84,7 +83,6 @@ struct aa_profile;
  * @profiles: head of the profiles list contained in the object
  */
 struct aa_policy {
-	struct aa_policy *parent;
 	char *name;
 	char *hname;
 	struct kref count;
@@ -108,8 +106,10 @@ struct aa_ns_acct {
 
 /* struct aa_namespace - namespace for a set of profiles
  * @base: common policy
+ * @parent: parent of namespace
  * @acct: accounting for the namespace
  * @unconfined: special unconfined profile for the namespace
+ * @sub_ns: list of namespaces under the current namespace.
  *
  * An aa_namespace defines the set profiles that are searched to determine
  * which profile to attach to a task.  Profiles can not be shared between
@@ -122,16 +122,19 @@ struct aa_ns_acct {
  *
  * Namespace names must be unique and can not contain the characters :/\0
  *
- * FIXME TODO: add vserver support so a vserer gets a default namespace
+ * FIXME TODO: add vserver support so a vserer (can it all be done in userspace)
  */
 struct aa_namespace {
 	struct aa_policy base;
+	struct aa_namespace *parent;
 	struct aa_ns_acct acct;
 	struct aa_profile *unconfined;
+	struct list_head sub_ns;
 };
 
 /* struct aa_profile - basic confinement data
  * @base - base componets of the profile (name, refcount, lists, lock ...)
+ * @parent: parent of profile
  * @ns: namespace the profile is in
  * @replacedby: is set profile that replaced this profile
  * @xmatch: optional extended matching for unconfined executables names
@@ -163,6 +166,7 @@ struct aa_namespace {
  */
 struct aa_profile {
 	struct aa_policy base;
+	struct aa_profile *parent;
 
 	struct aa_namespace *ns;
 	union {
@@ -185,9 +189,6 @@ struct aa_profile {
 	struct aa_rlimit rlimits;
 };
 
-extern struct list_head ns_list;
-extern rwlock_t ns_list_lock;
-
 extern struct aa_namespace *root_ns;
 extern enum profile_mode aa_g_profile_mode;
 
@@ -197,8 +198,8 @@ int aa_alloc_root_ns(void);
 void aa_free_root_ns(void);
 void aa_free_namespace_kref(struct kref *kref);
 
-struct aa_namespace *aa_find_namespace(const char *name);
-void aa_profile_ns_list_release(void);
+struct aa_namespace *aa_find_namespace(struct aa_namespace *root,
+				       const char *name);
 
 static inline struct aa_policy *aa_get_common(struct aa_policy *c)
 {

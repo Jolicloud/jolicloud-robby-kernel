@@ -68,8 +68,6 @@
  *   eg. :ns:/bin/bash//bin/ls
  *
  * NOTES:
- *   - hierarchical namespaces are not currently implemented.  Currently
- *     there is only a flat set of namespaces.
  *   - locking of profile lists is currently fairly coarse.  All profile
  *     lists within a namespace use the namespace lock.
  */
@@ -80,6 +78,7 @@
 
 #include "include/apparmor.h"
 #include "include/capability.h"
+#include "include/context.h"
 #include "include/file.h"
 #include "include/ipc.h"
 #include "include/match.h"
@@ -88,11 +87,8 @@
 #include "include/resource.h"
 #include "include/sid.h"
 
-/* list of profile namespaces and lock */
-LIST_HEAD(ns_list);
-DEFINE_RWLOCK(ns_list_lock);
 
-/* base profile namespace */
+/* root profile namespace */
 struct aa_namespace *root_ns;
 
 const char *profile_mode_names[] = {
@@ -158,8 +154,6 @@ static void policy_destroy(struct aa_policy *policy)
 			 __func__, policy->name);
 		BUG();
 	}
-
-	aa_put_profile(policy->parent);
 
 	/* don't free name as its a subset of hname */
 	kzfree(policy->hname);
@@ -231,6 +225,7 @@ static struct aa_namespace *aa_alloc_namespace(const char *name)
 
 	if (!policy_init(&ns->base, name))
 		goto fail_ns;
+	INIT_LIST_HEAD(&ns->sub_ns);
 
 	/*
 	 * null profile is not added to the profile list,
@@ -273,6 +268,7 @@ static void aa_free_namespace(struct aa_namespace *ns)
 		return;
 
 	policy_destroy(&ns->base);
+	aa_put_namespace(ns->parent);
 
 	if (ns->unconfined && ns->unconfined->ns == ns)
 		ns->unconfined->ns = NULL;
@@ -296,7 +292,7 @@ void aa_free_namespace_kref(struct kref *kref)
  *
  * Return: unrefcounted namespace
  *
- * Requires: ns_list_lock be held
+ * Requires: ns lock be held
  */
 static struct aa_namespace *__aa_find_namespace(struct list_head *head,
 						const char *name)
@@ -306,6 +302,7 @@ static struct aa_namespace *__aa_find_namespace(struct list_head *head,
 
 /**
  * aa_find_namespace  -  look up a profile namespace on the namespace list
+ * @root: namespace to search in
  * @name: name of namespace to find
  *
  * Return: a pointer to the namespace on the list, or NULL if no namespace
@@ -313,13 +310,14 @@ static struct aa_namespace *__aa_find_namespace(struct list_head *head,
  *
  * refcount released by caller
  */
-struct aa_namespace *aa_find_namespace(const char *name)
+struct aa_namespace *aa_find_namespace(struct aa_namespace *root,
+				       const char *name)
 {
 	struct aa_namespace *ns = NULL;
 
-	read_lock(&ns_list_lock);
-	ns = aa_get_namespace(__aa_find_namespace(&ns_list, name));
-	read_unlock(&ns_list_lock);
+	read_lock(&root->base.lock);
+	ns = aa_get_namespace(__aa_find_namespace(&root->sub_ns, name));
+	read_unlock(&root->base.lock);
 
 	return ns;
 }
@@ -332,27 +330,32 @@ struct aa_namespace *aa_find_namespace(const char *name)
  */
 static struct aa_namespace *aa_prepare_namespace(const char *name)
 {
-	struct aa_namespace *ns;
+	struct aa_namespace *ns, *root;
 
-	write_lock(&ns_list_lock);
+	root = aa_current_profile()->ns;
+
+	write_lock(&root->base.lock);
 	if (name)
 		/* released by caller */
-		ns = aa_get_namespace(__aa_find_namespace(&ns_list, name));
+		ns = aa_get_namespace(__aa_find_namespace(&root->sub_ns, name));
 	else
 		/* released by caller */
-		ns = aa_get_namespace(root_ns);
+		ns = aa_get_namespace(root);
 	if (!ns) {
 		/* name && namespace not found */
 		struct aa_namespace *new_ns;
-		write_unlock(&ns_list_lock);
+		write_unlock(&root->base.lock);
 		new_ns = aa_alloc_namespace(name);
 		if (!new_ns)
 			return NULL;
-		write_lock(&ns_list_lock);
+		write_lock(&root->base.lock);
 		/* test for race when new_ns was allocated */
-		ns = __aa_find_namespace(&ns_list, name);
+		ns = __aa_find_namespace(&root->sub_ns, name);
 		if (!ns) {
-			list_add(&new_ns->base.list, &ns_list);
+			/* add parent ref */
+			new_ns->parent = aa_get_namespace(root);
+
+			list_add(&new_ns->base.list, &root->sub_ns);
 			/* add list ref */
 			ns = aa_get_namespace(new_ns);
 		} else {
@@ -362,7 +365,7 @@ static struct aa_namespace *aa_prepare_namespace(const char *name)
 			aa_get_namespace(ns);
 		}
 	}
-	write_unlock(&ns_list_lock);
+	write_unlock(&root->base.lock);
 
 	/* return ref */
 	return ns;
@@ -375,7 +378,7 @@ static struct aa_namespace *aa_prepare_namespace(const char *name)
  *
  * refcount @profile, should be put by __aa_remove_profile
  *
- * Requires: namespace list lock be held, or list not be shared
+ * Requires: namespace lock be held, or list not be shared
  */
 static void __aa_add_profile(struct aa_policy *policy,
 			     struct aa_profile *profile)
@@ -394,9 +397,9 @@ static void __aa_add_profile(struct aa_policy *policy,
  * be done with __aa_replace_profile as most profile removals are
  * replacements to the unconfined profile.
  *
- * put @profile refcount
+ * put @profile list refcount
  *
- * Requires: namespace list lock be held, or list not be shared
+ * Requires: namespace lock be held, or list not have been live
  */
 static void __aa_remove_profile(struct aa_profile *profile)
 {
@@ -425,14 +428,14 @@ static void __aa_replace_profile(struct aa_profile *old,
 	struct aa_policy *policy;
 	struct aa_profile *child, *tmp;
 
-	if (old->base.parent)
-		policy = &old->base.parent->base;
+	if (old->parent)
+		policy = &old->parent->base;
 	else
 		policy = &old->ns->base;
 
 	if (new) {
 		/* released when @new is freed */
-		new->base.parent = aa_get_profile(old->base.parent);
+		new->parent = aa_get_profile(old->parent);
 		new->ns = aa_get_namespace(old->ns);
 		new->sid = old->sid;
 		__aa_add_profile(policy, new);
@@ -443,8 +446,8 @@ static void __aa_replace_profile(struct aa_profile *old,
 
 	/* inherit children */
 	list_for_each_entry_safe(child, tmp, &old->base.profiles, base.list) {
-		aa_put_profile(child->base.parent);
-		child->base.parent = aa_get_profile(new);
+		aa_put_profile(child->parent);
+		child->parent = aa_get_profile(new);
 		/* list refcount transfered to @new*/
 		list_move(&child->base.list, &new->base.profiles);
 	}
@@ -470,15 +473,51 @@ static void __aa_profile_list_release(struct list_head *head)
 	}
 }
 
+static void __aa_remove_namespace(struct aa_namespace *ns);
+
+/**
+ * __aa_ns_list_release - remove all profile namespaces on the list put refs
+ * @head: list of profile namespaces
+ *
+ * Requires: namespace lock be held
+ */
+static void __aa_ns_list_release(struct list_head *head)
+{
+	struct aa_namespace *ns, *tmp;
+	list_for_each_entry_safe(ns, tmp, head, base.list)
+		__aa_remove_namespace(ns);
+
+}
+
+/**
+ * aa_destroy_namespace - remove everything contained by @ns
+ * @ns: namespace to have it contents removed
+ */
+static void aa_destroy_namespace(struct aa_namespace *ns)
+{
+	if (!ns)
+		return;
+
+	write_lock(&ns->base.lock);
+	/* release all profiles in this namespace */
+	__aa_profile_list_release(&ns->base.profiles);
+
+	/* release all sub namespaces */
+	__aa_ns_list_release(&ns->sub_ns);
+
+	write_unlock(&ns->base.lock);
+}
+
 /**
  * __aa_remove_namespace - remove a namespace and all its children
  * @ns: namespace to be removed
  * 
- * Requires: ns_list_lock && ns->base.lock be held
+ * Requires: ns->parent->base.lock be held and ns removed from parent.
  */
 static void __aa_remove_namespace(struct aa_namespace *ns)
 {
 	struct aa_profile *unconfined = ns->unconfined;
+
 	/* remove ns from namespace list */
 	list_del_init(&ns->base.list);
 
@@ -486,11 +525,13 @@ static void __aa_remove_namespace(struct aa_namespace *ns)
 	 * break the ns, unconfined profile cyclic reference and forward
 	 * all new unconfined profiles requests to the parent namespace
 	 * This will result in all confined tasks that have a profile
-	 * being removed inheriting the parent->unconfined profile.
+	 * being removed, inheriting the parent->unconfined profile.
 	 */
 	if (ns->parent)
 		ns->unconfined = aa_get_profile(ns->parent->unconfined);
-	__aa_profile_list_release(&ns->base.profiles);
+
+	aa_destroy_namespace(ns);
+
 	/* release original ns->unconfined ref */
 	aa_put_profile(unconfined);
 	/* release ns->base.list ref, from removal above */
@@ -498,54 +539,31 @@ static void __aa_remove_namespace(struct aa_namespace *ns)
 }
 
 /**
- * aa_alloc_root_ns - allocate the base default namespace
+ * aa_alloc_root_ns - allocate the root profile namespace
  *
  * Returns 0 on success else error
  *
  */
 int __init aa_alloc_root_ns(void)
 {
-	struct aa_namespace *ns;
 	/* released by aa_free_root_ns - used as list ref*/
-	ns = aa_alloc_namespace("root");
-	if (!ns)
+	root_ns = aa_alloc_namespace("root");
+	if (!root_ns)
 		return -ENOMEM;
-
-	/* released by aa_free_root_ns - global var ref*/
-	root_ns = aa_get_namespace(ns);
-	write_lock(&ns_list_lock);
-	list_add(&ns->base.list, &ns_list);
-	write_unlock(&ns_list_lock);
 
 	return 0;
 }
 
+ /**
+  * aa_free_root_ns - free the root profile namespace
+  */
 void aa_free_root_ns(void)
-{
-	write_lock(&ns_list_lock);
-	list_del_init(&root_ns->base.list);
-	write_unlock(&ns_list_lock);
-	/* drop the list ref and the global root_ns ref */
-	aa_put_namespace(root_ns);
-	aa_put_namespace(root_ns);
-	root_ns = NULL;
-}
-
-/**
- * aa_profilelist_release - remove all namespaces and all associated profiles
- */
-void aa_profile_ns_list_release(void)
-{
-	struct aa_namespace *ns, *tmp;
-
-	/* Remove and release all the profiles on namespace profile lists. */
-	write_lock(&ns_list_lock);
-	list_for_each_entry_safe(ns, tmp, &ns_list, base.list) {
-		write_lock(&ns->base.lock);
-		__aa_remove_namespace(ns);
-		write_unlock(&ns->base.lock);
-	}
-	write_unlock(&ns_list_lock);
+ {
+	 struct aa_namespace *ns = root_ns;
+	 root_ns = NULL;
+ 
+	 aa_destroy_namespace(ns);
+	 aa_put_namespace(ns);
 }
 
 /**
@@ -608,7 +626,7 @@ struct aa_profile *aa_new_null_profile(struct aa_profile *parent, int hat)
 		profile->flags |= PFLAG_HAT;
 
 	/* released on aa_free_profile */
-	profile->base.parent = aa_get_profile(parent);
+	profile->parent = aa_get_profile(parent);
 	profile->ns = aa_get_namespace(parent->ns);
 
 	write_lock(&profile->ns->base.lock);
@@ -658,6 +676,7 @@ static void aa_free_profile(struct aa_profile *profile)
 
 	/* free children profiles */
 	policy_destroy(&profile->base);
+	aa_put_profile(profile->parent);
 
 	aa_put_namespace(profile->ns);
 
@@ -752,7 +771,7 @@ struct aa_profile *aa_find_child(struct aa_profile *parent, const char *name)
  * Returns: unrefcounted policy or NULL if not found
  */
 static struct aa_policy *__aa_find_parent(struct aa_namespace *ns,
-						 const char *hname)
+					  const char *hname)
 {
 	struct aa_policy *policy;
 	struct aa_profile *profile = NULL;
@@ -859,7 +878,7 @@ static void __add_new_profile(struct aa_namespace *ns,
 {
 	if (policy != &ns->base)
 		/* released on profile replacement or aa_free_profile */
-		profile->base.parent = aa_get_profile((struct aa_profile *) policy);
+		profile->parent = aa_get_profile((struct aa_profile *) policy);
 	__aa_add_profile(policy, profile);
 	/* released on aa_free_profile */
 	profile->sid = aa_alloc_sid(AA_ALLOC_SYS_SID);
@@ -982,16 +1001,17 @@ fail:
 
 /**
  * aa_interface_remove_profiles - remove profile(s) from the system
- * @fqname: name of the profile to remove
+ * @fqname: name of the profile or namespace to remove
  * @size: size of the name
  *
- * remove a profile from the profile list and all aa_task_cxt references
- * to said profile.
+ * Remove a profile or sub namespace from the current namespace, so that
+ * they can not be found anymore and mark them as replaced by unconfined
+ *
  * NOTE: removing confinement does not restore rlimits to preconfinemnet values
  */
 ssize_t aa_interface_remove_profiles(char *fqname, size_t size)
 {
-	struct aa_namespace *ns = NULL;
+	struct aa_namespace *root, *ns = NULL;
 	struct aa_profile *profile = NULL;
 	struct aa_audit_iface sa = {
 		.base.operation = "profile_remove",
@@ -1007,40 +1027,43 @@ ssize_t aa_interface_remove_profiles(char *fqname, size_t size)
 		goto fail;
 	}
 
-	write_lock(&ns_list_lock);
+	if (*fqname == 0) {
+		sa.base.info = "no profile specified";
+		sa.base.error = -ENOENT;
+		goto fail;
+	}
+
+	/* ref count held by cred */
+	root = aa_current_profile()->ns;
+
 	if (fqname[0] == ':') {
 		char *ns_name;
 		name = aa_split_fqname(fqname, &ns_name);
-		if (fqname)
+		if (ns_name)
 			/* released below */
-			ns = aa_get_namespace(__aa_find_namespace(&ns_list,
-								  ns_name));
-	} else {
+			ns = aa_find_namespace(root, ns_name);
+	} else
 		/* released below */
-		ns = aa_get_namespace(root_ns);
-	}
+		ns = aa_get_namespace(root);
 
 	if (!ns) {
-		sa.base.info = "failed: namespace does not exist";
+		sa.base.info = "namespace does not exist";
 		sa.base.error = -ENOENT;
-		goto fail_ns_list_lock;
+		goto fail;
 	}
 
 	sa.name2 = ns->base.name;
 	write_lock(&ns->base.lock);
 	if (!name) {
-		/* remove namespace */
-		if (ns == root_ns)
-			__aa_profile_list_release(&ns->base.profiles);
-		else
-			__aa_remove_namespace(ns);
+		/* remove namespace - can only happen if fqname[0] == ':' */
+		__aa_remove_namespace(ns);
 	} else {
 		/* remove profile */
 		profile = aa_get_profile(__aa_find_profile(&ns->base, name));
 		if (!profile) {
 			sa.name = name;
 			sa.base.error = -ENOENT;
-			sa.base.info = "failed: profile does not exist";
+			sa.base.info = "profile does not exist";
 			goto fail_ns_lock;
 		}
 		sa.name = profile->base.hname;
@@ -1048,7 +1071,6 @@ ssize_t aa_interface_remove_profiles(char *fqname, size_t size)
 		__aa_replace_profile(profile, NULL);
 	}
 	write_unlock(&ns->base.lock);
-	write_unlock(&ns_list_lock);
 
 	/* don't fail removal if audit fails */
 	(void) aa_audit_iface(&sa);
@@ -1058,9 +1080,7 @@ ssize_t aa_interface_remove_profiles(char *fqname, size_t size)
 
 fail_ns_lock:
 	write_unlock(&ns->base.lock);
-
-fail_ns_list_lock:
-	write_unlock(&ns_list_lock);
+	aa_put_namespace(ns);
 
 fail:
 	error = aa_audit_iface(&sa);

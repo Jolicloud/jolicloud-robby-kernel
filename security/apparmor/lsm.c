@@ -1081,9 +1081,6 @@ security_initcall(apparmor_init);
 
 void apparmor_disable(void)
 {
-	/* Remove and release all the profiles on the profile list. */
-	aa_profile_ns_list_release();
-
 	/* FIXME: cleanup profiles references on files */
 	aa_free_root_ns();
 
