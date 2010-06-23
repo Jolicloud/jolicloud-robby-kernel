@@ -57,9 +57,9 @@ static void aa_audit_file_mask(struct audit_buffer *ab, u16 mask, int xindex,
 	audit_log_string(ab, str);
 }
 
-static void file_audit_cb(struct audit_buffer *ab, void *va)
+static void file_audit_cb(struct audit_buffer *ab, struct aa_audit *va)
 {
-	struct aa_audit_file *sa = va;
+	struct aa_audit_file *sa = container_of(va, struct aa_audit_file, base);
 	u16 denied = sa->request & ~sa->perms.allowed;
 	uid_t fsuid;
 

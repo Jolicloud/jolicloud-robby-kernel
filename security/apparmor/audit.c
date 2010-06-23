@@ -48,7 +48,7 @@ static char *aa_audit_type[] = {
 
 static int aa_audit_base(int type, struct aa_profile *profile,
 			 struct aa_audit *sa, struct audit_context *audit_cxt,
-			 void (*cb) (struct audit_buffer *, void *))
+			 void (*cb) (struct audit_buffer *, struct aa_audit *))
 {
 	struct audit_buffer *ab = NULL;
 	struct task_struct *task = sa->task ? sa->task : current;
@@ -121,7 +121,7 @@ out:
  * Returns: error on failure
  */
 int aa_audit(int type, struct aa_profile *profile, struct aa_audit *sa,
-	     void (*cb) (struct audit_buffer *, void *))
+	     void (*cb) (struct audit_buffer *, struct aa_audit *))
 {
 	struct audit_context *audit_cxt;
 	audit_cxt = aa_g_logsyscall ? current->audit_context : NULL;

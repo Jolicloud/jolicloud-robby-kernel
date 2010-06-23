@@ -41,9 +41,9 @@ struct aa_audit_net {
 
 };
 
-static void audit_cb(struct audit_buffer *ab, void *va)
+static void audit_cb(struct audit_buffer *ab, struct aa_audit *va)
 {
-	struct aa_audit_net *sa = va;
+	struct aa_audit_net *sa = container_of(va, struct aa_audit_net, base);
 
 	if (sa->family || sa->type) {
 		if (address_family_names[sa->family]) {

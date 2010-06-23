@@ -27,9 +27,10 @@ struct aa_audit_ptrace {
 };
 
 /* call back to audit ptrace fields */
-static void audit_cb(struct audit_buffer *ab, void *va)
+static void audit_cb(struct audit_buffer *ab, struct aa_audit *va)
 {
-	struct aa_audit_ptrace *sa = va;
+	struct aa_audit_ptrace *sa = container_of(va, struct aa_audit_ptrace,
+						  base);
 	audit_log_format(ab, " tracer=%d tracee=%d", sa->tracer, sa->tracee);
 }
 

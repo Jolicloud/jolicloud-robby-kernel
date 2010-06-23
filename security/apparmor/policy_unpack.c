@@ -65,9 +65,10 @@ struct aa_ext {
 	u32 version;
 };
 
-static void audit_cb(struct audit_buffer *ab, void *va)
+static void audit_cb(struct audit_buffer *ab, struct aa_audit *va)
 {
-	struct aa_audit_iface *sa = va;
+	struct aa_audit_iface *sa = container_of(va, struct aa_audit_iface,
+						 base);
 
 	if (sa->name) {
 		audit_log_format(ab, " name=");

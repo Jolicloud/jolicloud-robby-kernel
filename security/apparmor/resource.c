@@ -24,9 +24,11 @@ struct aa_audit_resource {
 	int rlimit;
 };
 
-static void audit_cb(struct audit_buffer *ab, void *va)
+static void audit_cb(struct audit_buffer *ab, struct aa_audit *va)
 {
-	struct aa_audit_resource *sa = va;
+	struct aa_audit_resource *sa = container_of(va,
+						    struct aa_audit_resource,
+						    base);
 
 	if (sa->rlimit)
 		audit_log_format(ab, " rlimit=%d", sa->rlimit - 1);
