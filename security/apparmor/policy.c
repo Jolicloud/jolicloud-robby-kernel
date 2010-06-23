@@ -385,9 +385,8 @@ static void __aa_add_profile(struct list_head *list,
 			     struct aa_profile *profile)
 {
 	list_add(&profile->base.list, list);
-	if (!(profile->flags & PFLAG_NO_LIST_REF))
-		/* get list reference */
-		aa_get_profile(profile);
+	/* get list reference */
+	aa_get_profile(profile);
 }
 
 /**
@@ -658,21 +657,11 @@ static void aa_free_profile(struct aa_profile *profile)
 	if (!profile)
 		return;
 
-	/*
-	 * profile can still be on the list if the list doesn't hold a
-	 * reference.  There is no race as NULL profiles can't be attached
-	 */
 	if (!list_empty(&profile->base.list)) {
-		if ((profile->flags & PFLAG_NULL) && profile->ns) {
-			write_lock(&profile->ns->lock);
-			list_del_init(&profile->base.list);
-			write_unlock(&profile->ns->lock);
-		} else {
-			AA_ERROR("%s: internal error, "
-				 "profile '%s' still on ns list\n",
-				 __func__, profile->base.name);
-			BUG();
-		}
+		AA_ERROR("%s: internal error, "
+			 "profile '%s' still on ns list\n",
+			 __func__, profile->base.name);
+		BUG();
 	}
 
 	/* free children profiles */
