@@ -976,26 +976,15 @@ static int audit_policy(int op, gfp_t gfp, const char *name, const char *info,
 bool aa_may_manage_policy(int op)
 {
 	struct aa_profile *profile = __aa_current_profile();
-	const char *info = NULL;
-	int error = 0;
 
 	/* check if loading policy is locked out */
 	if (aa_g_lock_policy) {
-		info = "policy locked";
-		error = -EACCES;
+		audit_policy(op, GFP_KERNEL, NULL, "policy_locked", -EACCES);
+		return 0;
 	}
 
-	if (!capable(CAP_MAC_ADMIN))
-		error = -EACCES;
-
-
-	if (error) {
-		struct common_audit_data sa;
-		COMMON_AUDIT_DATA_INIT_NONE(&sa);
-		sa.aad.op = op;
-		sa.aad.error = error;
-
-		aa_audit(AUDIT_APPARMOR_DENIED, profile, GFP_KERNEL, &sa, NULL);
+	if (!capable(CAP_MAC_ADMIN)) {
+		audit_policy(op, GFP_KERNEL, NULL, "not policy admin", -EACCES);
 		return 0;
 	}
 
