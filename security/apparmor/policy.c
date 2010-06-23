@@ -838,7 +838,7 @@ ssize_t aa_interface_add_profiles(void *udata, size_t size)
 	write_lock(&ns->base.lock);
 
 	/* no ref on common only use inside of lock */
-	common = __aa_find_parent(ns, sa.name);
+	common = __aa_find_parent(ns, profile->base.hname);
 	if (!common) {
 		sa.base.info = "parent does not exist";
 		sa.base.error = -ENOENT;
@@ -923,7 +923,7 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size)
 
 	write_lock(&ns->base.lock);
 	/* no ref on common only use inside lock */
-	common = __aa_find_parent(ns, sa.name);
+	common = __aa_find_parent(ns, new_profile->base.hname);
 
 	if (!common) {
 		sa.base.info = "parent does not exist";
