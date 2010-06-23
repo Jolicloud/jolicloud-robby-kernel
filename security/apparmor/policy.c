@@ -591,18 +591,6 @@ fail:
 }
 
 /**
- * free_aa_profile_kref - free aa_profile by kref (called by aa_put_profile)
- * @kr: kref callback for freeing of a profile
- */
-void free_aa_profile_kref(struct kref *kref)
-{
-	struct aa_profile *p = container_of(kref, struct aa_profile,
-					    base.count);
-
-	free_aa_profile(p);
-}
-
-/**
  * free_aa_profile - free a profile
  * @profile: the profile to free
  *
@@ -612,7 +600,7 @@ void free_aa_profile_kref(struct kref *kref)
  * If the profile was referenced from a task context, free_aa_profile() will
  * be called from an rcu callback routine, so we must not sleep here.
  */
-void free_aa_profile(struct aa_profile *profile)
+static void free_aa_profile(struct aa_profile *profile)
 {
 	AA_DEBUG("%s(%p)\n", __func__, profile);
 
@@ -656,6 +644,18 @@ void free_aa_profile(struct aa_profile *profile)
 		aa_put_profile(profile->replacedby);
 
 	kzfree(profile);
+}
+
+/**
+ * free_aa_profile_kref - free aa_profile by kref (called by aa_put_profile)
+ * @kr: kref callback for freeing of a profile
+ */
+void free_aa_profile_kref(struct kref *kref)
+{
+	struct aa_profile *p = container_of(kref, struct aa_profile,
+					    base.count);
+
+	free_aa_profile(p);
 }
 
 /* TODO: profile count accounting - setup in remove */

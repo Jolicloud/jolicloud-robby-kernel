@@ -227,7 +227,6 @@ static inline void aa_put_namespace(struct aa_namespace *ns)
 struct aa_profile *alloc_aa_profile(const char *name);
 struct aa_profile *aa_new_null_profile(struct aa_profile *parent, int hat);
 void free_aa_profile_kref(struct kref *kref);
-void free_aa_profile(struct aa_profile *profile);
 struct aa_profile *aa_find_child(struct aa_profile *parent, const char *name);
 struct aa_profile *aa_find_profile(struct aa_namespace *ns, const char *name);
 struct aa_profile *aa_match_profile(struct aa_namespace *ns, const char *name);

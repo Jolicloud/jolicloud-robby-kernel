@@ -569,7 +569,7 @@ fail:
 	if (!sa->base.info)
 		sa->base.info = "failed to unpack profile";
 
-	free_aa_profile(profile);
+	aa_put_profile(profile);
 
 	return ERR_PTR(error);
 }
