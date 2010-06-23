@@ -96,6 +96,14 @@ static inline bool __aa_task_is_confined(struct task_struct *task)
 	return 1;
 }
 
+/**
+ * __aa_current_profile - find the current tasks confining profile
+ *
+ * Returns: up to date confining profile or NULL if task is unconfined
+ *
+ * This fn will not update the tasks cred to the most up to date version
+ * of the profile so it is safe to call when inside of locks.
+ */
 static inline struct aa_profile *__aa_current_profile(void)
 {
 	const struct aa_task_context *cxt = current_cred()->security;
@@ -103,6 +111,14 @@ static inline struct aa_profile *__aa_current_profile(void)
 	return aa_confining_profile(cxt->sys.profile);
 }
 
+/**
+ * aa_current_profile - find the current tasks confining profile and do updates
+ *
+ * Returns: up to date confinging profile or NULL if task is unconfined
+ *
+ * This fn will update the tasks cred structure if the profile has been
+ * replaced.  Not safe to call inside locks
+ */
 static inline struct aa_profile *aa_current_profile(void)
 {
 	const struct aa_task_context *cxt = current_cred()->security;
