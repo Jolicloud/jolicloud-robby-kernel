@@ -46,7 +46,7 @@ static void free_table(struct table_header *table)
  *
  * NOTE: must be freed by free_table (not kmalloc)
  */
-static struct table_header *unpack_table(void *blob, size_t bsize)
+static struct table_header *unpack_table(char *blob, size_t bsize)
 {
 	struct table_header *table = NULL;
 	struct table_header th;
@@ -213,6 +213,7 @@ struct aa_dfa *aa_dfa_unpack(void *blob, size_t size, int flags)
 {
 	int hsize;
 	int error = -ENOMEM;
+	char *data = blob;
 	struct aa_dfa *dfa = kzalloc(sizeof(struct aa_dfa), GFP_KERNEL);
 	if (!dfa)
 		goto fail;
@@ -225,20 +226,20 @@ struct aa_dfa *aa_dfa_unpack(void *blob, size_t size, int flags)
 	if (size < sizeof(struct table_set_header))
 		goto fail;
 
-	if (ntohl(*(u32 *) blob) != YYTH_MAGIC)
+	if (ntohl(*(u32 *) data) != YYTH_MAGIC)
 		goto fail;
 
-	hsize = ntohl(*(u32 *) (blob + 4));
+	hsize = ntohl(*(u32 *) (data + 4));
 	if (size < hsize)
 		goto fail;
 
-	dfa->flags = ntohs(*(u16 *) (blob + 12));
-	blob += hsize;
+	dfa->flags = ntohs(*(u16 *) (data + 12));
+	data += hsize;
 	size -= hsize;
 
 	while (size > 0) {
 		struct table_header *table;
-		table = unpack_table(blob, size);
+		table = unpack_table(data, size);
 		if (!table)
 			goto fail;
 
@@ -270,7 +271,7 @@ struct aa_dfa *aa_dfa_unpack(void *blob, size_t size, int flags)
 			goto fail;
 		}
 		dfa->tables[table->td_id] = table;
-		blob += table_size(table->td_lolen, table->td_flags);
+		data += table_size(table->td_lolen, table->td_flags);
 		size -= table_size(table->td_lolen, table->td_flags);
 	}
 
