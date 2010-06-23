@@ -552,20 +552,17 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 		/* released below */
 		hat = aa_find_child(root, hat_name);
 		if (!hat) {
-			if (list_empty(&root->base.profiles))
-				sa.base.error = -ECHILD;
-			if (permtest || !PROFILE_COMPLAIN(root))
-				/* probing is an expected unfortunate behavior
-				 * of the change_hat api is traditionally quiet
-				 */
+			if (!PROFILE_COMPLAIN(root) || permtest) {
+				sa.base.info = "hat not found";
+				if (list_empty(&root->base.profiles))
+					sa.base.error = -ECHILD;
+				else
+					sa.base.error = -ENOENT;
 				goto out;
-
+			}
 			/* freed below */
 			name = new_compound_name(root->base.hname, hat_name);
-
 			sa.name = name;
-			sa.base.info = "hat not found";
-			sa.base.error = -ENOENT;
 			/* released below */
 			hat = aa_new_null_profile(profile, 1);
 			if (!hat) {
