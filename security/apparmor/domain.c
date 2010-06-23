@@ -466,14 +466,15 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 	struct aa_task_context *cxt;
 	struct aa_profile *profile, *previous_profile, *hat = NULL;
 	struct aa_audit_file sa = { };
+	char *name = NULL;
 
 	sa.base.gfp_mask = GFP_KERNEL;
 	sa.base.operation = "change_hat";
+	sa.request = AA_MAY_CHANGEHAT;
 
 	cred = aa_current_policy(&profile);
 	cxt = cred->security;
 	previous_profile = cxt->sys.previous;
-	token = cxt->sys.token;
 
 	if (!profile) {
 		sa.base.info = "unconfined";
@@ -482,32 +483,36 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 	}
 
 	if (hat_name) {
-		if (previous_profile)
-			sa.name = previous_profile->fqname;
-		else
-			sa.name = profile->fqname;
-
+		struct aa_profile *root;
+		root = PROFILE_IS_HAT(profile) ? profile->parent : profile;
 		sa.name2 = profile->ns->base.name;
 
-		if (PROFILE_IS_HAT(profile))
-			hat = aa_find_child(profile->parent, hat_name);
-		else
-			hat = aa_find_child(profile, hat_name);
+		hat = aa_find_child(root, hat_name);
 		if (!hat) {
+			if (permtest || !PROFILE_COMPLAIN(root))
+				/* probing is an expected unfortunate behavior
+				 * of the change_hat api is traditionally quiet
+				 */
+				goto out;
+
+			name = new_compound_name(root->fqname, hat_name);
+
+			sa.name = name;
 			sa.base.info = "hat not found";
 			sa.base.error = -ENOENT;
-			if (permtest || !PROFILE_COMPLAIN(profile))
-				goto audit;
 			hat = aa_alloc_null_profile(profile, 1);
 			if (!hat) {
 				sa.base.info = "failed null profile create";
 				sa.base.error = -ENOMEM;
 				goto audit;
 			}
-		} else if (!PROFILE_IS_HAT(hat)) {
-			sa.base.info = "target not hat";
-			sa.base.error = -EPERM;
-			goto audit;
+		} else {
+			sa.name = hat->fqname;
+			if (!PROFILE_IS_HAT(hat)) {
+				sa.base.info = "target not hat";
+				sa.base.error = -EPERM;
+				goto audit;
+			}
 		}
 
 		sa.base.error = aa_may_change_ptraced_domain(current, hat);
@@ -519,27 +524,27 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 
 		if (!permtest) {
 			sa.base.error = aa_set_current_hat(hat, token);
-			if (sa.base.error == -EACCES) {
-				(void)send_sig_info(SIGKILL, NULL, current);
-				sa.base.error = aa_audit(AUDIT_APPARMOR_KILL,
-							 profile, &sa.base,
-							 file_audit_cb);
-				goto out;
-			}
+			if (sa.base.error == -EACCES)
+				sa.perms.kill = AA_MAY_CHANGEHAT;
+			else if (name && !sa.base.error)
+				/* reset error for learning of new hats */
+				sa.base.error = -ENOENT;
 		}
-	} else if (previous_profile)
+	} else if (previous_profile) {
+		sa.name = previous_profile->fqname;
 		sa.base.error = aa_restore_previous_profile(token);
-	/* else
-		 ignore restores when there is no saved profile
-	*/
+		sa.perms.kill = AA_MAY_CHANGEHAT;
+	} else
+		/* ignore restores when there is no saved profile */
+		goto out;
 
 audit:
 	if (!permtest)
 		sa.base.error = aa_audit_file(profile, &sa);
 
-
 out:
 	aa_put_profile(hat);
+	kfree(name);
 
 	return sa.base.error;
 }
