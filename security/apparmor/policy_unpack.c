@@ -388,11 +388,7 @@ static bool unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
 	return 1;
 
 fail:
-	if (profile->file.trans.table) {
-		int i;
-		for (i = 0; i < profile->file.trans.size; i++)
-			kzfree(profile->file.trans.table[i]);
-	}
+	aa_free_domain_entries(&profile->file.trans);
 	e->pos = pos;
 	return 0;
 }
