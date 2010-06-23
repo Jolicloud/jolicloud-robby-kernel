@@ -27,7 +27,7 @@
  *	namespace://profile - used by policy
  *
  * Profile names can not start with : or @ or ^ and may not contain \0
- * 
+ *
  * Reserved profile names
  *	unconfined - special automatically generated unconfined profile
  *	inherit - special name to indicate profile inheritance
@@ -395,7 +395,7 @@ static void __aa_add_profile(struct list_head *list,
 }
 
 /**
- * __aa_remove_profile - remove a profile from the list it is one
+ * __aa_remove_profile - remove a profile from the list it is on
  * @profile: the profile to remove  (NOT NULL)
  *
  * remove a profile from the list, warning generally removal should

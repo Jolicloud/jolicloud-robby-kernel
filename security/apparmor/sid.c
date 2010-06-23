@@ -12,7 +12,7 @@
  *
  *
  * AppArmor allocates a unique sid for every profile loaded.  If a profile
- * is replaced it receive the sid of the profile it is replacing.
+ * is replaced it receives the sid of the profile it is replacing.
  *
  * The sid value of 0 is invalid.
  */

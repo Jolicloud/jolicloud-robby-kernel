@@ -152,9 +152,9 @@ struct aa_namespace {
  * @rlimits: rlimits for the profile
  *
  * The AppArmor profile contains the basic confinement data.  Each profile
- * has a name, and exist in a namespace.  The @name and @exec_match are
+ * has a name, and exists in a namespace.  The @name and @exec_match are
  * used to determine profile attachment against unconfined tasks.  All other
- * attachments are determined by in profile X transition rules.
+ * attachments are determined by profile X transition rules.
  *
  * The @replacedby field is write protected by the profile lock.  Reads
  * are assumed to be atomic, and are done without locking.

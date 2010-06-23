@@ -14,7 +14,7 @@
  *
  * AppArmor uses a serialized binary format for loading policy.
  * The policy format is documented in Documentation/???
- * All policy is validated all before it is used.
+ * All policy is validated before it is used.
  */
 
 #include <asm/unaligned.h>
@@ -340,7 +340,7 @@ static struct aa_dfa *unpack_dfa(struct aa_ext *e)
 			flags |= DFA_FLAG_VERIFY_STATES;
 
 		dfa = aa_dfa_unpack(blob + pad, size - pad, flags);
-		
+
 		if (!IS_ERR(dfa) && !verify_accept(dfa, flags))
 			goto fail;
 	}
