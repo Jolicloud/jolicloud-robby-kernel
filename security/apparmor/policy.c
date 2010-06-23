@@ -740,33 +740,33 @@ static struct aa_policy_common *__aa_find_parent(struct aa_namespace *ns,
 
 /**
  * __aa_find_profile - lookup the profile matching @fqname
- * @ns: namespace to search for profile in
+ * @base: base list to start looking up profile name from
  * @fqname: fully qualified profile name
  *
  * Requires: ns->base.lock be held
  *
  * Returns: unrefcounted profile pointer or NULL if not found
+ *
+ * Do a relative name lookup, recursing through profile tree.
  */
-static struct aa_profile *__aa_find_profile(struct aa_namespace *ns,
+static struct aa_profile *__aa_find_profile(struct aa_policy_common *base,
 					    const char *fqname)
 {
-	struct aa_policy_common *common;
 	struct aa_profile *profile = NULL;
 	char *split;
 
-	common = &ns->base;
 	for (split = strstr(fqname, "//"); split;) {
-		profile = __aa_strn_find_child(&common->profiles, fqname,
-						 split - fqname);
+		profile = __aa_strn_find_child(&base->profiles, fqname,
+					       split - fqname);
 		if (!profile)
 			return NULL;
 
-		common = &profile->base;
+		base = &profile->base;
 		fqname = split + 2;
 		split = strstr(fqname, "//");
 	}
 
-	profile = __aa_find_child(&common->profiles, fqname);
+	profile = __aa_find_child(&base->profiles, fqname);
 
 	return profile;
 }
@@ -783,7 +783,7 @@ struct aa_profile *aa_find_profile(struct aa_namespace *ns, const char *fqname)
 	struct aa_profile *profile;
 
 	read_lock(&ns->base.lock);
-	profile = aa_get_profile(__aa_find_profile(ns, fqname));
+	profile = aa_get_profile(__aa_find_profile(&ns->base, fqname));
 	read_unlock(&ns->base.lock);
 	return profile;
 }
@@ -1021,7 +1021,7 @@ ssize_t aa_interface_remove_profiles(char *name, size_t size)
 			__aa_remove_namespace(ns);
 	} else {
 		/* remove profile */
-		profile = aa_get_profile(__aa_find_profile(ns, name));
+		profile = aa_get_profile(__aa_find_profile(&ns->base, name));
 		if (!profile) {
 			sa.name = name;
 			sa.base.error = -ENOENT;
