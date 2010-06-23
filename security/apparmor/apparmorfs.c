@@ -95,12 +95,11 @@ static char *aa_simple_write_to_buffer(int op, const char __user *userbuf,
 		struct aa_profile *profile = NULL;
 		struct aa_audit sa = {
 			.op = op,
-			.gfp_mask = GFP_KERNEL,
 			.error = -EACCES,
 		};
 		profile = aa_current_profile();
-		data = ERR_PTR(aa_audit(AUDIT_APPARMOR_DENIED, profile, &sa,
-					NULL));
+		data = ERR_PTR(aa_audit(AUDIT_APPARMOR_DENIED, profile,
+					GFP_KERNEL, &sa, NULL));
 		goto out;
 	}
 	/* freed by caller to simple_write_to_buffer */

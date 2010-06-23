@@ -34,7 +34,7 @@ static void audit_cb(struct audit_buffer *ab, struct aa_audit *sa)
  */
 static int audit_resource(struct aa_profile *profile, struct aa_audit *sa)
 {
-	return aa_audit(AUDIT_APPARMOR_AUTO, profile, sa, audit_cb);
+	return aa_audit(AUDIT_APPARMOR_AUTO, profile, GFP_KERNEL, sa, audit_cb);
 }
 
 /**
@@ -53,7 +53,6 @@ int aa_task_setrlimit(struct aa_profile *profile, unsigned int resource,
 	int error = 0;
 	struct aa_audit sa = {
 		.op = OP_SETRLIMIT,
-		.gfp_mask = GFP_KERNEL,
 	};
 	sa.rlimit = resource + 1;
 

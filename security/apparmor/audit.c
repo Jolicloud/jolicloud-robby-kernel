@@ -125,7 +125,7 @@ static int audit_base(int type, struct aa_profile *profile, struct aa_audit *sa,
 		type = AUDIT_APPARMOR_KILL;
 
 	/* ab freed below in audit_log_end */
-	ab = audit_log_start(audit_cxt, sa->gfp_mask, type);
+	ab = audit_log_start(audit_cxt, GFP_ATOMIC, type);
 
 	if (!ab) {
 		AA_ERROR("(%d) Unable to log event of type (%d)\n",
@@ -191,6 +191,7 @@ out:
  * aa_audit - Log an audit event to the audit subsystem
  * @type: audit type for the message
  * @profile: profile to check against
+ * @gfp: allocation flags to use
  * @sa: audit event
  * @cb: optional callback fn for type specific fields
  *
@@ -198,7 +199,8 @@ out:
  *
  * Returns: error on failure
  */
-int aa_audit(int type, struct aa_profile *profile, struct aa_audit *sa,
+int aa_audit(int type, struct aa_profile *profile, gfp_t gfp,
+	     struct aa_audit *sa,
 	     void (*cb) (struct audit_buffer *, struct aa_audit *))
 {
 	struct audit_context *audit_cxt;

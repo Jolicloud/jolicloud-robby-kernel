@@ -36,7 +36,7 @@ static void audit_cb(struct audit_buffer *ab, struct aa_audit *sa)
  */
 static int aa_audit_ptrace(struct aa_profile *profile, struct aa_audit *sa)
 {
-	return aa_audit(AUDIT_APPARMOR_AUTO, profile, sa, audit_cb);
+	return aa_audit(AUDIT_APPARMOR_AUTO, profile, GFP_ATOMIC, sa, audit_cb);
 }
 
 /**
@@ -94,7 +94,6 @@ int aa_ptrace(struct task_struct *tracer, struct task_struct *tracee,
 		struct aa_profile *tracee_p;
 		struct aa_audit sa = {
 			.op = OP_PTRACE,
-			.gfp_mask = GFP_ATOMIC,
 		};
 		sa.ptrace.tracer = tracer->pid;
 		sa.ptrace.tracee = tracee->pid;

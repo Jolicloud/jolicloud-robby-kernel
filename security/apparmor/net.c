@@ -89,7 +89,7 @@ static int audit_net(struct aa_profile *profile, struct aa_audit *sa)
 			return COMPLAIN_MODE(profile) ? 0 : sa->error;
 	}
 
-	return aa_audit(type, profile, sa, audit_cb);
+	return aa_audit(type, profile, GFP_KERNEL, sa, audit_cb);
 }
 
 /**
@@ -108,7 +108,6 @@ int aa_net_perm(int op, struct aa_profile *profile, int family, int type,
 	u16 family_mask;
 	struct aa_audit sa = {
 		.op = op,
-		.gfp_mask = GFP_KERNEL,
 	};
 	sa.net.family = family;
 	sa.net.type = type;

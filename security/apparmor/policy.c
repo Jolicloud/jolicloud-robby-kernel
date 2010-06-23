@@ -967,7 +967,6 @@ ssize_t aa_replace_profiles(void *udata, size_t size, bool noreplace)
 	ssize_t error;
 	struct aa_audit sa = {
 		.op = OP_PROF_REPL,
-		.gfp_mask = GFP_ATOMIC,
 	};
 
 	/* ref count released below */
@@ -1036,7 +1035,8 @@ audit:
 	if (!old_profile && !rename_profile)
 		sa.op = OP_PROF_LOAD;
 
-	error = aa_audit(AUDIT_APPARMOR_STATUS, current_profile, &sa, NULL);
+	error = aa_audit(AUDIT_APPARMOR_STATUS, current_profile, GFP_ATOMIC,
+			 &sa, NULL);
 
 	if (!error) {
 		if (rename_profile)
@@ -1065,7 +1065,8 @@ out:
 	return size;
 
 fail:
-	error = aa_audit(AUDIT_APPARMOR_STATUS, current_profile, &sa, NULL);
+	error = aa_audit(AUDIT_APPARMOR_STATUS, current_profile, GFP_KERNEL,
+			 &sa, NULL);
 	goto out;
 }
 
@@ -1087,7 +1088,6 @@ ssize_t aa_remove_profiles(char *fqname, size_t size)
 	struct aa_profile *profile = NULL, *current_profile = NULL;
 	struct aa_audit sa = {
 		.op = OP_PROF_RM,
-		.gfp_mask = GFP_ATOMIC,
 	};
 	const char *name = fqname;
 
@@ -1143,7 +1143,8 @@ ssize_t aa_remove_profiles(char *fqname, size_t size)
 	write_unlock(&ns->lock);
 
 	/* don't fail removal if audit fails */
-	(void) aa_audit(AUDIT_APPARMOR_STATUS, current_profile, &sa, NULL);
+	(void) aa_audit(AUDIT_APPARMOR_STATUS, current_profile, GFP_KERNEL,
+			&sa, NULL);
 	aa_put_namespace(ns);
 	aa_put_profile(profile);
 	aa_put_profile(current_profile);
@@ -1154,7 +1155,8 @@ fail_ns_lock:
 	aa_put_namespace(ns);
 
 fail:
-	(void) aa_audit(AUDIT_APPARMOR_STATUS, current_profile, &sa, NULL);
+	(void) aa_audit(AUDIT_APPARMOR_STATUS, current_profile, GFP_KERNEL,
+			&sa, NULL);
 	aa_put_profile(current_profile);
 	return sa.error;
 }

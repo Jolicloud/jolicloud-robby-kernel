@@ -619,11 +619,11 @@ static int apparmor_setprocattr(struct task_struct *task, char *name,
 		} else {
 			struct aa_audit sa = {
 				.op = OP_SETPROCATTR,
-				.gfp_mask = GFP_KERNEL,
 				.info = name,
 				.error = -EINVAL,
 			};
-			return aa_audit(AUDIT_APPARMOR_DENIED, NULL, &sa, NULL);
+			return aa_audit(AUDIT_APPARMOR_DENIED, NULL, GFP_KERNEL,
+					&sa, NULL);
 		}
 	} else if (strcmp(name, "exec") == 0) {
 		error = aa_setprocattr_changeprofile(args, AA_ONEXEC,

@@ -99,7 +99,6 @@ enum aa_ops {
  */
 struct aa_audit {
 	struct task_struct *task;
-	gfp_t gfp_mask;
 	int error;
 	int op;
 	const char *name;
@@ -124,7 +123,8 @@ struct aa_audit {
 	};
 };
 
-int aa_audit(int type, struct aa_profile *profile, struct aa_audit *sa,
+int aa_audit(int type, struct aa_profile *profile, gfp_t gfp,
+	     struct aa_audit *sa,
 	     void (*cb) (struct audit_buffer *, struct aa_audit *));
 
 static inline int complain_error(int error)

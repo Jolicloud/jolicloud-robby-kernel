@@ -351,7 +351,6 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	};
 	struct aa_audit sa = {
 		.op = OP_EXEC,
-		.gfp_mask = GFP_KERNEL,
 	};
 	sa.fs.request = MAY_EXEC;
 	sa.fs.ouid = cond.uid;
@@ -510,7 +509,7 @@ x_clear:
 	cxt->token = 0;
 
 audit:
-	sa.error = aa_audit_file(profile, &perms, &sa);
+	sa.error = aa_audit_file(profile, &perms, GFP_KERNEL, &sa);
 
 cleanup:
 	aa_put_profile(profile);
@@ -610,7 +609,6 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 	int i;
 	struct file_perms perms = {};
 	struct aa_audit sa = {
-		.gfp_mask = GFP_KERNEL,
 		.op = OP_CHANGE_HAT,
 	};
 	sa.fs.request = AA_MAY_CHANGEHAT;
@@ -703,7 +701,7 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 
 audit:
 	if (!permtest)
-		sa.error = aa_audit_file(profile, &perms, &sa);
+		sa.error = aa_audit_file(profile, &perms, GFP_KERNEL, &sa);
 
 out:
 	aa_put_profile(hat);
@@ -734,9 +732,7 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 	struct aa_profile *profile, *target = NULL;
 	struct aa_namespace *ns = NULL;
 	struct file_perms perms = {};
-	struct aa_audit sa = {
-		.gfp_mask = GFP_KERNEL,
-	};
+	struct aa_audit sa = { };
 
 	if (!hname && !ns_name)
 		return -EINVAL;
@@ -816,7 +812,7 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 
 audit:
 	if (!permtest)
-		sa.error = aa_audit_file(profile, &perms, &sa);
+		sa.error = aa_audit_file(profile, &perms, GFP_KERNEL, &sa);
 
 	aa_put_namespace(ns);
 	aa_put_profile(target);

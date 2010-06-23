@@ -90,7 +90,7 @@ static int audit_caps(struct aa_profile *profile, struct aa_audit *sa)
 	}
 	put_cpu_var(audit_cache);
 
-	return aa_audit(type, profile, sa, audit_cb);
+	return aa_audit(type, profile, GFP_ATOMIC, sa, audit_cb);
 }
 
 /**
@@ -123,7 +123,6 @@ int aa_capable(struct task_struct *task, struct aa_profile *profile, int cap,
 	struct aa_audit sa = {
 		.op = OP_CAPABLE,
 		.task = task,
-		.gfp_mask = GFP_ATOMIC,
 		.error = error,
 	};
 	sa.cap = cap;

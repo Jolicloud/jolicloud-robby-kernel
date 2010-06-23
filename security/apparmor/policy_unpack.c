@@ -75,6 +75,7 @@ static void audit_cb(struct audit_buffer *ab, struct aa_audit *sa)
 
 /**
  * aa_audit - do audit message for policy unpacking/load/replace/remove
+ * @may_block: whether
  * @sa: audit date to send to audit  (NOT NULL)
  *
  * Returns: %0 or error
@@ -82,7 +83,8 @@ static void audit_cb(struct audit_buffer *ab, struct aa_audit *sa)
 static int aa_audit_iface(struct aa_audit *sa)
 {
 	struct aa_profile *profile = __aa_current_profile();
-	return aa_audit(AUDIT_APPARMOR_STATUS, profile, sa, audit_cb);
+	return aa_audit(AUDIT_APPARMOR_STATUS, profile, GFP_KERNEL, sa,
+			audit_cb);
 }
 
 /* test if read will be in packed data bounds */

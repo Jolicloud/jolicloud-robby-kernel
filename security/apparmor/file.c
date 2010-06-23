@@ -95,12 +95,13 @@ static void file_audit_cb(struct audit_buffer *ab, struct aa_audit *sa)
  * aa_audit_file - handle the auditing of file operations
  * @profile: the profile being enforced  (NOT NULL)
  * @perms: the permissions computed for the request (NOT NULL)
+ * @gfp: allocation flags
  * @sa: file auditing context  (NOT NULL)
  *
  * Returns: %0 or error on failure
  */
 int aa_audit_file(struct aa_profile *profile, struct file_perms *perms,
-		  struct aa_audit *sa)
+		  gfp_t gfp, struct aa_audit *sa)
 {
 	int type = AUDIT_APPARMOR_AUTO;
 
@@ -134,7 +135,7 @@ int aa_audit_file(struct aa_profile *profile, struct file_perms *perms,
 	}
 
 	sa->fs.denied = sa->fs.request & ~perms->allow;
-	return aa_audit(type, profile, sa, file_audit_cb);
+	return aa_audit(type, profile, gfp, sa, file_audit_cb);
 }
 
 /**
@@ -252,7 +253,6 @@ int aa_pathstr_perm(int op, struct aa_profile *profile, const char *name,
 	struct file_perms perms = { };
 	struct aa_audit sa = {
 		.op = op,
-		.gfp_mask = GFP_KERNEL,
 	};
 	sa.fs.request = request;
 	sa.fs.path = name;
@@ -262,7 +262,7 @@ int aa_pathstr_perm(int op, struct aa_profile *profile, const char *name,
 		     &perms);
 	if (request & ~perms.allow)
 		sa.error = -EACCES;
-	return aa_audit_file(profile, &perms, &sa);
+	return aa_audit_file(profile, &perms, GFP_KERNEL, &sa);
 }
 
 /**
@@ -296,7 +296,6 @@ int aa_path_perm(int op, struct aa_profile *profile, struct path *path,
 	struct file_perms perms = {};
 	struct aa_audit sa = {
 		.op = op,
-		.gfp_mask = GFP_KERNEL,
 	};
 	sa.fs.request = request;
 	sa.fs.ouid = cond->uid;
@@ -324,7 +323,7 @@ int aa_path_perm(int op, struct aa_profile *profile, struct path *path,
 		if (request & ~perms.allow)
 			sa.error = -EACCES;
 	}
-	sa.error = aa_audit_file(profile, &perms, &sa);
+	sa.error = aa_audit_file(profile, &perms, GFP_KERNEL, &sa);
 	kfree(buffer);
 
 	return sa.error;
@@ -384,7 +383,6 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 
 	struct aa_audit sa = {
 		.op = OP_LINK,
-		.gfp_mask = GFP_KERNEL,
 	};
 	sa.fs.request = AA_MAY_LINK;
 	sa.fs.ouid = cond.uid;
@@ -457,7 +455,7 @@ done_tests:
 	sa.error = 0;
 
 audit:
-	sa.error = aa_audit_file(profile, &lperms, &sa);
+	sa.error = aa_audit_file(profile, &lperms, GFP_KERNEL, &sa);
 	kfree(buffer);
 	kfree(buffer2);
 
