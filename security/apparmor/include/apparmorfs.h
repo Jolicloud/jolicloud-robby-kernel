@@ -21,4 +21,10 @@ extern struct vfsmount *apparmorfs_mnt;
 extern int create_apparmorfs(void);
 extern void destroy_apparmorfs(void);
 
+#ifdef CONFIG_SECURITY_APPARMOR_COMPAT_24
+extern struct file_operations apparmorfs_profiles_fops;
+extern struct file_operations apparmorfs_matching_fops;
+extern struct file_operations apparmorfs_features_fops;
+#endif
+
 #endif	/* __AA_APPARMORFS_H */
