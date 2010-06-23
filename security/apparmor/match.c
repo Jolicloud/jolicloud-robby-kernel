@@ -80,7 +80,7 @@ out:
  *
  * assumes dfa has gone through the verification done by unpacking
  */
-int verify_dfa(struct aa_dfa *dfa)
+static int verify_dfa(struct aa_dfa *dfa)
 {
 	size_t i, state_count, trans_count;
 	int error = -EPROTO;
@@ -194,6 +194,10 @@ int unpack_dfa(struct aa_dfa *dfa, void *blob, size_t size)
 		blob += table_size(table->td_lolen, table->td_flags);
 		size -= table_size(table->td_lolen, table->td_flags);
 	}
+
+	error = verify_dfa(dfa);
+	if (error)
+		goto fail;
 
 	return 0;
 

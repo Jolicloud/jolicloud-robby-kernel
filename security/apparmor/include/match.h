@@ -94,7 +94,6 @@ static inline size_t table_size(size_t len, size_t el_size)
 struct aa_dfa *aa_match_alloc(void);
 void aa_match_free(struct aa_dfa *dfa);
 int unpack_dfa(struct aa_dfa *dfa, void *blob, size_t size);
-int verify_dfa(struct aa_dfa *dfa);
 unsigned int aa_dfa_match_len(struct aa_dfa *dfa, unsigned int start,
 			      const char *str, int len);
 unsigned int aa_dfa_match(struct aa_dfa *dfa, unsigned int start,

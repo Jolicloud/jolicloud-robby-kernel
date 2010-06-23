@@ -307,16 +307,12 @@ static struct aa_dfa *aa_unpack_dfa(struct aa_ext *e)
 			size_t sz = blob - (char *)e->start;
 			size_t pad = ALIGN(sz, 8) - sz;
 			error = unpack_dfa(dfa, blob + pad, size - pad);
-			if (!error)
-				error = verify_dfa(dfa);
 		} else {
 			error = -ENOMEM;
 		}
 
-		if (error) {
-			aa_match_free(dfa);
+		if (error)
 			dfa = ERR_PTR(error);
-		}
 	}
 
 	return dfa;
