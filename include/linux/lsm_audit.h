@@ -103,14 +103,12 @@ struct common_audit_data {
 			const char *name;
 			const char *info;
 			union {
+				void *target;
 				long pos;
 				struct {
 					int rlim;
 					unsigned long max;
 				} rlim;
-				struct {
-					pid_t tracer, tracee;
-				} ptrace;
 				struct {
 					const char *path;
 					const char *target;

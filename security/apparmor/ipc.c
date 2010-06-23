@@ -24,27 +24,25 @@
 static void audit_cb(struct audit_buffer *ab, void *va)
 {
 	struct common_audit_data *sa = va;
-	audit_log_format(ab, " tracer=%d tracee=%d", sa->aad.ptrace.tracer,
-			 sa->aad.ptrace.tracee);
+	audit_log_format(ab, " target=");
+	audit_log_untrustedstring(ab, sa->aad.target);
 }
 
 /**
  * aa_audit_ptrace - do auditing for ptrace
  * @profile: profile being enforced  (NOT NULL)
- * @tracer: pid of tracer
- * @tracee: pid of tracee
+ * @target: profile being traced (NOT NULL)
  * @error: error condition
  *
  * Returns: %0 or error code
  */
-static int aa_audit_ptrace(struct aa_profile *profile, pid_t tracer,
-			   pid_t tracee, int error)
+static int aa_audit_ptrace(struct aa_profile *profile,
+			   struct aa_profile *target, int error)
 {
 	struct common_audit_data sa;
 	COMMON_AUDIT_DATA_INIT_NONE(&sa);
 	sa.aad.op = OP_PTRACE;
-	sa.aad.ptrace.tracer = tracer;
-	sa.aad.ptrace.tracee = tracee;
+	sa.aad.target = target;
 	sa.aad.error = error;
 
 	return aa_audit(AUDIT_APPARMOR_AUTO, profile, GFP_ATOMIC, &sa,
@@ -106,7 +104,7 @@ int aa_ptrace(struct task_struct *tracer, struct task_struct *tracee,
 		struct aa_profile *tracee_p = aa_cred_profile(lcred);
 
 		error = aa_may_ptrace(tracer, tracer_p, tracee_p, mode);
-		error = aa_audit_ptrace(tracer_p, tracer->pid, tracee->pid, error);
+		error = aa_audit_ptrace(tracer_p, tracee_p, error);
 
 		put_cred(lcred);
 	}
