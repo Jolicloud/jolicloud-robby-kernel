@@ -25,6 +25,22 @@
 #include "include/context.h"
 #include "include/policy.h"
 
+static void *kvmalloc(size_t size)
+{
+	void *buffer = kmalloc(size, GFP_KERNEL);
+	if (!buffer)
+		buffer = vmalloc(size);
+	return buffer;
+}
+
+static void kvfree(void *buffer)
+{
+	if (is_vmalloc_addr(buffer))
+		vfree(buffer);
+	else
+		kfree(buffer);
+}
+
 static char *aa_simple_write_to_buffer(const char __user *userbuf,
 				       size_t alloc_size, size_t copy_size,
 				       loff_t *pos, const char *operation)
@@ -55,14 +71,14 @@ static char *aa_simple_write_to_buffer(const char __user *userbuf,
 		goto out;
 	}
 	/* freed by caller to aa_simple_write_to_buffer */
-	data = vmalloc(alloc_size);
+	data = kvmalloc(alloc_size);
 	if (data == NULL) {
 		data = ERR_PTR(-ENOMEM);
 		goto out;
 	}
 
 	if (copy_from_user(data, userbuf, copy_size)) {
-		vfree(data);
+		kvfree(data);
 		data = ERR_PTR(-EFAULT);
 		goto out;
 	}
@@ -83,7 +99,7 @@ static ssize_t aa_profile_load(struct file *f, const char __user *buf,
 	error = PTR_ERR(data);
 	if (!IS_ERR(data)) {
 		error = aa_interface_add_profiles(data, size);
-		vfree(data);
+		kvfree(data);
 	}
 
 	return error;
@@ -105,7 +121,7 @@ static ssize_t aa_profile_replace(struct file *f, const char __user *buf,
 	error = PTR_ERR(data);
 	if (!IS_ERR(data)) {
 		error = aa_interface_replace_profiles(data, size);
-		vfree(data);
+		kvfree(data);
 	}
 
 	return error;
@@ -133,7 +149,7 @@ static ssize_t aa_profile_remove(struct file *f, const char __user *buf,
 	if (!IS_ERR(data)) {
 		data[size] = 0;
 		error = aa_interface_remove_profiles(data, size);
-		vfree(data);
+		kvfree(data);
 	}
 
 	return error;
