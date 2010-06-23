@@ -73,71 +73,6 @@ out:
 	return table;
 }
 
-int unpack_dfa(struct aa_dfa *dfa, void *blob, size_t size)
-{
-	int hsize, i;
-	int error = -ENOMEM;
-
-	/* get dfa table set header */
-	if (size < sizeof(struct table_set_header))
-		goto fail;
-
-	if (ntohl(*(u32 *) blob) != YYTH_MAGIC)
-		goto fail;
-
-	hsize = ntohl(*(u32 *) (blob + 4));
-	if (size < hsize)
-		goto fail;
-
-	blob += hsize;
-	size -= hsize;
-
-	error = -EPROTO;
-	while (size > 0) {
-		struct table_header *table;
-		table = unpack_table(blob, size);
-		if (!table)
-			goto fail;
-
-		switch (table->td_id) {
-		case YYTD_ID_ACCEPT:
-		case YYTD_ID_ACCEPT2:
-		case YYTD_ID_BASE:
-			dfa->tables[table->td_id - 1] = table;
-			if (table->td_flags != YYTD_DATA32)
-				goto fail;
-			break;
-		case YYTD_ID_DEF:
-		case YYTD_ID_NXT:
-		case YYTD_ID_CHK:
-			dfa->tables[table->td_id - 1] = table;
-			if (table->td_flags != YYTD_DATA16)
-				goto fail;
-			break;
-		case YYTD_ID_EC:
-			dfa->tables[table->td_id - 1] = table;
-			if (table->td_flags != YYTD_DATA8)
-				goto fail;
-			break;
-		default:
-			free_table(table);
-			goto fail;
-		}
-
-		blob += table_size(table->td_lolen, table->td_flags);
-		size -= table_size(table->td_lolen, table->td_flags);
-	}
-
-	return 0;
-
-fail:
-	for (i = 0; i < ARRAY_SIZE(dfa->tables); i++) {
-		free_table(dfa->tables[i]);
-		dfa->tables[i] = NULL;
-	}
-	return error;
-}
-
 /**
  * verify_dfa - verify that all the transitions and states in the dfa tables
  *              are in bounds.
@@ -202,6 +137,71 @@ int verify_dfa(struct aa_dfa *dfa)
 
 	error = 0;
 out:
+	return error;
+}
+
+int unpack_dfa(struct aa_dfa *dfa, void *blob, size_t size)
+{
+	int hsize, i;
+	int error = -ENOMEM;
+
+	/* get dfa table set header */
+	if (size < sizeof(struct table_set_header))
+		goto fail;
+
+	if (ntohl(*(u32 *) blob) != YYTH_MAGIC)
+		goto fail;
+
+	hsize = ntohl(*(u32 *) (blob + 4));
+	if (size < hsize)
+		goto fail;
+
+	blob += hsize;
+	size -= hsize;
+
+	error = -EPROTO;
+	while (size > 0) {
+		struct table_header *table;
+		table = unpack_table(blob, size);
+		if (!table)
+			goto fail;
+
+		switch (table->td_id) {
+		case YYTD_ID_ACCEPT:
+		case YYTD_ID_ACCEPT2:
+		case YYTD_ID_BASE:
+			dfa->tables[table->td_id - 1] = table;
+			if (table->td_flags != YYTD_DATA32)
+				goto fail;
+			break;
+		case YYTD_ID_DEF:
+		case YYTD_ID_NXT:
+		case YYTD_ID_CHK:
+			dfa->tables[table->td_id - 1] = table;
+			if (table->td_flags != YYTD_DATA16)
+				goto fail;
+			break;
+		case YYTD_ID_EC:
+			dfa->tables[table->td_id - 1] = table;
+			if (table->td_flags != YYTD_DATA8)
+				goto fail;
+			break;
+		default:
+			free_table(table);
+			goto fail;
+		}
+
+		blob += table_size(table->td_lolen, table->td_flags);
+		size -= table_size(table->td_lolen, table->td_flags);
+	}
+
+	return 0;
+
+fail:
+	for (i = 0; i < ARRAY_SIZE(dfa->tables); i++) {
+		free_table(dfa->tables[i]);
+		dfa->tables[i] = NULL;
+	}
 	return error;
 }
 
