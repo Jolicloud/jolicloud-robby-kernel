@@ -521,7 +521,7 @@ static struct aa_profile *unpack_profile(struct aa_ext *e,
 		}
 	}
 
-	if (!unpack_u32(e, &(profile->caps.allowed.cap[0]), NULL))
+	if (!unpack_u32(e, &(profile->caps.allow.cap[0]), NULL))
 		goto fail;
 	if (!unpack_u32(e, &(profile->caps.audit.cap[0]), NULL))
 		goto fail;
@@ -532,7 +532,7 @@ static struct aa_profile *unpack_profile(struct aa_ext *e,
 
 	if (unpack_nameX(e, AA_STRUCT, "caps64")) {
 		/* optional upper half of 64 bit caps */
-		if (!unpack_u32(e, &(profile->caps.allowed.cap[1]), NULL))
+		if (!unpack_u32(e, &(profile->caps.allow.cap[1]), NULL))
 			goto fail;
 		if (!unpack_u32(e, &(profile->caps.audit.cap[1]), NULL))
 			goto fail;
@@ -561,7 +561,7 @@ static struct aa_profile *unpack_profile(struct aa_ext *e,
 			goto fail;
 
 		for (i = 0; i < size; i++) {
-			if (!unpack_u16(e, &profile->net.allowed[i], NULL))
+			if (!unpack_u16(e, &profile->net.allow[i], NULL))
 				goto fail;
 			if (!unpack_u16(e, &profile->net.audit[i], NULL))
 				goto fail;
@@ -575,8 +575,8 @@ static struct aa_profile *unpack_profile(struct aa_ext *e,
 		 * by IPC
 		 */
 	}
-	profile->net.allowed[AF_UNIX] = 0xffff;
-	profile->net.allowed[AF_NETLINK] = 0xffff;
+	profile->net.allow[AF_UNIX] = 0xffff;
+	profile->net.allow[AF_NETLINK] = 0xffff;
 
 	/* get file rules */
 	profile->file.dfa = unpack_dfa(e);

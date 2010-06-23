@@ -126,7 +126,7 @@ static int apparmor_capget(struct task_struct *target, kernel_cap_t *effective,
 	*permitted = cred->cap_permitted;
 
 	if (!unconfined(profile))
-		*effective = cap_intersect(*effective, profile->caps.allowed);
+		*effective = cap_intersect(*effective, profile->caps.allow);
 	rcu_read_unlock();
 
 	return 0;
@@ -432,7 +432,7 @@ static int apparmor_dentry_open(struct file *file, const struct cred *cred)
 		/* released by aa_free_file_context */
 		fcxt->profile = aa_get_profile(profile);
 		/* todo cache actual allowed permissions */
-		fcxt->allowed = aa_map_file_to_perms(file);
+		fcxt->allow = aa_map_file_to_perms(file);
 	}
 
 	return error;
@@ -468,7 +468,7 @@ static int common_file_perm(int op, struct file *file, u16 mask)
 	profile = __aa_current_profile();
 
 	if (!unconfined(profile) &&
-	    ((fprofile != profile) || (mask & ~fcxt->allowed)))
+	    ((fprofile != profile) || (mask & ~fcxt->allow)))
 		error = aa_file_perm(op, profile, file, mask);
 
 	return error;

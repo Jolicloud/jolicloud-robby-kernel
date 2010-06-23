@@ -23,7 +23,7 @@
  * @quiet_network: which network permissions to quiet rejects
  */
 struct aa_net {
-	u16 allowed[AF_MAX];
+	u16 allow[AF_MAX];
 	u16 audit[AF_MAX];
 	u16 quiet[AF_MAX];
 };

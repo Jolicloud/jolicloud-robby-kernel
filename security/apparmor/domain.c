@@ -108,7 +108,7 @@ static struct file_perms change_profile_perms(struct aa_profile *profile,
 	unsigned int state;
 
 	if (unconfined(profile)) {
-		perms.allowed = AA_MAY_CHANGE_PROFILE | AA_MAY_ONEXEC;
+		perms.allow = AA_MAY_CHANGE_PROFILE | AA_MAY_ONEXEC;
 		perms.xindex = perms.xdelegate = perms.dindex = 0;
 		perms.audit = perms.quiet = perms.kill = 0;
 		return perms;
@@ -409,7 +409,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	if (cxt->onexec) {
 		struct file_perms perms;
 		sa.base.info = "change_profile onexec";
-		if (!(sa.perms.allowed & AA_MAY_ONEXEC))
+		if (!(sa.perms.allow & AA_MAY_ONEXEC))
 			goto audit;
 
 		/* test if this exec can be paired with change_profile onexec.
@@ -420,13 +420,13 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 		perms = change_profile_perms(profile, cxt->onexec->ns,
 					     sa.name, AA_MAY_ONEXEC, state);
 
-		if (!(perms.allowed & AA_MAY_ONEXEC))
+		if (!(perms.allow & AA_MAY_ONEXEC))
 			goto audit;
 		new_profile = aa_get_profile(aa_newest_version(cxt->onexec));
 		goto apply;
 	}
 
-	if (sa.perms.allowed & MAY_EXEC) {
+	if (sa.perms.allow & MAY_EXEC) {
 		/* exec permission determine how to transition */
 		new_profile = x_to_profile(profile, sa.name, sa.perms.xindex);
 		if (!new_profile) {
@@ -786,7 +786,7 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 
 	sa.perms = change_profile_perms(profile, ns, hname, sa.request,
 					profile->file.start);
-	if (!(sa.perms.allowed & sa.request)) {
+	if (!(sa.perms.allow & sa.request)) {
 		sa.base.error = -EACCES;
 		goto audit;
 	}

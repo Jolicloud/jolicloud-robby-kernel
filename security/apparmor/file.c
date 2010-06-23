@@ -67,7 +67,7 @@ static void aa_audit_file_mask(struct audit_buffer *ab, u16 mask, int xindex)
 static void file_audit_cb(struct audit_buffer *ab, struct aa_audit *va)
 {
 	struct aa_audit_file *sa = container_of(va, struct aa_audit_file, base);
-	u16 denied = sa->request & ~sa->perms.allowed;
+	u16 denied = sa->request & ~sa->perms.allow;
 	uid_t fsuid;
 
 	fsuid = current_fsuid();
@@ -126,7 +126,7 @@ int aa_audit_file(struct aa_profile *profile, struct aa_audit_file *sa)
 		type = AUDIT_APPARMOR_AUDIT;
 	} else {
 		/* only report permissions that were denied */
-		sa->request = sa->request & ~sa->perms.allowed;
+		sa->request = sa->request & ~sa->perms.allow;
 
 		if (sa->request & sa->perms.kill)
 			type = AUDIT_APPARMOR_KILL;
@@ -196,12 +196,12 @@ static struct file_perms aa_compute_perms(struct aa_dfa *dfa,
 	perms.dindex = 0;
 
 	if (current_fsuid() == cond->uid) {
-		perms.allowed = map_old_perms(dfa_user_allow(dfa, state));
+		perms.allow = map_old_perms(dfa_user_allow(dfa, state));
 		perms.audit = map_old_perms(dfa_user_audit(dfa, state));
 		perms.quiet = map_old_perms(dfa_user_quiet(dfa, state));
 		perms.xindex = dfa_user_xindex(dfa, state);
 	} else {
-		perms.allowed = map_old_perms(dfa_other_allow(dfa, state));
+		perms.allow = map_old_perms(dfa_other_allow(dfa, state));
 		perms.audit = map_old_perms(dfa_other_audit(dfa, state));
 		perms.quiet = map_old_perms(dfa_other_quiet(dfa, state));
 		perms.xindex = dfa_other_xindex(dfa, state);
@@ -209,7 +209,7 @@ static struct file_perms aa_compute_perms(struct aa_dfa *dfa,
 
 	/* change_profile wasn't determined by ownership in old mapping */
 	if (ACCEPT_TABLE(dfa)[state] & 0x80000000)
-		perms.allowed |= AA_MAY_CHANGE_PROFILE;
+		perms.allow |= AA_MAY_CHANGE_PROFILE;
 
 	return perms;
 }
@@ -266,7 +266,7 @@ int aa_pathstr_perm(int op, struct aa_profile *profile, const char *name,
 
 	aa_str_perms(profile->file.dfa, profile->file.start, sa.name, cond,
 		     &sa.perms);
-	if (request & ~sa.perms.allowed)
+	if (request & ~sa.perms.allow)
 		sa.base.error = -EACCES;
 	return aa_audit_file(profile, &sa);
 }
@@ -315,7 +315,7 @@ int aa_path_perm(int op, struct aa_profile *profile, struct path *path,
 			 * give a pass (implicit delegation)
 			 */
 			sa.base.error = 0;
-			sa.perms.allowed = sa.request;
+			sa.perms.allow = sa.request;
 		} else if (sa.base.error == -ENOENT)
 			sa.base.info = "Failed name lookup - deleted entry";
 		else if (sa.base.error == -ESTALE)
@@ -327,7 +327,7 @@ int aa_path_perm(int op, struct aa_profile *profile, struct path *path,
 	} else {
 		aa_str_perms(profile->file.dfa, profile->file.start, sa.name,
 			     cond, &sa.perms);
-		if (request & ~sa.perms.allowed)
+		if (request & ~sa.perms.allow)
 			sa.base.error = -EACCES;
 	}
 	sa.base.error = aa_audit_file(profile, &sa);
@@ -418,20 +418,20 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 	sa.perms.quiet &= AA_MAY_LINK;
 	sa.perms.kill &= AA_MAY_LINK;
 
-	if (!(sa.perms.allowed & AA_MAY_LINK))
+	if (!(sa.perms.allow & AA_MAY_LINK))
 		goto audit;
 
 	/* test to see if target can be paired with link */
 	state = aa_dfa_null_transition(profile->file.dfa, state,
 				       profile->flags & PFLAG_OLD_NULL_TRANS);
 	aa_str_perms(profile->file.dfa, state, tname, &cond, &perms);
-	if (!(perms.allowed & AA_MAY_LINK)) {
+	if (!(perms.allow & AA_MAY_LINK)) {
 		sa.base.info = "target restricted";
 		goto audit;
 	}
 
 	/* done if link subset test is not required */
-	if (!(perms.allowed & AA_LINK_SUBSET))
+	if (!(perms.allow & AA_LINK_SUBSET))
 		goto done_tests;
 
 	/* Do link perm subset test requiring allowed permission on link are a
@@ -441,15 +441,15 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 		     &perms);
 
 	/* AA_MAY_LINK is not considered in the subset test */
-	sa.request = sa.perms.allowed & ~AA_MAY_LINK;
-	sa.perms.allowed &= perms.allowed | AA_MAY_LINK;
+	sa.request = sa.perms.allow & ~AA_MAY_LINK;
+	sa.perms.allow &= perms.allow | AA_MAY_LINK;
 
-	sa.request |= AA_AUDIT_FILE_MASK & (sa.perms.allowed & ~perms.allowed);
-	if (sa.request & ~sa.perms.allowed) {
+	sa.request |= AA_AUDIT_FILE_MASK & (sa.perms.allow & ~perms.allow);
+	if (sa.request & ~sa.perms.allow) {
 		goto audit;
-	} else if ((sa.perms.allowed & MAY_EXEC) &&
+	} else if ((sa.perms.allow & MAY_EXEC) &&
 		   !xindex_is_subset(sa.perms.xindex, perms.xindex)) {
-		sa.perms.allowed &= ~MAY_EXEC;
+		sa.perms.allow &= ~MAY_EXEC;
 		sa.request |= MAY_EXEC;
 		sa.base.info = "link not subset of target";
 		goto audit;

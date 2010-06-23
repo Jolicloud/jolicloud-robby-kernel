@@ -27,7 +27,7 @@
  */
 struct aa_file_cxt {
 	struct aa_profile *profile;
-	u16 allowed;
+	u16 allow;
 };
 
 /**

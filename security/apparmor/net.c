@@ -132,7 +132,7 @@ int aa_net_perm(int op, struct aa_profile *profile, int family, int type,
 	if (family == AF_UNIX || family == AF_NETLINK)
 		return 0;
 
-	family_mask = profile->net.allowed[family];
+	family_mask = profile->net.allow[family];
 
 	sa.base.error = (family_mask & (1 << type)) ? 0 : -EACCES;
 

@@ -78,18 +78,18 @@ struct path_cond {
 };
 
 /* struct file_perms - file permission fo
- * @allowed: mask of permissions that are allowed
+ * @allow: mask of permissions that are allowed
  * @audit: mask of permissions to force an audit message for
  * @quiet: mask of permissions to quiet audit messages for
  * @kill: mask of permissions that when matched will kill the task
- * @xindex: exec transition index if @allowed contains MAY_EXEC
+ * @xindex: exec transition index if @allow contains MAY_EXEC
  * @xdelegate: used by exec to determine set of delegates allowed
  * @dindex: delegate table index, 0 if no delegation allowed
  *
  * The @audit and @queit mask should be mutually exclusive.
  */
 struct file_perms {
-	u16 allowed;
+	u16 allow;
 	u16 audit;
 	u16 quiet;
 	u16 kill;
@@ -100,7 +100,7 @@ struct file_perms {
 
 extern struct file_perms nullperms;
 
-#define COMBINED_PERM_MASK(X) ((X).allowed | (X).audit | (X).quiet | (X).kill)
+#define COMBINED_PERM_MASK(X) ((X).allow | (X).audit | (X).quiet | (X).kill)
 
 /* FIXME: split perms from dfa and match this to description
  *        also add delegation info.
