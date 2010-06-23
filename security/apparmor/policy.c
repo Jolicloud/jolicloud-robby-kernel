@@ -796,99 +796,16 @@ struct aa_profile *aa_find_profile(struct aa_namespace *ns, const char *hname)
 }
 
 /**
- * aa_interface_add_profiles - Unpack and add new profile(s) to the profile list
- * @data: serialized data stream
- * @size: size of the serialized data stream
- */
-ssize_t aa_interface_add_profiles(void *udata, size_t size)
-{
-	struct aa_profile *profile = NULL;
-	struct aa_namespace *ns = NULL;
-	struct aa_policy_common *common;
-	ssize_t error;
-	struct aa_audit_iface sa = {
-		.base.operation = "profile_load",
-		.base.gfp_mask = GFP_ATOMIC,
-	};
-
-	/* check if loading policy is locked out */
-	if (aa_g_lock_policy) {
-		sa.base.info = "policy locked";
-		sa.base.error = -EACCES;
-		goto fail;
-	}
-
-	/* released below */
-	profile = aa_unpack(udata, size, &sa);
-	if (IS_ERR(profile)) {
-		sa.base.error = PTR_ERR(profile);
-		goto fail;
-	}
-
-	/* released below */
-	ns = aa_prepare_namespace(sa.name2);
-	if (IS_ERR(ns)) {
-		sa.base.info = "failed to prepare namespace";
-		sa.base.error = PTR_ERR(ns);
-		goto fail;
-	}
-	/* profiles are currently loaded flat with hnames */
-	sa.name = profile->base.hname;
-
-	write_lock(&ns->base.lock);
-
-	/* no ref on common only use inside of lock */
-	common = __aa_find_parent(ns, profile->base.hname);
-	if (!common) {
-		sa.base.info = "parent does not exist";
-		sa.base.error = -ENOENT;
-		goto audit;
-	}
-
-	if (common != &ns->base)
-		/* released on profile replacement or free_aa_profile */
-		profile->parent = aa_get_profile((struct aa_profile *)common);
-
-	if (__aa_find_child(&common->profiles, profile->base.name)) {
-		/* A profile with this name exists already. */
-		sa.base.info = "profile already exists";
-		sa.base.error = -EEXIST;
-	}
-
-audit:
-	error = aa_audit_iface(&sa);
-	if (!error) {
-		/* released on free_aa_profile */
-		profile->sid = aa_alloc_sid(AA_ALLOC_SYS_SID);
-		profile->ns = aa_get_namespace(ns);
-		__aa_add_profile(common, profile);
-	}
-
-	write_unlock(&ns->base.lock);
-
-out:
-	aa_put_namespace(ns);
-	aa_put_profile(profile);
-
-	if (error)
-		return error;
-	return size;
-
-fail:
-	error = aa_audit_iface(&sa);
-	goto out;
-}
-
-/**
  * aa_interface_replace_profiles - replace profile(s) on the profile list
  * @udata: serialized data stream
  * @size: size of the serialized data stream
+ * @add_only: true if only doing addition, no replacement allowed
  *
  * unpack and replace a profile on the profile list and uses of that profile
  * by any aa_task_context.  If the profile does not exist on the profile list
  * it is added.  Return %0 or error.
  */
-ssize_t aa_interface_replace_profiles(void *udata, size_t size)
+ssize_t aa_interface_replace_profiles(void *udata, size_t size, bool add_only)
 {
 	struct aa_policy_common *common;
 	struct aa_profile *old_profile = NULL, *new_profile = NULL;
@@ -906,12 +823,14 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size)
 		goto fail;
 	}
 
+	/* released below */
 	new_profile = aa_unpack(udata, size, &sa);
 	if (IS_ERR(new_profile)) {
 		sa.base.error = PTR_ERR(new_profile);
 		goto fail;
 	}
 
+	/* released below */
 	ns = aa_prepare_namespace(sa.name2);
 	if (!ns) {
 		sa.base.info = "failed to prepare namespace";
@@ -935,9 +854,14 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size)
 				      new_profile->base.name);
 	/* released below */
 	aa_get_profile(old_profile);
-	if (old_profile && old_profile->flags & PFLAG_IMMUTABLE) {
-		sa.base.info = "cannot replace immutible profile";
-		sa.base.error = -EPERM;
+	if (old_profile) {
+		if (old_profile->flags & PFLAG_IMMUTABLE) {
+			sa.base.info = "cannot replace immutible profile";
+			sa.base.error = -EPERM;
+		} else if (add_only) {
+			sa.base.info = "profile already exists";
+			sa.base.error = -EEXIST;
+		}
 	}
 
 audit:
@@ -951,9 +875,11 @@ audit:
 			__aa_replace_profile(old_profile, new_profile);
 		} else {
 			if (common != &ns->base)
+				/* released on profile replacement or free_aa_profile */
 				new_profile->parent = aa_get_profile(
 					(struct aa_profile *) common);
 			__aa_add_profile(common, new_profile);
+			/* released on free_aa_profile */
 			new_profile->sid = aa_alloc_sid(AA_ALLOC_SYS_SID);
 			new_profile->ns = aa_get_namespace(ns);
 		}

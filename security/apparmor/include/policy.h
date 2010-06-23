@@ -232,8 +232,7 @@ struct aa_profile *aa_find_child(struct aa_profile *parent, const char *name);
 struct aa_profile *aa_find_profile(struct aa_namespace *ns, const char *name);
 struct aa_profile *aa_match_profile(struct aa_namespace *ns, const char *name);
 
-ssize_t aa_interface_add_profiles(void *data, size_t size);
-ssize_t aa_interface_replace_profiles(void *udata, size_t size);
+ssize_t aa_interface_replace_profiles(void *udata, size_t size, bool add_only);
 ssize_t aa_interface_remove_profiles(char *name, size_t size);
 
 /**

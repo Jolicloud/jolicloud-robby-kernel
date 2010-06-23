@@ -98,7 +98,7 @@ static ssize_t aa_profile_load(struct file *f, const char __user *buf,
 
 	error = PTR_ERR(data);
 	if (!IS_ERR(data)) {
-		error = aa_interface_add_profiles(data, size);
+		error = aa_interface_replace_profiles(data, size, 1);
 		kvfree(data);
 	}
 
@@ -120,7 +120,7 @@ static ssize_t aa_profile_replace(struct file *f, const char __user *buf,
 					 "profile_replace");
 	error = PTR_ERR(data);
 	if (!IS_ERR(data)) {
-		error = aa_interface_replace_profiles(data, size);
+		error = aa_interface_replace_profiles(data, size, 0);
 		kvfree(data);
 	}
 
