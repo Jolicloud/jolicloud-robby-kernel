@@ -22,11 +22,77 @@
 
 #include "include/apparmor.h"
 #include "include/path.h"
+#include "include/policy.h"
 
-int aa_get_name_to_buffer(struct path *path, int is_dir, char *buffer, int size,
-			  char **name)
+static int d_namespace_path(struct path *path, char *buf, int buflen,
+			    char **name, int flags)
 {
-	int error = d_namespace_path(path, buffer, size - is_dir, name);
+	struct path root, tmp, ns_root = { };
+	char *res;
+	int error = 0;
+
+	read_lock(&current->fs->lock);
+	root = current->fs->root;
+	path_get(&current->fs->root);
+	read_unlock(&current->fs->lock);
+	spin_lock(&vfsmount_lock);
+	if (root.mnt && root.mnt->mnt_ns)
+		ns_root.mnt = mntget(root.mnt->mnt_ns->root);
+	if (ns_root.mnt)
+		ns_root.dentry = dget(ns_root.mnt->mnt_root);
+	spin_unlock(&vfsmount_lock);
+	spin_lock(&dcache_lock);
+	tmp = ns_root;
+	res = __d_path(path, &tmp, buf, buflen);
+
+	*name = res;
+	/* handle error conditions - and still allow a partial path to
+	 * be returned.
+	 */
+	if (IS_ERR(res)) {
+		error = PTR_ERR(res);
+		*name = buf;
+	} else if (d_unlinked(path->dentry)) {
+		/* The stripping of (deleted) is a hack that could be removed
+		 * with an updated __d_path
+		 */
+
+		if (!path->dentry->d_inode) {
+			/* On some filesystems, newly allocated dentries appear
+			 * to the security_path hooks as a deleted
+			 * dentry except without an inode allocated.
+			 *
+			 * Remove the appended deleted text and return as a
+			 * string for normal mediation.  The (deleted) string
+			 * is guarenteed to be added in this case, so just
+			 * strip it.
+			 */
+			buf[buflen - 11] = 0;	/* - (len(" (deleted)") +\0) */
+		} else if (flags & PFLAG_DELETED_NAMES &&
+			   (buf + buflen) - res > 11 &&
+			   strcmp(buf + buflen - 11, " (deleted)") == 0) {
+			buf[buflen - 11] = 0;   /* - (len(" (deleted)") +\0) */
+		} else
+			error = -ENOENT;
+	} else if (flags & ~PFLAG_CONNECT_PATH &&
+		   tmp.dentry != ns_root.dentry && tmp.mnt != ns_root.mnt) {
+		/* disconnected path, don't return pathname starting with '/' */
+		error = -ESTALE;
+		if (*res == '/')
+			*name = res + 1;
+	}
+
+	spin_unlock(&dcache_lock);
+	path_put(&root);
+	path_put(&ns_root);
+
+	return error;
+}
+
+static int get_name_to_buffer(struct path *path, int is_dir, char *buffer,
+			      int size, char **name, int flags)
+{
+	int error = d_namespace_path(path, buffer, size - is_dir, name, flags);
 
 	if (!error && is_dir && (*name)[1] != '\0')
 		/*
@@ -69,7 +135,7 @@ int aa_get_name(struct path *path, int is_dir, char **buffer, char **name)
 		if (!buf)
 			return -ENOMEM;
 
-		error = aa_get_name_to_buffer(path, is_dir, buf, size, &str);
+		error = get_name_to_buffer(path, is_dir, buf, size, &str, 0);
 		if (!error || (error == -ENOENT) || (error == -ESTALE))
 			break;
 
@@ -80,59 +146,6 @@ int aa_get_name(struct path *path, int is_dir, char **buffer, char **name)
 	}
 	*buffer = buf;
 	*name = str;
-
-	return error;
-}
-
-int d_namespace_path(struct path *path, char *buf, int buflen, char **name)
-{
-	struct path root, tmp, ns_root = { };
-	char *res;
-	int error = 0;
-
-	read_lock(&current->fs->lock);
-	root = current->fs->root;
-	path_get(&current->fs->root);
-	read_unlock(&current->fs->lock);
-	spin_lock(&vfsmount_lock);
-	if (root.mnt && root.mnt->mnt_ns)
-		ns_root.mnt = mntget(root.mnt->mnt_ns->root);
-	if (ns_root.mnt)
-		ns_root.dentry = dget(ns_root.mnt->mnt_root);
-	spin_unlock(&vfsmount_lock);
-	spin_lock(&dcache_lock);
-	tmp = ns_root;
-	res = __d_path(path, &tmp, buf, buflen);
-
-	*name = res;
-	/* handle error conditions - and still allow a partial path to
-	 * be returned */
-	if (IS_ERR(res)) {
-		error = PTR_ERR(res);
-		*name = buf;
-	} else if (d_unhashed(path->dentry) && !path->dentry->d_inode) {
-		/* On some filesystems, newly allocated dentries appear
-		 * to the security_path hooks as a deleted
-		 * dentry except without an inode allocated.
-		 *
-		 * Remove the appended deleted text and return as a
-		 * string for normal mediation.  The (deleted) string
-		 * is guarenteed to be added in this case, so just
-		 * strip it.
-		 */
-		buf[buflen - 11] = 0;	/* - (len(" (deleted)") +\0) */
-	} else if (!IS_ROOT(path->dentry) && d_unhashed(path->dentry)) {
-		error = -ENOENT;
-	} else if (tmp.dentry != ns_root.dentry && tmp.mnt != ns_root.mnt) {
-		/* disconnected path, don't return pathname starting with '/' */
-		error = -ESTALE;
-		if (*res == '/')
-			*name = res + 1;
-	}
-
-	spin_unlock(&dcache_lock);
-	path_put(&root);
-	path_put(&ns_root);
 
 	return error;
 }

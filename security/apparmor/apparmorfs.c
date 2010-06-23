@@ -47,10 +47,11 @@ static char *aa_simple_write_to_buffer(const char __user *userbuf,
 	 */
 	cred = aa_current_policy(&profile);
 	if (profile) {
-		struct aa_audit sa = { };
-		sa.operation = operation;
-		sa.gfp_mask = GFP_KERNEL;
-		sa.error = -EACCES;
+		struct aa_audit sa = {
+			.operation = operation,
+			.gfp_mask = GFP_KERNEL,
+			.error = -EACCES,
+		};
 		data = ERR_PTR(aa_audit(AUDIT_APPARMOR_DENIED, profile, &sa,
 					NULL));
 		goto out;

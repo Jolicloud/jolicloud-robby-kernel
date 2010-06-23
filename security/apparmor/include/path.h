@@ -15,10 +15,7 @@
 #ifndef __AA_PATH_H
 #define __AA_PATH_H
 
-int aa_get_name_to_buffer(struct path *path, int is_dir, char *buffer, int size,
-			  char **name);
 int aa_get_name(struct path *path, int is_dir, char **buffer, char **name);
-int d_namespace_path(struct path *path, char *buf, int buflen, char **name);
 char *sysctl_pathname(struct ctl_table *table, char *buffer, int buflen);
 
 #endif /* __AA_PATH_H */

@@ -64,9 +64,10 @@ int aa_strneq(const char *str, const char *sub, int len)
 
 void aa_info_message(const char *str)
 {
-	struct aa_audit sa = { };
-	sa.gfp_mask = GFP_KERNEL;
-	sa.info = str;
+	struct aa_audit sa = {
+		.gfp_mask = GFP_KERNEL,
+		.info = str,
+	};
 	printk(KERN_INFO "AppArmor: %s\n", str);
 	if (audit_enabled)
 		aa_audit(AUDIT_APPARMOR_STATUS, NULL, &sa, NULL);

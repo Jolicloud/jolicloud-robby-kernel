@@ -103,19 +103,19 @@ int aa_capable(struct task_struct *task, struct aa_profile *profile, int cap,
 	       int audit)
 {
 	int error = aa_profile_capable(profile, cap);
-	struct aa_audit_caps sa = { };
+	struct aa_audit_caps sa = {
+		.base.operation = "capable",
+		.base.task = task,
+		.base.gfp_mask = GFP_ATOMIC,
+		.base.error = error,
+		.cap = cap,
+	};
 
 	if (!audit) {
 		if (PROFILE_COMPLAIN(profile))
 			return 0;
 		return error;
 	}
-
-	sa.base.operation = "capable";
-	sa.base.task = task;
-	sa.base.gfp_mask = GFP_ATOMIC;
-	sa.base.error = error;
-	sa.cap = cap;
 
 	return aa_audit_caps(profile, &sa);
 }

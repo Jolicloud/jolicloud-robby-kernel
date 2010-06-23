@@ -50,12 +50,12 @@ static int aa_audit_resource(struct aa_profile *profile,
 int aa_task_setrlimit(struct aa_profile *profile, unsigned int resource,
 		      struct rlimit *new_rlim)
 {
-	struct aa_audit_resource sa = { };
+	struct aa_audit_resource sa = {
+		.base.operation = "setrlimit",
+		.base.gfp_mask = GFP_KERNEL,
+		.rlimit = resource + 1,
+	};
 	int error = 0;
-
-	sa.base.operation = "setrlimit";
-	sa.base.gfp_mask = GFP_KERNEL;
-	sa.rlimit = resource + 1;
 
 	if (profile->rlimits.mask & (1 << resource) &&
 	    new_rlim->rlim_max > profile->rlimits.limits[resource].rlim_max) {

@@ -199,13 +199,13 @@ struct file_perms aa_str_perms(struct aa_dfa *dfa, unsigned int start,
 int aa_pathstr_perm(struct aa_profile *profile, const char *op,
 		    const char *name, u16 request, struct path_cond *cond)
 {
-	struct aa_audit_file sa = { };
-
-	sa.base.operation = op;
-	sa.base.gfp_mask = GFP_KERNEL;
-	sa.request = request;
-	sa.name = name;
-	sa.cond = cond;
+	struct aa_audit_file sa = {
+		.base.operation = op,
+		.base.gfp_mask = GFP_KERNEL,
+		.request = request,
+		.name = name,
+		.cond = cond,
+	};
 
 	sa.perms = aa_str_perms(profile->file.dfa, DFA_START, sa.name, cond,
 				NULL);
@@ -217,13 +217,13 @@ int aa_pathstr_perm(struct aa_profile *profile, const char *op,
 int aa_path_perm(struct aa_profile *profile, const char *operation,
 		 struct path *path, u16 request, struct path_cond *cond)
 {
-	struct aa_audit_file sa = { };
 	char *buffer, *name;
-
-	sa.base.operation = operation;
-	sa.base.gfp_mask = GFP_KERNEL;
-	sa.request = request;
-	sa.cond = cond;
+	struct aa_audit_file sa = {
+		.base.operation = operation,
+		.base.gfp_mask = GFP_KERNEL,
+		.request = request,
+		.cond = cond,
+	};
 
 	sa.base.error = aa_get_name(path, S_ISDIR(cond->mode), &buffer, &name);
 	sa.name = name;
@@ -270,21 +270,22 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 {
 	struct path link = { new_dir->mnt, new_dentry };
 	struct path target = { new_dir->mnt, old_dentry };
-	struct path_cond cond = { old_dentry->d_inode->i_uid,
-				  old_dentry->d_inode->i_mode
+	struct path_cond cond = {
+		old_dentry->d_inode->i_uid,
+		old_dentry->d_inode->i_mode
 	};
 	char *buffer = NULL, *buffer2 = NULL;
 	char *lname, *tname;
 	struct file_perms perms;
 	unsigned int state;
 
-	struct aa_audit_file sa = { };
-	sa.base.operation = "link";
-	sa.base.gfp_mask = GFP_KERNEL;
-	sa.request = AA_MAY_LINK;
-	sa.cond = &cond;
-	sa.perms = nullperms;
-
+	struct aa_audit_file sa = {
+		.base.operation = "link",
+		.base.gfp_mask = GFP_KERNEL,
+		.request = AA_MAY_LINK,
+		.cond = &cond,
+		.perms = nullperms,
+	};
 	sa.base.error = aa_get_name(&link, 0, &buffer, &lname);
 	sa.name = lname;
 	if (sa.base.error)
@@ -363,17 +364,18 @@ int aa_file_common_perm(struct aa_profile *profile, const char *operation,
 			struct file *file, u16 request, const char *name,
 			int error)
 {
-	struct path_cond cond = {.uid = file->f_path.dentry->d_inode->i_uid,
-				  .mode = file->f_path.dentry->d_inode->i_mode
+	struct path_cond cond = {
+		.uid = file->f_path.dentry->d_inode->i_uid,
+		.mode = file->f_path.dentry->d_inode->i_mode
 	};
-	struct aa_audit_file sa = { };
-
-	sa.base.operation = operation;
-	sa.base.gfp_mask = GFP_KERNEL;
-	sa.request = request;
-	sa.base.error = error;
-	sa.name = name;
-	sa.cond = &cond;
+	struct aa_audit_file sa = {
+		.base.operation = operation,
+		.base.gfp_mask = GFP_KERNEL,
+		.request = request,
+		.base.error = error,
+		.name = name,
+		.cond = &cond,
+	};
 
 	if (sa.base.error) {
 		sa.perms = nullperms;

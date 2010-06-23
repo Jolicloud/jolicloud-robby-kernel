@@ -424,11 +424,12 @@ static int apparmor_file_mmap(struct file *file, unsigned long reqprot,
 			rc = -EACCES;
 		}
 		if (rc) {
-			struct aa_audit sa = { };
-			sa.operation = "file_mmap";
-			sa.gfp_mask = GFP_KERNEL;
-			sa.info = "addr < mmap_min_addr";
-			sa.error = rc;
+			struct aa_audit sa = {
+				.operation = "file_mmap",
+				.gfp_mask = GFP_KERNEL,
+				.info = "addr < mmap_min_addr",
+				.error = rc,
+			};
 			return aa_audit(AUDIT_APPARMOR_DENIED, profile, &sa,
 					NULL);
 		}
@@ -519,11 +520,12 @@ static int apparmor_setprocattr(struct task_struct *task, char *name,
 		} else if (strcmp(command, "permipc") == 0) {
 			error = aa_setprocattr_permipc(args);
 		} else {
-			struct aa_audit sa = { };
-			sa.operation = "setprocattr";
-			sa.gfp_mask = GFP_KERNEL;
-			sa.info = name;
-			sa.error = -EINVAL;
+			struct aa_audit sa = {
+				.operation = "setprocattr",
+				.gfp_mask = GFP_KERNEL,
+				.info = name,
+				.error = -EINVAL,
+			};
 			return aa_audit(AUDIT_APPARMOR_DENIED, NULL, &sa, NULL);
 		}
 	} else if (strcmp(name, "exec") == 0) {

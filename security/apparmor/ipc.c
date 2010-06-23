@@ -72,11 +72,12 @@ int aa_ptrace(struct task_struct *tracer, struct task_struct *tracee,
 	int error = 0;
 
 	if (tracer_p) {
-		struct aa_audit_ptrace sa = { };
-		sa.base.operation = "ptrace";
-		sa.base.gfp_mask = GFP_ATOMIC;
-		sa.tracer = tracer->pid;
-		sa.tracee = tracee->pid;
+		struct aa_audit_ptrace sa = {
+			.base.operation = "ptrace",
+			.base.gfp_mask = GFP_ATOMIC,
+			.tracer = tracer->pid,
+			.tracee = tracee->pid,
+		};
 		/* FIXME: different namespace restriction can be lifted
 		 * if, namespace are matched to AppArmor namespaces
 		 */

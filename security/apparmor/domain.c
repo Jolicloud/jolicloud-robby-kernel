@@ -86,7 +86,7 @@ static struct file_perms change_profile_perms(struct aa_profile *profile,
 					      unsigned int *rstate)
 {
 	struct file_perms perms;
-	struct path_cond cond = { 0, 0 };
+	struct path_cond cond = { };
 	unsigned int state;
 
 	if (!profile) {
@@ -254,9 +254,15 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	struct aa_namespace *ns;
 	char *buffer = NULL;
 	unsigned int state = DFA_START;
-	struct aa_audit_file sa = { };
-	struct path_cond cond = { bprm->file->f_path.dentry->d_inode->i_uid,
-				  bprm->file->f_path.dentry->d_inode->i_mode
+	struct path_cond cond = {
+		bprm->file->f_path.dentry->d_inode->i_uid,
+		bprm->file->f_path.dentry->d_inode->i_mode
+	};
+	struct aa_audit_file sa = {
+		.base.operation = "exec",
+		.base.gfp_mask = GFP_KERNEL,
+		.request = MAY_EXEC,
+		.cond = &cond,
 	};
 
 	sa.base.error = cap_bprm_set_creds(bprm);
@@ -265,11 +271,6 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 
 	if (bprm->cred_prepared)
 		return 0;
-
-	sa.base.operation = "exec";
-	sa.base.gfp_mask = GFP_KERNEL;
-	sa.request = MAY_EXEC;
-	sa.cond = &cond;
 
 	cxt = bprm->cred->security;
 	BUG_ON(!cxt);
@@ -468,12 +469,12 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 	const struct cred *cred;
 	struct aa_task_context *cxt;
 	struct aa_profile *profile, *previous_profile, *hat = NULL;
-	struct aa_audit_file sa = { };
+	struct aa_audit_file sa = {
+		.base.gfp_mask = GFP_KERNEL,
+		.base.operation = "change_hat",
+		.request = AA_MAY_CHANGEHAT,
+	};
 	char *name = NULL;
-
-	sa.base.gfp_mask = GFP_KERNEL;
-	sa.base.operation = "change_hat";
-	sa.request = AA_MAY_CHANGEHAT;
 
 	cred = aa_current_policy(&profile);
 	cxt = cred->security;
@@ -572,13 +573,14 @@ int aa_change_profile(const char *ns_name, const char *fqname, int onexec,
 	struct aa_task_context *cxt;
 	struct aa_profile *profile, *target = NULL;
 	struct aa_namespace *ns = NULL;
-	struct aa_audit_file sa = { };
+	struct aa_audit_file sa = {
+		.request = AA_MAY_CHANGE_PROFILE,
+		.base.gfp_mask = GFP_KERNEL,
+	};
 
 	if (!fqname && !ns_name)
 		return -EINVAL;
 
-	sa.request = AA_MAY_CHANGE_PROFILE;
-	sa.base.gfp_mask = GFP_KERNEL;
 	if (onexec)
 		sa.base.operation = "change_onexec";
 	else

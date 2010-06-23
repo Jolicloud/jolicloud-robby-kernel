@@ -95,8 +95,14 @@ static int aa_audit_net(struct aa_profile *profile, struct aa_audit_net *sa)
 int aa_net_perm(struct aa_profile *profile, char *operation,
 		int family, int type, int protocol)
 {
-	struct aa_audit_net sa = { };
 	u16 family_mask;
+	struct aa_audit_net sa = {
+		.base.operation = operation,
+		.base.gfp_mask = GFP_KERNEL,
+		.family = family,
+		.type = type,
+		.protocol = protocol,
+	};
 
 	if ((family < 0) || (family >= AF_MAX))
 		return -EINVAL;
@@ -111,12 +117,6 @@ int aa_net_perm(struct aa_profile *profile, char *operation,
 	family_mask = profile->net.allowed[family];
 
 	sa.base.error = (family_mask & (1 << type)) ? 0 : -EACCES;
-
-	sa.base.operation = operation;
-	sa.base.gfp_mask = GFP_KERNEL;
-	sa.family = family;
-	sa.type = type;
-	sa.protocol = protocol;
 
 	return aa_audit_net(profile, &sa);
 }
