@@ -523,7 +523,7 @@ static char *new_compound_name(const char *n1, const char *n2)
  *
  * Returns %0 on success, error otherwise.
  */
-int aa_change_hat(const char *hats[], int count, u64 token, int permtest)
+int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 {
 	const struct cred *cred;
 	struct aa_task_context *cxt;
@@ -639,7 +639,7 @@ out:
  * Returns %0 on success, error otherwise.
  */
 int aa_change_profile(const char *ns_name, const char *hname, int onexec,
-		      int permtest)
+		      bool permtest)
 {
 	const struct cred *cred;
 	struct aa_task_context *cxt;
