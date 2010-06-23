@@ -72,7 +72,7 @@ int aa_ptrace(struct task_struct *tracer, struct task_struct *tracee,
 	/* cred released below */
 	const struct cred *cred = get_task_cred(tracer);
 	int error = 0;
-	tracer_p = aa_cred_policy(cred);
+	tracer_p = aa_cred_profile(cred);
 
 	if (!unconfined(tracer_p)) {
 		struct aa_audit_ptrace sa = {
@@ -93,7 +93,7 @@ int aa_ptrace(struct task_struct *tracer, struct task_struct *tracee,
 			struct aa_profile *tracee_p;
 			/* lcred released below */
 			struct cred *lcred = get_task_cred(tracee);
-			tracee_p = aa_cred_policy(lcred);
+			tracee_p = aa_cred_profile(lcred);
 
 			sa.base.error = aa_may_ptrace(tracer, tracer_p,
 						      tracee_p, mode);

@@ -94,14 +94,14 @@ static inline bool __aa_task_is_confined(struct task_struct *task)
 }
 
 /**
- * aa_cred_policy - obtain cred's profiles
+ * aa_cred_profile - obtain cred's profiles
  * @cred: cred to obtain profiles from
  *
  * Returns: system confining profile
  *
  * does NOT increment reference count
  */
-static inline struct aa_profile *aa_cred_policy(const struct cred *cred)
+static inline struct aa_profile *aa_cred_profile(const struct cred *cred)
 {
 	struct aa_task_context *cxt = cred->security;
 	BUG_ON(!cxt);
@@ -118,7 +118,7 @@ static inline struct aa_profile *aa_cred_policy(const struct cred *cred)
  */
 static inline struct aa_profile *__aa_current_profile(void)
 {
-	return aa_cred_policy(current_cred());
+	return aa_cred_profile(current_cred());
 }
 
 /**

@@ -64,7 +64,7 @@ static int aa_may_change_ptraced_domain(struct task_struct *task,
 	if (tracer) {
 		/* released below */
 		cred = get_task_cred(tracer);
-		tracerp = aa_cred_policy(cred);
+		tracerp = aa_cred_profile(cred);
 	}
 	rcu_read_unlock();
 
@@ -539,7 +539,7 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 	/* released below */
 	cred = get_current_cred();
 	cxt = cred->security;
-	profile = aa_cred_policy(cred);
+	profile = aa_cred_profile(cred);
 	previous_profile = cxt->sys.previous;
 
 	if (unconfined(profile)) {
@@ -660,7 +660,7 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 
 	cred = get_current_cred();
 	cxt = cred->security;
-	profile = aa_cred_policy(cred);
+	profile = aa_cred_profile(cred);
 
 	if (ns_name) {
 		/* released below */

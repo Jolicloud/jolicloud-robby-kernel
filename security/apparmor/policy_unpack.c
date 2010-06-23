@@ -87,7 +87,7 @@ int aa_audit_iface(struct aa_audit_iface *sa)
 	struct aa_profile *profile;
 	const struct cred *cred = get_current_cred();
 	int error;
-	profile = aa_cred_policy(cred);
+	profile = aa_cred_profile(cred);
 	error = aa_audit(AUDIT_APPARMOR_STATUS, profile, &sa->base, audit_cb);
 	put_cred(cred);
 	return error;
