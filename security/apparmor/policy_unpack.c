@@ -243,8 +243,7 @@ static size_t unpack_blob(struct aa_ext *e, char **blob, const char *name)
 	return 0;
 }
 
-static int unpack_string(struct aa_ext *e, const char **string,
-			 const char *name)
+static int unpack_str(struct aa_ext *e, const char **string, const char *name)
 {
 	char *src_str;
 	size_t size = 0;
@@ -266,11 +265,11 @@ fail:
 	return 0;
 }
 
-static int unpack_dynstring(struct aa_ext *e, char **string, const char *name)
+static int unpack_strdup(struct aa_ext *e, char **string, const char *name)
 {
 	const char *tmp;
 	void *pos = e->pos;
-	int res = unpack_string(e, &tmp, name);
+	int res = unpack_str(e, &tmp, name);
 	*string = NULL;
 
 	if (!res)
@@ -362,7 +361,7 @@ static bool aa_unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
 		profile->file.trans.size = size;
 		for (i = 0; i < size; i++) {
 			char *tmp;
-			if (!unpack_dynstring(e, &tmp, NULL))
+			if (!unpack_strdup(e, &tmp, NULL))
 				goto fail;
 			/*
 			 * note: strings beginning with a : have an embedded
@@ -441,7 +440,7 @@ static struct aa_profile *aa_unpack_profile(struct aa_ext *e,
 	/* check that we have the right struct being passed */
 	if (!unpack_nameX(e, AA_STRUCT, "profile"))
 		goto fail;
-	if (!unpack_string(e, &name, NULL))
+	if (!unpack_str(e, &name, NULL))
 		goto fail;
 
 	profile = alloc_aa_profile(name);
@@ -589,7 +588,7 @@ static int aa_verify_header(struct aa_ext *e, struct aa_audit_iface *sa)
 	}
 
 	/* read the namespace if present */
-	if (!unpack_string(e, &sa->name2, "namespace"))
+	if (!unpack_str(e, &sa->name2, "namespace"))
 		sa->name2 = NULL;
 
 	return 0;
