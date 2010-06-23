@@ -141,7 +141,7 @@ int aa_get_name(struct path *path, int is_dir, char **buffer, char **name)
 
 		kfree(buf);
 		size <<= 1;
-		if (size > g_apparmor_path_max)
+		if (size > aa_g_path_max)
 			return -ENAMETOOLONG;
 	}
 	*buffer = buf;

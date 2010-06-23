@@ -125,7 +125,7 @@ static int seq_show_profile(struct seq_file *f, void *p)
 }
 
 /* Used in apparmorfs.c */
-static struct seq_operations apparmorfs_profiles_op = {
+static const struct seq_operations aa_fs_profiles_op = {
 	.start = p_start,
 	.next = p_next,
 	.stop = p_stop,
@@ -134,7 +134,7 @@ static struct seq_operations apparmorfs_profiles_op = {
 
 static int aa_profiles_open(struct inode *inode, struct file *file)
 {
-	return seq_open(file, &apparmorfs_profiles_op);
+	return seq_open(file, &aa_fs_profiles_op);
 }
 
 static int aa_profiles_release(struct inode *inode, struct file *file)
@@ -142,7 +142,7 @@ static int aa_profiles_release(struct inode *inode, struct file *file)
 	return seq_release(inode, file);
 }
 
-struct file_operations apparmorfs_profiles_fops = {
+const struct file_operations aa_fs_profiles_fops = {
 	.open = aa_profiles_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
@@ -160,7 +160,7 @@ static ssize_t aa_matching_read(struct file *file, char __user *buf,
 				       sizeof(matching) - 1);
 }
 
-struct file_operations apparmorfs_matching_fops = {
+const struct file_operations aa_fs_matching_fops = {
 	.read = aa_matching_read,
 };
 
@@ -175,6 +175,6 @@ static ssize_t aa_features_read(struct file *file, char __user *buf,
 				       sizeof(features) - 1);
 }
 
-struct file_operations apparmorfs_features_fops = {
+const struct file_operations aa_fs_features_fops = {
 	.read = aa_features_read,
 };

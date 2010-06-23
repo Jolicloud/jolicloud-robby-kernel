@@ -103,7 +103,6 @@ static inline u16 dfa_map_xindex(u16 mask)
 	u16 old_index = (mask >> 10) & 0xf;
 	u16 index = 0;
 
-//printk("mask x%x\n", mask);
 	if (mask & 0x100)
 		index |= AA_X_UNSAFE;
 	if (mask & 0x200)
@@ -128,15 +127,16 @@ static inline u16 dfa_map_xindex(u16 mask)
 /*
  * map old dfa inline permissions to new format
  */
-#define dfa_user_allow(dfa, state)	((ACCEPT_TABLE(dfa)[state]) & 0x7f)
-#define dfa_user_audit(dfa, state)	((ACCEPT_TABLE2(dfa)[state]) & 0x7f)
-#define dfa_user_quiet(dfa, state)	(((ACCEPT_TABLE2(dfa)[state]) >> 7) & 0x7f)
+#define dfa_user_allow(dfa, state) ((ACCEPT_TABLE(dfa)[state]) & 0x7f)
+#define dfa_user_audit(dfa, state) ((ACCEPT_TABLE2(dfa)[state]) & 0x7f)
+#define dfa_user_quiet(dfa, state) (((ACCEPT_TABLE2(dfa)[state]) >> 7) & 0x7f)
 #define dfa_user_xindex(dfa, state) \
 	(dfa_map_xindex(ACCEPT_TABLE(dfa)[state] & 0x3fff))
 
-#define dfa_other_allow(dfa, state)	(((ACCEPT_TABLE(dfa)[state]) >> 14) & 0x7f)
-#define dfa_other_audit(dfa, state)	(((ACCEPT_TABLE2(dfa)[state]) >> 14) & 0x7f)
-#define dfa_other_quiet(dfa, state)	((((ACCEPT_TABLE2(dfa)[state]) >> 7) >> 14) & 0x7f)
+#define dfa_other_allow(dfa, state) (((ACCEPT_TABLE(dfa)[state]) >> 14) & 0x7f)
+#define dfa_other_audit(dfa, state) (((ACCEPT_TABLE2(dfa)[state]) >> 14) & 0x7f)
+#define dfa_other_quiet(dfa, state) \
+	((((ACCEPT_TABLE2(dfa)[state]) >> 7) >> 14) & 0x7f)
 #define dfa_other_xindex(dfa, state) \
 	dfa_map_xindex((ACCEPT_TABLE(dfa)[state] >> 14) & 0x3fff)
 

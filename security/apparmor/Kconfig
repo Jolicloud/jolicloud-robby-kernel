@@ -57,6 +57,6 @@ config SECURITY_APPARMOR_COMPAT_24
 	depends on SECURITY_APPARMOR
 	default y
 	help
-	  This option enables compatability with AppArmor 2.4.  It is	  
+	  This option enables compatability with AppArmor 2.4.  It is
           recommended if compatability with older versions of AppArmor
           is desired.

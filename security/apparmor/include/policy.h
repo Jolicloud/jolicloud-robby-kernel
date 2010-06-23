@@ -34,11 +34,11 @@ extern const char *profile_mode_names[];
 #define APPARMOR_NAMES_MAX_INDEX 3
 
 #define PROFILE_COMPLAIN(_profile)				\
-	((g_profile_mode == APPARMOR_COMPLAIN) || ((_profile) &&	\
+	((aa_g_profile_mode == APPARMOR_COMPLAIN) || ((_profile) &&	\
 					(_profile)->mode == APPARMOR_COMPLAIN))
 
 #define PROFILE_KILL(_profile)					\
-	((g_profile_mode == APPARMOR_KILL) || ((_profile) &&	\
+	((aa_g_profile_mode == APPARMOR_KILL) || ((_profile) &&	\
 					(_profile)->mode == APPARMOR_KILL))
 
 #define PROFILE_IS_HAT(_profile) \
@@ -190,13 +190,13 @@ extern struct list_head ns_list;
 extern rwlock_t ns_list_lock;
 
 extern struct aa_namespace *default_namespace;
-extern enum profile_mode g_profile_mode;
+extern enum profile_mode aa_g_profile_mode;
 
 void aa_add_profile(struct aa_policy_common *common,
 		    struct aa_profile *profile);
 
-int alloc_default_namespace(void);
-void free_default_namespace(void);
+int aa_alloc_default_namespace(void);
+void aa_free_default_namespace(void);
 struct aa_namespace *alloc_aa_namespace(const char *name);
 void free_aa_namespace_kref(struct kref *kref);
 void free_aa_namespace(struct aa_namespace *ns);
@@ -286,8 +286,8 @@ static inline void aa_put_profile(struct aa_profile *p)
 
 static inline int PROFILE_AUDIT_MODE(struct aa_profile *profile)
 {
-	if (g_apparmor_audit != AUDIT_NORMAL)
-		return g_apparmor_audit;
+	if (aa_g_audit != AUDIT_NORMAL)
+		return aa_g_audit;
 	if (profile)
 		return profile->audit;
 	return AUDIT_NORMAL;

@@ -65,7 +65,7 @@ static int aa_audit_base(int type, struct aa_profile *profile,
 		return type == AUDIT_APPARMOR_ALLOWED ? 0 : -ENOMEM;
 	}
 
-	if (g_apparmor_audit_header)
+	if (aa_g_audit_header)
 		audit_log_format(ab, "type=%s ",
 				 aa_audit_type[type - AUDIT_APPARMOR_AUDIT]);
 
@@ -117,7 +117,7 @@ int aa_audit(int type, struct aa_profile *profile, struct aa_audit *sa,
 	     void (*cb) (struct audit_buffer *, void *))
 {
 	struct audit_context *audit_cxt;
-	audit_cxt = g_apparmor_logsyscall ? current->audit_context : NULL;
+	audit_cxt = aa_g_logsyscall ? current->audit_context : NULL;
 
 	if (type == AUDIT_APPARMOR_AUTO) {
 		if (likely(!sa->error)) {

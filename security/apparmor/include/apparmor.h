@@ -19,12 +19,12 @@
 
 /* Control parameters settable thru module/boot flags or
  * via /sys/kernel/security/apparmor/control */
-extern enum audit_mode g_apparmor_audit;
-extern int g_apparmor_audit_header;
-extern int g_apparmor_debug;
-extern int g_apparmor_lock_policy;
-extern int g_apparmor_logsyscall;
-extern unsigned int g_apparmor_path_max;
+extern enum audit_mode aa_g_audit;
+extern int aa_g_audit_header;
+extern int aa_g_debug;
+extern int aa_g_lock_policy;
+extern int aa_g_logsyscall;
+extern unsigned int aa_g_path_max;
 
 /*
  * DEBUG remains global (no per profile flag) since it is mostly used in sysctl
@@ -33,7 +33,7 @@ extern unsigned int g_apparmor_path_max;
 
 #define AA_DEBUG(fmt, args...)						\
 	do {								\
-		if (g_apparmor_debug && printk_ratelimit())		\
+		if (aa_g_debug && printk_ratelimit())			\
 			printk(KERN_DEBUG "AppArmor: " fmt, ##args);	\
 	} while (0)
 

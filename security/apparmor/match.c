@@ -250,7 +250,7 @@ unsigned int aa_dfa_match_len(struct aa_dfa *dfa, unsigned int start,
 	if (dfa->tables[YYTD_ID_EC - 1]) {
 		u8 *equiv = EQUIV_TABLE(dfa);
 		for (; len; len--) {
-			pos = base[state] + equiv[(u8) * str++];
+			pos = base[state] + equiv[(u8) *str++];
 			if (check[pos] == state)
 				state = next[pos];
 			else
@@ -258,7 +258,7 @@ unsigned int aa_dfa_match_len(struct aa_dfa *dfa, unsigned int start,
 		}
 	} else {
 		for (; len; len--) {
-			pos = base[state] + (u8) * str++;
+			pos = base[state] + (u8) *str++;
 			if (check[pos] == state)
 				state = next[pos];
 			else

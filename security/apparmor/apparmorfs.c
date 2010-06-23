@@ -91,7 +91,7 @@ static ssize_t aa_profile_load(struct file *f, const char __user *buf,
 	return error;
 }
 
-static struct file_operations apparmorfs_profile_load = {
+static const struct file_operations aa_fs_profile_load = {
 	.write = aa_profile_load
 };
 
@@ -113,7 +113,7 @@ static ssize_t aa_profile_replace(struct file *f, const char __user *buf,
 	return error;
 }
 
-static struct file_operations apparmorfs_profile_replace = {
+static const struct file_operations aa_fs_profile_replace = {
 	.write = aa_profile_replace
 };
 
@@ -141,38 +141,39 @@ static ssize_t aa_profile_remove(struct file *f, const char __user *buf,
 	return error;
 }
 
-static struct file_operations apparmorfs_profile_remove = {
+static const struct file_operations aa_fs_profile_remove = {
 	.write = aa_profile_remove
 };
 
-static struct dentry *apparmorfs_dentry;
-struct dentry *apparmorfs_null;
-struct vfsmount *apparmorfs_mnt;
+static struct dentry *aa_fs_dentry;
+struct dentry *aa_fs_null;
+struct vfsmount *aa_fs_mnt;
 
 static void aafs_remove(const char *name)
 {
 	struct dentry *dentry;
 
-	dentry = lookup_one_len(name, apparmorfs_dentry, strlen(name));
+	dentry = lookup_one_len(name, aa_fs_dentry, strlen(name));
 	if (!IS_ERR(dentry)) {
 		securityfs_remove(dentry);
 		dput(dentry);
 	}
 }
 
-static int aafs_create(const char *name, int mask, struct file_operations *fops)
+static int aafs_create(const char *name, int mask,
+		       const struct file_operations *fops)
 {
 	struct dentry *dentry;
 
-	dentry = securityfs_create_file(name, S_IFREG | mask, apparmorfs_dentry,
+	dentry = securityfs_create_file(name, S_IFREG | mask, aa_fs_dentry,
 					NULL, fops);
 
 	return IS_ERR(dentry) ? PTR_ERR(dentry) : 0;
 }
 
-void destroy_apparmorfs(void)
+void aa_destroy_aafs(void)
 {
-	if (apparmorfs_dentry) {
+	if (aa_fs_dentry) {
 		aafs_remove(".remove");
 		aafs_remove(".replace");
 		aafs_remove(".load");
@@ -181,47 +182,47 @@ void destroy_apparmorfs(void)
 		aafs_remove("features");
 		aafs_remove("profiles");
 #endif
-		securityfs_remove(apparmorfs_dentry);
-		apparmorfs_dentry = NULL;
+		securityfs_remove(aa_fs_dentry);
+		aa_fs_dentry = NULL;
 	}
 }
 
-int create_apparmorfs(void)
+int aa_create_aafs(void)
 {
 	int error;
 
 	if (!apparmor_initialized)
 		return 0;
 
-	if (apparmorfs_dentry) {
+	if (aa_fs_dentry) {
 		AA_ERROR("%s: AppArmor securityfs already exists\n", __func__);
 		return -EEXIST;
 	}
 
-	apparmorfs_dentry = securityfs_create_dir("apparmor", NULL);
-	if (IS_ERR(apparmorfs_dentry)) {
-		error = PTR_ERR(apparmorfs_dentry);
-		apparmorfs_dentry = NULL;
+	aa_fs_dentry = securityfs_create_dir("apparmor", NULL);
+	if (IS_ERR(aa_fs_dentry)) {
+		error = PTR_ERR(aa_fs_dentry);
+		aa_fs_dentry = NULL;
 		goto error;
 	}
 #ifdef CONFIG_SECURITY_APPARMOR_COMPAT_24
-	error = aafs_create("profiles", 0440, &apparmorfs_profiles_fops);
+	error = aafs_create("profiles", 0440, &aa_fs_profiles_fops);
 	if (error)
 		goto error;
-	error = aafs_create("matching", 0444, &apparmorfs_matching_fops);
+	error = aafs_create("matching", 0444, &aa_fs_matching_fops);
 	if (error)
 		goto error;
-	error = aafs_create("features", 0444, &apparmorfs_features_fops);
+	error = aafs_create("features", 0444, &aa_fs_features_fops);
 	if (error)
 		goto error;
 #endif
-	error = aafs_create(".load", 0640, &apparmorfs_profile_load);
+	error = aafs_create(".load", 0640, &aa_fs_profile_load);
 	if (error)
 		goto error;
-	error = aafs_create(".replace", 0640, &apparmorfs_profile_replace);
+	error = aafs_create(".replace", 0640, &aa_fs_profile_replace);
 	if (error)
 		goto error;
-	error = aafs_create(".remove", 0640, &apparmorfs_profile_remove);
+	error = aafs_create(".remove", 0640, &aa_fs_profile_remove);
 	if (error)
 		goto error;
 
@@ -232,10 +233,10 @@ int create_apparmorfs(void)
 	return 0;
 
 error:
-	destroy_apparmorfs();
+	aa_destroy_aafs();
 	AA_ERROR("Error creating AppArmor securityfs\n");
 	apparmor_disable();
 	return error;
 }
 
-fs_initcall(create_apparmorfs);
+fs_initcall(aa_create_aafs);

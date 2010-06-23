@@ -15,16 +15,15 @@
 #ifndef __AA_APPARMORFS_H
 #define __AA_APPARMORFS_H
 
-extern struct dentry *apparmorfs_null;
-extern struct vfsmount *apparmorfs_mnt;
+extern struct dentry *aa_fs_null;
+extern struct vfsmount *aa_fs_mnt;
 
-extern int create_apparmorfs(void);
-extern void destroy_apparmorfs(void);
+extern void aa_destroy_aafs(void);
 
 #ifdef CONFIG_SECURITY_APPARMOR_COMPAT_24
-extern struct file_operations apparmorfs_profiles_fops;
-extern struct file_operations apparmorfs_matching_fops;
-extern struct file_operations apparmorfs_features_fops;
+extern const struct file_operations aa_fs_profiles_fops;
+extern const struct file_operations aa_fs_matching_fops;
+extern const struct file_operations aa_fs_features_fops;
 #endif
 
 #endif /* __AA_APPARMORFS_H */

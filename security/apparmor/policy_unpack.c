@@ -281,12 +281,14 @@ static int unpack_string(struct aa_ext *e, char **string, const char *name)
 	size_t size = 0;
 	void *pos = e->pos;
 	*string = NULL;
-	if (unpack_nameX(e, AA_STRING, name) &&
-	    (size = unpack_u16_chunk(e, &src_str))) {
-		/* strings are null terminated, length is size - 1 */
-		if (src_str[size - 1] != 0)
-			goto fail;
-		*string = src_str;
+	if (unpack_nameX(e, AA_STRING, name)) {
+		size = unpack_u16_chunk(e, &src_str);
+		if (size) {
+			/* strings are null terminated, length is size - 1 */
+			if (src_str[size - 1] != 0)
+				goto fail;
+			*string = src_str;
+		}
 	}
 
 	return size;
@@ -701,7 +703,7 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size)
 	struct aa_audit_iface sa;
 	aa_audit_init(&sa, "profile_replace", &e);
 
-	if (g_apparmor_lock_policy)
+	if (aa_g_lock_policy)
 		return -EACCES;
 
 	error = aa_verify_header(&e, &sa);
@@ -798,7 +800,7 @@ ssize_t aa_interface_remove_profiles(char *name, size_t size)
 	struct aa_audit_iface sa;
 	aa_audit_init(&sa, "profile_remove", NULL);
 
-	if (g_apparmor_lock_policy)
+	if (aa_g_lock_policy)
 		return -EACCES;
 
 	write_lock(&ns_list_lock);

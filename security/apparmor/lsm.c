@@ -135,7 +135,7 @@ static int apparmor_sysctl(struct ctl_table *table, int op)
 		if (!buffer)
 			goto out;
 
-		/* 
+		/*
 		 * TODO: convert this over to using a global or per
 		 * namespace control instead of a hard coded /proc
 		 */
@@ -546,9 +546,8 @@ static int apparmor_task_setrlimit(unsigned int resource,
 	struct aa_profile *profile = aa_current_profile_wupd();
 	int error = 0;
 
-	if (profile) {
+	if (profile)
 		error = aa_task_setrlimit(profile, resource, new_rlim);
-	}
 
 	return error;
 }
@@ -749,42 +748,42 @@ static int param_get_mode(char *buffer, struct kernel_param *kp);
  */
 
 /* AppArmor global enforcement switch - complain, enforce, kill */
-enum profile_mode g_profile_mode = APPARMOR_ENFORCE;
+enum profile_mode aa_g_profile_mode = APPARMOR_ENFORCE;
 module_param_call(mode, param_set_mode, param_get_mode,
-		  &g_profile_mode, S_IRUSR | S_IWUSR);
+		  &aa_g_profile_mode, S_IRUSR | S_IWUSR);
 
 /* Debug mode */
-int g_apparmor_debug;
-module_param_named(debug, g_apparmor_debug, aabool, S_IRUSR | S_IWUSR);
+int aa_g_debug;
+module_param_named(debug, aa_g_debug, aabool, S_IRUSR | S_IWUSR);
 
 /* Audit mode */
-enum audit_mode g_apparmor_audit;
+enum audit_mode aa_g_audit;
 module_param_call(audit, param_set_audit, param_get_audit,
-		  &g_apparmor_audit, S_IRUSR | S_IWUSR);
+		  &aa_g_audit, S_IRUSR | S_IWUSR);
 
 /* Determines if audit header is included in audited messages.  This
  * provides more context if the audit daemon is not running
  */
-int g_apparmor_audit_header;
-module_param_named(audit_header, g_apparmor_audit_header, aabool,
+int aa_g_audit_header;
+module_param_named(audit_header, aa_g_audit_header, aabool,
 		   S_IRUSR | S_IWUSR);
 
 /* lock out loading/removal of policy
  * TODO: add in at boot loading of policy, which is the only way to
  *       load policy, if lock_policy is set
  */
-int g_apparmor_lock_policy;
-module_param_named(lock_policy, g_apparmor_lock_policy, aalockpolicy,
+int aa_g_lock_policy;
+module_param_named(lock_policy, aa_g_lock_policy, aalockpolicy,
 		   S_IRUSR | S_IWUSR);
 
 /* Syscall logging mode */
-int g_apparmor_logsyscall;
-module_param_named(logsyscall, g_apparmor_logsyscall, aabool,
+int aa_g_logsyscall;
+module_param_named(logsyscall, aa_g_logsyscall, aabool,
 		   S_IRUSR | S_IWUSR);
 
 /* Maximum pathname length before accesses will start getting rejected */
-unsigned int g_apparmor_path_max = 2 * PATH_MAX;
-module_param_named(path_max, g_apparmor_path_max, aauint, S_IRUSR | S_IWUSR);
+unsigned int aa_g_path_max = 2 * PATH_MAX;
+module_param_named(path_max, aa_g_path_max, aauint, S_IRUSR | S_IWUSR);
 
 /* Boot time disable flag */
 #ifdef CONFIG_SECURITY_APPARMOR_DISABLE
@@ -799,7 +798,10 @@ module_param_call(enabled, param_set_aa_enabled, param_get_aauint,
 
 static int __init apparmor_enabled_setup(char *str)
 {
-	apparmor_enabled = simple_strtol(str, NULL, 0);
+	unsigned long enabled;
+	int error = strict_strtoul(str, 0, &enabled);
+	if (!error)
+		apparmor_enabled = enabled ? 1 : 0;
 	return 1;
 }
 
@@ -809,7 +811,7 @@ static int param_set_aalockpolicy(const char *val, struct kernel_param *kp)
 {
 	if (__aa_task_is_confined(current))
 		return -EPERM;
-	if (g_apparmor_lock_policy)
+	if (aa_g_lock_policy)
 		return -EACCES;
 	return param_set_bool(val, kp);
 }
@@ -884,7 +886,7 @@ static int param_get_audit(char *buffer, struct kernel_param *kp)
 	if (!apparmor_enabled)
 		return -EINVAL;
 
-	return sprintf(buffer, "%s", audit_mode_names[g_apparmor_audit]);
+	return sprintf(buffer, "%s", audit_mode_names[aa_g_audit]);
 }
 
 static int param_set_audit(const char *val, struct kernel_param *kp)
@@ -901,7 +903,7 @@ static int param_set_audit(const char *val, struct kernel_param *kp)
 
 	for (i = 0; i < AUDIT_MAX_INDEX; i++) {
 		if (strcmp(val, audit_mode_names[i]) == 0) {
-			g_apparmor_audit = i;
+			aa_g_audit = i;
 			return 0;
 		}
 	}
@@ -917,7 +919,7 @@ static int param_get_mode(char *buffer, struct kernel_param *kp)
 	if (!apparmor_enabled)
 		return -EINVAL;
 
-	return sprintf(buffer, "%s", profile_mode_names[g_profile_mode]);
+	return sprintf(buffer, "%s", profile_mode_names[aa_g_profile_mode]);
 }
 
 static int param_set_mode(const char *val, struct kernel_param *kp)
@@ -934,7 +936,7 @@ static int param_set_mode(const char *val, struct kernel_param *kp)
 
 	for (i = 0; i < APPARMOR_NAMES_MAX_INDEX; i++) {
 		if (strcmp(val, profile_mode_names[i]) == 0) {
-			g_profile_mode = i;
+			aa_g_profile_mode = i;
 			return 0;
 		}
 	}
@@ -970,7 +972,7 @@ static int __init apparmor_init(void)
 		return 0;
 	}
 
-	error = alloc_default_namespace();
+	error = aa_alloc_default_namespace();
 	if (error) {
 		AA_ERROR("Unable to allocate default profile namespace\n");
 		goto alloc_out;
@@ -990,9 +992,9 @@ static int __init apparmor_init(void)
 
 	/* Report that AppArmor successfully initialized */
 	apparmor_initialized = 1;
-	if (g_profile_mode == APPARMOR_COMPLAIN)
+	if (aa_g_profile_mode == APPARMOR_COMPLAIN)
 		aa_info_message("AppArmor initialized: complain mode enabled");
-	else if (g_profile_mode == APPARMOR_KILL)
+	else if (aa_g_profile_mode == APPARMOR_KILL)
 		aa_info_message("AppArmor initialized: kill mode enabled");
 	else
 		aa_info_message("AppArmor initialized");
@@ -1000,10 +1002,10 @@ static int __init apparmor_init(void)
 	return error;
 
 register_security_out:
-	free_default_namespace();
+	aa_free_default_namespace();
 
 alloc_out:
-	destroy_apparmorfs();
+	aa_destroy_aafs();
 
 	apparmor_enabled = 0;
 	return error;
@@ -1018,9 +1020,9 @@ void apparmor_disable(void)
 	aa_profile_ns_list_release();
 
 	/* FIXME: cleanup profiles references on files */
-	free_default_namespace();
+	aa_free_default_namespace();
 
-	destroy_apparmorfs();
+	aa_destroy_aafs();
 	apparmor_initialized = 0;
 
 	aa_info_message("AppArmor protection disabled");

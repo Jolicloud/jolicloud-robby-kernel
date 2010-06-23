@@ -67,7 +67,8 @@ struct table_header {
 #define CHECK_TABLE(DFA) ((u16 *)((DFA)->tables[YYTD_ID_CHK - 1]->td_data))
 #define EQUIV_TABLE(DFA) ((u8 *)((DFA)->tables[YYTD_ID_EC - 1]->td_data))
 #define ACCEPT_TABLE(DFA) ((u32 *)((DFA)->tables[YYTD_ID_ACCEPT - 1]->td_data))
-#define ACCEPT_TABLE2(DFA) ((u32 *)((DFA)->tables[YYTD_ID_ACCEPT2 - 1]->td_data))
+#define ACCEPT_TABLE2(DFA) ((u32 *)\
+			    ((DFA)->tables[YYTD_ID_ACCEPT2 - 1]->td_data))
 
 struct aa_dfa {
 	struct table_header *tables[YYTD_ID_NXT];

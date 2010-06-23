@@ -127,7 +127,7 @@ static struct aa_policy_common *__common_find_strn(struct list_head *head,
  * Routines for AppArmor namespaces
  */
 
-int alloc_default_namespace(void)
+int aa_alloc_default_namespace(void)
 {
 	struct aa_namespace *ns;
 	ns = alloc_aa_namespace("default");
@@ -142,7 +142,7 @@ int alloc_default_namespace(void)
 	return 0;
 }
 
-void free_default_namespace(void)
+void aa_free_default_namespace(void)
 {
 	write_lock(&ns_list_lock);
 	list_del_init(&default_namespace->base.list);
@@ -182,8 +182,7 @@ struct aa_namespace *alloc_aa_namespace(const char *name)
 	return ns;
 
 fail_unconfined:
-	if (ns->base.name)
-		kfree(ns->base.name);
+	kfree(ns->base.name);
 fail_ns:
 	kfree(ns);
 	return NULL;
@@ -407,9 +406,9 @@ static const char *fqname_subname(const char *name)
 			return NULL;
 		name = strstrip(split + 1);
 	}
-	for (split = strstr(name, "//"); split; split = strstr(name, "//")) {
+	for (split = strstr(name, "//"); split; split = strstr(name, "//"))
 		name = split + 2;
-	}
+
 	return name;
 }
 

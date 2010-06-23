@@ -405,8 +405,7 @@ int apparmor_bprm_secureexec(struct linux_binprm *bprm)
 	int ret = cap_bprm_secureexec(bprm);
 
 	/* the decision to use secure exec is computed in set_creds
-	 * and stored in bprm->unsafe.  The AppArmor X_UNSAFE flag is
-	 * indicates don't 
+	 * and stored in bprm->unsafe.
 	 */
 	if (!ret && (bprm->unsafe & AA_SECURE_X_NEEDED))
 		ret = 1;

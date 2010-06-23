@@ -19,7 +19,8 @@
 
 char *aa_strchrnul(const char *s, int c)
 {
-	for (; *s != (char)c && *s != '\0'; ++s) ;
+	for (; *s != (char)c && *s != '\0'; ++s)
+		;
 	return (char *)s;
 }
 
