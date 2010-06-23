@@ -658,7 +658,6 @@ ssize_t aa_interface_add_profiles(void *data, size_t size)
 
 	aa_audit_iface(&sa);
 	aa_put_namespace(ns);
-	kfree(e.ns_name);
 	return size;
 
 fail2:
@@ -668,7 +667,6 @@ fail:
 	error = aa_audit_iface(&sa);
 	aa_put_namespace(ns);
 	aa_put_profile(profile);
-	kfree(e.ns_name);
 	return error;
 }
 
@@ -771,7 +769,6 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size)
 	aa_audit_iface(&sa);
 	aa_put_namespace(ns);
 	aa_put_profile(old_profile);
-	kfree(e.ns_name);
 	return size;
 
 fail2:
@@ -781,7 +778,6 @@ fail:
 	aa_put_namespace(ns);
 	aa_put_profile(old_profile);
 	aa_put_profile(new_profile);
-	kfree(e.ns_name);
 	return error;
 }
 

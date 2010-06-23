@@ -292,7 +292,7 @@ struct aa_namespace *aa_prepare_namespace(const char *name)
 		ns = __aa_find_namespace(&ns_list, name);
 		if (!ns) {
 			list_add(&new_ns->base.list, &ns_list);
-			ns = new_ns;
+			ns = aa_get_namespace(new_ns);
 		} else {
 			/* raced so free the new one */
 			free_aa_namespace(new_ns);
