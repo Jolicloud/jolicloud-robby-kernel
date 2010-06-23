@@ -313,6 +313,29 @@ static int apparmor_path_rename(struct path *old_dir, struct dentry *old_dentry,
 	return error;
 }
 
+static int apparmor_path_chmod(struct dentry *dentry, struct vfsmount *mnt,
+			       mode_t mode)
+{
+	struct aa_profile *profile;
+	int error = 0;
+
+	if (!mediated_filesystem(dentry->d_inode))
+		return 0;
+
+	profile = aa_current_profile_wupd();
+	if (profile) {
+		struct path path = { mnt, dentry };
+		struct path_cond cond = { dentry->d_inode->i_uid,
+					  dentry->d_inode->i_mode
+		};
+
+		error = aa_path_perm(profile, "chmod", &path, AA_MAY_CHMOD,
+			&cond);
+	}
+
+	return error;
+}
+
 static int apparmor_dentry_open(struct file *file, const struct cred *cred)
 {
 	struct aa_profile *profile;
@@ -688,6 +711,7 @@ static struct security_operations apparmor_ops = {
 	.path_rmdir =			apparmor_path_rmdir,
 	.path_mknod =			apparmor_path_mknod,
 	.path_rename =			apparmor_path_rename,
+	.path_chmod =			apparmor_path_chmod,
 	.path_truncate =		apparmor_path_truncate,
 	.dentry_open =			apparmor_dentry_open,
 

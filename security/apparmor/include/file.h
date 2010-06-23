@@ -35,6 +35,7 @@ struct aa_profile;
 #define AA_LINK_SUBSET			0x0100
 #define AA_MAY_DELEGATE			0x0200
 #define AA_EXEC_DELEGATE		0x0400	/*exec allows delegate */
+#define AA_MAY_CHMOD			0x0800
 
 #define AA_MAY_CHANGEHAT		0x2000	/* ctrl auditing only */
 #define AA_MAY_ONEXEC			0x4000	/* exec allows onexec */
@@ -42,7 +43,7 @@ struct aa_profile;
 
 #define AA_AUDIT_FILE_MASK	(MAY_READ | MAY_WRITE | MAY_EXEC | MAY_APPEND |\
 				 AA_MAY_LINK | AA_MAY_LOCK | AA_EXEC_MMAP | \
-				 AA_MAY_CREATE)
+				 AA_MAY_CREATE | AA_MAY_CHMOD)
 
 /*
  * The xindex is broken into 3 parts
