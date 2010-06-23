@@ -93,6 +93,7 @@
 LIST_HEAD(ns_list);
 DEFINE_RWLOCK(ns_list_lock);
 
+/* base profile namespace */
 struct aa_namespace *default_namespace;
 
 const char *profile_mode_names[] = {

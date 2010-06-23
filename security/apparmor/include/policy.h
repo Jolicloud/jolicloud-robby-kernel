@@ -138,7 +138,7 @@ struct aa_namespace {
  * @parent: parent profile of this profile, if one exists
  * @replacedby: is set profile that replaced this profile
  * @xmatch: optional extended matching for unconfined executables names
- * @xmatch_plen: xmatch prefix len, used to determine xmatch priority
+ * @xmatch_len: xmatch prefix len, used to determine xmatch priority
  * @sid: the unique security id number of this profile
  * @audit: the auditing mode of the profile
  * @mode: the enforcement mode of the profile
