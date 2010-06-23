@@ -304,7 +304,8 @@ static int apparmor_path_truncate(struct path *path, loff_t length,
 	if (!path->mnt || !mediated_filesystem(path->dentry->d_inode))
 		return 0;
 
-	return common_perm("truncate", path, MAY_WRITE, &cond);
+	return common_perm("truncate", path, MAY_WRITE | AA_MAY_META_WRITE,
+			   &cond);
 }
 
 static int apparmor_path_symlink(struct path *dir, struct dentry *dentry,
@@ -347,10 +348,13 @@ static int apparmor_path_rename(struct path *old_dir, struct dentry *old_dentry,
 		};
 
 		error = aa_path_perm(profile, "rename_src", &old_path,
-				     MAY_READ | MAY_WRITE, &cond);
+				     MAY_READ | AA_MAY_META_READ | MAY_WRITE |
+				     AA_MAY_META_WRITE | AA_MAY_DELETE,
+				     &cond);
 		if (!error)
 			error = aa_path_perm(profile, "rename_dest", &new_path,
-					     AA_MAY_CREATE | MAY_WRITE, &cond);
+					     MAY_WRITE | AA_MAY_META_WRITE |
+					     AA_MAY_CREATE, &cond);
 
 	}
 	return error;
