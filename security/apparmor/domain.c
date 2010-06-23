@@ -158,17 +158,19 @@ static struct aa_profile *__aa_attach_match(const char *name,
 
 /**
  * aa_find_attach - do attachment search for sys unconfined processes
+ * @ns: the current namespace
  * @base: the base to search
- * name: the executable name to match against
+ * @name: the executable name to match against
  */
-static struct aa_profile *aa_find_attach(struct aa_policy *base,
+static struct aa_profile *aa_find_attach(struct aa_namespace *ns,
+					 struct aa_policy *base,
 					 const char *name)
 {
 	struct aa_profile *profile;
 
-	read_lock(&base->lock);
+	read_lock(&ns->base.lock);
 	profile = aa_get_profile(__aa_attach_match(name, &base->profiles));
-	read_unlock(&base->lock);
+	read_unlock(&ns->base.lock);
 
 	return profile;
 }
@@ -238,10 +240,12 @@ static struct aa_profile *x_to_profile(struct aa_profile *profile,
 	case AA_X_NAME:
 		if (xindex & AA_X_CHILD)
 			/* released by caller */
-			new_profile = aa_find_attach(&profile->base, name);
+			new_profile = aa_find_attach(profile->ns,
+						     &profile->base, name);
 		else
 			/* released by caller */
-			new_profile = aa_find_attach(&profile->ns->base, name);
+			new_profile = aa_find_attach(profile->ns,
+						     &profile->ns->base, name);
 
 		goto out;
 	case AA_X_TABLE:
@@ -350,7 +354,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 
 	if (unconfined(profile)) {
 		/* unconfined task - attach profile if one matches */
-		new_profile = aa_find_attach(&ns->base, sa.name);
+		new_profile = aa_find_attach(ns, &ns->base, sa.name);
 		if (!new_profile)
 			goto cleanup;
 		goto apply;
