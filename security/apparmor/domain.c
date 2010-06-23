@@ -357,9 +357,11 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	} else if (PROFILE_COMPLAIN(profile)) {
 		new_profile = aa_alloc_null_profile(profile, 0);
 		sa.base.error = -EACCES;
-		if (!new_profile)
+		if (!new_profile) {
 			sa.base.error = -ENOMEM;
-		sa.name2 = new_profile->fqname;
+			sa.base.info = "could not create null profile";
+		} else
+			sa.name2 = new_profile->fqname;
 		sa.perms.xindex |= AA_X_UNSAFE;
 	} else {
 		sa.base.error = -EACCES;
