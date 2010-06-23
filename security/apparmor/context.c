@@ -144,7 +144,7 @@ int aa_set_current_hat(struct aa_profile *profile, u64 token)
 		abort_creds(new);
 		return -EACCES;
 	}
-	cxt->sys.profile = aa_get_profile(profile);
+	cxt->sys.profile = aa_get_profile(aa_newest_version(profile));
 	/* clear exec on switching context */
 	aa_put_profile(cxt->sys.onexec);
 	cxt->sys.onexec = NULL;
