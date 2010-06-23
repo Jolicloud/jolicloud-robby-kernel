@@ -47,23 +47,6 @@ void aa_dup_task_context(struct aa_task_context *new,
 }
 
 /**
- * aa_get_task_cred - get the cred with the task policy, and current profiles
- * @task: task to get policy of
- * @sys: return - pointer to system profile
- *
- * Returns: a refcounted task cred
- *
- * Only gets the cred ref count which has ref counts on the profiles returned
- */
-struct cred *aa_get_task_cred(const struct task_struct *task,
-			      struct aa_profile **sys)
-{
-	struct cred *cred = get_task_cred(task);
-	*sys = aa_cred_policy(cred);
-	return cred;
-}
-
-/**
  * replace_group - replace a context group profile
  * @cgrp: profile
  * @profile: profile to replace cxt group

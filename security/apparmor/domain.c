@@ -61,9 +61,11 @@ static int aa_may_change_ptraced_domain(struct task_struct *task,
 
 	rcu_read_lock();
 	tracer = tracehook_tracer_task(task);
-	if (tracer)
+	if (tracer) {
 		/* released below */
-		cred = aa_get_task_cred(tracer, &tracerp);
+		cred = get_task_cred(tracer);
+		tracerp = aa_cred_policy(cred);
+	}
 	rcu_read_unlock();
 
 	/* not ptraced */
@@ -532,8 +534,9 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 	char *name = NULL;
 
 	/* released below */
-	cred = aa_get_task_cred(current, &profile);
+	cred = get_current_cred();
 	cxt = cred->security;
+	profile = aa_cred_policy(cred);
 	previous_profile = cxt->sys.previous;
 
 	if (unconfined(profile)) {
@@ -650,8 +653,9 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 	else
 		sa.base.operation = "change_profile";
 
-	cred = aa_get_task_cred(current, &profile);
+	cred = get_current_cred();
 	cxt = cred->security;
+	profile = aa_cred_policy(cred);
 
 	if (ns_name) {
 		/* released below */

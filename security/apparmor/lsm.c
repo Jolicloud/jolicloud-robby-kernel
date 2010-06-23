@@ -514,8 +514,9 @@ static int apparmor_getprocattr(struct task_struct *task, char *name,
 	int error = -ENOENT;
 	struct aa_profile *profile;
 	/* released below */
-	const struct cred *cred = aa_get_task_cred(task, &profile);
+	const struct cred *cred = get_task_cred(task);
 	struct aa_task_context *cxt = cred->security;
+	profile = aa_cred_policy(cred);
 
 	if (strcmp(name, "current") == 0)
 		error = aa_getprocattr(aa_newest_version(cxt->sys.profile),
