@@ -341,7 +341,10 @@ static struct aa_dfa *unpack_dfa(struct aa_ext *e)
 
 		dfa = aa_dfa_unpack(blob + pad, size - pad, flags);
 
-		if (!IS_ERR(dfa) && !verify_accept(dfa, flags))
+		if (IS_ERR(dfa))
+			return dfa;
+
+		if (!verify_accept(dfa, flags))
 			goto fail;
 	}
 
