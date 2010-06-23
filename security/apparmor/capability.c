@@ -49,7 +49,7 @@ static void audit_cb(struct audit_buffer *ab, struct aa_audit *va)
 {
 	struct aa_audit_caps *sa = container_of(va, struct aa_audit_caps, base);
 
-	audit_log_format(ab, " name=");
+	audit_log_format(ab, " capability=");
 	audit_log_untrustedstring(ab, capability_names[sa->cap]);
 }
 

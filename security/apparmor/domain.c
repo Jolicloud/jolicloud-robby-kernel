@@ -375,13 +375,13 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 
 	/* buffer freed below, name is pointer into buffer */
 	sa.base.error = aa_get_name(&bprm->file->f_path, profile->path_flags,
-				    &buffer, (char **)&sa.name);
+				    &buffer, &sa.path);
 	if (sa.base.error) {
 		if (profile->flags &
 		    (PFLAG_IX_ON_NAME_ERROR | PFLAG_UNCONFINED))
 			sa.base.error = 0;
 		sa.base.info = "Exec failed name resolution";
-		sa.name = bprm->filename;
+		sa.path = bprm->filename;
 		goto audit;
 	}
 
@@ -395,14 +395,14 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 			new_profile = aa_get_profile(cxt->onexec);
 		else
 			new_profile = find_attach(ns, &ns->base.profiles,
-						  sa.name);
+						  sa.path);
 		if (!new_profile)
 			goto cleanup;
 		goto apply;
 	}
 
 	/* find exec permissions for name */
-	state = aa_str_perms(profile->file.dfa, state, sa.name, &cond,
+	state = aa_str_perms(profile->file.dfa, state, sa.path, &cond,
 			     &sa.perms);
 	if (cxt->onexec) {
 		struct file_perms perms;
@@ -416,7 +416,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 		 */
 		state = aa_dfa_null_transition(profile->file.dfa, state, 0);
 		perms = change_profile_perms(profile, cxt->onexec->ns,
-					     sa.name, AA_MAY_ONEXEC, state);
+					     sa.path, AA_MAY_ONEXEC, state);
 
 		if (!(perms.allow & AA_MAY_ONEXEC))
 			goto audit;
@@ -426,7 +426,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 
 	if (sa.perms.allow & MAY_EXEC) {
 		/* exec permission determine how to transition */
-		new_profile = x_to_profile(profile, sa.name, sa.perms.xindex);
+		new_profile = x_to_profile(profile, sa.path, sa.perms.xindex);
 		if (!new_profile) {
 			if (sa.perms.xindex & AA_X_INHERIT) {
 				/* (p|c|n)ix - don't change profile but do
@@ -452,7 +452,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 			sa.base.error = -ENOMEM;
 			sa.base.info = "could not create null profile";
 		} else
-			sa.name2 = new_profile->base.hname;
+			sa.target = new_profile->base.hname;
 		sa.perms.xindex |= AA_X_UNSAFE;
 	} else
 		/* fail exec */
@@ -488,15 +488,11 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	 */
 	if (!(sa.perms.xindex & AA_X_UNSAFE)) {
 		AA_DEBUG("scrubbing environment variables for %s profile=%s\n",
-			 sa.name, new_profile->base.hname);
+			 sa.path, new_profile->base.hname);
 		bprm->unsafe |= AA_SECURE_X_NEEDED;
 	}
 apply:
-	sa.name2 = new_profile->base.hname;
-	/* When switching namespace ensure its part of audit message */
-	if (new_profile->ns != ns)
-		sa.name3 = new_profile->ns->base.hname;
-
+	sa.target = new_profile->base.hname;
 	/* when transitioning profiles clear unsafe personality bits */
 	bprm->per_clear |= PER_CLEAR_ON_SETID;
 
@@ -633,7 +629,6 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 		/* attempting to change into a new hat or switch to a sibling */
 		struct aa_profile *root;
 		root = PROFILE_IS_HAT(profile) ? profile->parent : profile;
-		sa.name2 = profile->ns->base.hname;
 
 		/* find first matching hat */
 		for (i = 0; i < count && !hat; i++)
@@ -660,7 +655,7 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 
 			/* freed below */
 			name = new_compound_name(root->base.hname, hats[0]);
-			sa.name = name;
+			sa.target = name;
 			/* released below */
 			hat = aa_new_null_profile(profile, 1);
 			if (!hat) {
@@ -669,7 +664,7 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 				goto audit;
 			}
 		} else {
-			sa.name = hat->base.hname;
+			sa.target = hat->base.hname;
 			if (!PROFILE_IS_HAT(hat)) {
 				sa.base.info = "target not hat";
 				sa.base.error = -EPERM;
@@ -697,7 +692,7 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 		/* Return to saved profile.  Kill task if restore fails
 		 * to avoid brute force attacks
 		 */
-		sa.name = previous_profile->base.hname;
+		sa.target = previous_profile->base.hname;
 		sa.base.error = aa_restore_previous_profile(token);
 		sa.perms.kill = AA_MAY_CHANGEHAT;
 	} else
@@ -760,17 +755,14 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 		ns = aa_find_namespace(profile->ns, ns_name);
 		if (!ns) {
 			/* we don't create new namespace in complain mode */
-			sa.name2 = ns_name;
+			sa.name = ns_name;
 			sa.base.info = "namespace not found";
 			sa.base.error = -ENOENT;
 			goto audit;
 		}
-		sa.name2 = ns->base.hname;
-	} else {
+	} else
 		/* released below */
 		ns = aa_get_namespace(profile->ns);
-		sa.name2 = ns->base.hname;
-	}
 
 	/* if the name was not specified, use the name of the current profile */
 	if (!hname) {
@@ -779,7 +771,7 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 		else
 			hname = profile->base.hname;
 	}
-	sa.name = hname;
+	sa.target = hname;
 
 	sa.perms = change_profile_perms(profile, ns, hname, sa.request,
 					profile->file.start);

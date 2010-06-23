@@ -85,19 +85,14 @@ static void file_audit_cb(struct audit_buffer *ab, struct aa_audit *va)
 		audit_log_format(ab, " ouid=%d", sa->cond->uid);
 	}
 
-	if (sa->name) {
-		audit_log_format(ab, " name=");
-		audit_log_untrustedstring(ab, sa->name);
+	if (sa->path) {
+		audit_log_format(ab, " path=");
+		audit_log_untrustedstring(ab, sa->path);
 	}
 
-	if (sa->name2) {
-		audit_log_format(ab, " name2=");
-		audit_log_untrustedstring(ab, sa->name2);
-	}
-
-	if (sa->name3) {
-		audit_log_format(ab, " name3=");
-		audit_log_untrustedstring(ab, sa->name3);
+	if (sa->target) {
+		audit_log_format(ab, " target=");
+		audit_log_untrustedstring(ab, sa->target);
 	}
 }
 
@@ -259,11 +254,11 @@ int aa_pathstr_perm(int op, struct aa_profile *profile, const char *name,
 		.base.op = op,
 		.base.gfp_mask = GFP_KERNEL,
 		.request = request,
-		.name = name,
+		.path = name,
 		.cond = cond,
 	};
 
-	aa_str_perms(profile->file.dfa, profile->file.start, sa.name, cond,
+	aa_str_perms(profile->file.dfa, profile->file.start, name, cond,
 		     &sa.perms);
 	if (request & ~sa.perms.allow)
 		sa.base.error = -EACCES;
@@ -298,7 +293,6 @@ int aa_path_perm(int op, struct aa_profile *profile, struct path *path,
 		 int flags, u16 request, struct path_cond *cond)
 {
 	char *buffer;
-	const char *name;
 	struct aa_audit_file sa = {
 		.base.op = op,
 		.base.gfp_mask = GFP_KERNEL,
@@ -306,8 +300,7 @@ int aa_path_perm(int op, struct aa_profile *profile, struct path *path,
 		.cond = cond,
 	};
 	flags |= profile->path_flags | (S_ISDIR(cond->mode) ? PATH_IS_DIR : 0);
-	sa.base.error = aa_get_name(path, flags, &buffer, &name);
-	sa.name = name;
+	sa.base.error = aa_get_name(path, flags, &buffer, &sa.path);
 	if (sa.base.error) {
 		sa.perms = nullperms;
 		if (sa.base.error == -ENOENT && is_deleted(path->dentry)) {
@@ -325,7 +318,7 @@ int aa_path_perm(int op, struct aa_profile *profile, struct path *path,
 		else
 			sa.base.info = "Failed name lookup";
 	} else {
-		aa_str_perms(profile->file.dfa, profile->file.start, sa.name,
+		aa_str_perms(profile->file.dfa, profile->file.start, sa.path,
 			     cond, &sa.perms);
 		if (request & ~sa.perms.allow)
 			sa.base.error = -EACCES;
@@ -398,14 +391,14 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 	/* buffer freed below, lname is pointer in buffer */
 	sa.base.error = aa_get_name(&link, profile->path_flags, &buffer,
 				    &lname);
-	sa.name = lname;
+	sa.path = lname;
 	if (sa.base.error)
 		goto audit;
 
 	/* buffer2 freed below, tname is pointer in buffer2 */
 	sa.base.error = aa_get_name(&target, profile->path_flags, &buffer2,
 				    &tname);
-	sa.name2 = tname;
+	sa.target = tname;
 	if (sa.base.error)
 		goto audit;
 

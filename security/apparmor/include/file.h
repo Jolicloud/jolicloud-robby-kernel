@@ -154,8 +154,8 @@ struct aa_audit_file {
 	struct aa_audit base;
 
 	const char *name;
-	const char *name2;
-	const char *name3;
+	const char *path;
+	const char *target;
 	struct file_perms perms;
 	u16 request;
 	struct path_cond *cond;
