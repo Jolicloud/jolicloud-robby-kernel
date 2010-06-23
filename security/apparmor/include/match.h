@@ -113,6 +113,5 @@ unsigned int aa_dfa_match_len(struct aa_dfa *dfa, unsigned int start,
 			      const char *str, int len);
 unsigned int aa_dfa_match(struct aa_dfa *dfa, unsigned int start,
 			  const char *str);
-unsigned int aa_dfa_null_transition(struct aa_dfa *dfa, unsigned int start);
 
 #endif /* __AA_MATCH_H */

@@ -340,17 +340,3 @@ unsigned int aa_dfa_match(struct aa_dfa *dfa, unsigned int start,
 {
 	return aa_dfa_match_len(dfa, start, str, strlen(str));
 }
-
-/**
- * aa_dfa_null_transition - step to next state after null character
- * @dfa: the dfa to match against
- * @start: the state of the dfa to start matching in
- *
- * aa_dfa_null_transition transitions to the next state after a null
- * character which is not used in standard matching and is only
- * used to seperate pairs.
- */
-unsigned int aa_dfa_null_transition(struct aa_dfa *dfa, unsigned int start)
-{
-	return aa_dfa_match_len(dfa, start, "", 1);
-}

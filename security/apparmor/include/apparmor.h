@@ -17,6 +17,8 @@
 
 #include <linux/fs.h>
 
+#include "match.h"
+
 /* Control parameters settable thru module/boot flags or
  * via /sys/kernel/security/apparmor/control */
 extern enum audit_mode aa_g_audit;
@@ -53,6 +55,21 @@ char *aa_split_name_from_ns(char *args, char **ns_name);
 int aa_strneq(const char *str, const char *sub, int len);
 char *aa_strchrnul(const char *s, int c);
 void aa_info_message(const char *str);
+
+/**
+ * aa_dfa_null_transition - step to next state after null character
+ * @dfa: the dfa to match against
+ * @start: the state of the dfa to start matching in
+ *
+ * aa_dfa_null_transition transitions to the next state after a null
+ * character which is not used in standard matching and is only
+ * used to seperate pairs.
+ */
+static inline unsigned int aa_dfa_null_transition(struct aa_dfa *dfa,
+						  unsigned int start)
+{
+	return aa_dfa_match_len(dfa, start, "\0", 1);
+}
 
 static inline int mediated_filesystem(struct inode *inode)
 {
