@@ -140,10 +140,13 @@ out:
 	return error;
 }
 
-int unpack_dfa(struct aa_dfa *dfa, void *blob, size_t size)
+struct aa_dfa *unpack_dfa(void *blob, size_t size)
 {
-	int hsize, i;
+	int hsize;
 	int error = -ENOMEM;
+	struct aa_dfa *dfa = kzalloc(sizeof(struct aa_dfa), GFP_KERNEL);
+	if (!dfa)
+		goto fail;
 
 	/* get dfa table set header */
 	if (size < sizeof(struct table_set_header))
@@ -199,20 +202,11 @@ int unpack_dfa(struct aa_dfa *dfa, void *blob, size_t size)
 	if (error)
 		goto fail;
 
-	return 0;
+	return dfa;
 
 fail:
-	for (i = 0; i < ARRAY_SIZE(dfa->tables); i++) {
-		free_table(dfa->tables[i]);
-		dfa->tables[i] = NULL;
-	}
-	return error;
-}
-
-struct aa_dfa *aa_match_alloc(void)
-{
-	/* freed by aa_match_free, by caller */
-	return kzalloc(sizeof(struct aa_dfa), GFP_KERNEL);
+	aa_match_free(dfa);
+	return ERR_PTR(error);
 }
 
 void aa_match_free(struct aa_dfa *dfa)
@@ -220,8 +214,10 @@ void aa_match_free(struct aa_dfa *dfa)
 	if (dfa) {
 		int i;
 
-		for (i = 0; i < ARRAY_SIZE(dfa->tables); i++)
+		for (i = 0; i < ARRAY_SIZE(dfa->tables); i++) {
 			free_table(dfa->tables[i]);
+			dfa->tables[i] = NULL;
+		}
 	}
 	kfree(dfa);
 }

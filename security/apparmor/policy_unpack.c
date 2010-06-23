@@ -293,26 +293,18 @@ static int unpack_dynstring(struct aa_ext *e, char **string, const char *name)
 static struct aa_dfa *aa_unpack_dfa(struct aa_ext *e)
 {
 	char *blob = NULL;
-	size_t size, error = 0;
+	size_t size;
 	struct aa_dfa *dfa = NULL;
 
 	size = unpack_blob(e, &blob, "aadfa");
 	if (size) {
-		dfa = aa_match_alloc();
-		if (dfa) {
-			/*
-			 * The dfa is aligned with in the blob to 8 bytes
-			 * from the beginning of the stream.
-			 */
-			size_t sz = blob - (char *)e->start;
-			size_t pad = ALIGN(sz, 8) - sz;
-			error = unpack_dfa(dfa, blob + pad, size - pad);
-		} else {
-			error = -ENOMEM;
-		}
-
-		if (error)
-			dfa = ERR_PTR(error);
+		/*
+		 * The dfa is aligned with in the blob to 8 bytes
+		 * from the beginning of the stream.
+		 */
+		size_t sz = blob - (char *)e->start;
+		size_t pad = ALIGN(sz, 8) - sz;
+		dfa = unpack_dfa(blob + pad, size - pad);
 	}
 
 	return dfa;
