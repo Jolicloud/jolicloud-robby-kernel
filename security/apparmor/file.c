@@ -21,17 +21,19 @@
 
 struct file_perms nullperms;
 
+
 /**
- * aa_audit_file_sub_mask - convert a permission mask into string
- * @buffer: buffer to write string to  (NOT NULL)
+ * aa_audit_file_mask - convert mask to owner::other string
+ * @buffer: buffer to write string to (NOT NULL)
  * @mask: permission mask to convert
  * @xindex: xindex
- *
- * NOTE: caller must make sure buffer is large enough for @mask
+ * @owner: if the mask is for owner or other
  */
-static void aa_audit_file_sub_mask(char *buffer, u16 mask, u16 xindex)
+static void aa_audit_file_mask(struct audit_buffer *ab, u16 mask, int xindex)
 {
-	char *m = buffer;
+	char str[10];
+
+	char *m = str;
 
 	if (mask & AA_EXEC_MMAP)
 		*m++ = 'm';
@@ -53,27 +55,7 @@ static void aa_audit_file_sub_mask(char *buffer, u16 mask, u16 xindex)
 	if (mask & MAY_EXEC)
 		*m++ = 'x';
 	*m++ = '\0';
-}
 
-/**
- * aa_audit_file_mask - convert mask to owner::other string
- * @buffer: buffer to write string to (NOT NULL)
- * @mask: permission mask to convert
- * @xindex: xindex
- * @owner: if the mask is for owner or other
- */
-static void aa_audit_file_mask(struct audit_buffer *ab, u16 mask, int xindex,
-			       int owner)
-{
-	char str[10];
-
-	if (owner) {
-		aa_audit_file_sub_mask(str, mask, xindex);
-		strcat(str, "::");
-	} else {
-		strcpy(str, "::");
-		aa_audit_file_sub_mask(str + 2, mask, xindex);
-	}
 	audit_log_string(ab, str);
 }
 
@@ -92,13 +74,11 @@ static void file_audit_cb(struct audit_buffer *ab, struct aa_audit *va)
 
 	if (sa->request & AA_AUDIT_FILE_MASK) {
 		audit_log_format(ab, " requested_mask=");
-		aa_audit_file_mask(ab, sa->request, AA_X_NONE,
-				   fsuid == sa->cond->uid);
+		aa_audit_file_mask(ab, sa->request, AA_X_NONE);
 	}
 	if (denied & AA_AUDIT_FILE_MASK) {
 		audit_log_format(ab, " denied_mask=");
-		aa_audit_file_mask(ab, denied, sa->perms.xindex,
-				   fsuid == sa->cond->uid);
+		aa_audit_file_mask(ab, denied, sa->perms.xindex);
 	}
 	if (sa->request & AA_AUDIT_FILE_MASK) {
 		audit_log_format(ab, " fsuid=%d", fsuid);
