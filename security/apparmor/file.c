@@ -323,7 +323,7 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 	sa.base.error = -EACCES;
 
 	/* aa_str_perms - handles the case of the dfa being NULL */
-	sa.perms = aa_str_perms(profile->file.dfa, DFA_START, sa.name, &cond,
+	sa.perms = aa_str_perms(profile->file.dfa, DFA_START, lname, &cond,
 				&state);
 	sa.perms.audit &= AA_MAY_LINK;
 	sa.perms.quiet &= AA_MAY_LINK;
@@ -334,7 +334,7 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 
 	/* test to see if target can be paired with link */
 	state = aa_dfa_null_transition(profile->file.dfa, state);
-	perms = aa_str_perms(profile->file.dfa, state, sa.name2, &cond, NULL);
+	perms = aa_str_perms(profile->file.dfa, state, tname, &cond, NULL);
 	if (!(perms.allowed & AA_MAY_LINK)) {
 		sa.base.info = "target restricted";
 		goto audit;
@@ -347,7 +347,7 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 	/* Do link perm subset test requiring allowed permission on link are a
 	 * subset of the allowed permissions on target.
 	 */
-	perms = aa_str_perms(profile->file.dfa, DFA_START, sa.name2, &cond,
+	perms = aa_str_perms(profile->file.dfa, DFA_START, tname, &cond,
 			     NULL);
 
 	/* AA_MAY_LINK is not considered in the subset test */
