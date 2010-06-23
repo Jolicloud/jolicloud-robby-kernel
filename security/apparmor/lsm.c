@@ -521,7 +521,7 @@ static int apparmor_getprocattr(struct task_struct *task, char *name,
 		error = -EPERM;
 	} else {
 		if (strcmp(name, "current") == 0) {
-			error = aa_getprocattr(profile, value);
+			error = aa_getprocattr(cxt->sys.profile, value);
 		} else if (strcmp(name, "prev") == 0) {
 			if (prev)
 				error = aa_getprocattr(prev, value);

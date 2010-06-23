@@ -23,45 +23,36 @@
  *
  * Returns: length of @string on success else error on failure
  *
+ * Requires: profile != NULL
+ *
  * Creates a string containing the namespace_name://profile_name for
  * @profile.
  */
 int aa_getprocattr(struct aa_profile *profile, char **string)
 {
 	char *str;
-	int len = 0;
+	int len = 0, mode_len, name_len, ns_len = 0;
+	const char *mode_str = profile_mode_names[profile->mode];
+	struct aa_namespace *ns = profile->ns;
+	char *s;
 
-	if (profile) {
-		int mode_len, name_len, ns_len = 0;
-		const char *mode_str = profile_mode_names[profile->mode];
-		struct aa_namespace *ns = profile->ns;
-		char *s;
+	mode_len = strlen(mode_str) + 3;	/* + 3 for _() */
+	name_len = strlen(profile->base.hname);
+	if (ns != default_namespace)
+		ns_len = strlen(ns->base.name) + 3; /*+ 3 for :// */
+	len = mode_len + ns_len + name_len + 1;	    /*+ 1 for \n */
+	s = str = kmalloc(len + 1, GFP_ATOMIC);	    /* + 1 \0 */
+	if (!str)
+		return -ENOMEM;
 
-		mode_len = strlen(mode_str) + 3;	/* + 3 for _() */
-		name_len = strlen(profile->base.hname);
-		if (ns != default_namespace)
-			ns_len = strlen(ns->base.name) + 3; /*+ 3 for :// */
-		len = mode_len + ns_len + name_len + 1;	    /*+ 1 for \n */
-		s = str = kmalloc(len + 1, GFP_ATOMIC);	    /* + 1 \0 */
-		if (!str)
-			return -ENOMEM;
-
-		if (ns_len) {
-			sprintf(s, "%s://", ns->base.name);
-			s += ns_len;
-		}
-		sprintf(s, "%s (%s)\n",profile->base.hname, mode_str);
-	} else {
-		const char unconfined_str[] = "unconfined\n";
-
-		len = sizeof(unconfined_str) - 1;	/* - 1 for \0 */
-
-		str = kmalloc(len + 1, GFP_ATOMIC);
-		if (!str)
-			return -ENOMEM;
-
-		memcpy(str, unconfined_str, len);
+	if (ns_len) {
+		sprintf(s, "%s://", ns->base.name);
+		s += ns_len;
 	}
+	if (profile->flags & PFLAG_UNCONFINED)
+		sprintf(s, "%s\n", profile->base.hname);
+	else
+		sprintf(s, "%s (%s)\n", profile->base.hname, mode_str);
 	*string = str;
 
 	/* NOTE: len does not include \0 of string, not saved as part of file */
