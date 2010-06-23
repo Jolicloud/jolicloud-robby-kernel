@@ -311,7 +311,7 @@ static struct aa_dfa *aa_unpack_dfa(struct aa_ext *e)
 		dfa = aa_dfa_unpack(blob + pad, size - pad, flags);
 
 		/* verify accept permissions */
-		for (i = 0; i < dfa->tables[YYTD_ID_ACCEPT - 1]->td_lolen; i++) {
+		for (i = 0; i < dfa->tables[YYTD_ID_ACCEPT]->td_lolen; i++) {
 			int mode = ACCEPT_TABLE(dfa)[i];
 
 			if (mode & ~DFA_VALID_PERM_MASK)

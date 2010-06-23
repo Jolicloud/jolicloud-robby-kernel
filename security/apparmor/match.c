@@ -37,7 +37,10 @@ static struct table_header *unpack_table(void *blob, size_t bsize)
 	if (bsize < sizeof(struct table_header))
 		goto out;
 
-	th.td_id = be16_to_cpu(*(u16 *) (blob));
+	/* loaded td_id's start at 1, subtract 1 now to avoid doing
+	 * it every time we use td_id as an index
+	 */
+	th.td_id = be16_to_cpu(*(u16 *) (blob)) - 1;
 	th.td_flags = be16_to_cpu(*(u16 *) (blob + 2));
 	th.td_lolen = be32_to_cpu(*(u32 *) (blob + 8));
 	blob += sizeof(struct table_header);
@@ -85,36 +88,36 @@ static int verify_dfa(struct aa_dfa *dfa, int flags)
 	int error = -EPROTO;
 
 	/* check that required tables exist */
-	if (!(dfa->tables[YYTD_ID_DEF - 1] &&
-	      dfa->tables[YYTD_ID_BASE - 1] &&
-	      dfa->tables[YYTD_ID_NXT - 1] && dfa->tables[YYTD_ID_CHK - 1]))
+	if (!(dfa->tables[YYTD_ID_DEF] &&
+	      dfa->tables[YYTD_ID_BASE] &&
+	      dfa->tables[YYTD_ID_NXT] && dfa->tables[YYTD_ID_CHK]))
 		goto out;
 
 	/* accept.size == default.size == base.size */
-	state_count = dfa->tables[YYTD_ID_BASE - 1]->td_lolen;
+	state_count = dfa->tables[YYTD_ID_BASE]->td_lolen;
 	if (ACCEPT1_FLAGS(flags)) {
-		if (!dfa->tables[YYTD_ID_ACCEPT - 1])
+		if (!dfa->tables[YYTD_ID_ACCEPT])
 			goto out;
-		if (state_count != dfa->tables[YYTD_ID_ACCEPT - 1]->td_lolen)
+		if (state_count != dfa->tables[YYTD_ID_ACCEPT]->td_lolen)
 			goto out;
 	}
 	if (ACCEPT2_FLAGS(flags)) {
-		if (!dfa->tables[YYTD_ID_ACCEPT2 - 1])
+		if (!dfa->tables[YYTD_ID_ACCEPT2])
 			goto out;
-		if (state_count != dfa->tables[YYTD_ID_ACCEPT2 - 1]->td_lolen)
+		if (state_count != dfa->tables[YYTD_ID_ACCEPT2]->td_lolen)
 			goto out;
 	}
-	if (state_count != dfa->tables[YYTD_ID_DEF - 1]->td_lolen)
+	if (state_count != dfa->tables[YYTD_ID_DEF]->td_lolen)
 		goto out;
 
 	/* next.size == chk.size */
-	trans_count = dfa->tables[YYTD_ID_NXT - 1]->td_lolen;
-	if (trans_count != dfa->tables[YYTD_ID_CHK - 1]->td_lolen)
+	trans_count = dfa->tables[YYTD_ID_NXT]->td_lolen;
+	if (trans_count != dfa->tables[YYTD_ID_CHK]->td_lolen)
 		goto out;
 
 	/* if equivalence classes then its table size must be 256 */
-	if (dfa->tables[YYTD_ID_EC - 1] &&
-	    dfa->tables[YYTD_ID_EC - 1]->td_lolen != 256)
+	if (dfa->tables[YYTD_ID_EC] &&
+	    dfa->tables[YYTD_ID_EC]->td_lolen != 256)
 		goto out;
 
 	for (i = 0; i < state_count; i++) {
@@ -179,29 +182,29 @@ struct aa_dfa *aa_dfa_unpack(void *blob, size_t size, int flags)
 
 		switch (table->td_id) {
 		case YYTD_ID_ACCEPT:
-			dfa->tables[table->td_id - 1] = table;
+			dfa->tables[table->td_id] = table;
 			if (!(table->td_flags & ACCEPT1_FLAGS(flags)))
 				goto fail;
 			break;
 		case YYTD_ID_ACCEPT2:
-			dfa->tables[table->td_id - 1] = table;
+			dfa->tables[table->td_id] = table;
 			if (!(table->td_flags & ACCEPT2_FLAGS(flags)))
 				goto fail;
 			break;
 		case YYTD_ID_BASE:
-			dfa->tables[table->td_id - 1] = table;
+			dfa->tables[table->td_id] = table;
 			if (table->td_flags != YYTD_DATA32)
 				goto fail;
 			break;
 		case YYTD_ID_DEF:
 		case YYTD_ID_NXT:
 		case YYTD_ID_CHK:
-			dfa->tables[table->td_id - 1] = table;
+			dfa->tables[table->td_id] = table;
 			if (table->td_flags != YYTD_DATA16)
 				goto fail;
 			break;
 		case YYTD_ID_EC:
-			dfa->tables[table->td_id - 1] = table;
+			dfa->tables[table->td_id] = table;
 			if (table->td_flags != YYTD_DATA8)
 				goto fail;
 			break;
@@ -265,7 +268,7 @@ unsigned int aa_dfa_match_len(struct aa_dfa *dfa, unsigned int start,
 		return 0;
 
 	/* current state is <state>, matching character *str */
-	if (dfa->tables[YYTD_ID_EC - 1]) {
+	if (dfa->tables[YYTD_ID_EC]) {
 		u8 *equiv = EQUIV_TABLE(dfa);
 		for (; len; len--) {
 			pos = base[state] + equiv[(u8) *str++];

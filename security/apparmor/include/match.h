@@ -40,20 +40,25 @@ struct table_set_header {
 	char th_version[];
 };
 
-#define	YYTD_ID_ACCEPT	1
-#define YYTD_ID_BASE	2
-#define YYTD_ID_CHK	3
-#define YYTD_ID_DEF	4
-#define YYTD_ID_EC	5
-#define YYTD_ID_META	6
-#define YYTD_ID_ACCEPT2 7
-#define YYTD_ID_NXT	8
+/* The YYTD_ID are one less than flex table mappings.  The flex id
+ * has 1 subtracted at table load time, this allows us to directly use the
+ * ID's as indexes.
+ */
+#define	YYTD_ID_ACCEPT	0
+#define YYTD_ID_BASE	1
+#define YYTD_ID_CHK	2
+#define YYTD_ID_DEF	3
+#define YYTD_ID_EC	4
+#define YYTD_ID_META	5
+#define YYTD_ID_ACCEPT2 6
+#define YYTD_ID_NXT	7
+#define YYTD_ID_TSIZE	8
 
 #define YYTD_DATA8	1
 #define YYTD_DATA16	2
 #define YYTD_DATA32	4
 
-/* Each ACCEPT2 table gets 7 dedicated flags, YYTD_DATAX define the
+/* Each ACCEPT2 table gets 6 dedicated flags, YYTD_DATAX define the
  * first flags
  */
 #define ACCEPT1_FLAGS(X) ((X) & 0x7f)
@@ -69,17 +74,16 @@ struct table_header {
 	char td_data[];
 };
 
-#define DEFAULT_TABLE(DFA) ((u16 *)((DFA)->tables[YYTD_ID_DEF - 1]->td_data))
-#define BASE_TABLE(DFA) ((u32 *)((DFA)->tables[YYTD_ID_BASE - 1]->td_data))
-#define NEXT_TABLE(DFA) ((u16 *)((DFA)->tables[YYTD_ID_NXT - 1]->td_data))
-#define CHECK_TABLE(DFA) ((u16 *)((DFA)->tables[YYTD_ID_CHK - 1]->td_data))
-#define EQUIV_TABLE(DFA) ((u8 *)((DFA)->tables[YYTD_ID_EC - 1]->td_data))
-#define ACCEPT_TABLE(DFA) ((u32 *)((DFA)->tables[YYTD_ID_ACCEPT - 1]->td_data))
-#define ACCEPT_TABLE2(DFA) ((u32 *)\
-			    ((DFA)->tables[YYTD_ID_ACCEPT2 - 1]->td_data))
+#define DEFAULT_TABLE(DFA) ((u16 *)((DFA)->tables[YYTD_ID_DEF]->td_data))
+#define BASE_TABLE(DFA) ((u32 *)((DFA)->tables[YYTD_ID_BASE]->td_data))
+#define NEXT_TABLE(DFA) ((u16 *)((DFA)->tables[YYTD_ID_NXT]->td_data))
+#define CHECK_TABLE(DFA) ((u16 *)((DFA)->tables[YYTD_ID_CHK]->td_data))
+#define EQUIV_TABLE(DFA) ((u8 *)((DFA)->tables[YYTD_ID_EC]->td_data))
+#define ACCEPT_TABLE(DFA) ((u32 *)((DFA)->tables[YYTD_ID_ACCEPT]->td_data))
+#define ACCEPT_TABLE2(DFA) ((u32 *)((DFA)->tables[YYTD_ID_ACCEPT2]->td_data))
 
 struct aa_dfa {
-	struct table_header *tables[YYTD_ID_NXT];
+	struct table_header *tables[YYTD_ID_TSIZE];
 };
 
 #define byte_to_byte(X) (X)
