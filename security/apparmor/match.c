@@ -194,6 +194,8 @@ struct aa_dfa *aa_dfa_unpack(void *blob, size_t size, int flags)
 
 	kref_init(&dfa->count);
 
+	error = -EPROTO;
+
 	/* get dfa table set header */
 	if (size < sizeof(struct table_set_header))
 		goto fail;
@@ -209,7 +211,6 @@ struct aa_dfa *aa_dfa_unpack(void *blob, size_t size, int flags)
 	blob += hsize;
 	size -= hsize;
 
-	error = -EPROTO;
 	while (size > 0) {
 		struct table_header *table;
 		table = unpack_table(blob, size);

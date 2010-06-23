@@ -307,7 +307,7 @@ static bool verify_accept(struct aa_dfa *dfa, int flags)
  * unpack_dfa - unpack a file rule dfa
  * @e: serialized data extent information
  *
- * returns dfa or ERR_PTR
+ * returns dfa or ERR_PTR or NULL if no dfa
  */
 static struct aa_dfa *unpack_dfa(struct aa_ext *e)
 {
@@ -331,8 +331,8 @@ static struct aa_dfa *unpack_dfa(struct aa_ext *e)
 			flags |= DFA_FLAG_VERIFY_STATES;
 
 		dfa = aa_dfa_unpack(blob + pad, size - pad, flags);
-
-		if (aa_g_paranoid_load && !verify_accept(dfa, flags))
+		
+		if (!IS_ERR(dfa) && !verify_accept(dfa, flags))
 			goto fail;
 	}
 
@@ -465,10 +465,12 @@ static struct aa_profile *unpack_profile(struct aa_ext *e,
 		profile->xmatch = NULL;
 		goto fail;
 	}
-	/* xmatch_len is not optional is xmatch is set */
-	if (profile->xmatch && !unpack_u32(e, &tmp, NULL))
-		goto fail;
-	profile->xmatch_len = tmp;
+	/* xmatch_len is not optional if xmatch is set */
+	if (profile->xmatch) {
+		if (!unpack_u32(e, &tmp, NULL))
+			goto fail;
+		profile->xmatch_len = tmp;
+	}
 
 	/* per profile debug flags (complain, audit) */
 	if (!unpack_nameX(e, AA_STRUCT, "flags"))
@@ -649,7 +651,8 @@ static bool verify_dfa_xindex(struct aa_dfa *dfa, int table_size)
 static int verify_profile(struct aa_profile *profile, struct aa_audit_iface *sa)
 {
 	if (aa_g_paranoid_load) {
-		if (!verify_dfa_xindex(profile->file.dfa,
+		if (profile->file.dfa &&
+		    !verify_dfa_xindex(profile->file.dfa,
 				       profile->file.trans.size)) {
 			sa->base.info = "Invalid named transition";
 			return -EPROTO;
