@@ -201,7 +201,6 @@ static inline void aa_free_file_rules(struct aa_file_rules *rules)
 #define ACC_FMODE(x) (("\000\004\002\006"[(x)&O_ACCMODE]) | (((x) << 1) & 0x40))
 
 /* from namei.c */
-#define ACC_MODE(x) ("\000\004\002\006"[(x)&O_ACCMODE])
 #define MAP_OPEN_FLAGS(x) ((((x) + 1) & O_ACCMODE) ? (x) + 1 : (x))
 /*
  * map file flags to AppArmor permissions
