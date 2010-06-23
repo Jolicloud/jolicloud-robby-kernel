@@ -257,7 +257,7 @@ int aa_pathstr_perm(struct aa_profile *profile, const char *op,
 		    const char *name, u16 request, struct path_cond *cond)
 {
 	struct aa_audit_file sa = {
-		.base.operation = op,
+		.base.op = op,
 		.base.gfp_mask = GFP_KERNEL,
 		.request = request,
 		.name = name,
@@ -287,7 +287,7 @@ static inline bool is_deleted(struct dentry *dentry)
 /**
  * aa_path_perm - do permissions check & audit for @path
  * @profile: profile being enforced  (NOT NULL)
- * @operation: name of the operation being enforced  (NOT NULL)
+ * @op: name of the operation being enforced  (NOT NULL)
  * @path: path to check permissions of  (NOT NULL)
  * @flags: any additional path flags beyond what the profile specifies
  * @request: requested permissions
@@ -295,13 +295,12 @@ static inline bool is_deleted(struct dentry *dentry)
  *
  * Returns: %0 else error if access denied or other error
  */
-int aa_path_perm(struct aa_profile *profile, const char *operation,
-		 struct path *path, int flags, u16 request,
-		 struct path_cond *cond)
+int aa_path_perm(struct aa_profile *profile, const char *op, struct path *path,
+		 int flags, u16 request, struct path_cond *cond)
 {
 	char *buffer, *name;
 	struct aa_audit_file sa = {
-		.base.operation = operation,
+		.base.op = op,
 		.base.gfp_mask = GFP_KERNEL,
 		.request = request,
 		.cond = cond,
@@ -390,7 +389,7 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 	unsigned int state;
 
 	struct aa_audit_file sa = {
-		.base.operation = "link",
+		.base.op = "link",
 		.base.gfp_mask = GFP_KERNEL,
 		.request = AA_MAY_LINK,
 		.cond = &cond,
@@ -470,20 +469,20 @@ audit:
 /**
  * aa_file_perm - do permission revalidation check & audit for @file
  * @profile: profile being enforced   (NOT NULL)
- * @operation: name of the operation  (NOT NULL)
+ * @op: name of the operation  (NOT NULL)
  * @file: file to revalidate access permissions on  (NOT NULL)
  * @request: requested permissions
  *
  * Returns: %0 if access allowed else error
  */
-int aa_file_perm(struct aa_profile *profile, const char *operation,
-		 struct file *file, u16 request)
+int aa_file_perm(struct aa_profile *profile, const char *op, struct file *file,
+		 u16 request)
 {
 	struct path_cond cond = {
 		.uid = file->f_path.dentry->d_inode->i_uid,
 		.mode = file->f_path.dentry->d_inode->i_mode
 	};
 
-	return aa_path_perm(profile, operation, &file->f_path,
+	return aa_path_perm(profile, op, &file->f_path,
 			    PATH_DELEGATE_DELETED, request, &cond);
 }

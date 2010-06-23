@@ -103,19 +103,19 @@ static int aa_audit_net(struct aa_profile *profile, struct aa_audit_net *sa)
 /**
  * aa_net_perm - very course network access check
  * @profile: profile being enforced  (NOT NULL)
- * @operation: name of the operation being checked  (NOT NULL)
+ * @op: name of the operation being checked  (NOT NULL)
  * @family: network family
  * @type:   network type
  * @protocol: network protocol
  *
  * Returns: %0 else error if permission denied
  */
-int aa_net_perm(struct aa_profile *profile, char *operation,
-		int family, int type, int protocol)
+int aa_net_perm(struct aa_profile *profile, char *op, int family, int type,
+		int protocol)
 {
 	u16 family_mask;
 	struct aa_audit_net sa = {
-		.base.operation = operation,
+		.base.op = op,
 		.base.gfp_mask = GFP_KERNEL,
 		.family = family,
 		.type = type,

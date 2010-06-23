@@ -85,9 +85,9 @@ static int aa_audit_base(int type, struct aa_profile *profile,
 		audit_log_string(ab, aa_audit_type[type - AUDIT_APPARMOR_AUDIT]);
 	}
 
-	if (sa->operation) {
+	if (sa->op) {
 		audit_log_format(ab, " operation=");
-		audit_log_string(ab, sa->operation);
+		audit_log_string(ab, sa->op);
 	}
 
 	if (sa->info) {

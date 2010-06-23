@@ -509,8 +509,8 @@ static int apparmor_file_lock(struct file *file, unsigned int cmd)
 	return common_file_perm("file_lock", file, mask);
 }
 
-static int common_mmap(struct file *file, const char *operation,
-		       unsigned long prot, unsigned long flags)
+static int common_mmap(struct file *file, const char *op, unsigned long prot,
+		       unsigned long flags)
 {
 	struct dentry *dentry;
 	int mask = 0;
@@ -530,7 +530,7 @@ static int common_mmap(struct file *file, const char *operation,
 		mask |= AA_EXEC_MMAP;
 
 	dentry = file->f_path.dentry;
-	return common_file_perm(operation, file, mask);
+	return common_file_perm(op, file, mask);
 }
 
 static int apparmor_file_mmap(struct file *file, unsigned long reqprot,
@@ -623,7 +623,7 @@ static int apparmor_setprocattr(struct task_struct *task, char *name,
 			error = aa_setprocattr_permipc(args);
 		} else {
 			struct aa_audit sa = {
-				.operation = "setprocattr",
+				.op = "setprocattr",
 				.gfp_mask = GFP_KERNEL,
 				.info = name,
 				.error = -EINVAL,

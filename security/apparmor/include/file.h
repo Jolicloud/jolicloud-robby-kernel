@@ -189,15 +189,14 @@ unsigned int aa_str_perms(struct aa_dfa *dfa, unsigned int start,
 int aa_pathstr_perm(struct aa_profile *profile, const char *op,
 		    const char *name, u16 request, struct path_cond *cond);
 
-int aa_path_perm(struct aa_profile *profile, const char *operation,
-		 struct path *path, int flags, u16 request,
-		 struct path_cond *cond);
+int aa_path_perm(struct aa_profile *profile, const char *op, struct path *path,
+		 int flags, u16 request, struct path_cond *cond);
 
 int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 		 struct path *new_dir, struct dentry *new_dentry);
 
-int aa_file_perm(struct aa_profile *profile, const char *operation,
-		 struct file *file, u16 request);
+int aa_file_perm(struct aa_profile *profile, const char *op, struct file *file,
+		 u16 request);
 
 static inline void aa_free_file_rules(struct aa_file_rules *rules)
 {

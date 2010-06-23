@@ -351,7 +351,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 		bprm->file->f_path.dentry->d_inode->i_mode
 	};
 	struct aa_audit_file sa = {
-		.base.operation = "exec",
+		.base.op = "exec",
 		.base.gfp_mask = GFP_KERNEL,
 		.request = MAY_EXEC,
 		.cond = &cond,
@@ -614,7 +614,7 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 	struct aa_profile *profile, *previous_profile, *hat = NULL;
 	struct aa_audit_file sa = {
 		.base.gfp_mask = GFP_KERNEL,
-		.base.operation = "change_hat",
+		.base.op = "change_hat",
 		.request = AA_MAY_CHANGEHAT,
 	};
 	char *name = NULL;
@@ -748,10 +748,10 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 
 	if (onexec) {
 		sa.request = AA_MAY_ONEXEC;
-		sa.base.operation = "change_onexec";
+		sa.base.op = "change_onexec";
 	} else {
 		sa.request = AA_MAY_CHANGE_PROFILE;
-		sa.base.operation = "change_profile";
+		sa.base.op = "change_profile";
 	}
 
 	cred = get_current_cred();

@@ -44,7 +44,7 @@ struct aa_audit {
 	struct task_struct *task;
 	gfp_t gfp_mask;
 	int error;
-	const char *operation;
+	const char *op;
 	const char *info;
 };
 

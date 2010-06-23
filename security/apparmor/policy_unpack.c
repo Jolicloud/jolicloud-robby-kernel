@@ -611,7 +611,7 @@ fail:
 /**
  * aa_verify_head - unpack serialized stream header
  * @e: serialized data read head
- * @operation: operation header is being verified for
+ * sa: audit structure
  *
  * Returns: error or 0 if header is good
  */

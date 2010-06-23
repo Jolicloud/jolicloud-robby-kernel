@@ -70,14 +70,14 @@ static void kvfree(void *buffer)
  * @alloc_size: size of user buffer
  * @copy_size: size of data to copy from user buffer
  * @pos: position write is at in the file
- * @operation: name of operation doing the user buffer copy (NOT NULL)
+ * @op: name of operation doing the user buffer copy (NOT NULL)
  *
  * Returns: kernel buffer containing copy of user buffer data or an
  *          ERR_PTR on failure.
  */
 static char *aa_simple_write_to_buffer(const char __user *userbuf,
 				       size_t alloc_size, size_t copy_size,
-				       loff_t *pos, const char *operation)
+				       loff_t *pos, const char *op)
 {
 	char *data;
 
@@ -94,7 +94,7 @@ static char *aa_simple_write_to_buffer(const char __user *userbuf,
 	if (!capable(CAP_MAC_ADMIN)) {
 		struct aa_profile *profile = NULL;
 		struct aa_audit sa = {
-			.operation = operation,
+			.op = op,
 			.gfp_mask = GFP_KERNEL,
 			.error = -EACCES,
 		};
