@@ -455,11 +455,8 @@ static void apparmor_file_free_security(struct file *file)
 	aa_free_file_context(cxt);
 }
 
-static int apparmor_file_permission(struct file *file, int mask)
+static int common_file_perm(int op, struct file *file, u16 mask)
 {
-	/*
-	 * TODO: cache profiles that have revalidated?
-	 */
 	struct aa_file_cxt *fcxt = file->f_security;
 	struct aa_profile *profile, *fprofile = aa_newest_version(fcxt->profile);
 	int error = 0;
@@ -477,28 +474,15 @@ static int apparmor_file_permission(struct file *file, int mask)
 	 */
 	if (!unconfined(profile) &&
 	    ((fprofile != profile) || (mask & ~fcxt->allowed)))
-		error = aa_file_perm(OP_FPERM, profile, file, mask);
+		error = aa_file_perm(op, profile, file, mask);
 #endif
 
 	return error;
 }
 
-static int common_file_perm(int op, struct file *file, u16 mask)
+static int apparmor_file_permission(struct file *file, int mask)
 {
-	const struct aa_file_cxt *fcxt = file->f_security;
-	struct aa_profile *profile, *fprofile = fcxt->profile;
-	int error = 0;
-
-	if (!fprofile || !file->f_path.mnt ||
-	    !mediated_filesystem(file->f_path.dentry->d_inode))
-		return 0;
-
-	profile = aa_current_profile();
-	if (!unconfined(profile) && ((fprofile != profile) ||
-				     (mask & ~fcxt->allowed)))
-		error = aa_file_perm(op, profile, file, mask);
-
-	return error;
+	return common_file_perm(OP_FPERM, file, mask);
 }
 
 static int apparmor_file_lock(struct file *file, unsigned int cmd)
