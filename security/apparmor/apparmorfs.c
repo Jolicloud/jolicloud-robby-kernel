@@ -58,14 +58,13 @@ static char *aa_simple_write_to_buffer(const char __user *userbuf,
 	 * have CAP_MAC_ADMIN
 	 */
 	if (!capable(CAP_MAC_ADMIN)) {
-		const struct cred *cred;
 		struct aa_profile *profile = NULL;
 		struct aa_audit sa = {
 			.operation = operation,
 			.gfp_mask = GFP_KERNEL,
 			.error = -EACCES,
 		};
-		cred = __aa_current_policy(&profile);
+		profile = aa_current_profile();
 		data = ERR_PTR(aa_audit(AUDIT_APPARMOR_DENIED, profile, &sa,
 					NULL));
 		goto out;

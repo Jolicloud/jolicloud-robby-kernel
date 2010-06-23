@@ -127,7 +127,6 @@ int aa_net_perm(struct aa_profile *profile, char *operation,
 int aa_revalidate_sk(struct sock *sk, char *operation)
 {
 	struct aa_profile *profile;
-	struct cred *cred;
 	int error = 0;
 
 	/* aa_revalidate_sk should not be called from interrupt context
@@ -136,13 +135,11 @@ int aa_revalidate_sk(struct sock *sk, char *operation)
 	if (in_interrupt())
 		return 0;
 
-	/* cred released below */
-	cred = aa_get_task_cred(current, &profile);
+	profile = __aa_current_profile();
 	if (profile)
 		error = aa_net_perm(profile, operation,
 				    sk->sk_family, sk->sk_type,
 				    sk->sk_protocol);
-	put_cred(cred);
 
 	return error;
 }

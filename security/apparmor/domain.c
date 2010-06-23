@@ -478,18 +478,13 @@ int apparmor_bprm_secureexec(struct linux_binprm *bprm)
 
 void apparmor_bprm_committing_creds(struct linux_binprm *bprm)
 {
-	struct aa_profile *profile;
-	/* ref released below */
-	struct cred *cred = aa_get_task_cred(current, &profile);
+	struct aa_profile *profile = __aa_current_profile();
 	struct aa_task_context *new_cxt = bprm->cred->security;
 
 	/* bail out if unconfined or not changing profile */
 	if ((new_cxt->sys.profile == profile) ||
-	    (new_cxt->sys.profile->flags & PFLAG_UNCONFINED)) {
-		put_cred(cred);
+	    (new_cxt->sys.profile->flags & PFLAG_UNCONFINED))
 		return;
-	}
-	put_cred(cred);
 
 	current->pdeath_signal = 0;
 
