@@ -44,7 +44,7 @@ int apparmor_initialized;
  */
 
 /*
- * free the associated aa_task_context and put its profiles
+ * free the associated aa_task_cxt and put its profiles
  */
 static void apparmor_cred_free(struct cred *cred)
 {
@@ -58,7 +58,7 @@ static void apparmor_cred_free(struct cred *cred)
 static int apparmor_cred_alloc_blank(struct cred *cred, gfp_t gfp)
 {
 	/* freed by apparmor_cred_free */
-	struct aa_task_context *cxt = aa_alloc_task_context(gfp);
+	struct aa_task_cxt *cxt = aa_alloc_task_context(gfp);
 	if (cxt)
 		return -ENOMEM;
 
@@ -67,13 +67,13 @@ static int apparmor_cred_alloc_blank(struct cred *cred, gfp_t gfp)
 }
 
 /*
- * prepare new aa_task_context for modification by prepare_cred block
+ * prepare new aa_task_cxt for modification by prepare_cred block
  */
 static int apparmor_cred_prepare(struct cred *new, const struct cred *old,
 				 gfp_t gfp)
 {
 	/* freed by apparmor_cred_free */
-	struct aa_task_context *cxt = aa_alloc_task_context(gfp);
+	struct aa_task_cxt *cxt = aa_alloc_task_context(gfp);
 	if (!cxt)
 		return -ENOMEM;
 
@@ -87,8 +87,8 @@ static int apparmor_cred_prepare(struct cred *new, const struct cred *old,
  */
 static void apparmor_cred_transfer(struct cred *new, const struct cred *old)
 {
-	const struct aa_task_context *old_cxt = old->security;
-	struct aa_task_context *new_cxt = new->security;
+	const struct aa_task_cxt *old_cxt = old->security;
+	struct aa_task_cxt *new_cxt = new->security;
 
 	aa_dup_task_context(new_cxt, old_cxt);
 }
@@ -515,7 +515,7 @@ static int apparmor_getprocattr(struct task_struct *task, char *name,
 	struct aa_profile *profile;
 	/* released below */
 	const struct cred *cred = get_task_cred(task);
-	struct aa_task_context *cxt = cred->security;
+	struct aa_task_cxt *cxt = cred->security;
 	profile = aa_cred_profile(cred);
 
 	if (strcmp(name, "current") == 0)
@@ -1018,7 +1018,7 @@ static int param_set_mode(const char *val, struct kernel_param *kp)
 static int __init set_init_cxt(void)
 {
 	struct cred *cred = (struct cred *)current->real_cred;
-	struct aa_task_context *cxt;
+	struct aa_task_cxt *cxt;
 
 	cxt = aa_alloc_task_context(GFP_KERNEL);
 	if (!cxt)

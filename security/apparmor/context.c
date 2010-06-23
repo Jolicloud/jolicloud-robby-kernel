@@ -16,12 +16,12 @@
 #include "include/context.h"
 #include "include/policy.h"
 
-struct aa_task_context *aa_alloc_task_context(gfp_t flags)
+struct aa_task_cxt *aa_alloc_task_context(gfp_t flags)
 {
-	return kzalloc(sizeof(struct aa_task_context), flags);
+	return kzalloc(sizeof(struct aa_task_cxt), flags);
 }
 
-void aa_free_task_context(struct aa_task_context *cxt)
+void aa_free_task_context(struct aa_task_cxt *cxt)
 {
 	if (cxt) {
 		aa_put_profile(cxt->profile);
@@ -37,8 +37,7 @@ void aa_free_task_context(struct aa_task_context *cxt)
  * @new: a blank task context
  * @old: the task context to copy
  */
-void aa_dup_task_context(struct aa_task_context *new,
-			 const struct aa_task_context *old)
+void aa_dup_task_context(struct aa_task_cxt *new, const struct aa_task_cxt *old)
 {
 	*new = *old;
 	aa_get_profile(new->profile);
@@ -53,7 +52,7 @@ void aa_dup_task_context(struct aa_task_context *new,
  *
  * Replace context grouping profile reference with @profile
  */
-static void replace_group(struct aa_task_context *cxt, struct aa_profile *profile)
+static void replace_group(struct aa_task_cxt *cxt, struct aa_profile *profile)
 {
 	if (cxt->profile == profile)
 		return;
@@ -81,7 +80,7 @@ static void replace_group(struct aa_task_context *cxt, struct aa_profile *profil
  */
 int aa_replace_current_profiles(struct aa_profile *sys)
 {
-	struct aa_task_context *cxt;
+	struct aa_task_cxt *cxt;
 	struct cred *new = prepare_creds();
 	if (!new)
 		return -ENOMEM;
@@ -102,7 +101,7 @@ int aa_replace_current_profiles(struct aa_profile *sys)
  */
 int aa_set_current_onexec(struct aa_profile *sys)
 {
-	struct aa_task_context *cxt;
+	struct aa_task_cxt *cxt;
 	struct cred *new = prepare_creds();
 	if (!new)
 		return -ENOMEM;
@@ -127,7 +126,7 @@ int aa_set_current_onexec(struct aa_profile *sys)
  */
 int aa_set_current_hat(struct aa_profile *profile, u64 token)
 {
-	struct aa_task_context *cxt;
+	struct aa_task_cxt *cxt;
 	struct cred *new = prepare_creds();
 	if (!new)
 		return -ENOMEM;
@@ -163,7 +162,7 @@ int aa_set_current_hat(struct aa_profile *profile, u64 token)
  */
 int aa_restore_previous_profile(u64 token)
 {
-	struct aa_task_context *cxt;
+	struct aa_task_cxt *cxt;
 	struct cred *new = prepare_creds();
 	if (!new)
 		return -ENOMEM;

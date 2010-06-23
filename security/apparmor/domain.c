@@ -302,7 +302,7 @@ out:
  */
 int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 {
-	struct aa_task_context *cxt;
+	struct aa_task_cxt *cxt;
 	struct aa_profile *profile, *new_profile = NULL;
 	struct aa_namespace *ns;
 	char *buffer = NULL;
@@ -478,7 +478,7 @@ int apparmor_bprm_secureexec(struct linux_binprm *bprm)
 void apparmor_bprm_committing_creds(struct linux_binprm *bprm)
 {
 	struct aa_profile *profile = __aa_current_profile();
-	struct aa_task_context *new_cxt = bprm->cred->security;
+	struct aa_task_cxt *new_cxt = bprm->cred->security;
 
 	/* bail out if unconfined or not changing profile */
 	if ((new_cxt->profile == profile) ||
@@ -526,7 +526,7 @@ static char *new_compound_name(const char *n1, const char *n2)
 int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 {
 	const struct cred *cred;
-	struct aa_task_context *cxt;
+	struct aa_task_cxt *cxt;
 	struct aa_profile *profile, *previous_profile, *hat = NULL;
 	struct aa_audit_file sa = {
 		.base.gfp_mask = GFP_KERNEL,
@@ -642,7 +642,7 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 		      bool permtest)
 {
 	const struct cred *cred;
-	struct aa_task_context *cxt;
+	struct aa_task_cxt *cxt;
 	struct aa_profile *profile, *target = NULL;
 	struct aa_namespace *ns = NULL;
 	struct aa_audit_file sa = {

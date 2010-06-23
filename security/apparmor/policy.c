@@ -844,7 +844,7 @@ static void __add_new_profile(struct aa_namespace *ns,
  * @add_only: true if only doing addition, no replacement allowed
  *
  * unpack and replace a profile on the profile list and uses of that profile
- * by any aa_task_context.  If the profile does not exist on the profile list
+ * by any aa_task_cxt.  If the profile does not exist on the profile list
  * it is added.  Return %0 or error.
  */
 ssize_t aa_interface_replace_profiles(void *udata, size_t size, bool add_only)
@@ -956,7 +956,7 @@ fail:
  * @fqname: name of the profile to remove
  * @size: size of the name
  *
- * remove a profile from the profile list and all aa_task_context references
+ * remove a profile from the profile list and all aa_task_cxt references
  * to said profile.
  * NOTE: removing confinement does not restore rlimits to preconfinemnet values
  */

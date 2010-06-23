@@ -42,7 +42,7 @@ static inline void aa_free_file_context(struct aa_file_cxt *cxt)
 }
 
 /**
- * struct aa_task_context - primary label for confined tasks
+ * struct aa_task_cxt - primary label for confined tasks
  * @profile: the current profile
  * @exec: profile to transition to on next exec
  * @previous: profile the task may return to
@@ -53,17 +53,17 @@ static inline void aa_free_file_context(struct aa_file_cxt *cxt)
  *
  * TODO: make so a task can be confined by a stack of contexts
  */
-struct aa_task_context {
+struct aa_task_cxt {
 	struct aa_profile *profile;
 	struct aa_profile *onexec;
 	struct aa_profile *previous;
 	u64 token;
 };
 
-struct aa_task_context *aa_alloc_task_context(gfp_t flags);
-void aa_free_task_context(struct aa_task_context *cxt);
-void aa_dup_task_context(struct aa_task_context *new,
-			 const struct aa_task_context *old);
+struct aa_task_cxt *aa_alloc_task_context(gfp_t flags);
+void aa_free_task_context(struct aa_task_cxt *cxt);
+void aa_dup_task_context(struct aa_task_cxt *new,
+			 const struct aa_task_cxt *old);
 int aa_replace_current_profiles(struct aa_profile *sys);
 int aa_set_current_onexec(struct aa_profile *sys);
 int aa_set_current_hat(struct aa_profile *profile, u64 token);
@@ -77,7 +77,7 @@ int aa_restore_previous_profile(u64 cookie);
  */
 static inline bool __aa_task_is_confined(struct task_struct *task)
 {
-	struct aa_task_context *cxt = __task_cred(task)->security;
+	struct aa_task_cxt *cxt = __task_cred(task)->security;
 
 	BUG_ON(!cxt);
 	if (unconfined(aa_newest_version(cxt->profile)))
@@ -96,7 +96,7 @@ static inline bool __aa_task_is_confined(struct task_struct *task)
  */
 static inline struct aa_profile *aa_cred_profile(const struct cred *cred)
 {
-	struct aa_task_context *cxt = cred->security;
+	struct aa_task_cxt *cxt = cred->security;
 	BUG_ON(!cxt);
 	return aa_newest_version(cxt->profile);
 }
@@ -124,7 +124,7 @@ static inline struct aa_profile *__aa_current_profile(void)
  */
 static inline struct aa_profile *aa_current_profile(void)
 {
-	const struct aa_task_context *cxt = current_cred()->security;
+	const struct aa_task_cxt *cxt = current_cred()->security;
 	struct aa_profile *profile;
 	BUG_ON(!cxt);
 
