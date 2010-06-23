@@ -65,9 +65,10 @@ enum profile_flags {
 	PFLAG_USER_DEFINED = 0x20,	/* user based profile */
 	PFLAG_NO_LIST_REF = 0x40,	/* list doesn't keep profile ref */
 	PFLAG_MMAP_MIN_ADDR = 0x80,	/* profile controls mmap_min_addr */
-	PFLAG_DELETED_NAMES = 0x100,	/* mediate deleted paths */
-	PFLAG_CONNECT_PATH = 0x200,	/* connect disconnected paths to / */
-	PFLAG_OLD_NULL_TRANS = 0x400,	/* use // as the null transition */
+	PFLAG_OLD_NULL_TRANS = 0x100,	/* use // as the null transition */
+
+	/* These flags must coorespond with PATH_flags */
+	PFLAG_MEDIATE_DELETED = 0x10000, /* mediate instead delegate deleted */
 };
 
 #define AA_NEW_SID 0
@@ -143,6 +144,7 @@ struct aa_namespace {
  * @audit: the auditing mode of the profile
  * @mode: the enforcement mode of the profile
  * @flags: flags controlling profile behavior
+ * @path_flags: flags controlling path generation behavior
  * @size: the memory consumed by this profiles rules
  * @file: The set of rules governing basic file access and domain transitions
  * @caps: capabilities for the profile
@@ -179,6 +181,7 @@ struct aa_profile {
 	enum audit_mode audit;
 	enum profile_mode mode;
 	u32 flags;
+	u32 path_flags;
 	int size;
 
 	unsigned long mmap_min_addr;

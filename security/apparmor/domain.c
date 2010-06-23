@@ -342,8 +342,8 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	state = profile->file.start;
 
 	/* buffer freed below, name is pointer inside of buffer */
-	sa.base.error = aa_get_name(&bprm->file->f_path, 0, &buffer,
-				    (char **)&sa.name);
+	sa.base.error = aa_get_name(&bprm->file->f_path, profile->path_flags,
+				    &buffer, (char **)&sa.name);
 	if (sa.base.error) {
 		if (profile->flags &
 		    (PFLAG_IX_ON_NAME_ERROR | PFLAG_UNCONFINED))
