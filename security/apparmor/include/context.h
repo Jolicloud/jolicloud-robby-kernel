@@ -120,8 +120,12 @@ static inline const struct cred *aa_current_policy(struct aa_profile **sys)
 	BUG_ON(!cxt);
 
 	*sys = aa_profile_newest(cxt->sys.profile);
-	if (unlikely((cxt->sys.profile != *sys)))
+	if (unlikely((cxt->sys.profile != *sys))) {
 		aa_replace_current_profiles(*sys);
+		cred = current_cred();
+		cred->security;
+		*sys = aa_profile_newest(cxt->sys.profile);
+	}
 	*sys = aa_filter_profile(*sys);
 
 	return cred;
