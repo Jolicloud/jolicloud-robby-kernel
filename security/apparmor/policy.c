@@ -101,9 +101,9 @@ const char *profile_mode_names[] = {
 
 /**
  * hname_tail - find the last component of an hname
- * @name: hname to find the tail component of  (NOT NULL)
+ * @name: hname to find the base profile name component of  (NOT NULL)
  *
- * Returns: the tail name component of an hname
+ * Returns: the tail (base profile name) name component of an hname
  */
 static const char *hname_tail(const char *hname)
 {
@@ -168,7 +168,7 @@ static void policy_destroy(struct aa_policy *policy)
  *
  * Requires: correct locks for the @head list be held
  *
- * Returns: policy that match @name or NULL if not found
+ * Returns: unrefcounted policy that match @name or NULL if not found
  */
 static struct aa_policy *__policy_find(struct list_head *head, const char *name)
 {
@@ -189,7 +189,7 @@ static struct aa_policy *__policy_find(struct list_head *head, const char *name)
  *
  * Requires: correct locks for the @head list be held
  *
- * Returns: policy that match @str or NULL if not found
+ * Returns: unrefcounted policy that match @str or NULL if not found
  *
  * if @len == strlen(@strlen) then this is equiv to __policy_find
  * other wise it allows searching for policy by a partial match of name
@@ -584,7 +584,7 @@ void aa_free_root_ns(void)
  * aa_alloc_profile - allocate, initialize and return a new profile
  * @hname: name of the profile  (NOT NULL)
  *
- * Returns: NULL on failure, else refcounted profile
+ * Returns: refcount profile or NULL on failure
  */
 struct aa_profile *aa_alloc_profile(const char *hname)
 {
