@@ -436,14 +436,34 @@ static int apparmor_file_mmap(struct file *file, unsigned long reqprot,
 			      unsigned long prot, unsigned long flags,
 			      unsigned long addr, unsigned long addr_only)
 {
-	if ((addr < mmap_min_addr) && !capable(CAP_SYS_RAWIO)) {
-		struct aa_profile *profile = aa_current_profile_wupd();
-		if (profile)
-			/* future control check here */
-			return -EACCES;
-		else
-			return -EACCES;
+	int rc = 0;
+	struct aa_profile *profile = aa_current_profile_wupd();
+	/*
+	 * test before cap_file_mmap.  For confined tasks AppArmor will
+	 * enforce the mmap value set in the profile or default
+	 * to LSM_MMAP_MIN_ADDR
+	 */
+	if (profile) {
+		if (profile->flags & PFLAG_MMAP_MIN_ADDR) {
+			if (addr < profile->mmap_min_addr)
+				rc = -EACCES;
+		} else if (addr < CONFIG_LSM_MMAP_MIN_ADDR) {
+			rc = -EACCES;
+		}
+		if (rc) {
+			struct aa_audit sa;
+			memset(&sa, 0, sizeof(sa));
+			sa.operation = "file_mmap";
+			sa.gfp_mask = GFP_KERNEL;
+			sa.info = "addr < mmap_min_addr";
+			sa.error = rc;
+			return aa_audit(AUDIT_APPARMOR_DENIED, profile, &sa,
+					NULL);
+		}
 	}
+	rc = cap_file_mmap(file, reqprot, prot, flags, addr, addr_only);
+	if (rc || addr_only)
+		return rc;
 
 	return common_mmap(file, "file_mmap", prot, flags);
 }

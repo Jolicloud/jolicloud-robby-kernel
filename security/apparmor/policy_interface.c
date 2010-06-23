@@ -444,6 +444,7 @@ static struct aa_profile *aa_unpack_profile(struct aa_ext *e,
 	size_t size = 0;
 	int i, error = -EPROTO;
 	u32 tmp;
+	u64 tmp64;
 
 	/* check that we have the right struct being passed */
 	if (!aa_is_nameX(e, AA_STRUCT, "profile"))
@@ -485,6 +486,17 @@ static struct aa_profile *aa_unpack_profile(struct aa_ext *e,
 
 	if (!aa_is_nameX(e, AA_STRUCTEND, NULL))
 		goto fail;
+
+	/* mmap_min_addr is optional */
+	if (aa_is_u64(e, &tmp64, "mmap_min_addr")) {
+		profile->mmap_min_addr = (unsigned long) tmp64;
+		if (((u64) profile->mmap_min_addr) == tmp64) {
+			profile->flags |= PFLAG_MMAP_MIN_ADDR;
+		} else {
+			sa->base.info = "invalid set mmap_min_addr";
+			goto fail;
+		}
+	}
 
 	if (!aa_is_u32(e, &(profile->caps.allowed.cap[0]), NULL))
 		goto fail;
