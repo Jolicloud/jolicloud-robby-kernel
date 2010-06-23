@@ -46,20 +46,20 @@ static void audit_cb(struct audit_buffer *ab, void *va)
 	struct aa_audit_net *sa = va;
 
 	if (sa->family || sa->type) {
-		if (address_family_names[sa->family])
-			audit_log_format(ab, " family=\"%s\"",
-					 address_family_names[sa->family]);
-		else
+		if (address_family_names[sa->family]) {
+			audit_log_format(ab, " family=");
+			audit_log_string(ab, address_family_names[sa->family]);
+		} else {
 			audit_log_format(ab, " family=\"unknown(%d)\"",
 					 sa->family);
-
-		if (sock_type_names[sa->type])
-			audit_log_format(ab, " sock_type=\"%s\"",
-					 sock_type_names[sa->type]);
-		else
+		}
+		if (sock_type_names[sa->type]) {
+			audit_log_format(ab, " sock_type=");
+			audit_log_string(ab, sock_type_names[sa->type]);
+		} else {
 			audit_log_format(ab, " sock_type=\"unknown(%d)\"",
 					 sa->type);
-
+		}
 		audit_log_format(ab, " protocol=%d", sa->protocol);
 	}
 

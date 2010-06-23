@@ -69,10 +69,14 @@ static void audit_cb(struct audit_buffer *ab, void *va)
 {
 	struct aa_audit_iface *sa = va;
 
-	if (sa->name)
-		audit_log_format(ab, " name=%s", sa->name);
-	if (sa->name2)
-		audit_log_format(ab, " namespace=%s", sa->name2);
+	if (sa->name) {
+		audit_log_format(ab, " name=");
+		audit_log_string(ab, sa->name);
+	}
+	if (sa->name2) {
+		audit_log_format(ab, " namespace=");
+		audit_log_string(ab, sa->name2);
+	}
 	if (sa->base.error && sa->pos)
 		audit_log_format(ab, " offset=%ld", sa->pos);
 }

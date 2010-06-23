@@ -66,15 +66,19 @@ static int aa_audit_base(int type, struct aa_profile *profile,
 		goto out;
 	}
 
-	if (aa_g_audit_header)
-		audit_log_format(ab, "type=%s ",
-				 aa_audit_type[type - AUDIT_APPARMOR_AUDIT]);
+	if (aa_g_audit_header) {
+		audit_log_format(ab, " type=");
+		audit_log_string(ab, aa_audit_type[type - AUDIT_APPARMOR_AUDIT]);
+	}
 
-	if (sa->operation)
-		audit_log_format(ab, "operation=\"%s\"", sa->operation);
+	if (sa->operation) {
+		audit_log_format(ab, " operation=");
+		audit_log_string(ab, sa->operation);
+	}
 
 	if (sa->info) {
-		audit_log_format(ab, " info=\"%s\"", sa->info);
+		audit_log_format(ab, " info=");
+		audit_log_string(ab, sa->info);
 		if (sa->error)
 			audit_log_format(ab, " error=%d", sa->error);
 	}

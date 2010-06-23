@@ -21,8 +21,7 @@
 
 struct file_perms nullperms;
 
-static void aa_audit_file_sub_mask(struct audit_buffer *ab, char *buffer,
-				   u16 mask, u16 xindex)
+static void aa_audit_file_sub_mask(char *buffer, u16 mask, u16 xindex)
 {
 	char *m = buffer;
 
@@ -43,16 +42,19 @@ static void aa_audit_file_sub_mask(struct audit_buffer *ab, char *buffer,
 	*m++ = '\0';
 }
 
-static void aa_audit_file_mask(struct audit_buffer *ab, const char *name,
-			       u16 mask, int xindex, int owner)
+static void aa_audit_file_mask(struct audit_buffer *ab, u16 mask, int xindex,
+			       int owner)
 {
 	char str[10];
 
-	aa_audit_file_sub_mask(ab, str, mask, xindex);
-	if (owner)
-		audit_log_format(ab, " %s=\"%s::\"", name, str);
-	else
-		audit_log_format(ab, " %s=\"::%s\"", name, str);
+	if (owner) {
+		aa_audit_file_sub_mask(str, mask, xindex);
+		strcat(str, "::");
+	} else {
+		strcpy(str, "::");
+		aa_audit_file_sub_mask(str + 2, mask, xindex);
+	}
+	audit_log_string(ab, str);
 }
 
 void file_audit_cb(struct audit_buffer *ab, void *va)
@@ -66,14 +68,16 @@ void file_audit_cb(struct audit_buffer *ab, void *va)
 	else
 		fsuid = current_fsuid();
 
-	if (sa->request & AA_AUDIT_FILE_MASK)
-		aa_audit_file_mask(ab, "requested_mask", sa->request,
-				   AA_X_NONE, fsuid == sa->cond->uid);
-
-	if (denied & AA_AUDIT_FILE_MASK)
-		aa_audit_file_mask(ab, "denied_mask", denied, sa->perms.xindex,
+	if (sa->request & AA_AUDIT_FILE_MASK) {
+		audit_log_format(ab, " requested_mask=");
+		aa_audit_file_mask(ab, sa->request, AA_X_NONE,
 				   fsuid == sa->cond->uid);
-
+	}
+	if (denied & AA_AUDIT_FILE_MASK) {
+		audit_log_format(ab, " denied_mask=");
+		aa_audit_file_mask(ab, denied, sa->perms.xindex,
+				   fsuid == sa->cond->uid);
+	}
 	if (sa->request & AA_AUDIT_FILE_MASK) {
 		audit_log_format(ab, " fsuid=%d", fsuid);
 		audit_log_format(ab, " ouid=%d", sa->cond->uid);
