@@ -37,10 +37,10 @@ struct aa_profile;
 #define AA_MAY_LOCK                    0x0400
 #define AA_EXEC_MMAP                   0x0800
  
-#define AA_MAY_LINK                    0x1000
-#define AA_LINK_SUBSET			0x2000
+#define AA_MAY_LINK			0x1000
 #define AA_MAY_ONEXEC			0x4000	/* exec allows onexec */
 #define AA_MAY_CHANGE_PROFILE		0x8000
+#define AA_LINK_SUBSET			AA_MAY_LOCK	/* overlayed */
 #define AA_MAY_CHANGEHAT		0x8000	/* ctrl auditing only */
 
 #define AA_AUDIT_FILE_MASK	(MAY_READ | MAY_WRITE | MAY_EXEC | MAY_APPEND |\
