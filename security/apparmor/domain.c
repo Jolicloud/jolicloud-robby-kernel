@@ -250,8 +250,8 @@ static struct aa_profile *x_to_profile(struct aa_profile *profile,
 			/* released by caller */
 			new_profile = aa_find_attach(ns, &ns->base.profiles,
 						     name);
-
-		goto out;
+		/* released by caller */
+		return new_profile;
 	case AA_X_TABLE:
 		/* index is guarenteed to be in range */
 		name = profile->file.trans.table[index];
@@ -296,7 +296,6 @@ static struct aa_profile *x_to_profile(struct aa_profile *profile,
 		aa_put_namespace(new_ns);
 	}
 
-out:
 	/* released by caller */
 	return new_profile;
 }
