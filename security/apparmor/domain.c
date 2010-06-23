@@ -259,8 +259,6 @@ static struct aa_profile *x_table_lookup(struct aa_profile *profile, u16 xindex)
 		if (xindex & AA_X_CHILD) {
 			/* release by caller */
 			new_profile = aa_find_child(profile, name);
-			if (new_profile)
-				break;
 			continue;
 		} else if (*name == ':') {
 			/* switching namespace */
