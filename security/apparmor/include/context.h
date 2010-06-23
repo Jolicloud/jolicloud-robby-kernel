@@ -22,11 +22,13 @@
 #include "policy.h"
 
 /* struct aa_file_cxt - the AppArmor context the file was opened in
- * @profile: the profile the file was opened under
  * @perms: the permission the file was opened with
+ *
+ * The file_cxt could currently be directly stored in file->f_security
+ * as the profile reference is now stored in the f_cred.  However the
+ * cxt struct will expand in the future so we keep the struct.
  */
 struct aa_file_cxt {
-	struct aa_profile *profile;
 	u16 allow;
 };
 
@@ -47,10 +49,8 @@ static inline struct aa_file_cxt *aa_alloc_file_context(gfp_t gfp)
  */
 static inline void aa_free_file_context(struct aa_file_cxt *cxt)
 {
-	if (cxt) {
-		aa_put_profile(cxt->profile);
+	if (cxt)
 		kzfree(cxt);
-	}
 }
 
 /**
