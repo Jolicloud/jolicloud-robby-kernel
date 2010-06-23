@@ -156,40 +156,6 @@ static struct aa_policy_common *__common_strn_find(struct list_head *head,
  */
 
 /**
- * aa_alloc_default_namespace - allocate the base default namespace
- *
- * Returns 0 on success else error
- *
- */
-int aa_alloc_default_namespace(void)
-{
-	struct aa_namespace *ns;
-	/* released by aa_free_default_namespace - used as list ref*/
-	ns = alloc_aa_namespace("default");
-	if (!ns)
-		return -ENOMEM;
-
-	/* released by aa_free_default_namespace - global var ref*/
-	default_namespace = aa_get_namespace(ns);
-	write_lock(&ns_list_lock);
-	list_add(&ns->base.list, &ns_list);
-	write_unlock(&ns_list_lock);
-
-	return 0;
-}
-
-void aa_free_default_namespace(void)
-{
-	write_lock(&ns_list_lock);
-	list_del_init(&default_namespace->base.list);
-	write_unlock(&ns_list_lock);
-	/* drop the list ref and the global default_namespace ref */
-	aa_put_namespace(default_namespace);
-	aa_put_namespace(default_namespace);
-	default_namespace = NULL;
-}
-
-/**
  * alloc_aa_namespace - allocate, initialize and return a new namespace
  * @name: a preallocated name
  * Returns NULL on failure.
@@ -235,15 +201,6 @@ fail_ns:
 }
 
 /**
- * free_aa_namespace_kref - free aa_namespace by kref (see aa_put_namespace)
- * @kr: kref callback for freeing of a namespace
- */
-void free_aa_namespace_kref(struct kref *kref)
-{
-	free_aa_namespace(container_of(kref, struct aa_namespace, base.count));
-}
-
-/**
  * free_aa_namespace - free a profile namespace
  * @namespace: the namespace to free
  *
@@ -262,6 +219,49 @@ static void free_aa_namespace(struct aa_namespace *ns)
 
 	aa_put_profile(ns->unconfined);
 	kzfree(ns);
+}
+
+/**
+ * free_aa_namespace_kref - free aa_namespace by kref (see aa_put_namespace)
+ * @kr: kref callback for freeing of a namespace
+ */
+void free_aa_namespace_kref(struct kref *kref)
+{
+	free_aa_namespace(container_of(kref, struct aa_namespace, base.count));
+}
+
+/**
+ * aa_alloc_default_namespace - allocate the base default namespace
+ *
+ * Returns 0 on success else error
+ *
+ */
+int aa_alloc_default_namespace(void)
+{
+	struct aa_namespace *ns;
+	/* released by aa_free_default_namespace - used as list ref*/
+	ns = alloc_aa_namespace("default");
+	if (!ns)
+		return -ENOMEM;
+
+	/* released by aa_free_default_namespace - global var ref*/
+	default_namespace = aa_get_namespace(ns);
+	write_lock(&ns_list_lock);
+	list_add(&ns->base.list, &ns_list);
+	write_unlock(&ns_list_lock);
+
+	return 0;
+}
+
+void aa_free_default_namespace(void)
+{
+	write_lock(&ns_list_lock);
+	list_del_init(&default_namespace->base.list);
+	write_unlock(&ns_list_lock);
+	/* drop the list ref and the global default_namespace ref */
+	aa_put_namespace(default_namespace);
+	aa_put_namespace(default_namespace);
+	default_namespace = NULL;
 }
 
 /**
