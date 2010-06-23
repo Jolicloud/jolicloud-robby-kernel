@@ -186,6 +186,15 @@ out:
 	return error;
 }
 
+/**
+ * common_perm - basic common permission check wrapper fn for paths
+ * @op: operation name  (NOT NULL)
+ * @path: path to check permission of  (NOT NULL)
+ * @mask: requested permissions mask
+ * @cond: conditional info for the permission request  (NOT NULL)
+ *
+ * Returns: %0 else error code if error or permission denied
+ */
 static int common_perm(const char *op, struct path *path, u16 mask,
 		       struct path_cond *cond)
 {
@@ -199,6 +208,16 @@ static int common_perm(const char *op, struct path *path, u16 mask,
 	return error;
 }
 
+/**
+ * common_perm_dentry - common permission wrapper when path is dir, dentry
+ * @op: operation name  (NOT NULL)
+ * @dir: directory of the dentry  (NOT NULL)
+ * @dentry: dentry to check  (NOT NULL)
+ * @mask: requested permissions mask
+ * @cond: conditional info for the permission request  (NOT NULL)
+ *
+ * Returns: %0 else error code if error or permission denied
+ */
 static int common_perm_dentry(const char *op, struct path *dir,
 			      struct dentry *dentry, u16 mask,
 			      struct path_cond *cond)
@@ -208,6 +227,15 @@ static int common_perm_dentry(const char *op, struct path *dir,
 	return common_perm(op, &path, mask, cond);
 }
 
+/**
+ * common_perm_rm - common permission wrapper for operations doing rm
+ * @op: operation name  (NOT NULL)
+ * @dir: directory that the dentry is in  (NOT NULL)
+ * @dentry: dentry being rm'd  (NOT NULL)
+ * @mask: requested permission mask
+ *
+ * Returns: %0 else error code if error or permission denied
+ */
 static int common_perm_rm(const char *op, struct path *dir,
 			  struct dentry *dentry, u16 mask)
 {
@@ -223,6 +251,16 @@ static int common_perm_rm(const char *op, struct path *dir,
 	return common_perm_dentry(op, dir, dentry, mask, &cond);
 }
 
+/**
+ * common_perm_create - common permission wrapper for operations doing create
+ * @op: operation name  (NOT NULL)
+ * @dir: directory that dentry will be created in  (NOT NULL)
+ * @dentry: dentry to create   (NOT NULL)
+ * @mask: request permission mask
+ * @mode: created file mode
+ *
+ * Returns: %0 else error code if error or permission denied
+ */
 static int common_perm_create(const char *op, struct path *dir,
 			      struct dentry *dentry, u16 mask, umode_t mode)
 {
@@ -1006,6 +1044,12 @@ static int param_set_mode(const char *val, struct kernel_param *kp)
 
 /*
  * AppArmor init functions
+ */
+
+/**
+ * set_init_cxt - set a task context and profile on the first task.
+ *
+ * TODO: allow setting an alternate profile than unconfined
  */
 static int __init set_init_cxt(void)
 {
