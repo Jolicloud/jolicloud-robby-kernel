@@ -534,7 +534,8 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 	};
 	char *name = NULL;
 
-	cred = __aa_current_policy(&profile);
+	/* released below */
+	cred = aa_get_task_cred(current, &profile);
 	cxt = cred->security;
 	previous_profile = cxt->sys.previous;
 
@@ -615,6 +616,7 @@ audit:
 out:
 	aa_put_profile(hat);
 	kfree(name);
+	put_cred(cred);
 
 	return sa.base.error;
 }
@@ -652,7 +654,7 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 	else
 		sa.base.operation = "change_profile";
 
-	cred = __aa_current_policy(&profile);
+	cred = aa_get_task_cred(current, &profile);
 	cxt = cred->security;
 
 	if (ns_name) {
@@ -724,6 +726,7 @@ audit:
 
 	aa_put_namespace(ns);
 	aa_put_profile(target);
+	put_cred(cred);
 
 	return sa.base.error;
 }
