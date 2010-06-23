@@ -467,15 +467,9 @@ static int common_file_perm(int op, struct file *file, u16 mask)
 
 	profile = __aa_current_profile();
 
-#ifdef CONFIG_SECURITY_APPARMOR_COMPAT_24
-	/*
-	 * AppArmor <= 2.4 revalidates files at access time instead
-	 * of at exec.
-	 */
 	if (!unconfined(profile) &&
 	    ((fprofile != profile) || (mask & ~fcxt->allowed)))
 		error = aa_file_perm(op, profile, file, mask);
-#endif
 
 	return error;
 }
