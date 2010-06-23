@@ -569,10 +569,10 @@ static int apparmor_setprocattr(struct task_struct *task, char *name,
 			error = aa_setprocattr_changehat(args, arg_size,
 							 AA_DO_TEST);
 		} else if (strcmp(command, "changeprofile") == 0) {
-			error = aa_setprocattr_changeprofile(args, 0,
+			error = aa_setprocattr_changeprofile(args, !AA_ONEXEC,
 							     !AA_DO_TEST);
 		} else if (strcmp(command, "permprofile") == 0) {
-			error = aa_setprocattr_changeprofile(args, 0,
+			error = aa_setprocattr_changeprofile(args, !AA_ONEXEC,
 							     AA_DO_TEST);
 		} else if (strcmp(command, "permipc") == 0) {
 			error = aa_setprocattr_permipc(args);
@@ -586,7 +586,7 @@ static int apparmor_setprocattr(struct task_struct *task, char *name,
 			return aa_audit(AUDIT_APPARMOR_DENIED, NULL, &sa, NULL);
 		}
 	} else if (strcmp(name, "exec") == 0) {
-		error = aa_setprocattr_changeprofile(strstrip(args), 1,
+		error = aa_setprocattr_changeprofile(strstrip(args), AA_ONEXEC,
 						     !AA_DO_TEST);
 	} else {
 		/* only support the "current" and "exec" process attributes */
