@@ -122,22 +122,17 @@ static int aa_inbounds(struct aa_ext *e, size_t size)
  */
 static size_t unpack_u16_chunk(struct aa_ext *e, char **chunk)
 {
-	void *pos = e->pos;
 	size_t size = 0;
 
 	if (!aa_inbounds(e, sizeof(u16)))
-		goto fail;
+		return 0;
 	size = le16_to_cpu(get_unaligned((u16 *) e->pos));
 	e->pos += sizeof(u16);
 	if (!aa_inbounds(e, size))
-		goto fail;
+		return 0;
 	*chunk = e->pos;
 	e->pos += size;
 	return size;
-
-fail:
-	e->pos = pos;
-	return 0;
 }
 
 static int unpack_X(struct aa_ext *e, enum aa_code code)
@@ -166,6 +161,9 @@ static int unpack_X(struct aa_ext *e, enum aa_code code)
  */
 static int unpack_nameX(struct aa_ext *e, enum aa_code code, const char *name)
 {
+	/*
+	 * May need to reset pos if name or type doesn't match
+	 */
 	void *pos = e->pos;
 	/*
 	 * Check for presence of a tagname, and if present name size
@@ -193,75 +191,62 @@ fail:
 
 static int unpack_u16(struct aa_ext *e, u16 *data, const char *name)
 {
-	void *pos = e->pos;
 	if (unpack_nameX(e, AA_U16, name)) {
 		if (!aa_inbounds(e, sizeof(u16)))
-			goto fail;
+			return 0;
 		if (data)
 			*data = le16_to_cpu(get_unaligned((u16 *) e->pos));
 		e->pos += sizeof(u16);
 		return 1;
 	}
-fail:
-	e->pos = pos;
 	return 0;
 }
 
 static int unpack_u32(struct aa_ext *e, u32 *data, const char *name)
 {
-	void *pos = e->pos;
 	if (unpack_nameX(e, AA_U32, name)) {
 		if (!aa_inbounds(e, sizeof(u32)))
-			goto fail;
+			return 0;
 		if (data)
 			*data = le32_to_cpu(get_unaligned((u32 *) e->pos));
 		e->pos += sizeof(u32);
 		return 1;
 	}
-fail:
-	e->pos = pos;
 	return 0;
 }
 
 static int unpack_u64(struct aa_ext *e, u64 *data, const char *name)
 {
-	void *pos = e->pos;
 	if (unpack_nameX(e, AA_U64, name)) {
 		if (!aa_inbounds(e, sizeof(u64)))
-			goto fail;
+			return 0;
 		if (data)
 			*data = le64_to_cpu(get_unaligned((u64 *) e->pos));
 		e->pos += sizeof(u64);
 		return 1;
 	}
-fail:
-	e->pos = pos;
 	return 0;
 }
 
 static size_t unpack_array(struct aa_ext *e, const char *name)
 {
-	void *pos = e->pos;
 	if (unpack_nameX(e, AA_ARRAY, name)) {
 		int size;
 		if (!aa_inbounds(e, sizeof(u16)))
-			goto fail;
+			return 0;
 		size = (int)le16_to_cpu(get_unaligned((u16 *) e->pos));
 		e->pos += sizeof(u16);
 		return size;
 	}
-fail:
-	e->pos = pos;
 	return 0;
 }
 
 static size_t unpack_blob(struct aa_ext *e, char **blob, const char *name)
 {
-	void *pos = e->pos;
 	if (unpack_nameX(e, AA_BLOB, name)) {
 		u32 size;
 		if (!aa_inbounds(e, sizeof(u32)))
-			goto fail;
+			return 0;
 		size = le32_to_cpu(get_unaligned((u32 *) e->pos));
 		e->pos += sizeof(u32);
 		if (aa_inbounds(e, (size_t) size)) {
@@ -270,8 +255,6 @@ static size_t unpack_blob(struct aa_ext *e, char **blob, const char *name)
 			return size;
 		}
 	}
-fail:
-	e->pos = pos;
 	return 0;
 }
 
@@ -290,7 +273,6 @@ static int unpack_string(struct aa_ext *e, char **string, const char *name)
 			*string = src_str;
 		}
 	}
-
 	return size;
 
 fail:
