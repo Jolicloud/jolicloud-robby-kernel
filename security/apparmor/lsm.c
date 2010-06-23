@@ -509,29 +509,19 @@ static int apparmor_getprocattr(struct task_struct *task, char *name,
 				char **value)
 {
 	int error = -ENOENT;
-	struct aa_profile *profile, *onexec, *prev;
+	struct aa_profile *profile;
 	/* released below */
 	const struct cred *cred = aa_get_task_cred(task, &profile);
 	struct aa_task_context *cxt = cred->security;
-	onexec = cxt->sys.onexec;
-	prev = cxt->sys.previous;
 
-	/* task must be either querying itself, unconfined or can ptrace */
-	if (current != task && profile && !capable(CAP_SYS_PTRACE)) {
-		error = -EPERM;
-	} else {
-		if (strcmp(name, "current") == 0) {
-			error = aa_getprocattr(cxt->sys.profile, value);
-		} else if (strcmp(name, "prev") == 0) {
-			if (prev)
-				error = aa_getprocattr(prev, value);
-		} else if (strcmp(name, "exec") == 0) {
-			if (onexec)
-				error = aa_getprocattr(onexec, value);
-		} else {
-			error = -EINVAL;
-		}
-	}
+	if (strcmp(name, "current") == 0)
+		error = aa_getprocattr(cxt->sys.profile, value);
+	else if (strcmp(name, "prev") == 0  && cxt->sys.previous)
+		error = aa_getprocattr(cxt->sys.previous, value);
+	else if (strcmp(name, "exec") == 0 && cxt->sys.onexec)
+		error = aa_getprocattr(cxt->sys.onexec, value);
+	else
+		error = -EINVAL;
 
 	put_cred(cred);
 
