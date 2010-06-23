@@ -33,8 +33,6 @@ struct aa_profile;
 
 #define AA_MAY_CREATE			0x0080
 #define AA_LINK_SUBSET			0x0100
-#define AA_MAY_DELEGATE			0x0200
-#define AA_EXEC_DELEGATE		0x0400	/*exec allows delegate */
 #define AA_MAY_CHMOD			0x0800
 #define AA_MAY_CHOWN			0x1000
 
@@ -80,7 +78,8 @@ struct path_cond {
  * @quiet: mask of permissions to quiet audit messages for
  * @kill: mask of permissions that when matched will kill the task
  * @xindex: exec transition index if @allowed contains MAY_EXEC
- * @dindex: delegate table index if @allowed contain AA_MAY_DELEGATE
+ * @xdelegate: used by exec to determine set of delegates allowed
+ * @dindex: delegate table index, 0 if no delegation allowed
  *
  * The @audit and @queit mask should be mutually exclusive.
  */
@@ -90,6 +89,7 @@ struct file_perms {
 	u16 quiet;
 	u16 kill;
 	u16 xindex;
+	u16 xdelegate;
 	u16 dindex;
 };
 

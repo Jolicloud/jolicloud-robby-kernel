@@ -98,7 +98,7 @@ static struct file_perms change_profile_perms(struct aa_profile *profile,
 	if (!profile) {
 		/* unconfined */
 		perms.allowed = AA_MAY_CHANGE_PROFILE;
-		perms.xindex = perms.dindex = 0;
+		perms.xindex = perms.xdelegate = perms.dindex = 0;
 		perms.audit = perms.quiet = perms.kill = 0;
 		if (rstate)
 			*rstate = 0;
