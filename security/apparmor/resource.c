@@ -39,10 +39,18 @@ static void audit_cb(struct audit_buffer *ab, void *va)
  *
  * Returns: 0 or sa->error else other error code on failure
  */
-static int audit_resource(struct aa_profile *profile,
-			  struct common_audit_data *sa)
+static int audit_resource(struct aa_profile *profile, unsigned int resource,
+			  unsigned long value, int error)
 {
-	return aa_audit(AUDIT_APPARMOR_AUTO, profile, GFP_KERNEL, sa, audit_cb);
+	struct common_audit_data sa;
+
+	COMMON_AUDIT_DATA_INIT_NONE(&sa);
+	sa.aad.op = OP_SETRLIMIT,
+	sa.aad.rlim.rlim = resource;
+	sa.aad.rlim.max = value;
+	sa.aad.error = error;
+	return aa_audit(AUDIT_APPARMOR_AUTO, profile, GFP_KERNEL, &sa,
+			audit_cb);
 }
 
 /**
@@ -73,18 +81,12 @@ int aa_task_setrlimit(struct aa_profile *profile, unsigned int resource,
 		      struct rlimit *new_rlim)
 {
 	int error = 0;
-	struct common_audit_data sa;
-	COMMON_AUDIT_DATA_INIT_NONE(&sa);
-	sa.aad.op = OP_SETRLIMIT,
-	sa.aad.rlim.rlim = resource;
-	sa.aad.rlim.max = new_rlim->rlim_max;
 
 	if (profile->rlimits.mask & (1 << resource) &&
-	    new_rlim->rlim_max > profile->rlimits.limits[resource].rlim_max) {
-		sa.aad.error = -EACCES;
+	    new_rlim->rlim_max > profile->rlimits.limits[resource].rlim_max)
 
-		error = audit_resource(profile, &sa);
-	}
+		error = audit_resource(profile, resource, new_rlim->rlim_max,
+			-EACCES);
 
 	return error;
 }
