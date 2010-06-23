@@ -855,6 +855,7 @@ ssize_t aa_interface_add_profiles(void *udata, size_t size)
 
 	aa_audit_iface(&sa);
 	aa_put_namespace(ns);
+	aa_put_profile(profile);
 	return size;
 
 fail2:
@@ -941,6 +942,7 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size)
 	aa_audit_iface(&sa);
 	aa_put_namespace(ns);
 	aa_put_profile(old_profile);
+	aa_put_profile(new_profile);
 	return size;
 
 fail2:
@@ -965,7 +967,7 @@ fail:
 ssize_t aa_interface_remove_profiles(char *name, size_t size)
 {
 	struct aa_namespace *ns;
-	struct aa_profile *profile;
+	struct aa_profile *profile = NULL;
 	struct aa_audit_iface sa = {
 		.base.operation = "profile_remove",
 		.base.gfp_mask = GFP_KERNEL,
@@ -980,7 +982,7 @@ ssize_t aa_interface_remove_profiles(char *name, size_t size)
 		char *ns_name;
 		name = aa_split_name_from_ns(name, &ns_name);
 		/* released below */
-		ns = __aa_find_namespace(&ns_list, ns_name);
+		ns = aa_get_namespace(__aa_find_namespace(&ns_list, ns_name));
 	} else {
 		/* released below */
 		ns = aa_get_namespace(default_namespace);
@@ -1001,7 +1003,7 @@ ssize_t aa_interface_remove_profiles(char *name, size_t size)
 			__aa_remove_namespace(ns);
 	} else {
 		/* remove profile */
-		profile = __aa_find_profile(ns, name);
+		profile = aa_get_profile(__aa_find_profile(ns, name));
 		if (!profile) {
 			sa.name = name;
 			sa.base.info = "failed: profile does not exist";
@@ -1016,6 +1018,7 @@ ssize_t aa_interface_remove_profiles(char *name, size_t size)
 
 	aa_audit_iface(&sa);
 	aa_put_namespace(ns);
+	aa_put_profile(profile);
 	return size;
 
 fail_ns_lock:
