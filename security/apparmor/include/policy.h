@@ -75,6 +75,7 @@ struct aa_profile;
 
 /* struct aa_policy_common - common part of both namespaces and profiles
  * @name: name of the object
+ * @fqname - The full hierarchical name
  * @count: reference count of the obj
  * lock: lock for modifying the object
  * @list: list object is on
@@ -82,6 +83,7 @@ struct aa_profile;
  */
 struct aa_policy_common {
 	char *name;
+	char *fqname;
 	struct kref count;
 	rwlock_t lock;
 	struct list_head list;
@@ -131,7 +133,6 @@ struct aa_namespace {
 
 /* struct aa_profile - basic confinement data
  * @base - base componets of the profile (name, refcount, lists, lock ...)
- * @fqname - The fully qualified profile name, less the namespace name
  * @ns: namespace the profile is in
  * @parent: parent profile of this profile, if one exists
  * @replacedby: is set profile that replaced this profile
@@ -164,7 +165,6 @@ struct aa_namespace {
  */
 struct aa_profile {
 	struct aa_policy_common base;
-	char *fqname;
 
 	struct aa_namespace *ns;
 	struct aa_profile *parent;

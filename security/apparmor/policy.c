@@ -18,8 +18,8 @@
  * visible set of profiles or by following a profiles attachment rules.
  *
  * Each profile exists in an profile namespace which is a container of
- * related profiles.  Each namespace contains a special "unconfined" profile,
- * which doesn't enfforce any confinement on a task beyond DAC.
+ * visible profiles.  Each namespace contains a special "unconfined" profile,
+ * which doesn't enforce any confinement on a task beyond DAC.
  *
  * Namespace and profile names can be written together in either
  * of two syntaxes.
@@ -38,7 +38,7 @@
  *	default - the default namespace setup by AppArmor
  *	user-XXXX - user defined profiles
  *
- * a // in a profile or namespace name indicates a compound name with the
+ * a // in a profile or namespace name indicates a hierarcical name with the
  * name before the // being the parent and the name after the child.
  *
  * Profile and namespace hierachies serve two different but similar purposes.
@@ -60,7 +60,10 @@
  *   level must be defined.
  *   eg. /bin/bash///bin/ls as a name would indicate /bin/ls was started
  *       from /bin/bash
- *   
+ *
+ *   A profile or namespace name that can contain one or more // seperators
+ *   is refered to as an fqname.
+ *
  * NOTES:
  *   - hierarchical namespaces are not currently implemented.  Currently
  *     there is only a flat set of namespaces.
@@ -109,9 +112,12 @@ static const char *fqname_subname(const char *name)
 static bool common_init(struct aa_policy_common *common, const char *name)
 {
 	/* freed by common_free */
-	common->name = kstrdup(name, GFP_KERNEL);
-	if (!common->name)
+	common->fqname = kstrdup(name, GFP_KERNEL);
+	if (!common->fqname)
 		return 0;
+	/* base.name is a substring of fqname */
+	common->name = (char *)fqname_subname(common->fqname);
+
 	INIT_LIST_HEAD(&common->list);
 	INIT_LIST_HEAD(&common->profiles);
 	kref_init(&common->count);
@@ -135,7 +141,8 @@ static void common_free(struct aa_policy_common *common)
 		BUG();
 	}
 
-	kfree(common->name);
+	/* don't free name as its a subset of fqname */
+	kfree(common->fqname);
 }
 
 static struct aa_policy_common *__common_find(struct list_head *head,
@@ -520,11 +527,6 @@ struct aa_profile *alloc_aa_profile(const char *fqname)
 		return NULL;
 	}
 
-	profile->fqname = profile->base.name;
-	/* base.name is a substring of fqname */
-	profile->base.name =
-	    (char *)fqname_subname((const char *)profile->fqname);
-
 	/* return ref */
 	return profile;
 }
@@ -548,10 +550,10 @@ struct aa_profile *aa_alloc_null_profile(struct aa_profile *parent, int hat)
 	u32 sid = aa_alloc_sid(AA_ALLOC_SYS_SID);
 
 	/* freed below */
-	name = kmalloc(strlen(parent->fqname) + 2 + 7 + 8, GFP_KERNEL);
+	name = kmalloc(strlen(parent->base.fqname) + 2 + 7 + 8, GFP_KERNEL);
 	if (!name)
 		goto fail;
-	sprintf(name, "%s//null-%x", parent->fqname, sid);
+	sprintf(name, "%s//null-%x", parent->base.fqname, sid);
 
 	profile = alloc_aa_profile(name);
 	kfree(name);
@@ -625,14 +627,10 @@ void free_aa_profile(struct aa_profile *profile)
 		}
 	}
 
-	/* profile->name is a substring of fqname */
-	profile->base.name = NULL;
 	/* free children profiles */
 	common_free(&profile->base);
 
 	BUG_ON(!list_empty(&profile->base.profiles));
-
-	kfree(profile->fqname);
 
 	aa_put_namespace(profile->ns);
 	aa_put_profile(profile->parent);
@@ -826,7 +824,7 @@ ssize_t aa_interface_add_profiles(void *udata, size_t size)
 		goto fail;
 	}
 	/* profiles are currently loaded flat with fqnames */
-	sa.name = profile->fqname;
+	sa.name = profile->base.fqname;
 
 	write_lock(&ns->base.lock);
 
@@ -912,7 +910,7 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size)
 		goto fail;
 	}
 
-	sa.name = new_profile->fqname;
+	sa.name = new_profile->base.fqname;
 
 	write_lock(&ns->base.lock);
 	/* no ref on common only use inside lock */
@@ -1028,7 +1026,7 @@ ssize_t aa_interface_remove_profiles(char *name, size_t size)
 			sa.base.info = "failed: profile does not exist";
 			goto fail_ns_lock;
 		}
-		sa.name = profile->fqname;
+		sa.name = profile->base.fqname;
 		__aa_profile_list_release(&profile->base.profiles);
 		__aa_replace_profile(profile, NULL);
 	}

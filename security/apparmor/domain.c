@@ -233,7 +233,7 @@ static struct aa_profile *x_to_profile(struct aa_namespace *ns,
 			name = xname = ns_name + strlen(ns_name) + 1;
 			if (!*xname)
 				/* no name so use profile name */
-				xname = profile->fqname;
+				xname = profile->base.fqname;
 			if (*ns_name == '@') {
 				/* TODO: variable support */
 				;
@@ -361,7 +361,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 			sa.base.error = -ENOMEM;
 			sa.base.info = "could not create null profile";
 		} else
-			sa.name2 = new_profile->fqname;
+			sa.name2 = new_profile->base.fqname;
 		sa.perms.xindex |= AA_X_UNSAFE;
 	} else {
 		sa.base.error = -EACCES;
@@ -403,7 +403,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 		bprm->unsafe |= AA_SECURE_X_NEEDED;
 
 apply:
-	sa.name2 = new_profile->fqname;
+	sa.name2 = new_profile->base.fqname;
 	/* When switching namespace ensure its part of audit message */
 	if (new_profile->ns != ns)
 		sa.name3 = new_profile->ns->base.name;
@@ -533,7 +533,7 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 				goto out;
 
 			/* freed below */
-			name = new_compound_name(root->fqname, hat_name);
+			name = new_compound_name(root->base.fqname, hat_name);
 
 			sa.name = name;
 			sa.base.info = "hat not found";
@@ -546,7 +546,7 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 				goto audit;
 			}
 		} else {
-			sa.name = hat->fqname;
+			sa.name = hat->base.fqname;
 			if (!PROFILE_IS_HAT(hat)) {
 				sa.base.info = "target not hat";
 				sa.base.error = -EPERM;
@@ -574,7 +574,7 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 		/* Return to saved profile.  Kill task if restore fails
 		 * to avoid brute force attacks
 		 */
-		sa.name = previous_profile->fqname;
+		sa.name = previous_profile->base.fqname;
 		sa.base.error = aa_restore_previous_profile(token);
 		sa.perms.kill = AA_MAY_CHANGEHAT;
 	} else
@@ -647,9 +647,9 @@ int aa_change_profile(const char *ns_name, const char *fqname, int onexec,
 	/* if the name was not specified, use the name of the current profile */
 	if (!fqname) {
 		if (!profile)
-			fqname = ns->unconfined->fqname;
+			fqname = ns->unconfined->base.fqname;
 		else
-			fqname = profile->fqname;
+			fqname = profile->base.fqname;
 	}
 	sa.name = fqname;
 

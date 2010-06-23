@@ -28,7 +28,7 @@ int aa_getprocattr(struct aa_namespace *ns, struct aa_profile *profile,
 		char *s;
 
 		mode_len = strlen(mode_str) + 3;	/* + 3 for _() */
-		name_len = strlen(profile->fqname);
+		name_len = strlen(profile->base.fqname);
 		if (ns != default_namespace)
 			ns_len = strlen(ns->base.name) + 3; /*+ 3 for :// */
 		len = mode_len + ns_len + name_len + 1;	    /*+ 1 for \n */
@@ -40,7 +40,7 @@ int aa_getprocattr(struct aa_namespace *ns, struct aa_profile *profile,
 			sprintf(s, "%s://", ns->base.name);
 			s += ns_len;
 		}
-		sprintf(s, "%s (%s)\n",profile->fqname, mode_str);
+		sprintf(s, "%s (%s)\n",profile->base.fqname, mode_str);
 	} else {
 		const char unconfined_str[] = "unconfined\n";
 
