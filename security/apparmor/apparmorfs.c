@@ -29,8 +29,6 @@ static char *aa_simple_write_to_buffer(const char __user *userbuf,
 				       size_t alloc_size, size_t copy_size,
 				       loff_t *pos, const char *operation)
 {
-	const struct cred *cred;
-	struct aa_profile *profile;
 	char *data;
 
 	if (*pos != 0) {
@@ -40,22 +38,22 @@ static char *aa_simple_write_to_buffer(const char __user *userbuf,
 	}
 
 	/*
-	 * Don't allow confined processes to load/replace/remove profiles.
-	 * No sane person would add rules allowing this to a profile
-	 * but we enforce the restriction anyways.
+	 * Don't allow profile load/replace/remove from profiles that don't
+	 * have CAP_MAC_ADMIN
 	 */
-	cred = aa_current_policy(&profile);
-	if (profile) {
+	if (!capable(CAP_MAC_ADMIN)) {
+		const struct cred *cred;
+		struct aa_profile *profile = NULL;
 		struct aa_audit sa = {
 			.operation = operation,
 			.gfp_mask = GFP_KERNEL,
 			.error = -EACCES,
 		};
+		cred = aa_current_policy(&profile);
 		data = ERR_PTR(aa_audit(AUDIT_APPARMOR_DENIED, profile, &sa,
 					NULL));
 		goto out;
 	}
-
 	/* freed by caller to aa_simple_write_to_buffer */
 	data = vmalloc(alloc_size);
 	if (data == NULL) {
