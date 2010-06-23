@@ -141,25 +141,3 @@ int aa_audit(int type, struct aa_profile *profile, struct aa_audit *sa,
 
 	return aa_audit_base(type, profile, sa, audit_cxt, cb);
 }
-
-/**
- * aa_audit_syscallreject - Log a syscall rejection to the audit subsystem
- * @profile: profile to check against
- * @gfp: memory allocation flags
- * @msg: string describing syscall being rejected
- * @cb:  optional callback fn for type specific fields
- */
-int aa_audit_syscallreject(struct aa_profile *profile, gfp_t gfp,
-			   const char *msg,
-			   void (*cb) (struct audit_buffer *, void *))
-{
-	struct aa_audit sa = {
-		.operation = "syscall",
-		.info = msg,
-		.gfp_mask = gfp,
-		.error = -EACCES,
-	};
-
-	return aa_audit_base(AUDIT_APPARMOR_DENIED, profile, &sa,
-			     current->audit_context, NULL);
-}
