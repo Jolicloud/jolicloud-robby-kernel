@@ -375,26 +375,6 @@ static void p_stop(struct seq_file *f, void *p)
 }
 
 /**
- * print_ns_name - print a namespace name back to @root
- * @root: root namespace to stop at
- * @ns: namespace to gen name for
- *
- * Returns: true if it printed a name
- */
-static bool print_ns_name(struct seq_file *f, struct aa_namespace *root,
-			  struct aa_namespace *ns)
-{
-	if (!ns || ns == root)
-		return 0;
-
-	if (ns->parent && print_ns_name(f, root, ns->parent))
-		seq_printf(f, "//");
-
-	seq_printf(f, "%s", ns->base.name);
-	return 1;
-}
-
-/**
  * seq_show_profile - 
  * @f: seq_file to file
  * @p: current position (profile)    (NOT NULL)
@@ -407,9 +387,7 @@ static int seq_show_profile(struct seq_file *f, void *p)
 	struct aa_namespace *root = f->private;
 
 	if (profile->ns != root)
-		seq_printf(f, ":");
-	if (print_ns_name(f, root, profile->ns))
-		seq_printf(f, "://");
+		seq_printf(f, ":%s://", aa_ns_name(root, profile->ns));
 	seq_printf(f, "%s (%s)\n", profile->base.hname,
 		   COMPLAIN_MODE(profile) ? "complain" : "enforce");
 
