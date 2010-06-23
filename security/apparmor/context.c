@@ -90,8 +90,11 @@ static void replace_group(struct aa_task_cxt_group *cgrp,
 	if (cgrp->profile == profile)
 		return;
 
-	if (!profile || !aa_confined(profile)) ||
-	    (cgrp->profile && cgrp->profile->ns != profile->ns)) {
+	BUG_ON(!profile);
+	if (!aa_confined(profile) || (cgrp->profile->ns != profile->ns)) {
+		/* if switching to unconfined or a different profile namespace
+		 * clear out context state
+		 */
 		aa_put_profile(cgrp->previous);
 		aa_put_profile(cgrp->onexec);
 		cgrp->previous = NULL;
