@@ -118,11 +118,6 @@ static struct file_perms change_profile_perms(struct aa_profile *profile,
 	return aa_str_perms(profile->file.dfa, state, name, &cond, rstate);
 }
 
-static const char *next_name(int xtype, const char *name)
-{
-	return NULL;
-}
-
 /* __aa_attach_match_ - find an attachment match
  * @name - to match against
  * @head - profile list to walk
@@ -209,6 +204,11 @@ static const char *separate_fqname(const char *fqname, const char **ns_name)
 	}
 
 	return name;
+}
+
+static const char *next_name(int xtype, const char *name)
+{
+	return NULL;
 }
 
 /**
