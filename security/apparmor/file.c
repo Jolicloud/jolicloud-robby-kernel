@@ -24,9 +24,6 @@ struct file_perms nullperms;
 static void aa_audit_file_sub_mask(struct audit_buffer *ab, char *buffer,
 				   u16 mask, u16 xindex)
 {
-
-  /*	const char xchar[] = "PpCc";*/
-
 	char *m = buffer;
 
 	if (mask & AA_EXEC_MMAP)
@@ -41,38 +38,14 @@ static void aa_audit_file_sub_mask(struct audit_buffer *ab, char *buffer,
 		*m++ = 'l';
 	if (mask & AA_MAY_LOCK)
 		*m++ = 'k';
-	if (mask & MAY_EXEC) {
+	if (mask & MAY_EXEC)
 		*m++ = 'x';
-
-/* FIXME: only want more advanced auditing of x if in audit/hint mode
-		u16 index = xindex & AA_X_INDEX_MASK;
-		u16 xtype = xindex & AA_X_TYPE_MASK;
-		if (xtype > AA_X_NONE)
-			*m++ = xchar[(xindex >> 12) & 0x3];
-		if (xindex & AA_X_INHERIT) {
-			*m++ = 'i';
-		} else if (xindex & AA_X_UNCONFINED) {
-			if (xindex & AA_X_UNSAFE)
-				*m++ = 'u';
-			else
-				*m++ = 'U';
-		}
-		*m++ = 'x';
-		/ * at most 7 character including trailing \0 * /
-		if (xtype == AA_X_VARIABLE) {
-			m += sprintf(m, "->v%x", index);
-		} else if (xtype == AA_X_TABLE) {
-			m += sprintf(m, "->n%x", index);
-		}
-*/
-	}
 	*m++ = '\0';
 }
 
 static void aa_audit_file_mask(struct audit_buffer *ab, const char *name,
 			       u16 mask, int xindex, int owner)
 {
-/*	char str[18]; */
 	char str[10];
 
 	aa_audit_file_sub_mask(ab, str, mask, xindex);
@@ -122,6 +95,11 @@ void file_audit_cb(struct audit_buffer *ab, void *va)
 	}
 }
 
+/**
+ * aa_audit_file - handle the auditing of file operations
+ * @profile: the profile being enforced
+ * @sa: file auditing context
+ */
 int aa_audit_file(struct aa_profile *profile, struct aa_audit_file *sa)
 {
 	int type = AUDIT_APPARMOR_AUTO;
@@ -158,14 +136,17 @@ int aa_audit_file(struct aa_profile *profile, struct aa_audit_file *sa)
 	return aa_audit(type, profile, (struct aa_audit *)sa, file_audit_cb);
 }
 
-/* FIXME: convert from dfa + state to permission entry */
+/* TODO: convert from dfa + state to permission entry */
 struct file_perms aa_compute_perms(struct aa_dfa *dfa, unsigned int state,
 				   struct path_cond *cond)
 {
 	struct file_perms perms;
 
-	/* FIXME: change over to new dfa format */
-	/* currently file perms are encoded in the dfa */
+	/* FIXME: change over to new dfa format
+	 * currently file perms are encoded in the dfa, new format
+	 * splits the permissions from the dfa.  This mapping can be
+	 * done at profile load
+	 */
 	perms.kill = 0;
 	perms.dindex = 0;
 
@@ -272,6 +253,22 @@ int aa_path_perm(struct aa_profile *profile, const char *operation,
 	return sa.base.error;
 }
 
+/**
+ * aa_path_link - Handle hard link permission check
+ * @profile: the profile being enforced
+ * @old_dentry: the target dentry
+ * @new_dir: directory the new link will be created in
+ * @new_dentry: the link being created
+ *
+ * Handle the permission test for a link & target pair.  Permission
+ * is encoded as a pair where the link permission is determined
+ * first, and if allowed, the target is tested.  The target test
+ * is done from the point of the link match (not start of DFA)
+ * making the target permission dependent on the link permission match.
+ *
+ * The subset test if required forces that permissions granted
+ * on link are a subset of the permission granted to target.
+ */
 int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 		 struct path *new_dir, struct dentry *new_dentry)
 {
