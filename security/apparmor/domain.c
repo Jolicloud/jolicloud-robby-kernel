@@ -235,46 +235,23 @@ static const char *next_name(int xtype, const char *name)
 }
 
 /**
- * x_to_profile - get target profile for a given xindex
- * @profile: current profile  (NOT NULL)
- * @name: to to lookup if specified  (NOT NULL)
+ * x_table_lookup - lookup an x transition name via transition table
+ * @profile: current profile (NOT NULL)
  * @xindex: index into x transition table
  *
- * find profile for a transition index
- *
- * Returns: refcounted profile or NULL if not found available
+ * Returns: refcounted profile, or NULL on failure
  */
-static struct aa_profile *x_to_profile(struct aa_profile *profile,
-				       const char *name, u16 xindex)
+static struct aa_profile *x_table_lookup(struct aa_profile *profile, u16 xindex)
 {
 	struct aa_profile *new_profile = NULL;
 	struct aa_namespace *ns = profile->ns;
 	u16 xtype = xindex & AA_X_TYPE_MASK;
 	int index = xindex & AA_X_INDEX_MASK;
+	const char *name;
 
-	switch (xtype) {
-	case AA_X_NONE:
-		/* fail exec unless ix || ux fallback - handled by caller */
-		return NULL;
-	case AA_X_NAME:
-		if (xindex & AA_X_CHILD)
-			/* released by caller */
-			new_profile = aa_find_attach(ns,
-						     &profile->base.profiles,
-						     name);
-		else
-			/* released by caller */
-			new_profile = aa_find_attach(ns, &ns->base.profiles,
-						     name);
-		/* released by caller */
-		return new_profile;
-	case AA_X_TABLE:
-		/* index is guarenteed to be in range */
-		name = profile->file.trans.table[index];
-		break;
-	}
-
-	for (; !new_profile && name; name = next_name(xtype, name)) {
+	/* index is guarenteed to be in range, validated at load time */
+	for (name = profile->file.trans.table[index]; !new_profile && name;
+	     name = next_name(xtype, name)) {
 		struct aa_namespace *new_ns;
 		const char *xname = NULL;
 
@@ -283,7 +260,7 @@ static struct aa_profile *x_to_profile(struct aa_profile *profile,
 			/* release by caller */
 			new_profile = aa_find_child(profile, name);
 			if (new_profile)
-				return new_profile;
+				break;
 			continue;
 		} else if (*name == ':') {
 			/* switching namespace */
@@ -304,12 +281,55 @@ static struct aa_profile *x_to_profile(struct aa_profile *profile,
 			/* TODO: variable support */
 			continue;
 		} else {
+			/* basic namespace lookup */
 			xname = name;
 		}
 
 		/* released by caller */
 		new_profile = aa_find_profile(new_ns ? new_ns : ns, xname);
 		aa_put_namespace(new_ns);
+	}
+
+	/* released by caller */
+	return new_profile;
+}
+
+/**
+ * x_to_profile - get target profile for a given xindex
+ * @profile: current profile  (NOT NULL)
+ * @name: to to lookup if specified  (NOT NULL)
+ * @xindex: index into x transition table
+ *
+ * find profile for a transition index
+ *
+ * Returns: refcounted profile or NULL if not found available
+ */
+static struct aa_profile *x_to_profile(struct aa_profile *profile,
+				       const char *name, u16 xindex)
+{
+	struct aa_profile *new_profile = NULL;
+	struct aa_namespace *ns = profile->ns;
+	u16 xtype = xindex & AA_X_TYPE_MASK;
+
+	switch (xtype) {
+	case AA_X_NONE:
+		/* fail exec unless ix || ux fallback - handled by caller */
+		return NULL;
+	case AA_X_NAME:
+		if (xindex & AA_X_CHILD)
+			/* released by caller */
+			new_profile = aa_find_attach(ns,
+						     &profile->base.profiles,
+						     name);
+		else
+			/* released by caller */
+			new_profile = aa_find_attach(ns, &ns->base.profiles,
+						     name);
+		break;
+	case AA_X_TABLE:
+		/* released by caller */
+		new_profile = x_table_lookup(profile, xindex);
+		break;
 	}
 
 	/* released by caller */
