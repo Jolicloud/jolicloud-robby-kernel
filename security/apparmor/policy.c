@@ -808,6 +808,10 @@ ssize_t aa_interface_add_profiles(void *udata, size_t size)
 		.base.gfp_mask = GFP_KERNEL,
 	};
 
+	/* check if loading policy is locked out */
+	if (aa_g_lock_policy)
+		return -EACCES;
+
 	/* released below */
 	profile = aa_unpack(udata, size, &sa);
 	if (IS_ERR(profile))
