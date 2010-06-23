@@ -17,12 +17,6 @@
 
 #include "include/audit.h"
 
-char *aa_strchrnul(const char *s, int c)
-{
-	for (; *s != (char)c && *s != '\0'; ++s)
-		;
-	return (char *)s;
-}
 
 char *aa_split_name_from_ns(char *args, char **ns_name)
 {

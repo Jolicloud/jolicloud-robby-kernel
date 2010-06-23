@@ -53,7 +53,6 @@ void apparmor_disable(void);
 /* fn's in lib */
 char *aa_split_name_from_ns(char *args, char **ns_name);
 bool aa_strneq(const char *str, const char *sub, int len);
-char *aa_strchrnul(const char *s, int c);
 void aa_info_message(const char *str);
 
 /**
