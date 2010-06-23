@@ -159,13 +159,13 @@ static int audit_base(int type, struct aa_profile *profile, struct aa_audit *sa,
 		pid = task->real_parent->pid;
 		rcu_read_unlock();
 		audit_log_format(ab, " parent=%d", pid);
-		audit_log_format(ab, " profile=");
-		audit_log_untrustedstring(ab, profile->base.hname);
-
 		if (profile->ns != root_ns) {
-			audit_log_format(ab, " namespace=");
+			audit_log_format(ab, " profile=:");
 			audit_log_untrustedstring(ab, profile->ns->base.hname);
-		}
+			audit_log_format(ab, "://");
+		} else
+			audit_log_format(ab, " profile=");
+		audit_log_untrustedstring(ab, profile->base.hname);
 	}
 
 	if (cb)
