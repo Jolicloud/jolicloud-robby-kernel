@@ -806,7 +806,7 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 	if (onexec)
 		sa.base.error = aa_set_current_onexec(target);
 	else
-		sa.base.error = aa_replace_current_profiles(target);
+		sa.base.error = aa_replace_current_profile(target);
 
 audit:
 	if (!permtest)

@@ -69,18 +69,25 @@ void aa_dup_task_context(struct aa_task_cxt *new, const struct aa_task_cxt *old)
 }
 
 /**
- * replace_cxt - replace a context profile
- * @cxt: task context  (NOT NULL)
- * @profile: profile to replace cxt group  (NOT NULL)
+ * aa_replace_current_profile - replace the current tasks profiles
+ * @profile: new profile  (NOT NULL)
  *
- * Replace context grouping profile reference with @profile
+ * Returns: 0 or error on failure
  */
-static void replace_group(struct aa_task_cxt *cxt, struct aa_profile *profile)
+int aa_replace_current_profile(struct aa_profile *profile)
 {
-	if (cxt->profile == profile)
-		return;
-
+	struct aa_task_cxt *cxt = current_cred()->security;
+	struct cred *new;
 	BUG_ON(!profile);
+
+	if (cxt->profile == profile)
+		return 0;
+
+	new  = prepare_creds();
+	if (!new)
+		return -ENOMEM;
+
+	cxt = new->security;
 	if (unconfined(profile) || (cxt->profile->ns != profile->ns)) {
 		/* if switching to unconfined or a different profile namespace
 		 * clear out context state
@@ -98,24 +105,6 @@ static void replace_group(struct aa_task_cxt *cxt, struct aa_profile *profile)
 	aa_get_profile(profile);
 	aa_put_profile(cxt->profile);
 	cxt->profile = profile;
-}
-
-/**
- * aa_replace_current_profiles - replace the current tasks profiles
- * @profile: new profile  (NOT NULL)
- *
- * Returns: 0 or error on failure
- */
-int aa_replace_current_profiles(struct aa_profile *profile)
-{
-	struct aa_task_cxt *cxt;
-	struct cred *new = prepare_creds();
-	if (!new)
-		return -ENOMEM;
-
-	cxt = new->security;
-	replace_group(cxt, profile);
-	/* todo add user group */
 
 	commit_creds(new);
 	return 0;
@@ -163,6 +152,7 @@ int aa_set_current_hat(struct aa_profile *profile, u64 token)
 
 	cxt = new->security;
 	if (!cxt->previous) {
+		/* transfer refcount */
 		cxt->previous = cxt->profile;
 		cxt->token = token;
 	} else if (cxt->token == token) {
