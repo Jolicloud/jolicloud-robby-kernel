@@ -105,15 +105,9 @@ struct aa_ns_acct {
 };
 
 /* struct aa_namespace - namespace for a set of profiles
- * @name: the name of the namespace
- * @list: list the namespace is on
- * @profiles: list of profile in the namespace
+ * @base: common policy
  * @acct: accounting for the namespace
- * @profile_count: count of profiles on @profiles list
- * @size: accounting of how much memory is consumed by the contained profiles
  * @unconfined: special unconfined profile for the namespace
- * @count: reference count on the namespace
- * @lock: lock for adding/removing profile to the namespace
  *
  * An aa_namespace defines the set profiles that are searched to determine
  * which profile to attach to a task.  Profiles can not be shared between
@@ -128,7 +122,6 @@ struct aa_ns_acct {
 struct aa_namespace {
 	struct aa_policy base;
 	struct aa_ns_acct acct;
-	int is_stale;
 	struct aa_profile *unconfined;
 };
 
