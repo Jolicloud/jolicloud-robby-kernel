@@ -595,6 +595,48 @@ static int aa_verify_header(struct aa_ext *e, struct aa_audit_iface *sa)
 }
 
 /**
+ * verify_profile - Do post unpack analysis to verify profile consistency
+ * @profile: profile to verify
+ *
+ * RETURNS: 0 if passes verification else error
+ */
+static bool verify_xindex(int xindex, int table_size)
+{
+	int index, xtype;
+	xtype = xindex & AA_X_TYPE_MASK;
+	index = xindex & AA_X_INDEX_MASK;
+	if (xtype == AA_X_TABLE && index > table_size)
+		return 0;
+	return 1;
+}
+
+/* verify dfa xindexes are in range of transition tables */
+static bool verify_dfa_xindex(struct aa_dfa *dfa, int table_size)
+{
+	int i;
+	for (i = 0; i < dfa->tables[YYTD_ID_ACCEPT]->td_lolen; i++) {
+		if (!verify_xindex(dfa_user_xindex(dfa, i), table_size))
+			return 0;
+		if (!verify_xindex(dfa_other_xindex(dfa, i), table_size))
+			return 0;
+	}
+	return 1;
+}
+
+static int verify_profile(struct aa_profile *profile, struct aa_audit_iface *sa)
+{
+	if (aa_g_paranoid_load) {
+		if (!verify_dfa_xindex(profile->file.dfa,
+				       profile->file.trans.size)) {
+			sa->base.info = "Invalid named transition";
+			return -EPROTO;
+		}
+	}
+
+	return 0;
+}
+
+/**
  * aa_unpack - unpack packed binary profile data loaded from user space
  * @udata: user data copied to kmem
  * @size: the size of the user data
@@ -620,6 +662,13 @@ struct aa_profile *aa_unpack(void *udata, size_t size,
 	profile = aa_unpack_profile(&e, sa);
 	if (IS_ERR(profile))
 		sa->pos = e.pos - e.start;
+
+	error = verify_profile(profile, sa);
+	if (error) {
+		aa_put_profile(profile);
+		profile = ERR_PTR(error);
+	}
+
 	/* return refcount */
 	return profile;
 }

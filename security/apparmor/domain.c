@@ -211,10 +211,7 @@ static struct aa_profile *x_to_profile(struct aa_namespace *ns,
 
 		goto out;
 	case AA_X_TABLE:
-		if (index > profile->file.trans.size) {
-			AA_ERROR("Invalid named transition\n");
-			return ERR_PTR(-EACCES);
-		}
+		/* index is guarenteed to be in range */
 		name = profile->file.trans.table[index];
 		break;
 	}
