@@ -3,7 +3,7 @@
 obj-$(CONFIG_SECURITY_APPARMOR) += apparmor.o
 
 apparmor-y := apparmorfs.o audit.o capability.o context.o ipc.o lib.o match.o \
-              path.o domain.o policy.o policy_interface.o procattr.o lsm.o \
+              path.o domain.o policy.o policy_unpack.o procattr.o lsm.o \
               resource.o sid.o file.o
 
 apparmor-$(CONFIG_SECURITY_APPARMOR_NETWORK) += net.o

@@ -120,7 +120,7 @@ static int aa_inbounds(struct aa_ext *e, size_t size)
  * return the size of chunk found with the read head at the end of
  * the chunk.
  */
-static size_t aa_is_u16_chunk(struct aa_ext *e, char **chunk)
+static size_t unpack_u16_chunk(struct aa_ext *e, char **chunk)
 {
 	void *pos = e->pos;
 	size_t size = 0;
@@ -140,7 +140,7 @@ fail:
 	return 0;
 }
 
-static int aa_is_X(struct aa_ext *e, enum aa_code code)
+static int unpack_X(struct aa_ext *e, enum aa_code code)
 {
 	if (!aa_inbounds(e, 1))
 		return 0;
@@ -151,7 +151,7 @@ static int aa_is_X(struct aa_ext *e, enum aa_code code)
 }
 
 /**
- * aa_is_nameX - check is the next element is of type X with a name of @name
+ * unpack_nameX - check is the next element is of type X with a name of @name
  * @e: serialized data extent information
  * @code: type code
  * @name: name to match to the serialized element.
@@ -164,16 +164,16 @@ static int aa_is_X(struct aa_ext *e, enum aa_code code)
  * head is advanced past the headers
  * returns %0 if either match failes, the read head does not move
  */
-static int aa_is_nameX(struct aa_ext *e, enum aa_code code, const char *name)
+static int unpack_nameX(struct aa_ext *e, enum aa_code code, const char *name)
 {
 	void *pos = e->pos;
 	/*
 	 * Check for presence of a tagname, and if present name size
 	 * AA_NAME tag value is a u16.
 	 */
-	if (aa_is_X(e, AA_NAME)) {
+	if (unpack_X(e, AA_NAME)) {
 		char *tag = NULL;
-		size_t size = aa_is_u16_chunk(e, &tag);
+		size_t size = unpack_u16_chunk(e, &tag);
 		/* if a name is specified it must match. otherwise skip tag */
 		if (name && (!size || strcmp(name, tag)))
 			goto fail;
@@ -183,7 +183,7 @@ static int aa_is_nameX(struct aa_ext *e, enum aa_code code, const char *name)
 	}
 
 	/* now check if type code matches */
-	if (aa_is_X(e, code))
+	if (unpack_X(e, code))
 		return 1;
 
 fail:
@@ -191,10 +191,10 @@ fail:
 	return 0;
 }
 
-static int aa_is_u16(struct aa_ext *e, u16 *data, const char *name)
+static int unpack_u16(struct aa_ext *e, u16 *data, const char *name)
 {
 	void *pos = e->pos;
-	if (aa_is_nameX(e, AA_U16, name)) {
+	if (unpack_nameX(e, AA_U16, name)) {
 		if (!aa_inbounds(e, sizeof(u16)))
 			goto fail;
 		if (data)
@@ -207,10 +207,10 @@ fail:
 	return 0;
 }
 
-static int aa_is_u32(struct aa_ext *e, u32 *data, const char *name)
+static int unpack_u32(struct aa_ext *e, u32 *data, const char *name)
 {
 	void *pos = e->pos;
-	if (aa_is_nameX(e, AA_U32, name)) {
+	if (unpack_nameX(e, AA_U32, name)) {
 		if (!aa_inbounds(e, sizeof(u32)))
 			goto fail;
 		if (data)
@@ -223,10 +223,10 @@ fail:
 	return 0;
 }
 
-static int aa_is_u64(struct aa_ext *e, u64 *data, const char *name)
+static int unpack_u64(struct aa_ext *e, u64 *data, const char *name)
 {
 	void *pos = e->pos;
-	if (aa_is_nameX(e, AA_U64, name)) {
+	if (unpack_nameX(e, AA_U64, name)) {
 		if (!aa_inbounds(e, sizeof(u64)))
 			goto fail;
 		if (data)
@@ -239,10 +239,10 @@ fail:
 	return 0;
 }
 
-static size_t aa_is_array(struct aa_ext *e, const char *name)
+static size_t unpack_array(struct aa_ext *e, const char *name)
 {
 	void *pos = e->pos;
-	if (aa_is_nameX(e, AA_ARRAY, name)) {
+	if (unpack_nameX(e, AA_ARRAY, name)) {
 		int size;
 		if (!aa_inbounds(e, sizeof(u16)))
 			goto fail;
@@ -255,10 +255,10 @@ fail:
 	return 0;
 }
 
-static size_t aa_is_blob(struct aa_ext *e, char **blob, const char *name)
+static size_t unpack_blob(struct aa_ext *e, char **blob, const char *name)
 {
 	void *pos = e->pos;
-	if (aa_is_nameX(e, AA_BLOB, name)) {
+	if (unpack_nameX(e, AA_BLOB, name)) {
 		u32 size;
 		if (!aa_inbounds(e, sizeof(u32)))
 			goto fail;
@@ -275,14 +275,14 @@ fail:
 	return 0;
 }
 
-static int aa_is_string(struct aa_ext *e, char **string, const char *name)
+static int unpack_string(struct aa_ext *e, char **string, const char *name)
 {
 	char *src_str;
 	size_t size = 0;
 	void *pos = e->pos;
 	*string = NULL;
-	if (aa_is_nameX(e, AA_STRING, name) &&
-	    (size = aa_is_u16_chunk(e, &src_str))) {
+	if (unpack_nameX(e, AA_STRING, name) &&
+	    (size = unpack_u16_chunk(e, &src_str))) {
 		/* strings are null terminated, length is size - 1 */
 		if (src_str[size - 1] != 0)
 			goto fail;
@@ -296,11 +296,11 @@ fail:
 	return 0;
 }
 
-static int aa_is_dynstring(struct aa_ext *e, char **string, const char *name)
+static int unpack_dynstring(struct aa_ext *e, char **string, const char *name)
 {
 	char *tmp;
 	void *pos = e->pos;
-	int res = aa_is_string(e, &tmp, name);
+	int res = unpack_string(e, &tmp, name);
 	*string = NULL;
 
 	if (!res)
@@ -327,7 +327,7 @@ static struct aa_dfa *aa_unpack_dfa(struct aa_ext *e)
 	size_t size, error = 0;
 	struct aa_dfa *dfa = NULL;
 
-	size = aa_is_blob(e, &blob, "aadfa");
+	size = unpack_blob(e, &blob, "aadfa");
 	if (size) {
 		dfa = aa_match_alloc();
 		if (dfa) {
@@ -358,10 +358,10 @@ static int aa_unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
 	void *pos = e->pos;
 
 	/* exec table is optional */
-	if (aa_is_nameX(e, AA_STRUCT, "xtable")) {
+	if (unpack_nameX(e, AA_STRUCT, "xtable")) {
 		int i, size;
 
-		size = aa_is_array(e, NULL);
+		size = unpack_array(e, NULL);
 		/* currently 4 exec bits and entries 0-3 are reserved iupcx */
 		if (size > 16 - 4)
 			goto fail;
@@ -372,7 +372,7 @@ static int aa_unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
 
 		for (i = 0; i < size; i++) {
 			char *tmp;
-			if (!aa_is_dynstring(e, &tmp, NULL))
+			if (!unpack_dynstring(e, &tmp, NULL))
 				goto fail;
 			/*
 			 * note: strings beginning with a : have an embedded
@@ -381,9 +381,9 @@ static int aa_unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
 			 */
 			profile->file.trans.table[i] = tmp;
 		}
-		if (!aa_is_nameX(e, AA_ARRAYEND, NULL))
+		if (!unpack_nameX(e, AA_ARRAYEND, NULL))
 			goto fail;
-		if (!aa_is_nameX(e, AA_STRUCTEND, NULL))
+		if (!unpack_nameX(e, AA_STRUCTEND, NULL))
 			goto fail;
 		profile->file.trans.size = size;
 	}
@@ -399,25 +399,25 @@ int aa_unpack_rlimits(struct aa_ext *e, struct aa_profile *profile)
 	void *pos = e->pos;
 
 	/* rlimits are optional */
-	if (aa_is_nameX(e, AA_STRUCT, "rlimits")) {
+	if (unpack_nameX(e, AA_STRUCT, "rlimits")) {
 		int i, size;
 		u32 tmp = 0;
-		if (!aa_is_u32(e, &tmp, NULL))
+		if (!unpack_u32(e, &tmp, NULL))
 			goto fail;
 		profile->rlimits.mask = tmp;
 
-		size = aa_is_array(e, NULL);
+		size = unpack_array(e, NULL);
 		if (size > RLIM_NLIMITS)
 			goto fail;
 		for (i = 0; i < size; i++) {
 			u64 tmp = 0;
-			if (!aa_is_u64(e, &tmp, NULL))
+			if (!unpack_u64(e, &tmp, NULL))
 				goto fail;
 			profile->rlimits.limits[i].rlim_max = tmp;
 		}
-		if (!aa_is_nameX(e, AA_ARRAYEND, NULL))
+		if (!unpack_nameX(e, AA_ARRAYEND, NULL))
 			goto fail;
-		if (!aa_is_nameX(e, AA_STRUCTEND, NULL))
+		if (!unpack_nameX(e, AA_STRUCTEND, NULL))
 			goto fail;
 	}
 	return 1;
@@ -443,9 +443,9 @@ static struct aa_profile *aa_unpack_profile(struct aa_ext *e,
 	u64 tmp64;
 
 	/* check that we have the right struct being passed */
-	if (!aa_is_nameX(e, AA_STRUCT, "profile"))
+	if (!unpack_nameX(e, AA_STRUCT, "profile"))
 		goto fail;
-	if (!aa_is_string(e, &name, NULL))
+	if (!unpack_string(e, &name, NULL))
 		goto fail;
 
 	profile = alloc_aa_profile(name);
@@ -460,31 +460,31 @@ static struct aa_profile *aa_unpack_profile(struct aa_ext *e,
 		goto fail;
 	}
 	/* xmatch_len is not optional is xmatch is set */
-	if (profile->xmatch && !aa_is_u32(e, &tmp, NULL))
+	if (profile->xmatch && !unpack_u32(e, &tmp, NULL))
 		goto fail;
 	profile->xmatch_len = tmp;
 
 	/* per profile debug flags (complain, audit) */
-	if (!aa_is_nameX(e, AA_STRUCT, "flags"))
+	if (!unpack_nameX(e, AA_STRUCT, "flags"))
 		goto fail;
-	if (!aa_is_u32(e, &tmp, NULL))
+	if (!unpack_u32(e, &tmp, NULL))
 		goto fail;
 	if (tmp)
 		profile->flags |= PFLAG_HAT;
-	if (!aa_is_u32(e, &tmp, NULL))
+	if (!unpack_u32(e, &tmp, NULL))
 		goto fail;
 	if (tmp)
 		profile->mode = APPARMOR_COMPLAIN;
-	if (!aa_is_u32(e, &tmp, NULL))
+	if (!unpack_u32(e, &tmp, NULL))
 		goto fail;
 	if (tmp)
 		profile->audit = AUDIT_ALL;
 
-	if (!aa_is_nameX(e, AA_STRUCTEND, NULL))
+	if (!unpack_nameX(e, AA_STRUCTEND, NULL))
 		goto fail;
 
 	/* mmap_min_addr is optional */
-	if (aa_is_u64(e, &tmp64, "mmap_min_addr")) {
+	if (unpack_u64(e, &tmp64, "mmap_min_addr")) {
 		profile->mmap_min_addr = (unsigned long)tmp64;
 		if (((u64) profile->mmap_min_addr) == tmp64) {
 			profile->flags |= PFLAG_MMAP_MIN_ADDR;
@@ -494,46 +494,46 @@ static struct aa_profile *aa_unpack_profile(struct aa_ext *e,
 		}
 	}
 
-	if (!aa_is_u32(e, &(profile->caps.allowed.cap[0]), NULL))
+	if (!unpack_u32(e, &(profile->caps.allowed.cap[0]), NULL))
 		goto fail;
-	if (!aa_is_u32(e, &(profile->caps.audit.cap[0]), NULL))
+	if (!unpack_u32(e, &(profile->caps.audit.cap[0]), NULL))
 		goto fail;
-	if (!aa_is_u32(e, &(profile->caps.quiet.cap[0]), NULL))
+	if (!unpack_u32(e, &(profile->caps.quiet.cap[0]), NULL))
 		goto fail;
-	if (!aa_is_u32(e, &(profile->caps.set.cap[0]), NULL))
+	if (!unpack_u32(e, &(profile->caps.set.cap[0]), NULL))
 		goto fail;
 
-	if (aa_is_nameX(e, AA_STRUCT, "caps64")) {
+	if (unpack_nameX(e, AA_STRUCT, "caps64")) {
 		/* optional upper half of 64 bit caps */
-		if (!aa_is_u32(e, &(profile->caps.allowed.cap[1]), NULL))
+		if (!unpack_u32(e, &(profile->caps.allowed.cap[1]), NULL))
 			goto fail;
-		if (!aa_is_u32(e, &(profile->caps.audit.cap[1]), NULL))
+		if (!unpack_u32(e, &(profile->caps.audit.cap[1]), NULL))
 			goto fail;
-		if (!aa_is_u32(e, &(profile->caps.quiet.cap[1]), NULL))
+		if (!unpack_u32(e, &(profile->caps.quiet.cap[1]), NULL))
 			goto fail;
-		if (!aa_is_u32(e, &(profile->caps.set.cap[1]), NULL))
+		if (!unpack_u32(e, &(profile->caps.set.cap[1]), NULL))
 			goto fail;
-		if (!aa_is_nameX(e, AA_STRUCTEND, NULL))
+		if (!unpack_nameX(e, AA_STRUCTEND, NULL))
 			goto fail;
 	}
 
 	if (!aa_unpack_rlimits(e, profile))
 		goto fail;
 
-	size = aa_is_array(e, "net_allowed_af");
+	size = unpack_array(e, "net_allowed_af");
 	if (size) {
 		if (size > AF_MAX)
 			goto fail;
 
 		for (i = 0; i < size; i++) {
-			if (!aa_is_u16(e, &profile->net.allowed[i], NULL))
+			if (!unpack_u16(e, &profile->net.allowed[i], NULL))
 				goto fail;
-			if (!aa_is_u16(e, &profile->net.audit[i], NULL))
+			if (!unpack_u16(e, &profile->net.audit[i], NULL))
 				goto fail;
-			if (!aa_is_u16(e, &profile->net.quiet[i], NULL))
+			if (!unpack_u16(e, &profile->net.quiet[i], NULL))
 				goto fail;
 		}
-		if (!aa_is_nameX(e, AA_ARRAYEND, NULL))
+		if (!unpack_nameX(e, AA_ARRAYEND, NULL))
 			goto fail;
 		/*
 		 * allow unix domain and netlink sockets they are handled
@@ -554,7 +554,7 @@ static struct aa_profile *aa_unpack_profile(struct aa_ext *e,
 	if (!aa_unpack_trans_table(e, profile))
 		goto fail;
 
-	if (!aa_is_nameX(e, AA_STRUCTEND, NULL))
+	if (!unpack_nameX(e, AA_STRUCTEND, NULL))
 		goto fail;
 
 	return profile;
@@ -581,7 +581,7 @@ fail:
 static int aa_verify_header(struct aa_ext *e, struct aa_audit_iface *sa)
 {
 	/* get the interface version */
-	if (!aa_is_u32(e, &e->version, "version")) {
+	if (!unpack_u32(e, &e->version, "version")) {
 		sa->base.info = "invalid profile format";
 		aa_audit_iface(sa);
 		return -EPROTONOSUPPORT;
@@ -595,7 +595,7 @@ static int aa_verify_header(struct aa_ext *e, struct aa_audit_iface *sa)
 	}
 
 	/* read the namespace if present */
-	if (!aa_is_string(e, &e->ns_name, "namespace"))
+	if (!unpack_string(e, &e->ns_name, "namespace"))
 		e->ns_name = NULL;
 
 	return 0;
