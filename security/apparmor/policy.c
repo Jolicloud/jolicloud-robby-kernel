@@ -118,19 +118,28 @@ static const char *hname_tail(const char *hname)
 /**
  * policy_init - initialize a policy structure
  * @policy: policy to initialize  (NOT NULL)
+ * @prefix: prefix name if any is required.  (MAYBE NULL)
  * @name: name of the policy, init will make a copy of it  (NOT NULL)
+ *
+ * Note: this fn creates a copy of strings passed in
  *
  * Returns: true if policy init successful
  */
-static bool policy_init(struct aa_policy *policy, const char *name)
+static bool policy_init(struct aa_policy *policy, const char *prefix,
+			const char *name)
 {
 	/* freed by policy_free */
-	policy->hname = kstrdup(name, GFP_KERNEL);
+	if (prefix) {
+		policy->hname = kmalloc(strlen(prefix) + strlen(name) +3,
+					GFP_KERNEL);
+		if (policy->hname)
+			sprintf(policy->hname, "%s//%s", prefix, name);
+	} else
+		policy->hname = kstrdup(name, GFP_KERNEL);
 	if (!policy->hname)
 		return 0;
 	/* base.name is a substring of fqname */
 	policy->name = (char *)hname_tail(policy->hname);
-
 	INIT_LIST_HEAD(&policy->list);
 	INIT_LIST_HEAD(&policy->profiles);
 	kref_init(&policy->count);
@@ -213,11 +222,13 @@ static struct aa_policy *__policy_strn_find(struct list_head *head,
 
 /**
  * alloc_namespace - allocate, initialize and return a new namespace
+ * @prefix: parent namespace name (MAYBE NULL)
  * @name: a preallocated name  (NOT NULL)
  *
  * Returns: refcounted namespace or NULL on failure.
  */
-static struct aa_namespace *alloc_namespace(const char *name)
+static struct aa_namespace *alloc_namespace(const char *prefix,
+					    const char *name)
 {
 	struct aa_namespace *ns;
 
@@ -225,9 +236,9 @@ static struct aa_namespace *alloc_namespace(const char *name)
 	AA_DEBUG("%s(%p)\n", __func__, ns);
 	if (!ns)
 		return NULL;
-
-	if (!policy_init(&ns->base, name))
+	if (!policy_init(&ns->base, prefix, name))
 		goto fail_ns;
+
 	INIT_LIST_HEAD(&ns->sub_ns);
 	rwlock_init(&ns->lock);
 
@@ -352,7 +363,7 @@ static struct aa_namespace *aa_prepare_namespace(const char *name)
 		/* namespace not found */
 		struct aa_namespace *new_ns;
 		write_unlock(&root->lock);
-		new_ns = alloc_namespace(name);
+		new_ns = alloc_namespace(root->base.hname, name);
 		if (!new_ns)
 			return NULL;
 		write_lock(&root->lock);
@@ -560,7 +571,7 @@ static void __ns_list_release(struct list_head *head)
 int __init aa_alloc_root_ns(void)
 {
 	/* released by aa_free_root_ns - used as list ref*/
-	root_ns = alloc_namespace("root");
+	root_ns = alloc_namespace(NULL, "root");
 	if (!root_ns)
 		return -ENOMEM;
 
@@ -594,7 +605,7 @@ struct aa_profile *aa_alloc_profile(const char *hname)
 	if (!profile)
 		return NULL;
 
-	if (!policy_init(&profile->base, hname)) {
+	if (!policy_init(&profile->base, NULL, hname)) {
 		kzfree(profile);
 		return NULL;
 	}
