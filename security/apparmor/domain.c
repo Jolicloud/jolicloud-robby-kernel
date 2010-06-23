@@ -116,8 +116,7 @@ static struct file_perms change_profile_perms(struct aa_profile *profile,
 		return nullperms;
 	} else if ((ns == profile->ns)) {
 		/* try matching against rules with out namespace prependend */
-		perms = aa_str_perms(profile->file.dfa, start, name, &cond,
-				     NULL);
+		aa_str_perms(profile->file.dfa, start, name, &cond, &perms);
 		if (COMBINED_PERM_MASK(perms) & request)
 			return perms;
 	}
@@ -125,7 +124,9 @@ static struct file_perms change_profile_perms(struct aa_profile *profile,
 	/* try matching with namespace name and then profile */
 	state = aa_dfa_match(profile->file.dfa, start, ns->base.name);
 	state = aa_dfa_match_len(profile->file.dfa, state, ":", 1);
-	return aa_str_perms(profile->file.dfa, state, name, &cond, NULL);
+	aa_str_perms(profile->file.dfa, state, name, &cond, &perms);
+
+	return perms;
 }
 
 /**
@@ -403,8 +404,8 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	}
 
 	/* find exec permissions for name */
-	sa.perms = aa_str_perms(profile->file.dfa, state, sa.name, &cond,
-				&state);
+	state = aa_str_perms(profile->file.dfa, state, sa.name, &cond,
+			     &sa.perms);
 	if (cxt->onexec) {
 		struct file_perms perms;
 		sa.base.info = "change_profile onexec";

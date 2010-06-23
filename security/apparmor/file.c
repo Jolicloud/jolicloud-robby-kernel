@@ -240,28 +240,24 @@ static struct file_perms aa_compute_perms(struct aa_dfa *dfa,
  * @state: state to start matching in
  * @name: string to match against dfa  (NOT NULL)
  * @cond: conditions to consider for permission set computation  (NOT NULL)
- * @rstate: if !NULL return state match finished in (MAYBE NULL)
+ * @perms: Returns - the permissions found when matching @name
  *
- * TODO: Update when permission mapping is moved to load time
- *
- * Returns: file permission for @name
+ * Returns: the final state in @dfa when beginning @start and walking @name
  */
-struct file_perms aa_str_perms(struct aa_dfa *dfa, unsigned int start,
-			       const char *name, struct path_cond *cond,
-			       unsigned int *rstate)
+unsigned int aa_str_perms(struct aa_dfa *dfa, unsigned int start,
+			  const char *name, struct path_cond *cond,
+			  struct file_perms *perms)
 {
 	unsigned int state;
-	if (!dfa)
-		return nullperms;
+	if (!dfa) {
+		*perms = nullperms;
+		return DFA_NOMATCH;
+	}
 
 	state = aa_dfa_match(dfa, start, name);
+	*perms = aa_compute_perms(dfa, state, cond);
 
-	if (rstate)
-		*rstate = state;
-
-	/* TODO: convert to new dfa format */
-
-	return aa_compute_perms(dfa, state, cond);
+	return state;
 }
 
 /**
@@ -288,9 +284,8 @@ int aa_pathstr_perm(struct aa_profile *profile, const char *op,
 		.cond = cond,
 	};
 
-	sa.perms = aa_str_perms(profile->file.dfa, profile->file.start, sa.name,
-				cond,
-				NULL);
+	aa_str_perms(profile->file.dfa, profile->file.start, sa.name, cond,
+		     &sa.perms);
 	if (request & ~sa.perms.allowed)
 		sa.base.error = -EACCES;
 	return aa_audit_file(profile, &sa);
@@ -332,8 +327,8 @@ int aa_path_perm(struct aa_profile *profile, const char *operation,
 		else
 			sa.base.info = "Failed name lookup";
 	} else {
-		sa.perms = aa_str_perms(profile->file.dfa, profile->file.start,
-					sa.name, cond, NULL);
+		aa_str_perms(profile->file.dfa, profile->file.start, sa.name,
+			     cond, &sa.perms);
 		if (request & ~sa.perms.allowed)
 			sa.base.error = -EACCES;
 	}
@@ -419,8 +414,8 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 	sa.base.error = -EACCES;
 
 	/* aa_str_perms - handles the case of the dfa being NULL */
-	sa.perms = aa_str_perms(profile->file.dfa, profile->file.start, lname,
-				&cond, &state);
+	state = aa_str_perms(profile->file.dfa, profile->file.start, lname,
+			     &cond, &sa.perms);
 	sa.perms.audit &= AA_MAY_LINK;
 	sa.perms.quiet &= AA_MAY_LINK;
 	sa.perms.kill &= AA_MAY_LINK;
@@ -431,7 +426,7 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 	/* test to see if target can be paired with link */
 	state = aa_dfa_null_transition(profile->file.dfa, state,
 				       profile->flags & PFLAG_OLD_NULL_TRANS);
-	perms = aa_str_perms(profile->file.dfa, state, tname, &cond, NULL);
+	aa_str_perms(profile->file.dfa, state, tname, &cond, &perms);
 	if (!(perms.allowed & AA_MAY_LINK)) {
 		sa.base.info = "target restricted";
 		goto audit;
@@ -444,8 +439,8 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 	/* Do link perm subset test requiring allowed permission on link are a
 	 * subset of the allowed permissions on target.
 	 */
-	perms = aa_str_perms(profile->file.dfa, profile->file.start, tname,
-			     &cond, NULL);
+	aa_str_perms(profile->file.dfa, profile->file.start, tname, &cond,
+		     &perms);
 
 	/* AA_MAY_LINK is not considered in the subset test */
 	sa.request = sa.perms.allowed & ~AA_MAY_LINK;
@@ -532,8 +527,8 @@ static int aa_file_common_perm(struct aa_profile *profile,
 		else
 			sa.base.info = "Failed name lookup";
 	} else {
-		sa.perms = aa_str_perms(profile->file.dfa, profile->file.start,
-					sa.name, &cond, NULL);
+		aa_str_perms(profile->file.dfa, profile->file.start, sa.name,
+			     &cond, &sa.perms);
 		if (request & ~sa.perms.allowed)
 			sa.base.error = -EACCES;
 	}
