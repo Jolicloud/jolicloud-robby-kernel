@@ -168,8 +168,10 @@ struct aa_profile {
 
 	struct aa_namespace *ns;
 	struct aa_profile *parent;
-	struct aa_profile *replacedby;
-
+	union {
+		struct aa_profile *replacedby;
+		const char *rename;
+	};
 	struct aa_dfa *xmatch;
 	int xmatch_len;
 	u32 sid;

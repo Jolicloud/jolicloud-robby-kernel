@@ -796,6 +796,48 @@ struct aa_profile *aa_find_profile(struct aa_namespace *ns, const char *hname)
 }
 
 /**
+ * replacement_allowed - test to see if replacement is allowed
+ */
+static bool replacement_allowed(struct aa_profile *profile,
+				struct aa_audit_iface *sa,
+				int add_only)
+{
+	if (profile) {
+		if (profile->flags & PFLAG_IMMUTABLE) {
+			sa->base.info = "cannot replace immutible profile";
+			sa->base.error = -EPERM;
+			return 0;
+		} else if (add_only) {
+			sa->base.info = "profile already exists";
+			sa->base.error = -EEXIST;
+			return 0;
+		}
+	}
+	return 1;
+}
+
+/**
+ * __add_new_profile - simple wrapper around __aa_add_profile
+ * @ns: namespace that profile is being added to
+ * @common: the policy container to add the profile to
+ * @profile: profile to add
+ *
+ * add a profile to a list and do other required basic allocations
+ */
+static void __add_new_profile(struct aa_namespace *ns,
+			      struct aa_policy_common *common,
+			      struct aa_profile *profile)
+{
+	if (common != &ns->base)
+		/* released on profile replacement or aa_free_profile */
+		profile->parent = aa_get_profile((struct aa_profile *) common);
+	__aa_add_profile(common, profile);
+	/* released on aa_free_profile */
+	profile->sid = aa_alloc_sid(AA_ALLOC_SYS_SID);
+	profile->ns = aa_get_namespace(ns);
+}
+
+/**
  * aa_interface_replace_profiles - replace profile(s) on the profile list
  * @udata: serialized data stream
  * @size: size of the serialized data stream
@@ -809,6 +851,7 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size, bool add_only)
 {
 	struct aa_policy_common *common;
 	struct aa_profile *old_profile = NULL, *new_profile = NULL;
+	struct aa_profile *rename_profile = NULL;
 	struct aa_namespace *ns;
 	ssize_t error;
 	struct aa_audit_iface sa = {
@@ -854,40 +897,49 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size, bool add_only)
 				      new_profile->base.name);
 	/* released below */
 	aa_get_profile(old_profile);
-	if (old_profile) {
-		if (old_profile->flags & PFLAG_IMMUTABLE) {
-			sa.base.info = "cannot replace immutible profile";
-			sa.base.error = -EPERM;
-		} else if (add_only) {
-			sa.base.info = "profile already exists";
-			sa.base.error = -EEXIST;
+
+	if (new_profile->rename) {
+		rename_profile = __aa_find_profile(&ns->base,
+						   new_profile->rename);
+		/* released below */
+		aa_get_profile(rename_profile);
+
+		/* must be cleared as it is shared with replaced-by */
+		kfree(new_profile->rename);
+		new_profile->rename = NULL;
+
+		if (!rename_profile) {
+			sa.base.info = "profile to rename does not exist";
+			sa.base.error = -ENOENT;
+			goto audit;
 		}
 	}
 
+	if (!replacement_allowed(old_profile, &sa, add_only))
+		goto audit;
+
+	if (!replacement_allowed(rename_profile, &sa, add_only))
+		goto audit;
+
 audit:
-	if (!old_profile)
+	if (!old_profile && !rename_profile)
 		sa.base.operation = "profile_load";
 
 	error = aa_audit_iface(&sa);
 
 	if (!error) {
-		if (old_profile) {
+		if (old_profile)
 			__aa_replace_profile(old_profile, new_profile);
-		} else {
-			if (common != &ns->base)
-				/* released on profile replacement or aa_free_profile */
-				new_profile->parent = aa_get_profile(
-					(struct aa_profile *) common);
-			__aa_add_profile(common, new_profile);
-			/* released on aa_free_profile */
-			new_profile->sid = aa_alloc_sid(AA_ALLOC_SYS_SID);
-			new_profile->ns = aa_get_namespace(ns);
-		}
+		if (rename_profile)
+			__aa_replace_profile(rename_profile, new_profile);
+		if (!(old_profile || rename_profile))
+			__add_new_profile(ns, common, new_profile);
 	}
 	write_unlock(&ns->base.lock);
 
 out:
 	aa_put_namespace(ns);
+	aa_put_profile(rename_profile);
 	aa_put_profile(old_profile);
 	aa_put_profile(new_profile);
 	if (error)

@@ -457,6 +457,9 @@ static struct aa_profile *unpack_profile(struct aa_ext *e,
 	if (!profile)
 		return ERR_PTR(-ENOMEM);
 
+	/* profile renaming is optional */
+	(void) unpack_str(e, &profile->rename, "rename");
+
 	/* xmatch is optional and may be NULL */
 	profile->xmatch = unpack_dfa(e);
 	if (IS_ERR(profile->xmatch)) {
