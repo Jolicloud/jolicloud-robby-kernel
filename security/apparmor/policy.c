@@ -374,17 +374,17 @@ static struct aa_namespace *aa_prepare_namespace(const char *name)
 
 /**
  * __aa_add_profile - add a profile to a list
- * @policy: the namespace or profile list to add it to
+ * @list: list to add it to
  * @profile: the profile to add
  *
  * refcount @profile, should be put by __aa_remove_profile
  *
  * Requires: namespace lock be held, or list not be shared
  */
-static void __aa_add_profile(struct aa_policy *policy,
+static void __aa_add_profile(struct list_head *list,
 			     struct aa_profile *profile)
 {
-	list_add(&profile->base.list, &policy->profiles);
+	list_add(&profile->base.list, list);
 	if (!(profile->flags & PFLAG_NO_LIST_REF))
 		/* get list reference */
 		aa_get_profile(profile);
@@ -439,7 +439,7 @@ static void __aa_replace_profile(struct aa_profile *old,
 		new->parent = aa_get_profile(old->parent);
 		new->ns = aa_get_namespace(old->ns);
 		new->sid = old->sid;
-		__aa_add_profile(policy, new);
+		__aa_add_profile(&policy->profiles, new);
 	} else {
 		/* refcount not taken, held via @old refcount */
 		new = old->ns->unconfined;
@@ -631,7 +631,7 @@ struct aa_profile *aa_new_null_profile(struct aa_profile *parent, int hat)
 	profile->ns = aa_get_namespace(parent->ns);
 
 	write_lock(&profile->ns->lock);
-	__aa_add_profile(&parent->base, profile);
+	__aa_add_profile(&parent->base.profiles, profile);
 	write_unlock(&profile->ns->lock);
 
 	return profile;
@@ -880,7 +880,7 @@ static void __add_new_profile(struct aa_namespace *ns,
 	if (policy != &ns->base)
 		/* released on profile replacement or aa_free_profile */
 		profile->parent = aa_get_profile((struct aa_profile *) policy);
-	__aa_add_profile(policy, profile);
+	__aa_add_profile(&policy->profiles, profile);
 	/* released on aa_free_profile */
 	profile->sid = aa_alloc_sid(AA_ALLOC_SYS_SID);
 	profile->ns = aa_get_namespace(ns);
