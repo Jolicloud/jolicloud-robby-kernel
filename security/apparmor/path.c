@@ -194,7 +194,7 @@ int aa_get_name(struct path *path, int flags, char **buffer, char **name)
 			return -ENOMEM;
 
 		error = get_name_to_buffer(path, flags, buf, size, &str);
-		if (!error || (error == -ENOENT) || (error == -ESTALE))
+		if (error != -ENAMETOOLONG)
 			break;
 
 		kfree(buf);
