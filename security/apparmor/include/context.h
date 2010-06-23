@@ -104,7 +104,7 @@ static inline struct aa_profile *aa_cred_profile(const struct cred *cred)
 /**
  * __aa_current_profile - find the current tasks confining profile
  *
- * Returns: up to date confining profile or NULL if task is unconfined
+ * Returns: up to date confining profile or the ns unconfined profile
  *
  * This fn will not update the tasks cred to the most up to date version
  * of the profile so it is safe to call when inside of locks.
@@ -117,7 +117,7 @@ static inline struct aa_profile *__aa_current_profile(void)
 /**
  * aa_current_profile - find the current tasks confining profile and do updates
  *
- * Returns: up to date confinging profile or NULL if task is unconfined
+ * Returns: up to date confinging profile or the ns unconfined profile
  *
  * This fn will update the tasks cred structure if the profile has been
  * replaced.  Not safe to call inside locks
