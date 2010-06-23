@@ -79,8 +79,8 @@ struct aa_profile;
  * @name: name of the object
  * @hname - The hierarchical name
  * @count: reference count of the obj
- * lock: lock for modifying the object
- * @list: list object is on
+ * @lock: lock for modifying the object
+ * @list: list policy object is on
  * @profiles: head of the profiles list contained in the object
  */
 struct aa_policy {

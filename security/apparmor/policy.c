@@ -118,6 +118,11 @@ static const char *hname_tail(const char *hname)
 	return hname;
 }
 
+/**
+ * policy_init - initialize a policy structure
+ * @policy: policy to initialize
+ * @name: name of the policy, init will make a copy of it
+ */
 static bool policy_init(struct aa_policy *policy, const char *name)
 {
 	/* freed by policy_free */
@@ -160,6 +165,15 @@ static void policy_destroy(struct aa_policy *policy)
 	kzfree(policy->hname);
 }
 
+/**
+ * __policy_find - find a policy by @name on a policy list
+ * @head: list to search
+ * @name: name to search for
+ *
+ * Requires: correct locks for the @head list be held
+ *
+ * Returns: policy that match @name or NULL if not found
+ */
 static struct aa_policy *__policy_find(struct list_head *head, const char *name)
 {
 	struct aa_policy *policy;
@@ -171,6 +185,19 @@ static struct aa_policy *__policy_find(struct list_head *head, const char *name)
 	return NULL;
 }
 
+/**
+ * __policy_strn_find - find a policy thats name matches @len chars of @str
+ * @head: list to search
+ * @str: string to search for
+ * @len: length of match required
+ *
+ * Requires: correct locks for the @head list be held
+ *
+ * Returns: policy that match @str or NULL if not found
+ *
+ * if @len == strlen(@strlen) then this is equiv to __policy_find
+ * other wise it allows searching for policy by a partial match of name
+ */
 static struct aa_policy *__policy_strn_find(struct list_head *head,
 					    const char *str, int len)
 {
