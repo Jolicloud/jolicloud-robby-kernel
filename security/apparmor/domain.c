@@ -157,7 +157,7 @@ static struct aa_profile *__aa_attach_match(const char *name,
 }
 
 /**
- * aa_find_attach - do attachment search for sys unconfined processes
+ * aa_find_attach - do attachment search for unconfined processes
  * @ns: the current namespace
  * @list: list to search
  * @name: the executable name to match against

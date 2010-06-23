@@ -97,11 +97,11 @@ static void replace_group(struct aa_task_cxt *cxt, struct aa_profile *profile)
 
 /**
  * aa_replace_current_profiles - replace the current tasks profiles
- * @sys: new system profile  (NOT NULL)
+ * @profile: new profile  (NOT NULL)
  *
  * Returns: 0 or error on failure
  */
-int aa_replace_current_profiles(struct aa_profile *sys)
+int aa_replace_current_profiles(struct aa_profile *profile)
 {
 	struct aa_task_cxt *cxt;
 	struct cred *new = prepare_creds();
@@ -109,7 +109,7 @@ int aa_replace_current_profiles(struct aa_profile *sys)
 		return -ENOMEM;
 
 	cxt = new->security;
-	replace_group(cxt, sys);
+	replace_group(cxt, profile);
 	/* todo add user group */
 
 	commit_creds(new);
@@ -118,11 +118,11 @@ int aa_replace_current_profiles(struct aa_profile *sys)
 
 /**
  * aa_set_current_onexec - set the tasks change_profile to happen onexec
- * @sys: system profile to set at exec  (MAYBE NULL)
+ * @profile: system profile to set at exec  (MAYBE NULL)
  *
  * Returns: 0 or error on failure
  */
-int aa_set_current_onexec(struct aa_profile *sys)
+int aa_set_current_onexec(struct aa_profile *profile)
 {
 	struct aa_task_cxt *cxt;
 	struct cred *new = prepare_creds();
@@ -131,7 +131,7 @@ int aa_set_current_onexec(struct aa_profile *sys)
 
 	cxt = new->security;
 	aa_put_profile(cxt->onexec);
-	cxt->onexec = aa_get_profile(sys);
+	cxt->onexec = aa_get_profile(profile);
 
 	commit_creds(new);
 	return 0;

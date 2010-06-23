@@ -76,8 +76,8 @@ struct aa_task_cxt *aa_alloc_task_context(gfp_t flags);
 void aa_free_task_context(struct aa_task_cxt *cxt);
 void aa_dup_task_context(struct aa_task_cxt *new,
 			 const struct aa_task_cxt *old);
-int aa_replace_current_profiles(struct aa_profile *sys);
-int aa_set_current_onexec(struct aa_profile *sys);
+int aa_replace_current_profiles(struct aa_profile *profile);
+int aa_set_current_onexec(struct aa_profile *profile);
 int aa_set_current_hat(struct aa_profile *profile, u64 token);
 int aa_restore_previous_profile(u64 cookie);
 
