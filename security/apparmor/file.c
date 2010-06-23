@@ -222,7 +222,8 @@ int aa_pathstr_perm(struct aa_profile *profile, const char *op,
 		.cond = cond,
 	};
 
-	sa.perms = aa_str_perms(profile->file.dfa, DFA_START, sa.name, cond,
+	sa.perms = aa_str_perms(profile->file.dfa, profile->file.start, sa.name,
+				cond,
 				NULL);
 	if (request & ~sa.perms.allowed)
 		sa.base.error = -EACCES;
@@ -254,8 +255,8 @@ int aa_path_perm(struct aa_profile *profile, const char *operation,
 		else
 			sa.base.info = "Failed name lookup";
 	} else {
-		sa.perms = aa_str_perms(profile->file.dfa, DFA_START, sa.name,
-					cond, NULL);
+		sa.perms = aa_str_perms(profile->file.dfa, profile->file.start,
+					sa.name, cond, NULL);
 		if (request & ~sa.perms.allowed)
 			sa.base.error = -EACCES;
 	}
@@ -327,8 +328,8 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 	sa.base.error = -EACCES;
 
 	/* aa_str_perms - handles the case of the dfa being NULL */
-	sa.perms = aa_str_perms(profile->file.dfa, DFA_START, lname, &cond,
-				&state);
+	sa.perms = aa_str_perms(profile->file.dfa, profile->file.start, lname,
+				&cond, &state);
 	sa.perms.audit &= AA_MAY_LINK;
 	sa.perms.quiet &= AA_MAY_LINK;
 	sa.perms.kill &= AA_MAY_LINK;
@@ -352,8 +353,8 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 	/* Do link perm subset test requiring allowed permission on link are a
 	 * subset of the allowed permissions on target.
 	 */
-	perms = aa_str_perms(profile->file.dfa, DFA_START, tname, &cond,
-			     NULL);
+	perms = aa_str_perms(profile->file.dfa, profile->file.start, tname,
+			     &cond, NULL);
 
 	/* AA_MAY_LINK is not considered in the subset test */
 	sa.request = sa.perms.allowed & ~AA_MAY_LINK;
@@ -423,8 +424,8 @@ static int aa_file_common_perm(struct aa_profile *profile,
 		else
 			sa.base.info = "Failed name lookup";
 	} else {
-		sa.perms = aa_str_perms(profile->file.dfa, DFA_START, sa.name,
-					&cond, NULL);
+		sa.perms = aa_str_perms(profile->file.dfa, profile->file.start,
+					sa.name, &cond, NULL);
 		if (request & ~sa.perms.allowed)
 			sa.base.error = -EACCES;
 	}

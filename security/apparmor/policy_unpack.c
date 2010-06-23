@@ -564,6 +564,10 @@ static struct aa_profile *unpack_profile(struct aa_ext *e,
 		goto fail;
 	}
 
+	if (!unpack_u32(e, &profile->file.start, "dfa_start"))
+		/* default start state */
+		profile->file.start = DFA_START;
+
 	if (!unpack_trans_table(e, profile))
 		goto fail;
 

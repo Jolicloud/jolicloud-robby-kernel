@@ -169,6 +169,7 @@ int aa_audit_file(struct aa_profile *profile, struct aa_audit_file *sa);
  * looked up in the transition table.
  */
 struct aa_file_rules {
+	unsigned int start;
 	struct aa_dfa *dfa;
 	/* struct perms perms; */
 	struct aa_domain trans;

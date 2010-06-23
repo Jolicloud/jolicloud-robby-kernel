@@ -108,14 +108,15 @@ static struct file_perms change_profile_perms(struct aa_profile *profile,
 		return nullperms;
 	} else if ((ns == profile->ns)) {
 		/* try matching against rules with out namespace prependend */
-		perms = aa_str_perms(profile->file.dfa, DFA_START, name, &cond,
-				     rstate);
+		perms = aa_str_perms(profile->file.dfa, profile->file.start,
+				     name, &cond, rstate);
 		if (COMBINED_PERM_MASK(perms) & AA_MAY_CHANGE_PROFILE)
 			return perms;
 	}
 
 	/* try matching with namespace name and then profile */
-	state = aa_dfa_match(profile->file.dfa, DFA_START, ns->base.name);
+	state = aa_dfa_match(profile->file.dfa, profile->file.start,
+			     ns->base.name);
 	state = aa_dfa_null_transition(profile->file.dfa, state, 0);
 	return aa_str_perms(profile->file.dfa, state, name, &cond, rstate);
 }
@@ -306,7 +307,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	struct aa_profile *profile, *new_profile = NULL;
 	struct aa_namespace *ns;
 	char *buffer = NULL;
-	unsigned int state = DFA_START;
+	unsigned int state;
 	struct path_cond cond = {
 		bprm->file->f_path.dentry->d_inode->i_uid,
 		bprm->file->f_path.dentry->d_inode->i_mode
@@ -334,6 +335,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	 * can change the namespace
 	 */
 	ns = profile->ns;
+	state = profile->file.start;
 
 	/* buffer freed below, name is pointer inside of buffer */
 	sa.base.error = aa_get_name(&bprm->file->f_path, 0, &buffer,
