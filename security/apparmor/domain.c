@@ -365,6 +365,9 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	}
 	sa.perms = aa_str_perms(profile->file.dfa, state, sa.name, &cond, NULL);
 	if (cxt->sys.onexec && sa.perms.allowed & AA_MAY_ONEXEC) {
+		/* transfer the onexec reference, this is allowed as the
+		 * cred is being prepared, and isn't committed yet.
+		 */
 		new_profile = cxt->sys.onexec;
 		cxt->sys.onexec = NULL;
 		sa.base.info = "change_profile onexec";
