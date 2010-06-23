@@ -17,29 +17,55 @@
  * to it determined either by matching "unconfined" tasks against the
  * visible set of profiles or by following a profiles attachment rules.
  *
- * Each profile exists in an AppArmor profile namespace which is a
- * container of related profiles.  Each namespace contains a special
- * "unconfined" profile, which doesn't efforce any confinement on
- * a task beyond DAC.
+ * Each profile exists in an profile namespace which is a container of
+ * related profiles.  Each namespace contains a special "unconfined" profile,
+ * which doesn't enfforce any confinement on a task beyond DAC.
  *
  * Namespace and profile names can be written together in either
  * of two syntaxes.
  *	:namespace:profile - used by kernel interfaces for easy detection
  *	namespace://profile - used by policy
  *
- * Profile names name not start with : or @ and may not contain \0
- * a // in a profile name indicates a compound name with the name before
- * the // being the parent profile and the name after the child
- *
+ * Profile names can not start with : or @ or ^ and may not contain \0
+ * 
  * Reserved profile names
  *	unconfined - special automatically generated unconfined profile
  *	inherit - special name to indicate profile inheritance
  *	null-XXXX-YYYY - special automically generated learning profiles
  *
- * Namespace names may not start with / or @ and may not contain \0 or /
+ * Namespace names may not start with / or @ and may not contain \0 or :
  * Reserved namespace namespace
  *	default - the default namespace setup by AppArmor
  *	user-XXXX - user defined profiles
+ *
+ * a // in a profile or namespace name indicates a compound name with the
+ * name before the // being the parent and the name after the child.
+ *
+ * Profile and namespace hierachies serve two different but similar purposes.
+ * The namespace contains the set of visible profiles that are considered
+ * for attachment.  The hierarchy of namespaces allows for virtualizing
+ * the namespace so that for example a chroot can have its own set of profiles
+ * which may define some local user namespaces.
+ * The profile hierachy severs two distinct purposes,
+ * -  it allows for sub profiles or hats, which allows an application to run
+ *    subprograms under its own profile with different restriction than it
+ *    self, and not have it use the system profile.
+ *    eg. if a mail program starts an editor, the policy might make the
+ *        restrictions tighter on the editor tighter than the mail program,
+ *        and definitely different than general editor restrictions
+ * - it allows for binary hierarchy of profiles, so that execution history
+ *   is preserved.  This feature isn't exploited by AppArmor reference policy
+ *   but is allowed.  NOTE: this is currently suboptimal because profile
+ *   aliasing is not currently implemented so that a profile for each
+ *   level must be defined.
+ *   eg. /bin/bash///bin/ls as a name would indicate /bin/ls was started
+ *       from /bin/bash
+ *   
+ * NOTES:
+ *   - hierarchical namespaces are not currently implemented.  Currently
+ *     there is only a flat set of namespaces.
+ *   - locking of profile lists is currently fairly coarse.  All profile
+ *     lists within a namespace use the namespace lock.
  */
 
 #include <linux/slab.h>
@@ -202,8 +228,8 @@ void free_aa_namespace_kref(struct kref *kref)
  * free_aa_namespace - free a profile namespace
  * @namespace: the namespace to free
  *
- * Free a namespace.  All references to the namespace must have been put.
- * If the namespace was referenced by a profile confining a task,
+ * Requires: All references to the namespace must have been put, if the
+ *           namespace was referenced by a profile confining a task,
  */
 void free_aa_namespace(struct aa_namespace *ns)
 {
@@ -219,6 +245,14 @@ void free_aa_namespace(struct aa_namespace *ns)
 	kzfree(ns);
 }
 
+/**
+ * __aa_find_namespace - find a namespace on a list by @name
+ * @name - name of namespace to look for
+ *
+ * Return: unrefcounted namespace
+ *
+ * Requires: ns_list_lock be held
+ */
 struct aa_namespace *__aa_find_namespace(struct list_head *head,
 					 const char *name)
 {
@@ -229,7 +263,7 @@ struct aa_namespace *__aa_find_namespace(struct list_head *head,
  * aa_find_namespace  -  look up a profile namespace on the namespace list
  * @name: name of namespace to find
  *
- * Returns a pointer to the namespace on the list, or NULL if no namespace
+ * Return: a pointer to the namespace on the list, or NULL if no namespace
  * called @name exists.
  */
 struct aa_namespace *aa_find_namespace(const char *name)
@@ -243,27 +277,11 @@ struct aa_namespace *aa_find_namespace(const char *name)
 	return ns;
 }
 
-static struct aa_namespace *__aa_find_namespace_by_strn(struct list_head *head,
-							const char *name,
-							int len)
-{
-	return (struct aa_namespace *)__common_find_strn(head, name, len);
-}
-
-struct aa_namespace *aa_find_namespace_by_strn(const char *name, int len)
-{
-	struct aa_namespace *ns = NULL;
-
-	read_lock(&ns_list_lock);
-	ns = aa_get_namespace(__aa_find_namespace_by_strn(&ns_list, name, len));
-	read_unlock(&ns_list_lock);
-
-	return ns;
-}
-
 /**
  * aa_prepare_namespace - find an existing or create a new namespace of @name
  * @name: the namespace to find or add
+ *
+ * Return: refcounted namespace or NULL if failed to create one
  */
 struct aa_namespace *aa_prepare_namespace(const char *name)
 {
@@ -408,6 +426,8 @@ void __aa_remove_namespace(struct aa_namespace *ns)
 	/*
 	 * break the ns, unconfined profile cyclic reference and forward
 	 * all new unconfined profiles requests to the default namespace
+	 * This will result in all confined tasks that have a profile
+	 * being removed inheriting the default->unconfined profile.
 	 */
 	ns->unconfined = aa_get_profile(default_namespace->unconfined);
 	__aa_profile_list_release(&ns->base.profiles);
@@ -415,18 +435,6 @@ void __aa_remove_namespace(struct aa_namespace *ns)
 	aa_put_namespace(ns);
 }
 
-/**
- * aa_remove_namespace = Remove namespace from the list
- * @ns: namespace to remove
- */
-void aa_remove_namespace(struct aa_namespace *ns)
-{
-	write_lock(&ns_list_lock);
-	write_lock(&ns->base.lock);
-	__aa_remove_namespace(ns);
-	write_unlock(&ns->base.lock);
-	write_unlock(&ns_list_lock);
-}
 
 /**
  * aa_profilelist_release - remove all namespaces and all associated profiles
