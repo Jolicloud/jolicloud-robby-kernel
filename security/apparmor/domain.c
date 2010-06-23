@@ -448,6 +448,14 @@ void apparmor_bprm_committed_creds(struct linux_binprm *bprm)
  */
 
 
+static char *new_compound_name(const char *n1, const char *n2)
+{
+	char *name = kmalloc(strlen(n1) + strlen(n2) + 3, GFP_KERNEL);
+	if (name)
+		sprintf(name, "%s//%s", n1, n2);
+	return name;
+}
+
 /**
  * aa_change_hat - change hat to/from subprofile
  * @hat_name: hat to change to

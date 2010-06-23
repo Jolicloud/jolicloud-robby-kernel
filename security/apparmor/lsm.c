@@ -944,7 +944,6 @@ static int param_set_mode(const char *val, struct kernel_param *kp)
 /*
  * AppArmor init functions
  */
-
 static int set_init_cxt(void)
 {
 	struct cred *cred = (struct cred *) current->real_cred;
@@ -965,7 +964,7 @@ static int __init apparmor_init(void)
 	int error;
 
 	if (!apparmor_enabled || !security_module_enable(&apparmor_ops)) {
-		info_message("AppArmor disabled by boot time parameter\n");
+		aa_info_message("AppArmor disabled by boot time parameter\n");
 		apparmor_enabled = 0;
 		return 0;
 	}
@@ -991,11 +990,11 @@ static int __init apparmor_init(void)
 	/* Report that AppArmor successfully initialized */
 	apparmor_initialized = 1;
 	if (g_profile_mode == APPARMOR_COMPLAIN)
-		info_message("AppArmor initialized: complain mode enabled");
+		aa_info_message("AppArmor initialized: complain mode enabled");
 	else if (g_profile_mode == APPARMOR_KILL)
-		info_message("AppArmor initialized: kill mode enabled");
+		aa_info_message("AppArmor initialized: kill mode enabled");
 	else
-		info_message("AppArmor initialized");
+		aa_info_message("AppArmor initialized");
 
 	return error;
 
@@ -1023,5 +1022,5 @@ void apparmor_disable(void)
 	destroy_apparmorfs();
 	apparmor_initialized = 0;
 
-	info_message("AppArmor protection disabled");
+	aa_info_message("AppArmor protection disabled");
 }

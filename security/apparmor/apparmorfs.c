@@ -230,7 +230,7 @@ int create_apparmorfs(void)
 	/* TODO: add support for apparmorfs_null and apparmorfs_mnt */
 
 	/* Report that AppArmor fs is enabled */
-	info_message("AppArmor Filesystem Enabled");
+	aa_info_message("AppArmor Filesystem Enabled");
 	return 0;
 
 error:

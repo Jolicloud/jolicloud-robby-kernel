@@ -49,12 +49,10 @@ extern int apparmor_initialized;
 void apparmor_disable(void);
 
 /* fn's in lib */
-void info_message(const char *str);
 char *aa_split_name_from_ns(char *args, char **ns_name);
-char *new_compound_name(const char *n1, const char *n2);
 int aa_strneq(const char *str, const char *sub, int len);
-char *strchrnul(const char *s, int c);
-const char *fqname_subname(const char *name);
+char *aa_strchrnul(const char *s, int c);
+void aa_info_message(const char *str);
 
 static inline int mediated_filesystem(struct inode *inode)
 {

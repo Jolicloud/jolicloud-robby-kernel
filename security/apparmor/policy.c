@@ -398,6 +398,23 @@ void aa_profile_ns_list_release(void)
 	write_unlock(&ns_list_lock);
 }
 
+static const char *fqname_subname(const char *name)
+{
+	char *split;
+	/* check for namespace which begins with a : and ends with : or \0 */
+	name = strstrip((char *) name);
+	if (*name == ':') {
+		split = aa_strchrnul(name + 1, ':');
+		if (*split == '\0')
+			return NULL;
+		name = strstrip(split + 1);
+	}
+	for (split = strstr(name, "//"); split; split = strstr(name, "//")) {
+		name = split + 2;
+	}
+	return name;
+}
+
 /**
  * alloc_aa_profile - allocate, initialize and return a new profile
  * @fqname: name of the profile
