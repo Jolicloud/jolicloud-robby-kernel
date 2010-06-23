@@ -454,9 +454,6 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	if (!new_profile)
 		goto audit;
 
-	if (profile == new_profile)
-		goto abort;
-
 	if (bprm->unsafe & LSM_UNSAFE_SHARE) {
 		/* FIXME: currently don't mediate shared state */
 		;
@@ -465,8 +462,10 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	if (bprm->unsafe & (LSM_UNSAFE_PTRACE | LSM_UNSAFE_PTRACE_CAP)) {
 		sa.base.error = aa_may_change_ptraced_domain(current,
 							     new_profile);
-		if (sa.base.error)
-			goto abort;
+		if (sa.base.error) {
+			aa_put_profile(new_profile);
+			goto audit;
+		}
 	}
 
 	/* Determine if secure exec is needed.
@@ -515,10 +514,6 @@ cleanup:
 	kfree(buffer);
 
 	return sa.base.error;
-
-abort:
-	aa_put_profile(new_profile);
-	goto audit;
 }
 
 /**
