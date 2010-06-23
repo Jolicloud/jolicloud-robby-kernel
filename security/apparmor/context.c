@@ -54,7 +54,7 @@ void aa_cred_policy(const struct cred *cred, struct aa_profile **sys)
 {
 	struct aa_task_context *cxt = cred->security;
 	BUG_ON(!cxt);
-	*sys = aa_filtered_profile(aa_profile_newest(cxt->sys.profile));
+	*sys = aa_confining_profile(cxt->sys.profile);
 }
 
 /**

@@ -608,7 +608,7 @@ void free_aa_profile(struct aa_profile *profile)
 	aa_free_sid(profile->sid);
 	aa_match_free(profile->xmatch);
 
-	if (profile->replacedby && !PTR_ERR(profile->replacedby))
+	if (profile->replacedby)
 		aa_put_profile(profile->replacedby);
 
 	kzfree(profile);
@@ -706,31 +706,5 @@ struct aa_profile *aa_find_profile_by_fqname(struct aa_namespace *ns,
 	read_lock(&ns->base.lock);
 	profile = aa_get_profile(__aa_find_profile_by_fqname(ns, fqname));
 	read_unlock(&ns->base.lock);
-	return profile;
-}
-
-/**
- * aa_profile_newest - find the newest version of @profile
- * @profile: the profile to check for newer versions of
- *
- * Find the newest version of @profile, if @profile is the newest version
- * return @profile.  If @profile has been removed return NULL.
- *
- * NOTE: the profile returned is not refcounted, The refcount on @profile
- * must be held until the caller decides what to do with the returned newest
- * version.
- */
-struct aa_profile *aa_profile_newest(struct aa_profile *profile)
-{
-	if (unlikely(profile && profile->replacedby)) {
-		for (; profile->replacedby; profile = profile->replacedby) {
-			if (IS_ERR(profile->replacedby)) {
-				/* profile has been removed */
-				profile = NULL;
-				break;
-			}
-		}
-	}
-
 	return profile;
 }

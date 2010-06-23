@@ -108,7 +108,7 @@ static inline const struct cred *aa_current_policy(struct aa_profile **sys)
 	const struct cred *cred = current_cred();
 	struct aa_task_context *cxt = cred->security;
 	BUG_ON(!cxt);
-	*sys = aa_filtered_profile(aa_profile_newest(cxt->sys.profile));
+	*sys = aa_confining_profile(cxt->sys.profile);
 
 	return cred;
 }
@@ -122,7 +122,7 @@ static inline const struct cred *aa_current_policy_wupd(struct aa_profile **sys)
 	*sys = aa_profile_newest(cxt->sys.profile);
 	if (unlikely((cxt->sys.profile != *sys)))
 		aa_replace_current_profiles(*sys);
-	*sys = aa_filtered_profile(*sys);
+	*sys = aa_filter_profile(*sys);
 
 	return cred;
 }
@@ -132,7 +132,7 @@ static inline struct aa_profile *aa_current_profile(void)
 	const struct cred *cred = current_cred();
 	struct aa_task_context *cxt = cred->security;
 	BUG_ON(!cxt);
-	return aa_filtered_profile(aa_profile_newest(cxt->sys.profile));
+	return aa_confining_profile(cxt->sys.profile);
 }
 
 static inline struct aa_profile *aa_current_profile_wupd(void)

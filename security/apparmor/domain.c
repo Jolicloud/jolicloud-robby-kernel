@@ -279,7 +279,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	cxt = bprm->cred->security;
 	BUG_ON(!cxt);
 
-	profile = aa_filtered_profile(aa_profile_newest(cxt->sys.profile));
+	profile = aa_confining_profile(cxt->sys.profile);
 	ns = cxt->sys.profile->ns;
 
 	sa.base.error = aa_get_name(&bprm->file->f_path, 0, &buffer,

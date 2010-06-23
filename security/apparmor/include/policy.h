@@ -246,7 +246,6 @@ struct aa_profile *__aa_find_profile_by_fqname(struct aa_namespace *ns,
 struct aa_profile *aa_find_profile_by_fqname(struct aa_namespace *ns,
 					     const char *name);
 struct aa_profile *aa_match_profile(struct aa_namespace *ns, const char *name);
-struct aa_profile *aa_profile_newest(struct aa_profile *profile);
 void __aa_add_profile(struct aa_policy_common *common,
 		      struct aa_profile *profile);
 void __aa_remove_profile(struct aa_profile *profile);
@@ -254,11 +253,52 @@ void __aa_replace_profile(struct aa_profile *profile,
 			  struct aa_profile *replacement);
 void __aa_profile_list_release(struct list_head *head);
 
-static inline struct aa_profile *aa_filtered_profile(struct aa_profile *profile)
+/**
+ * aa_filter_profile - filter out profiles that shouldn't be used to mediate
+ * @profile: profile to filter
+ *
+ * does not change refcounts
+ *
+ * Return: @profile or NULL if it is filtered
+ */
+static inline struct aa_profile *aa_filter_profile(struct aa_profile *profile)
 {
 	if (profile->flags & PFLAG_UNCONFINED)
 		return NULL;
 	return profile;
+}
+
+
+/**
+ * aa_profile_newest - find the newest version of @profile
+ * @profile: the profile to check for newer versions of
+ *
+ * Find the newest version of @profile, if @profile is the newest version
+ * return @profile.
+ *
+ * NOTE: the profile returned is not refcounted, The refcount on @profile
+ * must be held until the caller decides what to do with the returned newest
+ * version.
+ */
+static inline struct aa_profile *aa_profile_newest(struct aa_profile *profile)
+{
+	if (unlikely(profile && profile->replacedby))
+		for (; profile->replacedby; profile = profile->replacedby) ;
+
+	return profile;
+}
+
+/**
+ * aa_confining_profile - find the newest confining profile version
+ * @p - profile to check if newest version
+ *
+ * NOTE: the profile returned is not refcounted, The refcount on @p
+ * must be held until the caller decides what to do with the returned newest
+ * version.
+ */
+static inline struct aa_profile *aa_confining_profile(struct aa_profile *p)
+{
+	return aa_filter_profile(aa_profile_newest(p));
 }
 
 /**
