@@ -114,7 +114,7 @@ int aa_audit_file(struct aa_profile *profile, struct aa_audit_file *sa)
 	if (likely(!sa->base.error)) {
 		u16 mask = sa->perms.audit;
 
-		if (unlikely(PROFILE_AUDIT_MODE(profile) == AUDIT_ALL))
+		if (unlikely(AUDIT_MODE(profile) == AUDIT_ALL))
 			mask = 0xffff;
 
 		/* mask off perms that are not being force audited */
@@ -132,8 +132,8 @@ int aa_audit_file(struct aa_profile *profile, struct aa_audit_file *sa)
 
 		/* quiet known rejects, assumes quiet and kill do not overlap */
 		if ((sa->request & sa->perms.quiet) &&
-		    PROFILE_AUDIT_MODE(profile) != AUDIT_NOQUIET &&
-		    PROFILE_AUDIT_MODE(profile) != AUDIT_ALL)
+		    AUDIT_MODE(profile) != AUDIT_NOQUIET &&
+		    AUDIT_MODE(profile) != AUDIT_ALL)
 			sa->request &= ~sa->perms.quiet;
 
 		if (!sa->request)

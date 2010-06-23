@@ -279,7 +279,7 @@ static inline void aa_put_profile(struct aa_profile *p)
 		kref_put(&p->base.count, aa_free_profile_kref);
 }
 
-static inline int PROFILE_AUDIT_MODE(struct aa_profile *profile)
+static inline int AUDIT_MODE(struct aa_profile *profile)
 {
 	if (aa_g_audit != AUDIT_NORMAL)
 		return aa_g_audit;

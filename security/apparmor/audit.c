@@ -132,7 +132,7 @@ int aa_audit(int type, struct aa_profile *profile, struct aa_audit *sa,
 
 	if (type == AUDIT_APPARMOR_AUTO) {
 		if (likely(!sa->error)) {
-			if (PROFILE_AUDIT_MODE(profile) != AUDIT_ALL)
+			if (AUDIT_MODE(profile) != AUDIT_ALL)
 				return 0;
 			type = AUDIT_APPARMOR_AUDIT;
 		} else if (PROFILE_COMPLAIN(profile))
@@ -140,9 +140,9 @@ int aa_audit(int type, struct aa_profile *profile, struct aa_audit *sa,
 		else
 			type = AUDIT_APPARMOR_DENIED;
 	}
-	if (PROFILE_AUDIT_MODE(profile) == AUDIT_QUIET ||
+	if (AUDIT_MODE(profile) == AUDIT_QUIET ||
 	    (type == AUDIT_APPARMOR_DENIED &&
-	     PROFILE_AUDIT_MODE(profile) == AUDIT_QUIET))
+	     AUDIT_MODE(profile) == AUDIT_QUIET))
 		return sa->error;
 
 	return aa_audit_base(type, profile, sa, audit_cxt, cb);
