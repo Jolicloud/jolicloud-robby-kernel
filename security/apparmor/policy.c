@@ -337,12 +337,17 @@ static struct aa_namespace *aa_prepare_namespace(const char *name)
 	root = aa_current_profile()->ns;
 
 	write_lock(&root->lock);
-	if (name)
-		/* released by caller */
-		ns = aa_get_namespace(__aa_find_namespace(&root->sub_ns, name));
-	else
+
+	/* if name isn't specified the profile is loaded to the current ns */
+	if (!name) {
 		/* released by caller */
 		ns = aa_get_namespace(root);
+		goto out;
+	}
+
+	/* try and find the specified ns and if it doesn't exist create it */
+	/* released by caller */
+	ns = aa_get_namespace(__aa_find_namespace(&root->sub_ns, name));
 	if (!ns) {
 		/* name && namespace not found */
 		struct aa_namespace *new_ns;
@@ -367,6 +372,7 @@ static struct aa_namespace *aa_prepare_namespace(const char *name)
 			aa_get_namespace(ns);
 		}
 	}
+out:
 	write_unlock(&root->lock);
 
 	/* return ref */
