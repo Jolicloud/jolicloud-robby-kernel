@@ -13,8 +13,25 @@
  */
 
 #include "include/apparmor.h"
+#include "include/context.h"
 #include "include/policy.h"
 #include "include/domain.h"
+
+/**
+ * ns_visible - test if @child is visible from @parent
+ * @parent: namespace to treat as the parent
+ * @child:  namespace to test if visible from @parent
+ *
+ * Returns: true if @child is visible from @parent else false
+ */
+static bool ns_visible(struct aa_namespace *parent, struct aa_namespace *child)
+{
+	for ( ; child; child = child->parent) {
+		if (child->parent == parent)
+			return true;
+	}
+	return false;
+}
 
 /**
  * aa_getprocattr - Return the profile information for @profile
@@ -36,13 +53,23 @@ int aa_getprocattr(struct aa_profile *profile, char **string)
 	int len = 0, mode_len = 0, ns_len = 0, name_len;
 	const char *mode_str = profile_mode_names[profile->mode];
 	struct aa_namespace *ns = profile->ns;
+	struct aa_namespace *current_ns = __aa_current_profile()->ns;
 	char *s;
 
+	if (ns != current_ns) {
+		if (!ns_visible(current_ns, ns))
+			return -EACCES;
+		/* if ns is visible it is a child of current_ns and thus
+		 * its hname includes current_ns hname as a prefix
+		 * but we don't display that part of the name.
+		 */
+		ns_len = strlen(ns->base.hname) - 2 -	    /*- 2 for // */
+			strlen(current_ns->base.hname) + 3; /*+ 3 for :// */
+	}
 	/* unconfined profiles don't have a mode string appended */
 	if (!unconfined(profile))
 		mode_len = strlen(mode_str) + 3;	/* + 3 for _() */
-	if (ns != root_ns)
-		ns_len = strlen(ns->base.name) + 3; /*+ 3 for :// */
+
 	name_len = strlen(profile->base.hname);
 	len = mode_len + ns_len + name_len + 1;	    /*+ 1 for \n */
 	s = str = kmalloc(len + 1, GFP_KERNEL);	    /* + 1 \0 */
@@ -50,7 +77,9 @@ int aa_getprocattr(struct aa_profile *profile, char **string)
 		return -ENOMEM;
 
 	if (ns_len) {
-		sprintf(s, "%s://", ns->base.name);
+		/* skip over prefix current_ns->base.hname and seperating // */
+		sprintf(s, "%s://", ns->base.hname + 2 +
+			strlen(current_ns->base.hname));
 		s += ns_len;
 	}
 	if (unconfined(profile))
