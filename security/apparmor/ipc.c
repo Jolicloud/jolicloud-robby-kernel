@@ -99,7 +99,7 @@ int aa_ptrace(struct task_struct *tracer, struct task_struct *tracee,
 
 	if (!unconfined(tracer_p)) {
 		struct aa_audit_ptrace sa = {
-			.base.op = "ptrace",
+			.base.op = OP_PTRACE,
 			.base.gfp_mask = GFP_ATOMIC,
 			.tracer = tracer->pid,
 			.tracee = tracee->pid,

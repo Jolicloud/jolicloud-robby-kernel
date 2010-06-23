@@ -19,6 +19,60 @@
 #include "include/audit.h"
 #include "include/policy.h"
 
+const char *op_table[] = {
+	"null",
+
+	"sysctl",
+	"capable",
+
+	"unlink",
+	"mkdir",
+	"rmdir",
+	"mknod",
+	"truncate",
+	"link",
+	"symlink",
+	"rename_src",
+	"rename_dest",
+	"chmod",
+	"chown",
+	"getattr",
+	"open",
+
+	"file_perm",
+	"file_lock",
+	"file_mmap",
+	"file_mprotect",
+
+	"create",
+	"post_create",
+	"bind",
+	"connect",
+	"listen",
+	"accept",
+	"sendmsg",
+	"recvmsg",
+	"getsockname",
+	"getpeername",
+	"getsockopt",
+	"setsockopt",
+	"socket_shutdown",
+
+	"ptrace",
+
+	"exec",
+	"change_hat",
+	"change_profile",
+	"change_onexec",
+
+	"setprocattr",
+	"setrlimit",
+
+	"profile_replace",
+	"profile_load",
+	"profile_remove"
+};
+
 const char *audit_mode_names[] = {
 	"normal",
 	"quiet_denied",
@@ -87,7 +141,7 @@ static int aa_audit_base(int type, struct aa_profile *profile,
 
 	if (sa->op) {
 		audit_log_format(ab, " operation=");
-		audit_log_string(ab, sa->op);
+		audit_log_string(ab, op_table[sa->op]);
 	}
 
 	if (sa->info) {

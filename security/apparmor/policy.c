@@ -920,7 +920,7 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size, bool noreplace)
 	struct aa_namespace *ns = NULL;
 	ssize_t error;
 	struct aa_audit_iface sa = {
-		.base.op = "profile_replace",
+		.base.op = OP_PROF_REPL,
 		.base.gfp_mask = GFP_ATOMIC,
 	};
 
@@ -985,7 +985,7 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size, bool noreplace)
 
 audit:
 	if (!old_profile && !rename_profile)
-		sa.base.op = "profile_load";
+		sa.base.op = OP_PROF_LOAD;
 
 	error = aa_audit_iface(&sa);
 
@@ -1036,7 +1036,7 @@ ssize_t aa_interface_remove_profiles(char *fqname, size_t size)
 	struct aa_namespace *root, *ns = NULL;
 	struct aa_profile *profile = NULL;
 	struct aa_audit_iface sa = {
-		.base.op = "profile_remove",
+		.base.op = OP_PROF_RM,
 		.base.gfp_mask = GFP_ATOMIC,
 	};
 	const char *name = fqname;

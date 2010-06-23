@@ -62,7 +62,7 @@ int aa_task_setrlimit(struct aa_profile *profile, unsigned int resource,
 		      struct rlimit *new_rlim)
 {
 	struct aa_audit_resource sa = {
-		.base.op = "setrlimit",
+		.base.op = OP_SETRLIMIT,
 		.base.gfp_mask = GFP_KERNEL,
 		.rlimit = resource + 1,
 	};

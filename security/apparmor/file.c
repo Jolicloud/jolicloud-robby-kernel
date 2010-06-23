@@ -243,7 +243,7 @@ unsigned int aa_str_perms(struct aa_dfa *dfa, unsigned int start,
 /**
  * aa_pathstr_perm - do permission check & audit for @name
  * @profile: profile being enforced  (NOT NULL)
- * @op: name of the operation  (NOT NULL)
+ * @op: operation being checked
  * @name: path string to check permission for  (NOT NULL)
  * @request: requested permissions
  * @cond: conditional info for this request  (NOT NULL)
@@ -253,8 +253,8 @@ unsigned int aa_str_perms(struct aa_dfa *dfa, unsigned int start,
  *
  * Returns: %0 else error if access denied or other error
  */
-int aa_pathstr_perm(struct aa_profile *profile, const char *op,
-		    const char *name, u16 request, struct path_cond *cond)
+int aa_pathstr_perm(struct aa_profile *profile, int op, const char *name,
+		    u16 request, struct path_cond *cond)
 {
 	struct aa_audit_file sa = {
 		.base.op = op,
@@ -287,7 +287,7 @@ static inline bool is_deleted(struct dentry *dentry)
 /**
  * aa_path_perm - do permissions check & audit for @path
  * @profile: profile being enforced  (NOT NULL)
- * @op: name of the operation being enforced  (NOT NULL)
+ * @op: operation being checked
  * @path: path to check permissions of  (NOT NULL)
  * @flags: any additional path flags beyond what the profile specifies
  * @request: requested permissions
@@ -295,7 +295,7 @@ static inline bool is_deleted(struct dentry *dentry)
  *
  * Returns: %0 else error if access denied or other error
  */
-int aa_path_perm(struct aa_profile *profile, const char *op, struct path *path,
+int aa_path_perm(struct aa_profile *profile, int op, struct path *path,
 		 int flags, u16 request, struct path_cond *cond)
 {
 	char *buffer, *name;
@@ -389,7 +389,7 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 	unsigned int state;
 
 	struct aa_audit_file sa = {
-		.base.op = "link",
+		.base.op = OP_LINK,
 		.base.gfp_mask = GFP_KERNEL,
 		.request = AA_MAY_LINK,
 		.cond = &cond,
@@ -469,13 +469,13 @@ audit:
 /**
  * aa_file_perm - do permission revalidation check & audit for @file
  * @profile: profile being enforced   (NOT NULL)
- * @op: name of the operation  (NOT NULL)
+ * @op: operation being checked
  * @file: file to revalidate access permissions on  (NOT NULL)
  * @request: requested permissions
  *
  * Returns: %0 if access allowed else error
  */
-int aa_file_perm(struct aa_profile *profile, const char *op, struct file *file,
+int aa_file_perm(struct aa_profile *profile, int op, struct file *file,
 		 u16 request)
 {
 	struct path_cond cond = {

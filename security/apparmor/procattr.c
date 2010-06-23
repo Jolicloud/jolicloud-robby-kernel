@@ -95,19 +95,19 @@ int aa_getprocattr(struct aa_profile *profile, char **string)
 
 /**
  * split_token_from_name - separate a string of form  <token>^<name>
- * @op: operation name  (NOT NULL)
+ * @op: operation being checked
  * @args: string to parse  (NOT NULL)
  * @token: stores returned parsed token value  (NOT NULL)
  *
  * Returns: start position of name after token else NULL on failure
  */
-static char *split_token_from_name(const char *op, char *args, u64 * token)
+static char *split_token_from_name(int op, char *args, u64 * token)
 {
 	char *name;
 
 	*token = simple_strtoull(args, &name, 16);
 	if ((name == args) || *name != '^') {
-		AA_ERROR("%s: Invalid input '%s'", op, args);
+		AA_ERROR("%s: Invalid input '%s'", op_table[op], args);
 		return ERR_PTR(-EINVAL);
 	}
 
@@ -132,7 +132,7 @@ int aa_setprocattr_changehat(char *args, size_t size, int test)
 	const char *hats[16];		/* current hard limit on # of names */
 	int count = 0;
 
-	hat = split_token_from_name("change_hat", args, &token);
+	hat = split_token_from_name(OP_CHANGE_HAT, args, &token);
 	if (IS_ERR(hat))
 		return PTR_ERR(hat);
 

@@ -129,7 +129,7 @@ int aa_capable(struct task_struct *task, struct aa_profile *profile, int cap,
 {
 	int error = aa_profile_capable(profile, cap);
 	struct aa_audit_caps sa = {
-		.base.op = "capable",
+		.base.op = OP_CAPABLE,
 		.base.task = task,
 		.base.gfp_mask = GFP_ATOMIC,
 		.base.error = error,

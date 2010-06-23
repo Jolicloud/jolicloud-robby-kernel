@@ -70,14 +70,14 @@ static void kvfree(void *buffer)
  * @alloc_size: size of user buffer
  * @copy_size: size of data to copy from user buffer
  * @pos: position write is at in the file
- * @op: name of operation doing the user buffer copy (NOT NULL)
+ * @op: operation doing the user buffer copy
  *
  * Returns: kernel buffer containing copy of user buffer data or an
  *          ERR_PTR on failure.
  */
 static char *aa_simple_write_to_buffer(const char __user *userbuf,
 				       size_t alloc_size, size_t copy_size,
-				       loff_t *pos, const char *op)
+				       loff_t *pos, int op)
 {
 	char *data;
 
@@ -128,11 +128,11 @@ static ssize_t aa_profile_load(struct file *f, const char __user *buf,
 	char *data;
 	ssize_t error;
 
-	data = aa_simple_write_to_buffer(buf, size, size, pos, "profile_load");
+	data = aa_simple_write_to_buffer(buf, size, size, pos, OP_PROF_LOAD);
 
 	error = PTR_ERR(data);
 	if (!IS_ERR(data)) {
-		error = aa_interface_replace_profiles(data, size, PROF_ADD);
+		error = aa_interface_replace_profiles(data, size, OP_PROF_LOAD);
 		kvfree(data);
 	}
 
@@ -150,11 +150,10 @@ static ssize_t aa_profile_replace(struct file *f, const char __user *buf,
 	char *data;
 	ssize_t error;
 
-	data = aa_simple_write_to_buffer(buf, size, size, pos,
-					 "profile_replace");
+	data = aa_simple_write_to_buffer(buf, size, size, pos, OP_PROF_REPL);
 	error = PTR_ERR(data);
 	if (!IS_ERR(data)) {
-		error = aa_interface_replace_profiles(data, size, PROF_REPLACE);
+		error = aa_interface_replace_profiles(data, size, OP_PROF_REPL);
 		kvfree(data);
 	}
 
@@ -176,8 +175,7 @@ static ssize_t aa_profile_remove(struct file *f, const char __user *buf,
 	 * aa_remove_profile needs a null terminated string so 1 extra
 	 * byte is allocated and the copied data is null terminated.
 	 */
-	data = aa_simple_write_to_buffer(buf, size + 1, size, pos,
-					 "profile_remove");
+	data = aa_simple_write_to_buffer(buf, size + 1, size, pos, OP_PROF_RM);
 
 	error = PTR_ERR(data);
 	if (!IS_ERR(data)) {

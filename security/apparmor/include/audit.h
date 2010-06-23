@@ -35,6 +35,61 @@ enum audit_mode {
 	AUDIT_ALL		/* audit all accesses */
 };
 
+extern const char *op_table[];
+enum aa_ops {
+	OP_NULL,
+
+	OP_SYSCTL,
+	OP_CAPABLE,
+
+	OP_UNLINK,
+	OP_MKDIR,
+	OP_RMDIR,
+	OP_MKNOD,
+	OP_TRUNC,
+	OP_LINK,
+	OP_SYMLINK,
+	OP_RENAME_SRC,
+	OP_RENAME_DEST,
+	OP_CHMOD,
+	OP_CHOWN,
+	OP_GETATTR,
+	OP_OPEN,
+
+	OP_FPERM,
+	OP_FLOCK,
+	OP_FMMAP,
+	OP_FMPROT,
+
+	OP_CREATE,
+	OP_POST_CREATE,
+	OP_BIND,
+	OP_CONNECT,
+	OP_LISTEN,
+	OP_ACCEPT,
+	OP_SENDMSG,
+	OP_RECVMSG,
+	OP_GETSOCKNAME,
+	OP_GETPEERNAME,
+	OP_GETSOCKOPT,
+	OP_SETSOCKOPT,
+	OP_SOCK_SHUTDOWN,
+
+	OP_PTRACE,
+
+	OP_EXEC,
+	OP_CHANGE_HAT,
+	OP_CHANGE_PROFILE,
+	OP_CHANGE_ONEXEC,
+
+	OP_SETPROCATTR,
+	OP_SETRLIMIT,
+
+	OP_PROF_REPL,
+	OP_PROF_LOAD,
+	OP_PROF_RM,
+};
+
 /*
  * aa_audit - AppArmor auditing structure
  * Structure is populated by access control code and passed to aa_audit which
@@ -44,7 +99,7 @@ struct aa_audit {
 	struct task_struct *task;
 	gfp_t gfp_mask;
 	int error;
-	const char *op;
+	int op;
 	const char *info;
 };
 
