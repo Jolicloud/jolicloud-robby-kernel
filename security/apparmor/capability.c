@@ -28,7 +28,7 @@
 #include "capability_names.h"
 
 struct audit_cache {
-	struct task_struct *task;
+	struct aa_profile *profile;
 	kernel_cap_t caps;
 };
 
@@ -86,13 +86,14 @@ static int aa_audit_caps(struct aa_profile *profile, struct aa_audit_caps *sa)
 
 	/* Do simple duplicate message elimination */
 	ent = &get_cpu_var(audit_cache);
-	if (sa->base.task == ent->task && cap_raised(ent->caps, sa->cap)) {
+	if (profile == ent->profile && cap_raised(ent->caps, sa->cap)) {
 		put_cpu_var(audit_cache);
 		if (COMPLAIN_MODE(profile))
 			return 0;
 		return sa->base.error;
 	} else {
-		ent->task = sa->base.task;
+		aa_put_profile(ent->profile);
+		ent->profile = aa_get_profile(profile);
 		cap_raise(ent->caps, sa->cap);
 	}
 	put_cpu_var(audit_cache);
