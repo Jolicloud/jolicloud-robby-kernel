@@ -720,10 +720,6 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size)
 		goto fail2;
 	}
 
-	if (common != &ns->base)
-		new_profile->parent = aa_get_profile((struct aa_profile *)
-						     common);
-
 	old_profile = __aa_find_profile(&common->profiles,
 					new_profile->base.name);
 	aa_get_profile(old_profile);
@@ -732,24 +728,15 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size)
 		sa.base.error = -EPERM;
 		goto fail2;
 	} else if (old_profile) {
-		struct aa_profile *profile, *tmp;
-		list_for_each_entry_safe(profile, tmp,
-					 &old_profile->base.profiles,
-					 base.list) {
-			aa_put_profile(profile->parent);
-			list_del(&profile->base.list);
-			profile->parent = aa_get_profile(new_profile);
-			list_add(&profile->base.list,
-				 &new_profile->base.profiles);
-		}
 		__aa_replace_profile(old_profile, new_profile);
-		new_profile->sid = old_profile->sid;
 	} else {
+		if (common != &ns->base)
+			new_profile->parent =
+				aa_get_profile((struct aa_profile *) common);
 		__aa_add_profile(common, new_profile);
 		new_profile->sid = aa_alloc_sid(AA_ALLOC_SYS_SID);
+		new_profile->ns = aa_get_namespace(ns);
 	}
-
-	new_profile->ns = aa_get_namespace(ns);
 
 	write_unlock(&ns->base.lock);
 
@@ -822,7 +809,7 @@ ssize_t aa_interface_remove_profiles(char *name, size_t size)
 		}
 		sa.name = profile->fqname;
 		__aa_profile_list_release(&profile->base.profiles);
-		__aa_remove_profile(profile, profile->ns->unconfined);
+		__aa_replace_profile(profile, NULL);
 	}
 	write_unlock(&ns->base.lock);
 	write_unlock(&ns_list_lock);

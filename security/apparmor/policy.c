@@ -296,9 +296,14 @@ struct aa_namespace *aa_prepare_namespace(const char *name)
 	return ns;
 }
 
-/*
- * requires profile->ns set first, takes profiles refcount
- * TODO: add accounting
+/**
+ * __aa_add_profile - add a profile to a list
+ * @common: the namespace or profile list to add it to
+ * @profile: the profile to add
+ *
+ * refcount @profile, should be put by __aa_remove_profile
+ *
+ * Requires: namespace list lock be held, or list not be shared
  */
 void __aa_add_profile(struct aa_policy_common *common,
 		      struct aa_profile *profile)
@@ -308,49 +313,93 @@ void __aa_add_profile(struct aa_policy_common *common,
 		aa_get_profile(profile);
 }
 
-void __aa_remove_profile(struct aa_profile *profile,
-			 struct aa_profile *replacement)
+/**
+ * __aa_remove_profile - remove a profile from the list it is one
+ * @profile: the profile to remove
+ *
+ * remove a profile from the list, warning generally removal should
+ * be done with __aa_replace_profile as most profile removals are
+ * replacements to the unconfined profile.
+ *
+ * put @profile refcount
+ *
+ * Requires: namespace list lock be held, or list not be shared
+ */
+void __aa_remove_profile(struct aa_profile *profile)
 {
-	if (replacement)
-		profile->replacedby = aa_get_profile(replacement);
-	else
-		profile->replacedby = ERR_PTR(-EINVAL);
 	list_del_init(&profile->base.list);
 	if (!(profile->flags & PFLAG_NO_LIST_REF))
 		aa_put_profile(profile);
 }
 
-/* TODO: add accounting */
-void __aa_replace_profile(struct aa_profile *profile,
-			  struct aa_profile *replacement)
+/**
+ * __aa_replace_profile - replace @old with @new on a list
+ * @old: profile to be replaced
+ * @new: profile to replace @old with
+ *
+ * Will duplicaticate and refcount elements that @new inherits from @old
+ * and will inherit @old children.  If new is NULL it will replace to the
+ * unconfined profile for old's namespace.
+ *
+ * refcount @new for list, put @old list refcount
+ *
+ * Requires: namespace list lock be held, or list not be shared
+ */
+void __aa_replace_profile(struct aa_profile *old,
+			  struct aa_profile *new)
 {
-	if (replacement) {
-		struct aa_policy_common *common;
+	struct aa_policy_common *common;
+	struct aa_profile *child, *tmp;
 
-		if (profile->parent)
-			common = &profile->parent->base;
-		else
-			common = &profile->ns->base;
+	if (old->parent)
+		common = &old->parent->base;
+	else
+		common = &old->ns->base;
 
-		__aa_remove_profile(profile, replacement);
-		__aa_add_profile(common, replacement);
-	} else
-		__aa_remove_profile(profile, NULL);
+	if (new) {
+		new->parent = aa_get_profile(old->parent);
+		new->ns = aa_get_namespace(old->ns);
+		new->sid = old->sid;
+		__aa_add_profile(common, new);
+	} else {
+		/* refcount not taken, held via olds refcount */
+		new = old->ns->unconfined;
+	}
+
+	/* inherit children */
+	list_for_each_entry_safe(child, tmp, &old->base.profiles, base.list) {
+		aa_put_profile(child->parent);
+		child->parent = aa_get_profile(new);
+		/* list refcount transfered to @new*/
+		list_move(&child->base.list, &new->base.profiles);
+	}
+
+	old->replacedby = aa_get_profile(new);
+	__aa_remove_profile(old);
 }
 
 /**
  * __aa_profile_list_release - remove all profiles on the list and put refs
  * @head: list of profiles
+ *
+ * Requires: namespace lock be held
  */
 void __aa_profile_list_release(struct list_head *head)
 {
 	struct aa_profile *profile, *tmp;
 	list_for_each_entry_safe(profile, tmp, head, base.list) {
+		/* release any children lists first */
 		__aa_profile_list_release(&profile->base.profiles);
-		__aa_remove_profile(profile, NULL);
+		__aa_replace_profile(profile, NULL);
 	}
 }
 
+/**
+ * __aa_remove_namespace - remove a namespace and all its children
+ * @ns: namespace to be removed
+ * 
+ * Requires: ns_list_lock && namespace lock be held
+ */
 void __aa_remove_namespace(struct aa_namespace *ns)
 {
 	struct aa_profile *unconfined = ns->unconfined;
