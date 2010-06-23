@@ -115,8 +115,8 @@ struct aa_audit {
 			const char *path;
 			const char *target;
 			u16 request;
-			struct file_perms perms;
-			struct path_cond *cond;
+			u16 denied;
+			uid_t ouid;
 		} fs;
 		struct {
 			int family, type, protocol;

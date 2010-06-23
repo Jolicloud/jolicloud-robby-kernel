@@ -26,10 +26,9 @@ struct file_perms nullperms;
  * audit_file_mask - convert mask to owner::other string
  * @buffer: buffer to write string to (NOT NULL)
  * @mask: permission mask to convert
- * @xindex: xindex
  * @owner: if the mask is for owner or other
  */
-static void audit_file_mask(struct audit_buffer *ab, u16 mask, int xindex)
+static void audit_file_mask(struct audit_buffer *ab, u16 mask)
 {
 	char str[10];
 
@@ -66,22 +65,19 @@ static void audit_file_mask(struct audit_buffer *ab, u16 mask, int xindex)
  */
 static void file_audit_cb(struct audit_buffer *ab, struct aa_audit *sa)
 {
-	u16 denied = sa->fs.request & ~sa->fs.perms.allow;
-	uid_t fsuid;
-
-	fsuid = current_fsuid();
+	uid_t fsuid = current_fsuid();
 
 	if (sa->fs.request & AA_AUDIT_FILE_MASK) {
 		audit_log_format(ab, " requested_mask=");
-		audit_file_mask(ab, sa->fs.request, AA_X_NONE);
+		audit_file_mask(ab, sa->fs.request);
 	}
-	if (denied & AA_AUDIT_FILE_MASK) {
+	if (sa->fs.denied & AA_AUDIT_FILE_MASK) {
 		audit_log_format(ab, " denied_mask=");
-		audit_file_mask(ab, denied, sa->fs.perms.xindex);
+		audit_file_mask(ab, sa->fs.denied);
 	}
 	if (sa->fs.request & AA_AUDIT_FILE_MASK) {
 		audit_log_format(ab, " fsuid=%d", fsuid);
-		audit_log_format(ab, " ouid=%d", sa->fs.cond->uid);
+		audit_log_format(ab, " ouid=%d", sa->fs.ouid);
 	}
 
 	if (sa->fs.path) {
@@ -98,16 +94,18 @@ static void file_audit_cb(struct audit_buffer *ab, struct aa_audit *sa)
 /**
  * aa_audit_file - handle the auditing of file operations
  * @profile: the profile being enforced  (NOT NULL)
+ * @perms: the permissions computed for the request (NOT NULL)
  * @sa: file auditing context  (NOT NULL)
  *
  * Returns: %0 or error on failure
  */
-int aa_audit_file(struct aa_profile *profile, struct aa_audit *sa)
+int aa_audit_file(struct aa_profile *profile, struct file_perms *perms,
+		  struct aa_audit *sa)
 {
 	int type = AUDIT_APPARMOR_AUTO;
 
 	if (likely(!sa->error)) {
-		u16 mask = sa->fs.perms.audit;
+		u16 mask = perms->audit;
 
 		if (unlikely(AUDIT_MODE(profile) == AUDIT_ALL))
 			mask = 0xffff;
@@ -120,20 +118,22 @@ int aa_audit_file(struct aa_profile *profile, struct aa_audit *sa)
 		type = AUDIT_APPARMOR_AUDIT;
 	} else {
 		/* only report permissions that were denied */
-		sa->fs.request = sa->fs.request & ~sa->fs.perms.allow;
+		sa->fs.request = sa->fs.request & ~perms->allow;
 
-		if (sa->fs.request & sa->fs.perms.kill)
+		if (sa->fs.request & perms->kill)
 			type = AUDIT_APPARMOR_KILL;
 
 		/* quiet known rejects, assumes quiet and kill do not overlap */
-		if ((sa->fs.request & sa->fs.perms.quiet) &&
+		if ((sa->fs.request & perms->quiet) &&
 		    AUDIT_MODE(profile) != AUDIT_NOQUIET &&
 		    AUDIT_MODE(profile) != AUDIT_ALL)
-			sa->fs.request &= ~sa->fs.perms.quiet;
+			sa->fs.request &= ~perms->quiet;
 
 		if (!sa->fs.request)
 			return COMPLAIN_MODE(profile) ? 0 : sa->error;
 	}
+
+	sa->fs.denied = sa->fs.request & ~perms->allow;
 	return aa_audit(type, profile, sa, file_audit_cb);
 }
 
@@ -249,19 +249,20 @@ unsigned int aa_str_perms(struct aa_dfa *dfa, unsigned int start,
 int aa_pathstr_perm(int op, struct aa_profile *profile, const char *name,
 		    u16 request, struct path_cond *cond)
 {
+	struct file_perms perms = { };
 	struct aa_audit sa = {
 		.op = op,
 		.gfp_mask = GFP_KERNEL,
 	};
 	sa.fs.request = request;
 	sa.fs.path = name;
-	sa.fs.cond = cond;
+	sa.fs.ouid = cond->uid;
 
 	aa_str_perms(profile->file.dfa, profile->file.start, name, cond,
-		     &sa.fs.perms);
-	if (request & ~sa.fs.perms.allow)
+		     &perms);
+	if (request & ~perms.allow)
 		sa.error = -EACCES;
-	return aa_audit_file(profile, &sa);
+	return aa_audit_file(profile, &perms, &sa);
 }
 
 /**
@@ -292,23 +293,23 @@ int aa_path_perm(int op, struct aa_profile *profile, struct path *path,
 		 int flags, u16 request, struct path_cond *cond)
 {
 	char *buffer;
+	struct file_perms perms = {};
 	struct aa_audit sa = {
 		.op = op,
 		.gfp_mask = GFP_KERNEL,
 	};
 	sa.fs.request = request;
-	sa.fs.cond = cond;
+	sa.fs.ouid = cond->uid;
 
 	flags |= profile->path_flags | (S_ISDIR(cond->mode) ? PATH_IS_DIR : 0);
 	sa.error = aa_get_name(path, flags, &buffer, &sa.fs.path);
 	if (sa.error) {
-		sa.fs.perms = nullperms;
 		if (sa.error == -ENOENT && is_deleted(path->dentry)) {
 			/* Access to open files that are deleted are
 			 * give a pass (implicit delegation)
 			 */
 			sa.error = 0;
-			sa.fs.perms.allow = sa.fs.request;
+			perms.allow = sa.fs.request;
 		} else if (sa.error == -ENOENT)
 			sa.info = "Failed name lookup - deleted entry";
 		else if (sa.error == -ESTALE)
@@ -319,11 +320,11 @@ int aa_path_perm(int op, struct aa_profile *profile, struct path *path,
 			sa.info = "Failed name lookup";
 	} else {
 		aa_str_perms(profile->file.dfa, profile->file.start, sa.fs.path,
-			     cond, &sa.fs.perms);
-		if (request & ~sa.fs.perms.allow)
+			     cond, &perms);
+		if (request & ~perms.allow)
 			sa.error = -EACCES;
 	}
-	sa.error = aa_audit_file(profile, &sa);
+	sa.error = aa_audit_file(profile, &perms, &sa);
 	kfree(buffer);
 
 	return sa.error;
@@ -378,7 +379,7 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 	};
 	char *buffer = NULL, *buffer2 = NULL;
 	const char *lname, *tname;
-	struct file_perms perms;
+	struct file_perms lperms, perms;
 	unsigned int state;
 
 	struct aa_audit sa = {
@@ -386,8 +387,8 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 		.gfp_mask = GFP_KERNEL,
 	};
 	sa.fs.request = AA_MAY_LINK;
-	sa.fs.cond = &cond;
-	sa.fs.perms = nullperms;
+	sa.fs.ouid = cond.uid;
+	lperms = nullperms;
 
 	/* buffer freed below, lname is pointer in buffer */
 	sa.error = aa_get_name(&link, profile->path_flags, &buffer, &lname);
@@ -405,9 +406,9 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 
 	/* aa_str_perms - handles the case of the dfa being NULL */
 	state = aa_str_perms(profile->file.dfa, profile->file.start, lname,
-			     &cond, &sa.fs.perms);
+			     &cond, &lperms);
 
-	if (!(sa.fs.perms.allow & AA_MAY_LINK))
+	if (!(lperms.allow & AA_MAY_LINK))
 		goto audit;
 
 	/* test to see if target can be paired with link */
@@ -418,9 +419,9 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 	/* force audit/quiet masks for link are stored in the second entry
 	 * in the link pair.
 	 */
-	sa.fs.perms.audit = perms.audit;
-	sa.fs.perms.quiet = perms.quiet;
-	sa.fs.perms.kill = perms.kill;
+	lperms.audit = perms.audit;
+	lperms.quiet = perms.quiet;
+	lperms.kill = perms.kill;
 
 	if (!(perms.allow & AA_MAY_LINK)) {
 		sa.info = "target restricted";
@@ -438,15 +439,15 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 		     &perms);
 
 	/* AA_MAY_LINK is not considered in the subset test */
-	sa.fs.request = sa.fs.perms.allow & ~AA_MAY_LINK;
-	sa.fs.perms.allow &= perms.allow | AA_MAY_LINK;
+	sa.fs.request = lperms.allow & ~AA_MAY_LINK;
+	lperms.allow &= perms.allow | AA_MAY_LINK;
 
-	sa.fs.request |= AA_AUDIT_FILE_MASK & (sa.fs.perms.allow & ~perms.allow);
-	if (sa.fs.request & ~sa.fs.perms.allow) {
+	sa.fs.request |= AA_AUDIT_FILE_MASK & (lperms.allow & ~perms.allow);
+	if (sa.fs.request & ~lperms.allow) {
 		goto audit;
-	} else if ((sa.fs.perms.allow & MAY_EXEC) &&
-		   !xindex_is_subset(sa.fs.perms.xindex, perms.xindex)) {
-		sa.fs.perms.allow &= ~MAY_EXEC;
+	} else if ((lperms.allow & MAY_EXEC) &&
+		   !xindex_is_subset(lperms.xindex, perms.xindex)) {
+		lperms.allow &= ~MAY_EXEC;
 		sa.fs.request |= MAY_EXEC;
 		sa.info = "link not subset of target";
 		goto audit;
@@ -456,7 +457,7 @@ done_tests:
 	sa.error = 0;
 
 audit:
-	sa.error = aa_audit_file(profile, &sa);
+	sa.error = aa_audit_file(profile, &lperms, &sa);
 	kfree(buffer);
 	kfree(buffer2);
 

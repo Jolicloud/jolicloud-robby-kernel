@@ -344,6 +344,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	struct aa_namespace *ns;
 	char *buffer = NULL;
 	unsigned int state;
+	struct file_perms perms = {};
 	struct path_cond cond = {
 		bprm->file->f_path.dentry->d_inode->i_uid,
 		bprm->file->f_path.dentry->d_inode->i_mode
@@ -353,7 +354,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 		.gfp_mask = GFP_KERNEL,
 	};
 	sa.fs.request = MAY_EXEC;
-	sa.fs.cond = &cond;
+	sa.fs.ouid = cond.uid;
 
 	sa.error = cap_bprm_set_creds(bprm);
 	if (sa.error)
@@ -403,11 +404,11 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 
 	/* find exec permissions for name */
 	state = aa_str_perms(profile->file.dfa, state, sa.fs.path, &cond,
-			     &sa.fs.perms);
+			     &perms);
 	if (cxt->onexec) {
-		struct file_perms perms;
+		struct file_perms cp;
 		sa.info = "change_profile onexec";
-		if (!(sa.fs.perms.allow & AA_MAY_ONEXEC))
+		if (!(perms.allow & AA_MAY_ONEXEC))
 			goto audit;
 
 		/* test if this exec can be paired with change_profile onexec.
@@ -415,20 +416,20 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 		 * exec\0change_profile
 		 */
 		state = aa_dfa_null_transition(profile->file.dfa, state, 0);
-		perms = change_profile_perms(profile, cxt->onexec->ns,
-					     sa.fs.path, AA_MAY_ONEXEC, state);
+		cp = change_profile_perms(profile, cxt->onexec->ns,
+					  sa.fs.path, AA_MAY_ONEXEC, state);
 
-		if (!(perms.allow & AA_MAY_ONEXEC))
+		if (!(cp.allow & AA_MAY_ONEXEC))
 			goto audit;
 		new_profile = aa_get_profile(aa_newest_version(cxt->onexec));
 		goto apply;
 	}
 
-	if (sa.fs.perms.allow & MAY_EXEC) {
+	if (perms.allow & MAY_EXEC) {
 		/* exec permission determine how to transition */
-		new_profile = x_to_profile(profile, sa.fs.path, sa.fs.perms.xindex);
+		new_profile = x_to_profile(profile, sa.fs.path, perms.xindex);
 		if (!new_profile) {
-			if (sa.fs.perms.xindex & AA_X_INHERIT) {
+			if (perms.xindex & AA_X_INHERIT) {
 				/* (p|c|n)ix - don't change profile but do
 				 * use the newest version, which was picked
 				 * up above when getting profile 
@@ -436,7 +437,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 				sa.info = "ix fallback";
 				new_profile = aa_get_profile(profile);
 				goto x_clear;
-			} else if (sa.fs.perms.xindex & AA_X_UNCONFINED) {
+			} else if (perms.xindex & AA_X_UNCONFINED) {
 				new_profile = aa_get_profile(ns->unconfined);
 				sa.info = "ux fallback";
 			} else {
@@ -453,7 +454,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 			sa.info = "could not create null profile";
 		} else
 			sa.fs.target = new_profile->base.hname;
-		sa.fs.perms.xindex |= AA_X_UNSAFE;
+		perms.xindex |= AA_X_UNSAFE;
 	} else
 		/* fail exec */
 		sa.error = -EACCES;
@@ -486,7 +487,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	 * bprm->unsafe is used to cache the AA_X_UNSAFE permission
 	 * to avoid having to recompute in secureexec
 	 */
-	if (!(sa.fs.perms.xindex & AA_X_UNSAFE)) {
+	if (!(perms.xindex & AA_X_UNSAFE)) {
 		AA_DEBUG("scrubbing environment variables for %s profile=%s\n",
 			 sa.fs.path, new_profile->base.hname);
 		bprm->unsafe |= AA_SECURE_X_NEEDED;
@@ -509,7 +510,7 @@ x_clear:
 	cxt->token = 0;
 
 audit:
-	sa.error = aa_audit_file(profile, &sa);
+	sa.error = aa_audit_file(profile, &perms, &sa);
 
 cleanup:
 	aa_put_profile(profile);
@@ -607,6 +608,7 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 	struct aa_profile *profile, *previous_profile, *hat = NULL;
 	char *name = NULL;
 	int i;
+	struct file_perms perms = {};
 	struct aa_audit sa = {
 		.gfp_mask = GFP_KERNEL,
 		.op = OP_CHANGE_HAT,
@@ -683,7 +685,7 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 			sa.error = aa_set_current_hat(hat, token);
 			if (sa.error == -EACCES)
 				/* kill task incase of brute force attacks */
-				sa.fs.perms.kill = AA_MAY_CHANGEHAT;
+				perms.kill = AA_MAY_CHANGEHAT;
 			else if (name && !sa.error)
 				/* reset error for learning of new hats */
 				sa.error = -ENOENT;
@@ -694,14 +696,14 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 		 */
 		sa.fs.target = previous_profile->base.hname;
 		sa.error = aa_restore_previous_profile(token);
-		sa.fs.perms.kill = AA_MAY_CHANGEHAT;
+		perms.kill = AA_MAY_CHANGEHAT;
 	} else
 		/* ignore restores when there is no saved profile */
 		goto out;
 
 audit:
 	if (!permtest)
-		sa.error = aa_audit_file(profile, &sa);
+		sa.error = aa_audit_file(profile, &perms, &sa);
 
 out:
 	aa_put_profile(hat);
@@ -731,6 +733,7 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 	struct aa_task_cxt *cxt;
 	struct aa_profile *profile, *target = NULL;
 	struct aa_namespace *ns = NULL;
+	struct file_perms perms = {};
 	struct aa_audit sa = {
 		.gfp_mask = GFP_KERNEL,
 	};
@@ -773,9 +776,9 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 	}
 	sa.fs.target = hname;
 
-	sa.fs.perms = change_profile_perms(profile, ns, hname, sa.fs.request,
-					   profile->file.start);
-	if (!(sa.fs.perms.allow & sa.fs.request)) {
+	perms = change_profile_perms(profile, ns, hname, sa.fs.request,
+				     profile->file.start);
+	if (!(perms.allow & sa.fs.request)) {
 		sa.error = -EACCES;
 		goto audit;
 	}
@@ -813,7 +816,7 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 
 audit:
 	if (!permtest)
-		sa.error = aa_audit_file(profile, &sa);
+		sa.error = aa_audit_file(profile, &perms, &sa);
 
 	aa_put_namespace(ns);
 	aa_put_profile(target);
