@@ -552,7 +552,7 @@ struct aa_profile *alloc_aa_profile(const char *hname)
  * hold a count on them so that they are automatically released when
  * not in use.
  */
-struct aa_profile *aa_alloc_null_profile(struct aa_profile *parent, int hat)
+struct aa_profile *aa_new_null_profile(struct aa_profile *parent, int hat)
 {
 	struct aa_profile *profile = NULL;
 	char *name;

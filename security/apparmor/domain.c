@@ -391,7 +391,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 			}
 		}
 	} else if (PROFILE_COMPLAIN(profile)) {
-		new_profile = aa_alloc_null_profile(profile, 0);
+		new_profile = aa_new_null_profile(profile, 0);
 		sa.base.error = -EACCES;
 		if (!new_profile) {
 			sa.base.error = -ENOMEM;
@@ -575,7 +575,7 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 			sa.base.info = "hat not found";
 			sa.base.error = -ENOENT;
 			/* released below */
-			hat = aa_alloc_null_profile(profile, 1);
+			hat = aa_new_null_profile(profile, 1);
 			if (!hat) {
 				sa.base.info = "failed null profile create";
 				sa.base.error = -ENOMEM;
@@ -703,7 +703,7 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 		if (permtest || !PROFILE_COMPLAIN(profile))
 			goto audit;
 		/* release below */
-		target = aa_alloc_null_profile(profile, 0);
+		target = aa_new_null_profile(profile, 0);
 		if (!target) {
 			sa.base.info = "failed null profile create";
 			sa.base.error = -ENOMEM;
