@@ -253,8 +253,6 @@ struct aa_profile *aa_find_profile_by_fqname(struct aa_namespace *ns,
 					     const char *name);
 struct aa_profile *aa_match_profile(struct aa_namespace *ns, const char *name);
 struct aa_profile *aa_profile_newest(struct aa_profile *profile);
-struct aa_profile *aa_sys_find_attach(struct aa_policy_common *base,
-				      const char *name);
 void __aa_add_profile(struct aa_policy_common *common,
 		      struct aa_profile *profile);
 void __aa_remove_profile(struct aa_profile *profile,

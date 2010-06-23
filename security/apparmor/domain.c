@@ -137,6 +137,59 @@ static const char *next_name(int xtype, const char *name)
 	return NULL;
 }
 
+
+/* __aa_attach_match_ - find an attachment match
+ * @name - to match against
+ * @head - profile list to walk
+ *
+ * Do a linear search on the profiles in the list.  There is a matching
+ * preference where an exact match is prefered over a name which uses
+ * expressions to match, and matching expressions with the greatest
+ * xmatch_len are prefered.
+ */
+static struct aa_profile *__aa_attach_match(const char *name,
+					    struct list_head *head)
+{
+	int len = 0;
+	struct aa_profile *profile, *candidate = NULL;
+
+	list_for_each_entry(profile, head, base.list) {
+		if (profile->flags & PFLAG_NULL)
+			continue;
+		if (profile->xmatch && profile->xmatch_len > len) {
+			unsigned int state = aa_dfa_match(profile->xmatch,
+							  DFA_START, name);
+			u16 perm = dfa_user_allow(profile->xmatch, state);
+			/* any accepting state means a valid match. */
+			if (perm & MAY_EXEC) {
+				candidate = profile;
+				len = profile->xmatch_len;
+			}
+		} else if (!strcmp(profile->base.name, name))
+			/* exact non-re match, no more searching required */
+			return profile;
+	}
+
+	return candidate;
+}
+
+/**
+ * aa_sys_find_attach - do attachment search for sys unconfined processes
+ * @base: the base to search
+ * name: the executable name to match against
+ */
+static struct aa_profile *aa_sys_find_attach(struct aa_policy_common *base,
+					     const char *name)
+{
+	struct aa_profile *profile;
+
+	read_lock(&base->lock);
+	profile = aa_get_profile(__aa_attach_match(name, &base->profiles));
+	read_unlock(&base->lock);
+
+	return profile;
+}
+
 /*
  * get target profile for xindex
  */
