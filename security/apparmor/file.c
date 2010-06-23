@@ -84,10 +84,7 @@ static void file_audit_cb(struct audit_buffer *ab, struct aa_audit *va)
 	u16 denied = sa->request & ~sa->perms.allowed;
 	uid_t fsuid;
 
-	if (sa->base.task)
-		fsuid = task_uid(sa->base.task);
-	else
-		fsuid = current_fsuid();
+	fsuid = current_fsuid();
 
 	if (sa->request & AA_AUDIT_FILE_MASK) {
 		audit_log_format(ab, " requested_mask=");

@@ -100,7 +100,10 @@ static int aa_audit_base(int type, struct aa_profile *profile,
 	audit_log_format(ab, " pid=%d", task->pid);
 
 	if (profile && !unconfined(profile)) {
-		pid_t pid = task->real_parent->pid;
+		pid_t pid;
+		rcu_read_lock();
+		pid = task->real_parent->pid;
+		rcu_read_unlock();
 		audit_log_format(ab, " parent=%d", pid);
 		audit_log_format(ab, " profile=");
 		audit_log_untrustedstring(ab, profile->base.hname);
