@@ -249,21 +249,6 @@ static inline bool aa_confined(struct aa_profile *profile)
 }
 
 /**
- * aa_filter_profile - filter out profiles that shouldn't be used to mediate
- * @profile: profile to filter
- *
- * does not change refcounts
- *
- * Return: @profile or NULL if it is filtered
- */
-static inline struct aa_profile *aa_filter_profile(struct aa_profile *profile)
-{
-	if (!aa_confined(profile))
-		return NULL;
-	return profile;
-}
-
-/**
  * aa_profile_newest - find the newest version of @profile
  * @profile: the profile to check for newer versions of
  *
@@ -292,7 +277,7 @@ static inline struct aa_profile *aa_profile_newest(struct aa_profile *profile)
  */
 static inline struct aa_profile *aa_confining_profile(struct aa_profile *p)
 {
-	return aa_filter_profile(aa_profile_newest(p));
+	return aa_profile_newest(p);
 }
 
 /**

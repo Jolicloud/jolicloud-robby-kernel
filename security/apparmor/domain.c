@@ -67,7 +67,7 @@ static int aa_may_change_ptraced_domain(struct task_struct *task,
 	rcu_read_unlock();
 
 	/* not ptraced */
-	if (!tracer || !tracerp)
+	if (!tracer || !aa_confined(tracerp))
 		goto out;
 
 	error = aa_may_ptrace(tracer, tracerp, to_profile, PTRACE_MODE_ATTACH);
@@ -95,7 +95,7 @@ static struct file_perms change_profile_perms(struct aa_profile *profile,
 	struct path_cond cond = { };
 	unsigned int state;
 
-	if (!profile) {
+	if (!aa_confined(profile)) {
 		/* unconfined */
 		perms.allowed = AA_MAY_CHANGE_PROFILE;
 		perms.xindex = perms.xdelegate = perms.dindex = 0;
@@ -231,7 +231,7 @@ static struct aa_profile *x_to_profile(struct aa_namespace *ns,
 	u16 xtype = xindex & AA_X_TYPE_MASK;
 	int index = xindex & AA_X_INDEX_MASK;
 
-	if (!profile)
+	if (!aa_confined(profile))
 		profile = ns->unconfined;
 
 	switch (xtype) {
@@ -336,21 +336,20 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	 * can change the namespace
 	 */
 	ns = profile->ns;
-	/* filter after namespace assignment */
-	profile = aa_filter_profile(profile);
 
 	/* buffer freed below, name is pointer inside of buffer */
 	sa.base.error = aa_get_name(&bprm->file->f_path, 0, &buffer,
 				    (char **)&sa.name);
 	if (sa.base.error) {
-		if (!profile || profile->flags & PFLAG_IX_ON_NAME_ERROR)
+		if (profile->flags &
+		    (PFLAG_IX_ON_NAME_ERROR | PFLAG_UNCONFINED))
 			sa.base.error = 0;
 		sa.base.info = "Exec failed name resolution";
 		sa.name = bprm->filename;
 		goto audit;
 	}
 
-	if (!profile) {
+	if (!aa_confined(profile)) {
 		/* unconfined task - attach profile if one matches */
 		new_profile = aa_sys_find_attach(&ns->base, sa.name);
 		if (!new_profile)
@@ -539,7 +538,7 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 	cxt = cred->security;
 	previous_profile = cxt->sys.previous;
 
-	if (!profile) {
+	if (!aa_confined(profile)) {
 		sa.base.info = "unconfined";
 		sa.base.error = -EPERM;
 		goto audit;
@@ -678,7 +677,7 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 
 	/* if the name was not specified, use the name of the current profile */
 	if (!hname) {
-		if (!profile)
+		if (!aa_confined(profile))
 			hname = ns->unconfined->base.hname;
 		else
 			hname = profile->base.hname;

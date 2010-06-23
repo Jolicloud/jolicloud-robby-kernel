@@ -46,6 +46,10 @@ static char *aa_audit_type[] = {
  * system control of whether user audit messages go to system log
  */
 
+/**
+ *
+ * NOTE: profile can be NULL if audit is a none profile based message
+ */
 static int aa_audit_base(int type, struct aa_profile *profile,
 			 struct aa_audit *sa, struct audit_context *audit_cxt,
 			 void (*cb) (struct audit_buffer *, struct aa_audit *))
@@ -85,7 +89,7 @@ static int aa_audit_base(int type, struct aa_profile *profile,
 
 	audit_log_format(ab, " pid=%d", task->pid);
 
-	if (profile) {
+	if (profile && aa_confined(profile)) {
 		pid_t pid = task->real_parent->pid;
 		audit_log_format(ab, " parent=%d", pid);
 		audit_log_format(ab, " profile=");

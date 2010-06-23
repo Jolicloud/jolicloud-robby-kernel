@@ -144,7 +144,6 @@ static inline struct aa_profile *aa_current_profile(void)
 	 */
 	if (unlikely((cxt->sys.profile != profile)))
 		aa_replace_current_profiles(profile);
-	profile = aa_filter_profile(profile);
 
 	return profile;
 }
