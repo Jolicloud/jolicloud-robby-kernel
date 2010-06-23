@@ -50,10 +50,9 @@ static int aa_audit_resource(struct aa_profile *profile,
 int aa_task_setrlimit(struct aa_profile *profile, unsigned int resource,
 		      struct rlimit *new_rlim)
 {
-	struct aa_audit_resource sa;
+	struct aa_audit_resource sa = { };
 	int error = 0;
 
-	memset(&sa, 0, sizeof(sa));
 	sa.base.operation = "setrlimit";
 	sa.base.gfp_mask = GFP_KERNEL;
 	sa.rlimit = resource + 1;

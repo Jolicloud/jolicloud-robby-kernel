@@ -218,13 +218,11 @@ void free_aa_namespace(struct aa_namespace *ns)
 		ns->unconfined->ns = NULL;
 
 	aa_put_profile(ns->unconfined);
-	memset(ns, 0, sizeof(*ns));
-	kfree(ns);
+	kzfree(ns);
 }
 
 struct aa_namespace *__aa_find_namespace(struct list_head *head,
 					 const char *name)
-					 
 {
 	return (struct aa_namespace *) __common_find(head, name);
 }
@@ -540,8 +538,7 @@ void free_aa_profile(struct aa_profile *profile)
 	if (profile->replacedby && !PTR_ERR(profile->replacedby))
 		aa_put_profile(profile->replacedby);
 
-	memset(profile, 0, sizeof(profile));
-	kfree(profile);
+	kzfree(profile);
 }
 
 

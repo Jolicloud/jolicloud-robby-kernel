@@ -103,7 +103,7 @@ int aa_capable(struct task_struct *task, struct aa_profile *profile, int cap,
 	       int audit)
 {
 	int error = aa_profile_capable(profile, cap);
-	struct aa_audit_caps sa;
+	struct aa_audit_caps sa = { };
 
 	if (!audit) {
 		if (PROFILE_COMPLAIN(profile))
@@ -111,7 +111,6 @@ int aa_capable(struct task_struct *task, struct aa_profile *profile, int cap,
 		return error;
 	}
 
-	memset(&sa, 0, sizeof(sa));
 	sa.base.operation = "capable";
 	sa.base.task = task;
 	sa.base.gfp_mask = GFP_ATOMIC;

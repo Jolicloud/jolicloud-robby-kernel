@@ -147,8 +147,7 @@ int aa_audit_syscallreject(struct aa_profile *profile, gfp_t gfp,
 			   const char *msg,
 			   void(*cb)(struct audit_buffer *, void *))
 {
-	struct aa_audit sa;
-	memset(&sa, 0, sizeof(sa));
+	struct aa_audit sa = { };
 	sa.operation = "syscall";
 	sa.info = msg;
 	sa.gfp_mask = gfp;

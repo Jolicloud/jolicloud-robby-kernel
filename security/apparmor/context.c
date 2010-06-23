@@ -30,8 +30,7 @@ void aa_free_task_context(struct aa_task_context *cxt)
 		aa_put_profile(cxt->sys.previous);
 		aa_put_profile(cxt->sys.onexec);
 
-		memset(cxt, 0, sizeof(*cxt));
-		kfree(cxt);
+		kzfree(cxt);
 	}
 }
 

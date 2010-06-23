@@ -257,7 +257,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	struct aa_namespace *ns;
 	char *buffer = NULL;
 	unsigned int state = DFA_START;
-	struct aa_audit_file sa;
+	struct aa_audit_file sa = { };
 	struct path_cond cond = { bprm->file->f_path.dentry->d_inode->i_uid,
 				  bprm->file->f_path.dentry->d_inode->i_mode }; 
 
@@ -268,7 +268,6 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	if (bprm->cred_prepared)
 		return 0;
 
-	memset(&sa, 0, sizeof(sa));
 	sa.base.operation = "exec";
 	sa.base.gfp_mask = GFP_KERNEL;
 	sa.request = MAY_EXEC;
@@ -466,9 +465,8 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 	const struct cred *cred;
 	struct aa_task_context *cxt;
 	struct aa_profile *profile, *previous_profile, *hat = NULL;
-	struct aa_audit_file sa;
+	struct aa_audit_file sa = { };
 
-	memset(&sa, 0, sizeof(sa));
 	sa.base.gfp_mask = GFP_KERNEL;
 	sa.base.operation = "change_hat";
 
@@ -566,12 +564,11 @@ int aa_change_profile(const char *ns_name, const char *fqname, int onexec,
 	struct aa_task_context *cxt;
 	struct aa_profile *profile, *target = NULL;
 	struct aa_namespace *ns = NULL;
-	struct aa_audit_file sa;
+	struct aa_audit_file sa = { };
 
 	if (!fqname && !ns_name)
 		return -EINVAL;
 
-	memset(&sa, 0, sizeof(sa));
 	sa.request = AA_MAY_CHANGE_PROFILE;
 	sa.base.gfp_mask = GFP_KERNEL;
 	if (onexec)

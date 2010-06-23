@@ -425,8 +425,7 @@ static int apparmor_file_mmap(struct file *file, unsigned long reqprot,
 			rc = -EACCES;
 		}
 		if (rc) {
-			struct aa_audit sa;
-			memset(&sa, 0, sizeof(sa));
+			struct aa_audit sa = { };
 			sa.operation = "file_mmap";
 			sa.gfp_mask = GFP_KERNEL;
 			sa.info = "addr < mmap_min_addr";
@@ -521,8 +520,7 @@ static int apparmor_setprocattr(struct task_struct *task, char *name,
 		} else if (strcmp(command, "permipc") == 0) {
 			error = aa_setprocattr_permipc(args);
 		} else {
-			struct aa_audit sa;
-			memset(&sa, 0, sizeof(sa));
+			struct aa_audit sa = { };
 			sa.operation = "setprocattr";
 			sa.gfp_mask = GFP_KERNEL;
 			sa.info = name;

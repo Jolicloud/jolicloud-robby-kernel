@@ -47,8 +47,7 @@ static char *aa_simple_write_to_buffer(const char __user *userbuf,
 	 */
 	cred = aa_current_policy(&profile);
 	if (profile) {
-		struct aa_audit sa;
-		memset(&sa, 0, sizeof(sa));
+		struct aa_audit sa = { };
 		sa.operation = operation;
 		sa.gfp_mask = GFP_KERNEL;
 		sa.error = -EACCES;

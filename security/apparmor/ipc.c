@@ -73,8 +73,7 @@ int aa_ptrace(struct task_struct *tracer, struct task_struct *tracee,
 	int error = 0;
 
 	if (tracer_p) {
-		struct aa_audit_ptrace sa;
-		memset(&sa, 0, sizeof(sa));
+		struct aa_audit_ptrace sa = { };
 		sa.base.operation = "ptrace";
 		sa.base.gfp_mask = GFP_ATOMIC;
 		sa.tracer = tracer->pid;

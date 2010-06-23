@@ -19,8 +19,7 @@
 
 void info_message(const char *str)
 {
-	struct aa_audit sa;
-	memset(&sa, 0, sizeof(sa));
+	struct aa_audit sa = { };
 	sa.gfp_mask = GFP_KERNEL;
 	sa.info = str;
 	printk(KERN_INFO "AppArmor: %s\n", str);

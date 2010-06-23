@@ -200,9 +200,8 @@ struct file_perms aa_str_perms(struct aa_dfa *dfa, unsigned int start,
 int aa_pathstr_perm(struct aa_profile *profile, const char *op,
 		    const char *name, u16 request, struct path_cond *cond)
 {
-	struct aa_audit_file sa;
+	struct aa_audit_file sa = { };
 
-	memset(&sa, 0, sizeof(sa));
 	sa.base.operation = op;
 	sa.base.gfp_mask = GFP_KERNEL;
 	sa.request = request;
@@ -219,10 +218,9 @@ int aa_pathstr_perm(struct aa_profile *profile, const char *op,
 int aa_path_perm(struct aa_profile *profile, const char *operation,
 		 struct path *path, u16 request, struct path_cond *cond)
 {
-	struct aa_audit_file sa;
+	struct aa_audit_file sa = { };
 	char *buffer, *name;
 
-	memset(&sa, 0, sizeof(sa));
 	sa.base.operation = operation;
 	sa.base.gfp_mask = GFP_KERNEL;
 	sa.request = request;
@@ -281,8 +279,7 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 	struct file_perms perms;
 	unsigned int state;
 
-	struct aa_audit_file sa;
-	memset(&sa, 0, sizeof(sa));
+	struct aa_audit_file sa = { };
 	sa.base.operation = "link";
 	sa.base.gfp_mask = GFP_KERNEL;
 	sa.request = AA_MAY_LINK;
@@ -371,9 +368,8 @@ int aa_file_common_perm(struct aa_profile *profile, const char *operation,
 {
 	struct path_cond cond = { .uid = file->f_path.dentry->d_inode->i_uid,
 				 .mode = file->f_path.dentry->d_inode->i_mode };
-	struct aa_audit_file sa;
+	struct aa_audit_file sa = { };
 
-	memset(&sa, 0, sizeof(sa));
 	sa.base.operation = operation;
 	sa.base.gfp_mask = GFP_KERNEL;
 	sa.request = request;
