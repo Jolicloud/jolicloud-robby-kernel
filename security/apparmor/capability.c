@@ -54,7 +54,7 @@ static void audit_cb(struct audit_buffer *ab, struct aa_audit *va)
 }
 
 /**
- * aa_audit_caps - audit a capability
+ * audit_caps - audit a capability
  * @profile: profile confining task
  * @sa: audit structure containing data to audit
  *
@@ -63,7 +63,7 @@ static void audit_cb(struct audit_buffer *ab, struct aa_audit *va)
  *
  * returns: 0 or sa->error on succes,  error code on failure
  */
-static int aa_audit_caps(struct aa_profile *profile, struct aa_audit_caps *sa)
+static int audit_caps(struct aa_profile *profile, struct aa_audit_caps *sa)
 {
 	struct audit_cache *ent;
 	int type = AUDIT_APPARMOR_AUTO;
@@ -102,13 +102,13 @@ static int aa_audit_caps(struct aa_profile *profile, struct aa_audit_caps *sa)
 }
 
 /**
- * aa_profile_capable - test if profile allows use of capability @cap
+ * profile_capable - test if profile allows use of capability @cap
  * @profile: profile being enforced    (NOT NULL, NOT unconfined)
  * @cap: capability to test if allowed
  *
  * Returns: 0 if allowed else -EPERM
  */
-static int aa_profile_capable(struct aa_profile *profile, int cap)
+static int profile_capable(struct aa_profile *profile, int cap)
 {
 	return cap_raised(profile->caps.allow, cap) ? 0 : -EPERM;
 }
@@ -127,7 +127,7 @@ static int aa_profile_capable(struct aa_profile *profile, int cap)
 int aa_capable(struct task_struct *task, struct aa_profile *profile, int cap,
 	       int audit)
 {
-	int error = aa_profile_capable(profile, cap);
+	int error = profile_capable(profile, cap);
 	struct aa_audit_caps sa = {
 		.base.op = OP_CAPABLE,
 		.base.task = task,
@@ -142,5 +142,5 @@ int aa_capable(struct task_struct *task, struct aa_profile *profile, int cap,
 		return error;
 	}
 
-	return aa_audit_caps(profile, &sa);
+	return audit_caps(profile, &sa);
 }

@@ -102,7 +102,7 @@ static char *aa_audit_type[] = {
  */
 
 /**
- * aa_audit_base - core AppArmor function.
+ * audit_base - core AppArmor function.
  * @type: type of audit message (see include/linux/apparmor.h)
  * @profile: active profile for event (MAY BE NULL)
  * @sa: audit structure containing data to audit
@@ -114,9 +114,9 @@ static char *aa_audit_type[] = {
  *
  * Returns: 0 or sa->error on success, else error
  */
-static int aa_audit_base(int type, struct aa_profile *profile,
-			 struct aa_audit *sa, struct audit_context *audit_cxt,
-			 void (*cb) (struct audit_buffer *, struct aa_audit *))
+static int audit_base(int type, struct aa_profile *profile, struct aa_audit *sa,
+		      struct audit_context *audit_cxt,
+		      void (*cb) (struct audit_buffer *, struct aa_audit *))
 {
 	struct audit_buffer *ab = NULL;
 	struct task_struct *task = sa->task ? sa->task : current;
@@ -214,5 +214,5 @@ int aa_audit(int type, struct aa_profile *profile, struct aa_audit *sa,
 	     AUDIT_MODE(profile) == AUDIT_QUIET))
 		return sa->error;
 
-	return aa_audit_base(type, profile, sa, audit_cxt, cb);
+	return audit_base(type, profile, sa, audit_cxt, cb);
 }

@@ -75,9 +75,9 @@ static void kvfree(void *buffer)
  * Returns: kernel buffer containing copy of user buffer data or an
  *          ERR_PTR on failure.
  */
-static char *aa_simple_write_to_buffer(int op, const char __user *userbuf,
-				       size_t alloc_size, size_t copy_size,
-				       loff_t *pos)
+static char *simple_write_to_buffer(int op, const char __user *userbuf,
+				    size_t alloc_size, size_t copy_size,
+				    loff_t *pos)
 {
 	char *data;
 
@@ -103,7 +103,7 @@ static char *aa_simple_write_to_buffer(int op, const char __user *userbuf,
 					NULL));
 		goto out;
 	}
-	/* freed by caller to aa_simple_write_to_buffer */
+	/* freed by caller to simple_write_to_buffer */
 	data = kvmalloc(alloc_size);
 	if (data == NULL) {
 		data = ERR_PTR(-ENOMEM);
@@ -122,13 +122,13 @@ out:
 
 
 /* .load file hook fn to load policy */
-static ssize_t aa_profile_load(struct file *f, const char __user *buf,
-			       size_t size, loff_t *pos)
+static ssize_t profile_load(struct file *f, const char __user *buf, size_t size,
+			    loff_t *pos)
 {
 	char *data;
 	ssize_t error;
 
-	data = aa_simple_write_to_buffer(OP_PROF_LOAD, buf, size, size, pos);
+	data = simple_write_to_buffer(OP_PROF_LOAD, buf, size, size, pos);
 
 	error = PTR_ERR(data);
 	if (!IS_ERR(data)) {
@@ -140,17 +140,17 @@ static ssize_t aa_profile_load(struct file *f, const char __user *buf,
 }
 
 static const struct file_operations aa_fs_profile_load = {
-	.write = aa_profile_load
+	.write = profile_load
 };
 
 /* .replace file hook fn to load and/or replace policy */
-static ssize_t aa_profile_replace(struct file *f, const char __user *buf,
-				  size_t size, loff_t *pos)
+static ssize_t profile_replace(struct file *f, const char __user *buf,
+			       size_t size, loff_t *pos)
 {
 	char *data;
 	ssize_t error;
 
-	data = aa_simple_write_to_buffer(OP_PROF_REPL, buf, size, size, pos);
+	data = simple_write_to_buffer(OP_PROF_REPL, buf, size, size, pos);
 	error = PTR_ERR(data);
 	if (!IS_ERR(data)) {
 		error = aa_interface_replace_profiles(data, size, PROF_REPLACE);
@@ -161,12 +161,12 @@ static ssize_t aa_profile_replace(struct file *f, const char __user *buf,
 }
 
 static const struct file_operations aa_fs_profile_replace = {
-	.write = aa_profile_replace
+	.write = profile_replace
 };
 
 /* .remove file hook fn to remove loaded policy */
-static ssize_t aa_profile_remove(struct file *f, const char __user *buf,
-				 size_t size, loff_t *pos)
+static ssize_t profile_remove(struct file *f, const char __user *buf,
+			      size_t size, loff_t *pos)
 {
 	char *data;
 	ssize_t error;
@@ -175,7 +175,7 @@ static ssize_t aa_profile_remove(struct file *f, const char __user *buf,
 	 * aa_remove_profile needs a null terminated string so 1 extra
 	 * byte is allocated and the copied data is null terminated.
 	 */
-	data = aa_simple_write_to_buffer(OP_PROF_RM, buf, size + 1, size, pos);
+	data = simple_write_to_buffer(OP_PROF_RM, buf, size + 1, size, pos);
 
 	error = PTR_ERR(data);
 	if (!IS_ERR(data)) {
@@ -188,7 +188,7 @@ static ssize_t aa_profile_remove(struct file *f, const char __user *buf,
 }
 
 static const struct file_operations aa_fs_profile_remove = {
-	.write = aa_profile_remove
+	.write = profile_remove
 };
 
 
@@ -240,8 +240,8 @@ static struct aa_namespace *__next_namespace(struct aa_namespace *root,
  *
  * Returns: unrefcounted profile or NULL if no profile
  */
-	static struct aa_profile *__first_profile(struct aa_namespace *root,
-						  struct aa_namespace *ns)
+static struct aa_profile *__first_profile(struct aa_namespace *root,
+					  struct aa_namespace *ns)
 {
 	for ( ; ns; ns = __next_namespace(root, ns)) {
 		if (!list_empty(&ns->base.profiles))
@@ -423,21 +423,21 @@ static const struct seq_operations aa_fs_profiles_op = {
 	.show = seq_show_profile,
 };
 
-static int aa_profiles_open(struct inode *inode, struct file *file)
+static int profiles_open(struct inode *inode, struct file *file)
 {
 	return seq_open(file, &aa_fs_profiles_op);
 }
 
-static int aa_profiles_release(struct inode *inode, struct file *file)
+static int profiles_release(struct inode *inode, struct file *file)
 {
 	return seq_release(inode, file);
 }
 
 static const struct file_operations aa_fs_profiles_fops = {
-	.open = aa_profiles_open,
+	.open = profiles_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
-	.release = aa_profiles_release,
+	.release = profiles_release,
 };
 
 

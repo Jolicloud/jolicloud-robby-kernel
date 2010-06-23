@@ -193,12 +193,12 @@ out:
 }
 
 /**
- * aa_dfa_free - free a dfa allocated by aa_dfa_unpack
+ * dfa_free - free a dfa allocated by aa_dfa_unpack
  * @dfa: the dfa to free  (MAYBE NULL)
  *
  * Requires: reference count to dfa == 0
  */
-static void aa_dfa_free(struct aa_dfa *dfa)
+static void dfa_free(struct aa_dfa *dfa)
 {
 	if (dfa) {
 		int i;
@@ -218,7 +218,7 @@ static void aa_dfa_free(struct aa_dfa *dfa)
 void aa_dfa_free_kref(struct kref *kref)
 {
 	struct aa_dfa *dfa = container_of(kref, struct aa_dfa, count);
-	aa_dfa_free(dfa);
+	dfa_free(dfa);
 }
 
 /**
@@ -310,7 +310,7 @@ struct aa_dfa *aa_dfa_unpack(void *blob, size_t size, int flags)
 
 fail:
 	free_table(table);
-	aa_dfa_free(dfa);
+	dfa_free(dfa);
 	return ERR_PTR(error);
 }
 

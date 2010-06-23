@@ -102,7 +102,7 @@ int aa_audit_iface(struct aa_audit_iface *sa)
 }
 
 /* test if read will be in packed data bounds */
-static bool aa_inbounds(struct aa_ext *e, size_t size)
+static bool inbounds(struct aa_ext *e, size_t size)
 {
 	return (size <= e->end - e->pos);
 }
@@ -118,11 +118,11 @@ static size_t unpack_u16_chunk(struct aa_ext *e, char **chunk)
 {
 	size_t size = 0;
 
-	if (!aa_inbounds(e, sizeof(u16)))
+	if (!inbounds(e, sizeof(u16)))
 		return 0;
 	size = le16_to_cpu(get_unaligned((u16 *) e->pos));
 	e->pos += sizeof(u16);
-	if (!aa_inbounds(e, size))
+	if (!inbounds(e, size))
 		return 0;
 	*chunk = e->pos;
 	e->pos += size;
@@ -132,7 +132,7 @@ static size_t unpack_u16_chunk(struct aa_ext *e, char **chunk)
 /* unpack control byte */
 static bool unpack_X(struct aa_ext *e, enum aa_code code)
 {
-	if (!aa_inbounds(e, 1))
+	if (!inbounds(e, 1))
 		return 0;
 	if (*(u8 *) e->pos != code)
 		return 0;
@@ -188,7 +188,7 @@ fail:
 static bool unpack_u16(struct aa_ext *e, u16 *data, const char *name)
 {
 	if (unpack_nameX(e, AA_U16, name)) {
-		if (!aa_inbounds(e, sizeof(u16)))
+		if (!inbounds(e, sizeof(u16)))
 			return 0;
 		if (data)
 			*data = le16_to_cpu(get_unaligned((u16 *) e->pos));
@@ -201,7 +201,7 @@ static bool unpack_u16(struct aa_ext *e, u16 *data, const char *name)
 static bool unpack_u32(struct aa_ext *e, u32 *data, const char *name)
 {
 	if (unpack_nameX(e, AA_U32, name)) {
-		if (!aa_inbounds(e, sizeof(u32)))
+		if (!inbounds(e, sizeof(u32)))
 			return 0;
 		if (data)
 			*data = le32_to_cpu(get_unaligned((u32 *) e->pos));
@@ -214,7 +214,7 @@ static bool unpack_u32(struct aa_ext *e, u32 *data, const char *name)
 static bool unpack_u64(struct aa_ext *e, u64 *data, const char *name)
 {
 	if (unpack_nameX(e, AA_U64, name)) {
-		if (!aa_inbounds(e, sizeof(u64)))
+		if (!inbounds(e, sizeof(u64)))
 			return 0;
 		if (data)
 			*data = le64_to_cpu(get_unaligned((u64 *) e->pos));
@@ -228,7 +228,7 @@ static size_t unpack_array(struct aa_ext *e, const char *name)
 {
 	if (unpack_nameX(e, AA_ARRAY, name)) {
 		int size;
-		if (!aa_inbounds(e, sizeof(u16)))
+		if (!inbounds(e, sizeof(u16)))
 			return 0;
 		size = (int)le16_to_cpu(get_unaligned((u16 *) e->pos));
 		e->pos += sizeof(u16);
@@ -241,11 +241,11 @@ static size_t unpack_blob(struct aa_ext *e, char **blob, const char *name)
 {
 	if (unpack_nameX(e, AA_BLOB, name)) {
 		u32 size;
-		if (!aa_inbounds(e, sizeof(u32)))
+		if (!inbounds(e, sizeof(u32)))
 			return 0;
 		size = le32_to_cpu(get_unaligned((u32 *) e->pos));
 		e->pos += sizeof(u32);
-		if (aa_inbounds(e, (size_t) size)) {
+		if (inbounds(e, (size_t) size)) {
 			*blob = e->pos;
 			e->pos += size;
 			return size;
@@ -609,13 +609,13 @@ fail:
 }
 
 /**
- * aa_verify_head - unpack serialized stream header
+ * verify_head - unpack serialized stream header
  * @e: serialized data read head
  * sa: audit structure
  *
  * Returns: error or 0 if header is good
  */
-static int aa_verify_header(struct aa_ext *e, struct aa_audit_iface *sa)
+static int verify_header(struct aa_ext *e, struct aa_audit_iface *sa)
 {
 	/* get the interface version */
 	if (!unpack_u32(e, &e->version, "version")) {
@@ -702,7 +702,7 @@ struct aa_profile *aa_unpack(void *udata, size_t size,
 		.pos = udata,
 	};
 
-	error = aa_verify_header(&e, sa);
+	error = verify_header(&e, sa);
 	if (error)
 		return ERR_PTR(error);
 

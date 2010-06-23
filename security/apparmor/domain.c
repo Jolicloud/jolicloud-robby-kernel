@@ -49,7 +49,7 @@ void aa_free_domain_entries(struct aa_domain *domain)
 }
 
 /**
- * aa_may_change_ptraced_domain - check if can change profile on ptraced task
+ * may_change_ptraced_domain - check if can change profile on ptraced task
  * @task: task we want to change profile of   (NOT NULL)
  * @to_profile: profile to change to  (NOT NULL)
  *
@@ -58,8 +58,8 @@ void aa_free_domain_entries(struct aa_domain *domain)
  *
  * Returns: %0 or error if change not allowed
  */
-static int aa_may_change_ptraced_domain(struct task_struct *task,
-					struct aa_profile *to_profile)
+static int may_change_ptraced_domain(struct task_struct *task,
+				     struct aa_profile *to_profile)
 {
 	struct task_struct *tracer;
 	struct cred *cred = NULL;
@@ -130,7 +130,7 @@ static struct file_perms change_profile_perms(struct aa_profile *profile,
 }
 
 /**
- * __aa_attach_match_ - find an attachment match
+ * __attach_match_ - find an attachment match
  * @name - to match against  (NOT NULL)
  * @head - profile list to walk  (NOT NULL)
  *
@@ -143,8 +143,8 @@ static struct file_perms change_profile_perms(struct aa_profile *profile,
  *
  * Returns: profile or NULL if no match found
  */
-static struct aa_profile *__aa_attach_match(const char *name,
-					    struct list_head *head)
+static struct aa_profile *__attach_match(const char *name,
+					 struct list_head *head)
 {
 	int len = 0;
 	struct aa_profile *profile, *candidate = NULL;
@@ -170,21 +170,20 @@ static struct aa_profile *__aa_attach_match(const char *name,
 }
 
 /**
- * aa_find_attach - do attachment search for unconfined processes
+ * find_attach - do attachment search for unconfined processes
  * @ns: the current namespace  (NOT NULL)
  * @list: list to search  (NOT NULL)
  * @name: the executable name to match against  (NOT NULL)
  *
  * Returns: profile or NULL if no match found
  */
-static struct aa_profile *aa_find_attach(struct aa_namespace *ns,
-					 struct list_head *list,
-					 const char *name)
+static struct aa_profile *find_attach(struct aa_namespace *ns,
+				      struct list_head *list, const char *name)
 {
 	struct aa_profile *profile;
 
 	read_lock(&ns->lock);
-	profile = aa_get_profile(__aa_attach_match(name, list));
+	profile = aa_get_profile(__attach_match(name, list));
 	read_unlock(&ns->lock);
 
 	return profile;
@@ -315,13 +314,12 @@ static struct aa_profile *x_to_profile(struct aa_profile *profile,
 	case AA_X_NAME:
 		if (xindex & AA_X_CHILD)
 			/* released by caller */
-			new_profile = aa_find_attach(ns,
-						     &profile->base.profiles,
-						     name);
+			new_profile = find_attach(ns, &profile->base.profiles,
+						  name);
 		else
 			/* released by caller */
-			new_profile = aa_find_attach(ns, &ns->base.profiles,
-						     name);
+			new_profile = find_attach(ns, &ns->base.profiles,
+						  name);
 		break;
 	case AA_X_TABLE:
 		/* released by caller */
@@ -396,8 +394,8 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 			/* change_profile on exec already been granted */
 			new_profile = aa_get_profile(cxt->onexec);
 		else
-			new_profile = aa_find_attach(ns, &ns->base.profiles,
-						     sa.name);
+			new_profile = find_attach(ns, &ns->base.profiles,
+						  sa.name);
 		if (!new_profile)
 			goto cleanup;
 		goto apply;
@@ -469,8 +467,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	}
 
 	if (bprm->unsafe & (LSM_UNSAFE_PTRACE | LSM_UNSAFE_PTRACE_CAP)) {
-		sa.base.error = aa_may_change_ptraced_domain(current,
-							     new_profile);
+		sa.base.error = may_change_ptraced_domain(current, new_profile);
 		if (sa.base.error) {
 			aa_put_profile(new_profile);
 			goto audit;
@@ -680,7 +677,7 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 			}
 		}
 
-		sa.base.error = aa_may_change_ptraced_domain(current, hat);
+		sa.base.error = may_change_ptraced_domain(current, hat);
 		if (sa.base.error) {
 			sa.base.info = "ptraced";
 			sa.base.error = -EPERM;
@@ -808,7 +805,7 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 	}
 
 	/* check if tracing task is allowed to trace target domain */
-	sa.base.error = aa_may_change_ptraced_domain(current, target);
+	sa.base.error = may_change_ptraced_domain(current, target);
 	if (sa.base.error) {
 		sa.base.info = "ptrace prevents transition";
 		goto audit;

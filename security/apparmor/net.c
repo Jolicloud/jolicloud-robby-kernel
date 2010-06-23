@@ -67,13 +67,13 @@ static void audit_cb(struct audit_buffer *ab, struct aa_audit *va)
 }
 
 /**
- * aa_audit_net - audit network access
+ * audit_net - audit network access
  * @profile: profile being enforced  (NOT NULL)
  * @sa: audit data  (NOT NULL)
  *
  * Returns: %0 or sa->error else other errorcode on failure
  */
-static int aa_audit_net(struct aa_profile *profile, struct aa_audit_net *sa)
+static int audit_net(struct aa_profile *profile, struct aa_audit_net *sa)
 {
 	int type = AUDIT_APPARMOR_AUTO;
 
@@ -136,7 +136,7 @@ int aa_net_perm(int op, struct aa_profile *profile, int family, int type,
 
 	sa.base.error = (family_mask & (1 << type)) ? 0 : -EACCES;
 
-	return aa_audit_net(profile, &sa);
+	return audit_net(profile, &sa);
 }
 
 /**

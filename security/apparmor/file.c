@@ -23,13 +23,13 @@ struct file_perms nullperms;
 
 
 /**
- * aa_audit_file_mask - convert mask to owner::other string
+ * audit_file_mask - convert mask to owner::other string
  * @buffer: buffer to write string to (NOT NULL)
  * @mask: permission mask to convert
  * @xindex: xindex
  * @owner: if the mask is for owner or other
  */
-static void aa_audit_file_mask(struct audit_buffer *ab, u16 mask, int xindex)
+static void audit_file_mask(struct audit_buffer *ab, u16 mask, int xindex)
 {
 	char str[10];
 
@@ -74,11 +74,11 @@ static void file_audit_cb(struct audit_buffer *ab, struct aa_audit *va)
 
 	if (sa->request & AA_AUDIT_FILE_MASK) {
 		audit_log_format(ab, " requested_mask=");
-		aa_audit_file_mask(ab, sa->request, AA_X_NONE);
+		audit_file_mask(ab, sa->request, AA_X_NONE);
 	}
 	if (denied & AA_AUDIT_FILE_MASK) {
 		audit_log_format(ab, " denied_mask=");
-		aa_audit_file_mask(ab, denied, sa->perms.xindex);
+		audit_file_mask(ab, denied, sa->perms.xindex);
 	}
 	if (sa->request & AA_AUDIT_FILE_MASK) {
 		audit_log_format(ab, " fsuid=%d", fsuid);
@@ -171,7 +171,7 @@ static u16 map_old_perms(u32 old)
 }
 
 /**
- * aa_compute_perms - convert dfa compressed perms to internal perms
+ * compute_perms - convert dfa compressed perms to internal perms
  * @dfa: dfa to compute perms for   (NOT NULL)
  * @state: state in dfa
  * @cond:  conditions to consider  (NOT NULL)
@@ -181,9 +181,8 @@ static u16 map_old_perms(u32 old)
  *
  * Returns: computed permission set
  */
-static struct file_perms aa_compute_perms(struct aa_dfa *dfa,
-					  unsigned int state,
-					  struct path_cond *cond)
+static struct file_perms compute_perms(struct aa_dfa *dfa, unsigned int state,
+				       struct path_cond *cond)
 {
 	struct file_perms perms;
 
@@ -235,7 +234,7 @@ unsigned int aa_str_perms(struct aa_dfa *dfa, unsigned int start,
 	}
 
 	state = aa_dfa_match(dfa, start, name);
-	*perms = aa_compute_perms(dfa, state, cond);
+	*perms = compute_perms(dfa, state, cond);
 
 	return state;
 }

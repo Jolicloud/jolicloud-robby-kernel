@@ -36,14 +36,14 @@ static void audit_cb(struct audit_buffer *ab, struct aa_audit *va)
 }
 
 /**
- * aa_audit_resource - audit setting resource limit
+ * audit_resource - audit setting resource limit
  * @profile: profile being enforced  (NOT NULL)
  * @sa: audit data  (NOT NULL)
  *
  * Returns: 0 or sa->error else other error code on failure
  */
-static int aa_audit_resource(struct aa_profile *profile,
-			     struct aa_audit_resource *sa)
+static int audit_resource(struct aa_profile *profile,
+			  struct aa_audit_resource *sa)
 {
 	return aa_audit(AUDIT_APPARMOR_AUTO, profile, &sa->base, audit_cb);
 }
@@ -72,7 +72,7 @@ int aa_task_setrlimit(struct aa_profile *profile, unsigned int resource,
 	    new_rlim->rlim_max > profile->rlimits.limits[resource].rlim_max) {
 		sa.base.error = -EACCES;
 
-		error = aa_audit_resource(profile, &sa);
+		error = audit_resource(profile, &sa);
 	}
 
 	return error;
