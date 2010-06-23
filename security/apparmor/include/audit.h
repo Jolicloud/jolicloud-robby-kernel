@@ -20,6 +20,8 @@
 #include <linux/sched.h>
 #include <linux/slab.h>
 
+#include "file.h"
+
 struct aa_profile;
 
 extern const char *audit_mode_names[];
@@ -100,7 +102,26 @@ struct aa_audit {
 	gfp_t gfp_mask;
 	int error;
 	int op;
+	const char *name;
 	const char *info;
+	union {
+		long pos;
+		int cap;
+		int rlimit;
+		struct {
+			pid_t tracer, tracee;
+		} ptrace;
+		struct {
+			const char *path;
+			const char *target;
+			u16 request;
+			struct file_perms perms;
+			struct path_cond *cond;
+		} fs;
+		struct {
+			int family, type, protocol;
+		} net;
+	};
 };
 
 int aa_audit(int type, struct aa_profile *profile, struct aa_audit *sa,

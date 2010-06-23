@@ -34,21 +34,13 @@ struct audit_cache {
 
 static DEFINE_PER_CPU(struct audit_cache, audit_cache);
 
-struct aa_audit_caps {
-	struct aa_audit base;
-
-	int cap;
-};
-
 /**
  * audit_cb - call back for capability components of audit struct
  * @ab - audit buffer   (NOT NULL)
  * @va - audit struct to audit data from  (NOT NULL)
  */
-static void audit_cb(struct audit_buffer *ab, struct aa_audit *va)
+static void audit_cb(struct audit_buffer *ab, struct aa_audit *sa)
 {
-	struct aa_audit_caps *sa = container_of(va, struct aa_audit_caps, base);
-
 	audit_log_format(ab, " capability=");
 	audit_log_untrustedstring(ab, capability_names[sa->cap]);
 }
@@ -63,12 +55,12 @@ static void audit_cb(struct audit_buffer *ab, struct aa_audit *va)
  *
  * returns: 0 or sa->error on succes,  error code on failure
  */
-static int audit_caps(struct aa_profile *profile, struct aa_audit_caps *sa)
+static int audit_caps(struct aa_profile *profile, struct aa_audit *sa)
 {
 	struct audit_cache *ent;
 	int type = AUDIT_APPARMOR_AUTO;
 
-	if (likely(!sa->base.error)) {
+	if (likely(!sa->error)) {
 		/* test if auditing is being forced */
 		if (likely((AUDIT_MODE(profile) != AUDIT_ALL) &&
 			   !cap_raised(profile->caps.audit, sa->cap)))
@@ -81,7 +73,7 @@ static int audit_caps(struct aa_profile *profile, struct aa_audit_caps *sa)
 		   AUDIT_MODE(profile) != AUDIT_NOQUIET &&
 		   AUDIT_MODE(profile) != AUDIT_ALL) {
 		/* quiet auditing */
-		return sa->base.error;
+		return sa->error;
 	}
 
 	/* Do simple duplicate message elimination */
@@ -89,8 +81,8 @@ static int audit_caps(struct aa_profile *profile, struct aa_audit_caps *sa)
 	if (profile == ent->profile && cap_raised(ent->caps, sa->cap)) {
 		put_cpu_var(audit_cache);
 		if (COMPLAIN_MODE(profile))
-			return complain_error(sa->base.error);
-		return sa->base.error;
+			return complain_error(sa->error);
+		return sa->error;
 	} else {
 		aa_put_profile(ent->profile);
 		ent->profile = aa_get_profile(profile);
@@ -98,7 +90,7 @@ static int audit_caps(struct aa_profile *profile, struct aa_audit_caps *sa)
 	}
 	put_cpu_var(audit_cache);
 
-	return aa_audit(type, profile, &sa->base, audit_cb);
+	return aa_audit(type, profile, sa, audit_cb);
 }
 
 /**
@@ -128,13 +120,13 @@ int aa_capable(struct task_struct *task, struct aa_profile *profile, int cap,
 	       int audit)
 {
 	int error = profile_capable(profile, cap);
-	struct aa_audit_caps sa = {
-		.base.op = OP_CAPABLE,
-		.base.task = task,
-		.base.gfp_mask = GFP_ATOMIC,
-		.base.error = error,
-		.cap = cap,
+	struct aa_audit sa = {
+		.op = OP_CAPABLE,
+		.task = task,
+		.gfp_mask = GFP_ATOMIC,
+		.error = error,
 	};
+	sa.cap = cap;
 
 	if (!audit) {
 		if (COMPLAIN_MODE(profile))

@@ -908,18 +908,17 @@ struct aa_profile *aa_lookup_profile(struct aa_namespace *ns, const char *hname)
  *
  * Returns: %1 if replacement allowed else %0
  */
-static bool replacement_allowed(struct aa_profile *profile,
-				struct aa_audit_iface *sa,
+static bool replacement_allowed(struct aa_profile *profile, struct aa_audit *sa,
 				int noreplace)
 {
 	if (profile) {
 		if (profile->flags & PFLAG_IMMUTABLE) {
-			sa->base.info = "cannot replace immutible profile";
-			sa->base.error = -EPERM;
+			sa->info = "cannot replace immutible profile";
+			sa->error = -EPERM;
 			return 0;
 		} else if (noreplace) {
-			sa->base.info = "profile already exists";
-			sa->base.error = -EEXIST;
+			sa->info = "profile already exists";
+			sa->error = -EEXIST;
 			return 0;
 		}
 	}
@@ -934,8 +933,7 @@ static bool replacement_allowed(struct aa_profile *profile,
  *
  * add a profile to a list and do other required basic allocations
  */
-static void __add_new_profile(struct aa_namespace *ns,
-			      struct aa_policy *policy,
+static void __add_new_profile(struct aa_namespace *ns, struct aa_policy *policy,
 			      struct aa_profile *profile)
 {
 	if (policy != &ns->base)
@@ -967,30 +965,30 @@ ssize_t aa_replace_profiles(void *udata, size_t size, bool noreplace)
 	struct aa_namespace *ns = NULL;
 	const char *ns_name;
 	ssize_t error;
-	struct aa_audit_iface sa = {
-		.base.op = OP_PROF_REPL,
-		.base.gfp_mask = GFP_ATOMIC,
+	struct aa_audit sa = {
+		.op = OP_PROF_REPL,
+		.gfp_mask = GFP_ATOMIC,
 	};
 
 	/* check if loading policy is locked out */
 	if (aa_g_lock_policy) {
-		sa.base.info = "policy locked";
-		sa.base.error = -EACCES;
+		sa.info = "policy locked";
+		sa.error = -EACCES;
 		goto fail;
 	}
 
 	/* released below */
 	new_profile = aa_unpack(udata, size, &ns_name, &sa);
 	if (IS_ERR(new_profile)) {
-		sa.base.error = PTR_ERR(new_profile);
+		sa.error = PTR_ERR(new_profile);
 		goto fail;
 	}
 
 	/* released below */
 	ns = aa_prepare_namespace(ns_name);
 	if (!ns) {
-		sa.base.info = "failed to prepare namespace";
-		sa.base.error = -ENOMEM;
+		sa.info = "failed to prepare namespace";
+		sa.error = -ENOMEM;
 		sa.name = ns_name;
 		goto fail;
 	}
@@ -1002,8 +1000,8 @@ ssize_t aa_replace_profiles(void *udata, size_t size, bool noreplace)
 	policy = __lookup_parent(ns, new_profile->base.hname);
 
 	if (!policy) {
-		sa.base.info = "parent does not exist";
-		sa.base.error = -ENOENT;
+		sa.info = "parent does not exist";
+		sa.error = -ENOENT;
 		goto audit;
 	}
 
@@ -1018,9 +1016,9 @@ ssize_t aa_replace_profiles(void *udata, size_t size, bool noreplace)
 		aa_get_profile(rename_profile);
 
 		if (!rename_profile) {
-			sa.base.info = "profile to rename does not exist";
+			sa.info = "profile to rename does not exist";
 			sa.name = new_profile->rename;
-			sa.base.error = -ENOENT;
+			sa.error = -ENOENT;
 			goto audit;
 		}
 	}
@@ -1033,7 +1031,7 @@ ssize_t aa_replace_profiles(void *udata, size_t size, bool noreplace)
 
 audit:
 	if (!old_profile && !rename_profile)
-		sa.base.op = OP_PROF_LOAD;
+		sa.op = OP_PROF_LOAD;
 
 	error = aa_audit_iface(&sa);
 
@@ -1083,23 +1081,23 @@ ssize_t aa_remove_profiles(char *fqname, size_t size)
 {
 	struct aa_namespace *root, *ns = NULL;
 	struct aa_profile *profile = NULL;
-	struct aa_audit_iface sa = {
-		.base.op = OP_PROF_RM,
-		.base.gfp_mask = GFP_ATOMIC,
+	struct aa_audit sa = {
+		.op = OP_PROF_RM,
+		.gfp_mask = GFP_ATOMIC,
 	};
 	const char *name = fqname;
 	int error;
 
 	/* check if loading policy is locked out */
 	if (aa_g_lock_policy) {
-		sa.base.info = "policy locked";
-		sa.base.error = -EACCES;
+		sa.info = "policy locked";
+		sa.error = -EACCES;
 		goto fail;
 	}
 
 	if (*fqname == 0) {
-		sa.base.info = "no profile specified";
-		sa.base.error = -ENOENT;
+		sa.info = "no profile specified";
+		sa.error = -ENOENT;
 		goto fail;
 	}
 
@@ -1113,8 +1111,8 @@ ssize_t aa_remove_profiles(char *fqname, size_t size)
 			/* released below */
 			ns = aa_find_namespace(root, ns_name);
 			if (!ns) {
-				sa.base.info = "namespace does not exist";
-				sa.base.error = -ENOENT;
+				sa.info = "namespace does not exist";
+				sa.error = -ENOENT;
 				goto fail;
 			}
 		}
@@ -1122,7 +1120,6 @@ ssize_t aa_remove_profiles(char *fqname, size_t size)
 		/* released below */
 		ns = aa_get_namespace(root);
 
-	sa.name2 = ns->base.name;
 	write_lock(&ns->lock);
 	if (!name) {
 		/* remove namespace - can only happen if fqname[0] == ':' */
@@ -1132,8 +1129,8 @@ ssize_t aa_remove_profiles(char *fqname, size_t size)
 		profile = aa_get_profile(__lookup_profile(&ns->base, name));
 		if (!profile) {
 			sa.name = name;
-			sa.base.error = -ENOENT;
-			sa.base.info = "profile does not exist";
+			sa.error = -ENOENT;
+			sa.info = "profile does not exist";
 			goto fail_ns_lock;
 		}
 		sa.name = profile->base.hname;

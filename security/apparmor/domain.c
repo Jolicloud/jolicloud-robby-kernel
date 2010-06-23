@@ -348,16 +348,16 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 		bprm->file->f_path.dentry->d_inode->i_uid,
 		bprm->file->f_path.dentry->d_inode->i_mode
 	};
-	struct aa_audit_file sa = {
-		.base.op = OP_EXEC,
-		.base.gfp_mask = GFP_KERNEL,
-		.request = MAY_EXEC,
-		.cond = &cond,
+	struct aa_audit sa = {
+		.op = OP_EXEC,
+		.gfp_mask = GFP_KERNEL,
 	};
+	sa.fs.request = MAY_EXEC;
+	sa.fs.cond = &cond;
 
-	sa.base.error = cap_bprm_set_creds(bprm);
-	if (sa.base.error)
-		return sa.base.error;
+	sa.error = cap_bprm_set_creds(bprm);
+	if (sa.error)
+		return sa.error;
 
 	if (bprm->cred_prepared)
 		return 0;
@@ -374,14 +374,14 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	state = profile->file.start;
 
 	/* buffer freed below, name is pointer into buffer */
-	sa.base.error = aa_get_name(&bprm->file->f_path, profile->path_flags,
-				    &buffer, &sa.path);
-	if (sa.base.error) {
+	sa.error = aa_get_name(&bprm->file->f_path, profile->path_flags,
+			       &buffer, &sa.fs.path);
+	if (sa.error) {
 		if (profile->flags &
 		    (PFLAG_IX_ON_NAME_ERROR | PFLAG_UNCONFINED))
-			sa.base.error = 0;
-		sa.base.info = "Exec failed name resolution";
-		sa.path = bprm->filename;
+			sa.error = 0;
+		sa.info = "Exec failed name resolution";
+		sa.fs.path = bprm->filename;
 		goto audit;
 	}
 
@@ -395,19 +395,19 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 			new_profile = aa_get_profile(cxt->onexec);
 		else
 			new_profile = find_attach(ns, &ns->base.profiles,
-						  sa.path);
+						  sa.fs.path);
 		if (!new_profile)
 			goto cleanup;
 		goto apply;
 	}
 
 	/* find exec permissions for name */
-	state = aa_str_perms(profile->file.dfa, state, sa.path, &cond,
-			     &sa.perms);
+	state = aa_str_perms(profile->file.dfa, state, sa.fs.path, &cond,
+			     &sa.fs.perms);
 	if (cxt->onexec) {
 		struct file_perms perms;
-		sa.base.info = "change_profile onexec";
-		if (!(sa.perms.allow & AA_MAY_ONEXEC))
+		sa.info = "change_profile onexec";
+		if (!(sa.fs.perms.allow & AA_MAY_ONEXEC))
 			goto audit;
 
 		/* test if this exec can be paired with change_profile onexec.
@@ -416,7 +416,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 		 */
 		state = aa_dfa_null_transition(profile->file.dfa, state, 0);
 		perms = change_profile_perms(profile, cxt->onexec->ns,
-					     sa.path, AA_MAY_ONEXEC, state);
+					     sa.fs.path, AA_MAY_ONEXEC, state);
 
 		if (!(perms.allow & AA_MAY_ONEXEC))
 			goto audit;
@@ -424,39 +424,39 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 		goto apply;
 	}
 
-	if (sa.perms.allow & MAY_EXEC) {
+	if (sa.fs.perms.allow & MAY_EXEC) {
 		/* exec permission determine how to transition */
-		new_profile = x_to_profile(profile, sa.path, sa.perms.xindex);
+		new_profile = x_to_profile(profile, sa.fs.path, sa.fs.perms.xindex);
 		if (!new_profile) {
-			if (sa.perms.xindex & AA_X_INHERIT) {
+			if (sa.fs.perms.xindex & AA_X_INHERIT) {
 				/* (p|c|n)ix - don't change profile but do
 				 * use the newest version, which was picked
 				 * up above when getting profile 
 				 */
-				sa.base.info = "ix fallback";
+				sa.info = "ix fallback";
 				new_profile = aa_get_profile(profile);
 				goto x_clear;
-			} else if (sa.perms.xindex & AA_X_UNCONFINED) {
+			} else if (sa.fs.perms.xindex & AA_X_UNCONFINED) {
 				new_profile = aa_get_profile(ns->unconfined);
-				sa.base.info = "ux fallback";
+				sa.info = "ux fallback";
 			} else {
-				sa.base.error = -ENOENT;
-				sa.base.info = "profile not found";
+				sa.error = -ENOENT;
+				sa.info = "profile not found";
 			}
 		}
 	} else if (COMPLAIN_MODE(profile)) {
 		/* no exec permission - are we in learning mode */
 		new_profile = aa_new_null_profile(profile, 0);
-		sa.base.error = -EACCES;
+		sa.error = -EACCES;
 		if (!new_profile) {
-			sa.base.error = -ENOMEM;
-			sa.base.info = "could not create null profile";
+			sa.error = -ENOMEM;
+			sa.info = "could not create null profile";
 		} else
-			sa.target = new_profile->base.hname;
-		sa.perms.xindex |= AA_X_UNSAFE;
+			sa.fs.target = new_profile->base.hname;
+		sa.fs.perms.xindex |= AA_X_UNSAFE;
 	} else
 		/* fail exec */
-		sa.base.error = -EACCES;
+		sa.error = -EACCES;
 
 	if (!new_profile)
 		goto audit;
@@ -467,8 +467,8 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	}
 
 	if (bprm->unsafe & (LSM_UNSAFE_PTRACE | LSM_UNSAFE_PTRACE_CAP)) {
-		sa.base.error = may_change_ptraced_domain(current, new_profile);
-		if (sa.base.error) {
+		sa.error = may_change_ptraced_domain(current, new_profile);
+		if (sa.error) {
 			aa_put_profile(new_profile);
 			goto audit;
 		}
@@ -486,13 +486,13 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	 * bprm->unsafe is used to cache the AA_X_UNSAFE permission
 	 * to avoid having to recompute in secureexec
 	 */
-	if (!(sa.perms.xindex & AA_X_UNSAFE)) {
+	if (!(sa.fs.perms.xindex & AA_X_UNSAFE)) {
 		AA_DEBUG("scrubbing environment variables for %s profile=%s\n",
-			 sa.path, new_profile->base.hname);
+			 sa.fs.path, new_profile->base.hname);
 		bprm->unsafe |= AA_SECURE_X_NEEDED;
 	}
 apply:
-	sa.target = new_profile->base.hname;
+	sa.fs.target = new_profile->base.hname;
 	/* when transitioning profiles clear unsafe personality bits */
 	bprm->per_clear |= PER_CLEAR_ON_SETID;
 
@@ -509,13 +509,13 @@ x_clear:
 	cxt->token = 0;
 
 audit:
-	sa.base.error = aa_audit_file(profile, &sa);
+	sa.error = aa_audit_file(profile, &sa);
 
 cleanup:
 	aa_put_profile(profile);
 	kfree(buffer);
 
-	return sa.base.error;
+	return sa.error;
 }
 
 /**
@@ -605,13 +605,13 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 	const struct cred *cred;
 	struct aa_task_cxt *cxt;
 	struct aa_profile *profile, *previous_profile, *hat = NULL;
-	struct aa_audit_file sa = {
-		.base.gfp_mask = GFP_KERNEL,
-		.base.op = OP_CHANGE_HAT,
-		.request = AA_MAY_CHANGEHAT,
-	};
 	char *name = NULL;
 	int i;
+	struct aa_audit sa = {
+		.gfp_mask = GFP_KERNEL,
+		.op = OP_CHANGE_HAT,
+	};
+	sa.fs.request = AA_MAY_CHANGEHAT;
 
 	/* released below */
 	cred = get_current_cred();
@@ -620,8 +620,8 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 	previous_profile = cxt->previous;
 
 	if (unconfined(profile)) {
-		sa.base.info = "unconfined";
-		sa.base.error = -EPERM;
+		sa.info = "unconfined";
+		sa.error = -EPERM;
 		goto audit;
 	}
 
@@ -636,17 +636,17 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 			hat = aa_find_child(root, hats[i]);
 		if (!hat) {
 			if (!COMPLAIN_MODE(root) || permtest) {
-				sa.base.info = "hat not found";
+				sa.info = "hat not found";
 				if (list_empty(&root->base.profiles))
-					sa.base.error = -ECHILD;
+					sa.error = -ECHILD;
 				else
-					sa.base.error = -ENOENT;
+					sa.error = -ENOENT;
 				goto out;
 			}
 
 			/*
 			 * In complain mode and failed to match any hats.
-			 * Audit the failure based off of the first hat
+			 * Audit the failure is based off of the first hat
 			 * supplied.  This is done due how userspace
 			 * interacts with change_hat.
 			 *
@@ -655,60 +655,60 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 
 			/* freed below */
 			name = new_compound_name(root->base.hname, hats[0]);
-			sa.target = name;
+			sa.fs.target = name;
 			/* released below */
 			hat = aa_new_null_profile(profile, 1);
 			if (!hat) {
-				sa.base.info = "failed null profile create";
-				sa.base.error = -ENOMEM;
+				sa.info = "failed null profile create";
+				sa.error = -ENOMEM;
 				goto audit;
 			}
 		} else {
-			sa.target = hat->base.hname;
+			sa.fs.target = hat->base.hname;
 			if (!PROFILE_IS_HAT(hat)) {
-				sa.base.info = "target not hat";
-				sa.base.error = -EPERM;
+				sa.info = "target not hat";
+				sa.error = -EPERM;
 				goto audit;
 			}
 		}
 
-		sa.base.error = may_change_ptraced_domain(current, hat);
-		if (sa.base.error) {
-			sa.base.info = "ptraced";
-			sa.base.error = -EPERM;
+		sa.error = may_change_ptraced_domain(current, hat);
+		if (sa.error) {
+			sa.info = "ptraced";
+			sa.error = -EPERM;
 			goto audit;
 		}
 
 		if (!permtest) {
-			sa.base.error = aa_set_current_hat(hat, token);
-			if (sa.base.error == -EACCES)
+			sa.error = aa_set_current_hat(hat, token);
+			if (sa.error == -EACCES)
 				/* kill task incase of brute force attacks */
-				sa.perms.kill = AA_MAY_CHANGEHAT;
-			else if (name && !sa.base.error)
+				sa.fs.perms.kill = AA_MAY_CHANGEHAT;
+			else if (name && !sa.error)
 				/* reset error for learning of new hats */
-				sa.base.error = -ENOENT;
+				sa.error = -ENOENT;
 		}
 	} else if (previous_profile) {
 		/* Return to saved profile.  Kill task if restore fails
 		 * to avoid brute force attacks
 		 */
-		sa.target = previous_profile->base.hname;
-		sa.base.error = aa_restore_previous_profile(token);
-		sa.perms.kill = AA_MAY_CHANGEHAT;
+		sa.fs.target = previous_profile->base.hname;
+		sa.error = aa_restore_previous_profile(token);
+		sa.fs.perms.kill = AA_MAY_CHANGEHAT;
 	} else
 		/* ignore restores when there is no saved profile */
 		goto out;
 
 audit:
 	if (!permtest)
-		sa.base.error = aa_audit_file(profile, &sa);
+		sa.error = aa_audit_file(profile, &sa);
 
 out:
 	aa_put_profile(hat);
 	kfree(name);
 	put_cred(cred);
 
-	return sa.base.error;
+	return sa.error;
 }
 
 /**
@@ -731,19 +731,19 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 	struct aa_task_cxt *cxt;
 	struct aa_profile *profile, *target = NULL;
 	struct aa_namespace *ns = NULL;
-	struct aa_audit_file sa = {
-		.base.gfp_mask = GFP_KERNEL,
+	struct aa_audit sa = {
+		.gfp_mask = GFP_KERNEL,
 	};
 
 	if (!hname && !ns_name)
 		return -EINVAL;
 
 	if (onexec) {
-		sa.request = AA_MAY_ONEXEC;
-		sa.base.op = OP_CHANGE_ONEXEC;
+		sa.fs.request = AA_MAY_ONEXEC;
+		sa.op = OP_CHANGE_ONEXEC;
 	} else {
-		sa.request = AA_MAY_CHANGE_PROFILE;
-		sa.base.op = OP_CHANGE_PROFILE;
+		sa.fs.request = AA_MAY_CHANGE_PROFILE;
+		sa.op = OP_CHANGE_PROFILE;
 	}
 
 	cred = get_current_cred();
@@ -756,8 +756,8 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 		if (!ns) {
 			/* we don't create new namespace in complain mode */
 			sa.name = ns_name;
-			sa.base.info = "namespace not found";
-			sa.base.error = -ENOENT;
+			sa.info = "namespace not found";
+			sa.error = -ENOENT;
 			goto audit;
 		}
 	} else
@@ -771,35 +771,35 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 		else
 			hname = profile->base.hname;
 	}
-	sa.target = hname;
+	sa.fs.target = hname;
 
-	sa.perms = change_profile_perms(profile, ns, hname, sa.request,
-					profile->file.start);
-	if (!(sa.perms.allow & sa.request)) {
-		sa.base.error = -EACCES;
+	sa.fs.perms = change_profile_perms(profile, ns, hname, sa.fs.request,
+					   profile->file.start);
+	if (!(sa.fs.perms.allow & sa.fs.request)) {
+		sa.error = -EACCES;
 		goto audit;
 	}
 
 	/* released below */
 	target = aa_lookup_profile(ns, hname);
 	if (!target) {
-		sa.base.info = "profile not found";
-		sa.base.error = -ENOENT;
+		sa.info = "profile not found";
+		sa.error = -ENOENT;
 		if (permtest || !COMPLAIN_MODE(profile))
 			goto audit;
 		/* release below */
 		target = aa_new_null_profile(profile, 0);
 		if (!target) {
-			sa.base.info = "failed null profile create";
-			sa.base.error = -ENOMEM;
+			sa.info = "failed null profile create";
+			sa.error = -ENOMEM;
 			goto audit;
 		}
 	}
 
 	/* check if tracing task is allowed to trace target domain */
-	sa.base.error = may_change_ptraced_domain(current, target);
-	if (sa.base.error) {
-		sa.base.info = "ptrace prevents transition";
+	sa.error = may_change_ptraced_domain(current, target);
+	if (sa.error) {
+		sa.info = "ptrace prevents transition";
 		goto audit;
 	}
 
@@ -807,17 +807,17 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 		goto audit;
 
 	if (onexec)
-		sa.base.error = aa_set_current_onexec(target);
+		sa.error = aa_set_current_onexec(target);
 	else
-		sa.base.error = aa_replace_current_profile(target);
+		sa.error = aa_replace_current_profile(target);
 
 audit:
 	if (!permtest)
-		sa.base.error = aa_audit_file(profile, &sa);
+		sa.error = aa_audit_file(profile, &sa);
 
 	aa_put_namespace(ns);
 	aa_put_profile(target);
 	put_cred(cred);
 
-	return sa.base.error;
+	return sa.error;
 }

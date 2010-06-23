@@ -20,18 +20,11 @@
 #include "include/context.h"
 #include "include/policy.h"
 
-struct aa_audit_ptrace {
-	struct aa_audit base;
-
-	pid_t tracer, tracee;
-};
-
 /* call back to audit ptrace fields */
-static void audit_cb(struct audit_buffer *ab, struct aa_audit *va)
+static void audit_cb(struct audit_buffer *ab, struct aa_audit *sa)
 {
-	struct aa_audit_ptrace *sa = container_of(va, struct aa_audit_ptrace,
-						  base);
-	audit_log_format(ab, " tracer=%d tracee=%d", sa->tracer, sa->tracee);
+	audit_log_format(ab, " tracer=%d tracee=%d", sa->ptrace.tracer,
+			 sa->ptrace.tracee);
 }
 
 /**
@@ -41,10 +34,9 @@ static void audit_cb(struct audit_buffer *ab, struct aa_audit *va)
  *
  * Returns: %0 or error code
  */
-static int aa_audit_ptrace(struct aa_profile *profile,
-			   struct aa_audit_ptrace *sa)
+static int aa_audit_ptrace(struct aa_profile *profile, struct aa_audit *sa)
 {
-	return aa_audit(AUDIT_APPARMOR_AUTO, profile, &sa->base, audit_cb);
+	return aa_audit(AUDIT_APPARMOR_AUTO, profile, sa, audit_cb);
 }
 
 /**
@@ -84,7 +76,6 @@ int aa_ptrace(struct task_struct *tracer, struct task_struct *tracee,
 	/*
 	 * tracer can ptrace tracee when
 	 * - tracer is unconfined ||
-	 * - tracer & tracee are in the same namespace &&
 	 *   - tracer is in complain mode
 	 *   - tracer has rules allowing it to trace tracee currently this is:
 	 *       - confined by the same profile ||
@@ -98,25 +89,23 @@ int aa_ptrace(struct task_struct *tracer, struct task_struct *tracee,
 	tracer_p = aa_cred_profile(cred);
 
 	if (!unconfined(tracer_p)) {
-		struct aa_audit_ptrace sa = {
-			.base.op = OP_PTRACE,
-			.base.gfp_mask = GFP_ATOMIC,
-			.tracer = tracer->pid,
-			.tracee = tracee->pid,
-		};
-		/* FIXME: different namespace restriction can be lifted
-		 * if, namespace are matched to AppArmor namespaces
-		 */
-		struct aa_profile *tracee_p;
 		/* lcred released below */
 		struct cred *lcred = get_task_cred(tracee);
+		struct aa_profile *tracee_p;
+		struct aa_audit sa = {
+			.op = OP_PTRACE,
+			.gfp_mask = GFP_ATOMIC,
+		};
+		sa.ptrace.tracer = tracer->pid;
+		sa.ptrace.tracee = tracee->pid;
+
 		tracee_p = aa_cred_profile(lcred);
 
-		sa.base.error = aa_may_ptrace(tracer, tracer_p, tracee_p, mode);
-		sa.base.error = aa_audit_ptrace(tracer_p, &sa);
+		sa.error = aa_may_ptrace(tracer, tracer_p, tracee_p, mode);
+		sa.error = aa_audit_ptrace(tracer_p, &sa);
 
 		put_cred(lcred);
-		error = sa.base.error;
+		error = sa.error;
 	}
 	put_cred(cred);
 

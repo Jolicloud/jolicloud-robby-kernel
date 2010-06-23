@@ -17,11 +17,11 @@
 
 #include <linux/path.h>
 
-#include "audit.h"
 #include "domain.h"
 #include "match.h"
 
 struct aa_profile;
+struct aa_audit;
 
 /*
  * We use MAY_EXEC, MAY_WRITE, MAY_READ, MAY_APPEND and the following flags
@@ -150,18 +150,7 @@ static inline u16 dfa_map_xindex(u16 mask)
 #define dfa_other_xindex(dfa, state) \
 	dfa_map_xindex((ACCEPT_TABLE(dfa)[state] >> 14) & 0x3fff)
 
-struct aa_audit_file {
-	struct aa_audit base;
-
-	const char *name;
-	const char *path;
-	const char *target;
-	struct file_perms perms;
-	u16 request;
-	struct path_cond *cond;
-};
-
-int aa_audit_file(struct aa_profile *profile, struct aa_audit_file *sa);
+int aa_audit_file(struct aa_profile *profile, struct aa_audit *sa);
 
 /**
  * struct aa_file_rules - components used for file rule permissions

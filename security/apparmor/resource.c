@@ -18,19 +18,9 @@
 #include "include/resource.h"
 #include "include/policy.h"
 
-struct aa_audit_resource {
-	struct aa_audit base;
-
-	int rlimit;
-};
-
 /* audit callback for resource specific fields */
-static void audit_cb(struct audit_buffer *ab, struct aa_audit *va)
+static void audit_cb(struct audit_buffer *ab, struct aa_audit *sa)
 {
-	struct aa_audit_resource *sa = container_of(va,
-						    struct aa_audit_resource,
-						    base);
-
 	if (sa->rlimit)
 		audit_log_format(ab, " rlimit=%d", sa->rlimit - 1);
 }
@@ -42,10 +32,9 @@ static void audit_cb(struct audit_buffer *ab, struct aa_audit *va)
  *
  * Returns: 0 or sa->error else other error code on failure
  */
-static int audit_resource(struct aa_profile *profile,
-			  struct aa_audit_resource *sa)
+static int audit_resource(struct aa_profile *profile, struct aa_audit *sa)
 {
-	return aa_audit(AUDIT_APPARMOR_AUTO, profile, &sa->base, audit_cb);
+	return aa_audit(AUDIT_APPARMOR_AUTO, profile, sa, audit_cb);
 }
 
 /**
@@ -61,16 +50,16 @@ static int audit_resource(struct aa_profile *profile,
 int aa_task_setrlimit(struct aa_profile *profile, unsigned int resource,
 		      struct rlimit *new_rlim)
 {
-	struct aa_audit_resource sa = {
-		.base.op = OP_SETRLIMIT,
-		.base.gfp_mask = GFP_KERNEL,
-		.rlimit = resource + 1,
-	};
 	int error = 0;
+	struct aa_audit sa = {
+		.op = OP_SETRLIMIT,
+		.gfp_mask = GFP_KERNEL,
+	};
+	sa.rlimit = resource + 1;
 
 	if (profile->rlimits.mask & (1 << resource) &&
 	    new_rlim->rlim_max > profile->rlimits.limits[resource].rlim_max) {
-		sa.base.error = -EACCES;
+		sa.error = -EACCES;
 
 		error = audit_resource(profile, &sa);
 	}

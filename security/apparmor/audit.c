@@ -168,6 +168,11 @@ static int audit_base(int type, struct aa_profile *profile, struct aa_audit *sa,
 		audit_log_untrustedstring(ab, profile->base.hname);
 	}
 
+	if (sa->name) {
+		audit_log_format(ab, " name=");
+		audit_log_untrustedstring(ab, sa->name);
+	}
+
 	if (cb)
 		cb(ab, sa);
 
