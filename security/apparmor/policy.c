@@ -94,6 +94,18 @@ const char *profile_mode_names[] = {
 	"kill",
 };
 
+/* fqname in this context does not have a namespace name prepended */
+static const char *fqname_subname(const char *name)
+{
+	char *split;
+	/* check for namespace which begins with a : and ends with : or \0 */
+	name = strstrip((char *)name);
+	for (split = strstr(name, "//"); split; split = strstr(name, "//"))
+		name = split + 2;
+
+	return name;
+}
+
 static bool common_init(struct aa_policy_common *common, const char *name)
 {
 	/* freed by common_free */
@@ -486,18 +498,6 @@ void aa_profile_ns_list_release(void)
 		write_unlock(&ns->base.lock);
 	}
 	write_unlock(&ns_list_lock);
-}
-
-/* fqname in this context does not have a namespace name prepended */
-static const char *fqname_subname(const char *name)
-{
-	char *split;
-	/* check for namespace which begins with a : and ends with : or \0 */
-	name = strstrip((char *)name);
-	for (split = strstr(name, "//"); split; split = strstr(name, "//"))
-		name = split + 2;
-
-	return name;
 }
 
 /**
