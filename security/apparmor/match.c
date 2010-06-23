@@ -277,40 +277,13 @@ unsigned int aa_dfa_match_len(struct aa_dfa *dfa, unsigned int start,
 	if (dfa->tables[YYTD_ID_EC]) {
 		/* Equivalence class table defined */
 		u8 *equiv = EQUIV_TABLE(dfa);
-		if (dfa->flags & YYTH_DEF_RECURSE) {
-			/* default table is recursive on check */
-			for (; len; len--) {
-				int c = equiv[(u8) *str++];
-				pos = base[state] + c;
-				/* recurse through state checks */
-				while (check[pos] != state) {
-					state = def[state];
-					pos = base[state] + c;
-				}
-				state = next[pos];
-			}
-		} else {
-			/* default is direct to next state */
-			for (; len; len--) {
-				pos = base[state] + equiv[(u8) *str++];
-				if (check[pos] == state)
-					state = next[pos];
-				else
-					state = def[state];
-			}
-		}
-	} else if (dfa->flags & YYTH_DEF_RECURSE) {
-		/* No equivalence class, characters direct map */
-		/* default table is recursive on check */
+		/* default is direct to next state */
 		for (; len; len--) {
-			int c = (u8) *str++;
-			pos = base[state] + c;
-			/* recurse through state checks until check matches */
-			while (check[pos] != state) {
+			pos = base[state] + equiv[(u8) *str++];
+			if (check[pos] == state)
+				state = next[pos];
+			else
 				state = def[state];
-				pos = base[state] + c;
-			}
-			state = next[pos];
 		}
 	} else {
 		/* default is direct to next state */
