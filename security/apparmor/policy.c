@@ -36,8 +36,7 @@
  *	inherit - special name to indicate profile inheritance
  *	null-XXXX-YYYY - special automically generated learning profiles
  *
- * Namespace names may not start with / or @ and may not contain \0 or //
- * it is recommend that they do not contain any '/' characters
+ * Namespace names may not start with / or @ and may not contain \0 or /
  * Reserved namespace namespace
  *	default - the default namespace setup by AppArmor
  *	user-XXXX - user defined profiles
@@ -67,9 +66,6 @@ const char *profile_mode_names[] = {
 	"complain",
 	"kill",
 };
-
-#define AA_SYS_SID 0
-#define AA_USR_SID 1
 
 
 static int common_init(struct aa_policy_common *common, const char *name)

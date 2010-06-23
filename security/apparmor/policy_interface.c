@@ -28,11 +28,6 @@
 #include "include/policy_interface.h"
 #include "include/sid.h"
 
-/* FIXME: convert profiles to internal hieracy, accounting
- * FIXME: have replacement routines set replaced_by profile instead of error
- * FIXME: name mapping to hierarchy
- */
-
 /*
  * The AppArmor interface treats data as a type byte followed by the
  * actual data.  The interface has the notion of a a named entry
@@ -380,9 +375,11 @@ static int aa_unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
 		    char *tmp;
 			if (!aa_is_dynstring(e, &tmp, NULL))
 				goto fail;
-			/* note: strings beginning with a : have an embedded
-			   \0 seperating the profile ns name from the profile
-			   name */
+			/*
+			 * note: strings beginning with a : have an embedded
+			 * \0 seperating the profile ns name from the profile
+			 * name
+			 */
 			profile->file.trans.table[i] = tmp;
 		}
 		if (!aa_is_nameX(e, AA_ARRAYEND, NULL))
@@ -539,7 +536,8 @@ static struct aa_profile *aa_unpack_profile(struct aa_ext *e,
 		}
 		if (!aa_is_nameX(e, AA_ARRAYEND, NULL))
 			goto fail;
-		/* allow unix domain and netlink sockets they are handled
+		/*
+		 * allow unix domain and netlink sockets they are handled
 		 * by IPC
 		 */
 	}
@@ -748,16 +746,10 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size)
 		sa.base.error = -EPERM;
 		goto fail2;
 	} else  if (old_profile) {
-	  //		__aa_profile_list_release(&old_profile->base.profiles);
-		/* TODO: remove for new interface
-		 * move children profiles over to the new profile so
-		 * that replacement behaves correctly
-		 */
-	  //		list_replace_init(&old_profile->base.profiles,
-	  //				  &new_profile->base.profiles);
-	  struct aa_profile *profile, *tmp;
-	  list_for_each_entry_safe(profile, tmp, &old_profile->base.profiles,
-				    base.list) {
+		struct aa_profile *profile, *tmp;
+		list_for_each_entry_safe(profile, tmp,
+					 &old_profile->base.profiles,
+					 base.list) {
 			aa_put_profile(profile->parent);
 			list_del(&profile->base.list);
 			profile->parent = aa_get_profile(new_profile);
