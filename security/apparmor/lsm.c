@@ -228,6 +228,26 @@ static int common_perm_dir_dentry(const char *op, struct path *dir,
 }
 
 /**
+ * common_perm_mnt_dentry - common permission wrapper when mnt, dentry
+ * @op: operation name  (NOT NULL)
+ * @mnt: mount point of dentry
+ * @dentry: dentry to check  (NOT NULL)
+ * @mask: requested permissions mask
+ *
+ * Returns: %0 else error code if error or permission denied
+ */
+static int common_perm_mnt_dentry(const char *op, struct vfsmount *mnt,
+				  struct dentry *dentry, u16 mask)
+{
+	struct path path = { mnt, dentry };
+	struct path_cond cond = { dentry->d_inode->i_uid,
+				  dentry->d_inode->i_mode
+	};
+
+	return common_perm(op, &path, mask, &cond);
+}
+
+/**
  * common_perm_rm - common permission wrapper for operations doing rm
  * @op: operation name  (NOT NULL)
  * @dir: directory that the dentry is in  (NOT NULL)
@@ -363,15 +383,10 @@ static int apparmor_path_rename(struct path *old_dir, struct dentry *old_dentry,
 static int apparmor_path_chmod(struct dentry *dentry, struct vfsmount *mnt,
 			       mode_t mode)
 {
-	struct path path = { mnt, dentry };
-	struct path_cond cond = { dentry->d_inode->i_uid,
-				  dentry->d_inode->i_mode
-	};
-
 	if (!mediated_filesystem(dentry->d_inode))
 		return 0;
 
-	return common_perm("chmod", &path, AA_MAY_CHMOD, &cond);
+	return common_perm_mnt_dentry("chmod", mnt, dentry, AA_MAY_CHMOD);
 }
 
 static int apparmor_path_chown(struct path *path, uid_t uid, gid_t gid)
