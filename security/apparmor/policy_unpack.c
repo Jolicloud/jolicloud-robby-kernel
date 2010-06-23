@@ -18,6 +18,7 @@
  */
 
 #include <asm/unaligned.h>
+#include <linux/ctype.h>
 #include <linux/errno.h>
 
 #include "include/apparmor.h"
@@ -367,18 +368,24 @@ static bool unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
 			if (!size)
 				goto fail;
 			profile->file.trans.table[i] = str;
-			/*
-			 * verify: transition names string
-			 */
-			for (c = j = 0; j < size - 1; j++) {
+			/* verify that name doesn't start with space */
+			if (isspace(*str))
+				goto fail;
+
+			/* count internal #  of internal \0 */
+			for (c = j = 0; j < size - 2; j++) {
 				if (!str[j])
 					c++;
 			}
-			/* names beginning with : require an embedded \0 */
-			if (*str == ':' && c != 1)
-				goto fail;
-			/* fail - all other cases with embedded \0 */
-			else if (c)
+			if (*str == ':') {
+				/* beginning with : requires an embedded \0 */
+				if (c != 1)
+					goto fail;
+				/* first character after : must be valid */
+				if (!str[1])
+					goto fail;
+			} else if (c)
+				/* fail - all other cases with embedded \0 */
 				goto fail;
 		}
 		if (!unpack_nameX(e, AA_ARRAYEND, NULL))
