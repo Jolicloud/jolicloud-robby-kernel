@@ -156,10 +156,11 @@ struct file_operations apparmorfs_profiles_fops = {
 static ssize_t aa_matching_read(struct file *file, char __user *buf,
 			       size_t size, loff_t *ppos)
 {
-	const char *matching = "pattern=aadfa audit perms=crwxamlk/ user::other";
+	const char matching[] = "pattern=aadfa audit perms=crwxamlk/ "
+				"user::other";
 
 	return simple_read_from_buffer(buf, size, ppos, matching,
-				       strlen(matching));
+				       sizeof(matching) - 1);
 }
 
 struct file_operations apparmorfs_matching_fops = {
@@ -170,12 +171,12 @@ struct file_operations apparmorfs_matching_fops = {
 static ssize_t aa_features_read(struct file *file, char __user *buf,
 				size_t size, loff_t *ppos)
 {
-	const char *features = "file=3.1 capability=2.0 network=1.0 "
-			       "change_hat=1.5 change_profile=1.1 "
-			       "aanamespaces=1.1 rlimit=1.1";
+	const char features[] = "file=3.1 capability=2.0 network=1.0 "
+			        "change_hat=1.5 change_profile=1.1 "
+			        "aanamespaces=1.1 rlimit=1.1";
 
 	return simple_read_from_buffer(buf, size, ppos, features,
-				       strlen(features));
+				       sizeof(features) - 1);
 }
 
 struct file_operations apparmorfs_features_fops = {

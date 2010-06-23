@@ -44,11 +44,11 @@ int aa_getprocattr(struct aa_namespace *ns, struct aa_profile *profile,
 		s += name_len;
 		sprintf(s, " (%s)\n", mode_str);
 	} else {
-		const char *unconfined_str = "unconfined\n";
+		const char unconfined_str[] = "unconfined\n";
 
-		len = strlen(unconfined_str);
+		len = sizeof(unconfined_str) - 1;
 		if (ns != default_namespace)
-			len += strlen(ns->base.name) + 1;
+			len += strlen(ns->base.name) + 3;
 
 		str = kmalloc(len + 1, GFP_ATOMIC);
 		if (!str)
