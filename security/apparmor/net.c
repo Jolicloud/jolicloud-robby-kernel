@@ -58,35 +58,53 @@ static void audit_cb(struct audit_buffer *ab, void *va)
 /**
  * audit_net - audit network access
  * @profile: profile being enforced  (NOT NULL)
- * @sa: audit data  (NOT NULL)
+ * @op: operation being checked
+ * @family: network family
+ * @type:   network type
+ * @protocol: network protocol
+ * @sk: socket auditing is being applied to
+ * @error: error code for failure else 0
  *
  * Returns: %0 or sa->error else other errorcode on failure
  */
-static int audit_net(struct aa_profile *profile, struct common_audit_data *sa)
+static int audit_net(struct aa_profile *profile, int op, u16 family, int type,
+		     int protocol, struct sock *sk, int error)
 {
-	int type = AUDIT_APPARMOR_AUTO;
+	int audit_type = AUDIT_APPARMOR_AUTO;
+	struct common_audit_data sa;
+	if (sk) {
+		COMMON_AUDIT_DATA_INIT(&sa, NET);
+	} else
+		COMMON_AUDIT_DATA_INIT_NONE(&sa);
+	/* todo fill in socket addr info */
 
-	if (likely(!sa->aad.error)) {
-		u16 audit_mask = profile->net.audit[sa->u.net.family];
+	sa.aad.op = op,
+	sa.u.net.family = family;
+	sa.u.net.sk = sk;
+	sa.aad.net.type = type;
+	sa.aad.net.protocol = protocol;
+
+	if (likely(!sa.aad.error)) {
+		u16 audit_mask = profile->net.audit[sa.u.net.family];
 		if (likely((AUDIT_MODE(profile) != AUDIT_ALL) &&
-			   !(1 << sa->aad.net.type & audit_mask)))
+			   !(1 << sa.aad.net.type & audit_mask)))
 			return 0;
-		type = AUDIT_APPARMOR_AUDIT;
+		audit_type = AUDIT_APPARMOR_AUDIT;
 	} else {
-		u16 quiet_mask = profile->net.quiet[sa->u.net.family];
+		u16 quiet_mask = profile->net.quiet[sa.u.net.family];
 		u16 kill_mask = 0;
-		u16 denied = (1 << sa->aad.net.type) & ~quiet_mask;
+		u16 denied = (1 << sa.aad.net.type) & ~quiet_mask;
 
 		if (denied & kill_mask)
-			type = AUDIT_APPARMOR_KILL;
+			audit_type = AUDIT_APPARMOR_KILL;
 
 		if ((denied & quiet_mask) &&
 		    AUDIT_MODE(profile) != AUDIT_NOQUIET &&
 		    AUDIT_MODE(profile) != AUDIT_ALL)
-			return COMPLAIN_MODE(profile) ? 0 : sa->aad.error;
+			return COMPLAIN_MODE(profile) ? 0 : sa.aad.error;
 	}
 
-	return aa_audit(type, profile, GFP_KERNEL, sa, audit_cb);
+	return aa_audit(audit_type, profile, GFP_KERNEL, &sa, audit_cb);
 }
 
 /**
@@ -99,22 +117,11 @@ static int audit_net(struct aa_profile *profile, struct common_audit_data *sa)
  *
  * Returns: %0 else error if permission denied
  */
-int aa_net_perm(int op, struct aa_profile *profile, u16 family, int type,
+int aa_net_perm(int op, struct aa_profile *profile,u16 family, int type,
 		int protocol, struct sock *sk)
 {
 	u16 family_mask;
-	struct common_audit_data sa;
-	if (sk) {
-		COMMON_AUDIT_DATA_INIT(&sa, NET);
-	} else
-		COMMON_AUDIT_DATA_INIT_NONE(&sa);
-	sa.aad.op = op,
-	sa.u.net.family = family;
-	sa.u.net.sk = sk;
-	sa.aad.net.type = type;
-	sa.aad.net.protocol = protocol;
-
-	/* todo fill in socket addr info */
+	int error;
 
 	if ((family < 0) || (family >= AF_MAX))
 		return -EINVAL;
@@ -128,9 +135,9 @@ int aa_net_perm(int op, struct aa_profile *profile, u16 family, int type,
 
 	family_mask = profile->net.allow[family];
 
-	sa.aad.error = (family_mask & (1 << type)) ? 0 : -EACCES;
+	error = (family_mask & (1 << type)) ? 0 : -EACCES;
 
-	return audit_net(profile, &sa);
+	return audit_net(profile, op, family, type, protocol, sk, error);
 }
 
 /**
