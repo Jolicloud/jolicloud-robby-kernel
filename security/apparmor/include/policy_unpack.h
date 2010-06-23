@@ -16,7 +16,7 @@
 #define __POLICY_INTERFACE_H
 
 #include "include/audit.h"
-int aa_audit_iface(struct aa_audit *sa);
+
 struct aa_profile *aa_unpack(void *udata, size_t size, const char **ns,
 			     struct aa_audit *sa);
 

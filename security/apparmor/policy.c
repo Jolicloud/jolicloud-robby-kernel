@@ -961,7 +961,7 @@ ssize_t aa_replace_profiles(void *udata, size_t size, bool noreplace)
 {
 	struct aa_policy *policy;
 	struct aa_profile *old_profile = NULL, *new_profile = NULL;
-	struct aa_profile *rename_profile = NULL;
+	struct aa_profile *rename_profile = NULL, *current_profile;
 	struct aa_namespace *ns = NULL;
 	const char *ns_name;
 	ssize_t error;
@@ -969,6 +969,9 @@ ssize_t aa_replace_profiles(void *udata, size_t size, bool noreplace)
 		.op = OP_PROF_REPL,
 		.gfp_mask = GFP_ATOMIC,
 	};
+
+	/* ref count released below */
+	current_profile = aa_get_profile(__aa_current_profile());
 
 	/* check if loading policy is locked out */
 	if (aa_g_lock_policy) {
@@ -1033,7 +1036,7 @@ audit:
 	if (!old_profile && !rename_profile)
 		sa.op = OP_PROF_LOAD;
 
-	error = aa_audit_iface(&sa);
+	error = aa_audit(AUDIT_APPARMOR_STATUS, current_profile, &sa, NULL);
 
 	if (!error) {
 		if (rename_profile)
@@ -1056,12 +1059,13 @@ out:
 	aa_put_profile(rename_profile);
 	aa_put_profile(old_profile);
 	aa_put_profile(new_profile);
+	aa_put_profile(current_profile);
 	if (error)
 		return error;
 	return size;
 
 fail:
-	error = aa_audit_iface(&sa);
+	error = aa_audit(AUDIT_APPARMOR_STATUS, current_profile, &sa, NULL);
 	goto out;
 }
 
@@ -1080,13 +1084,12 @@ fail:
 ssize_t aa_remove_profiles(char *fqname, size_t size)
 {
 	struct aa_namespace *root, *ns = NULL;
-	struct aa_profile *profile = NULL;
+	struct aa_profile *profile = NULL, *current_profile = NULL;
 	struct aa_audit sa = {
 		.op = OP_PROF_RM,
 		.gfp_mask = GFP_ATOMIC,
 	};
 	const char *name = fqname;
-	int error;
 
 	/* check if loading policy is locked out */
 	if (aa_g_lock_policy) {
@@ -1101,8 +1104,9 @@ ssize_t aa_remove_profiles(char *fqname, size_t size)
 		goto fail;
 	}
 
-	/* ref count held by cred */
-	root = aa_current_profile()->ns;
+	/* ref count released below */
+	current_profile = aa_get_profile(aa_current_profile());
+	root = current_profile->ns;
 
 	if (fqname[0] == ':') {
 		char *ns_name;
@@ -1139,9 +1143,10 @@ ssize_t aa_remove_profiles(char *fqname, size_t size)
 	write_unlock(&ns->lock);
 
 	/* don't fail removal if audit fails */
-	(void) aa_audit_iface(&sa);
+	(void) aa_audit(AUDIT_APPARMOR_STATUS, current_profile, &sa, NULL);
 	aa_put_namespace(ns);
 	aa_put_profile(profile);
+	aa_put_profile(current_profile);
 	return size;
 
 fail_ns_lock:
@@ -1149,6 +1154,7 @@ fail_ns_lock:
 	aa_put_namespace(ns);
 
 fail:
-	error = aa_audit_iface(&sa);
-	return error;
+	(void) aa_audit(AUDIT_APPARMOR_STATUS, current_profile, &sa, NULL);
+	aa_put_profile(current_profile);
+	return sa.error;
 }

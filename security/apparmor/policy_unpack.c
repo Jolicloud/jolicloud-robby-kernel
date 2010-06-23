@@ -69,10 +69,6 @@ struct aa_ext {
 /* audit callback for unpack fields */
 static void audit_cb(struct audit_buffer *ab, struct aa_audit *sa)
 {
-	if (sa->name) {
-		audit_log_format(ab, " name=");
-		audit_log_string(ab, sa->name);
-	}
 	if (sa->error && sa->pos)
 		audit_log_format(ab, " offset=%ld", sa->pos);
 }
@@ -83,15 +79,10 @@ static void audit_cb(struct audit_buffer *ab, struct aa_audit *sa)
  *
  * Returns: %0 or error
  */
-int aa_audit_iface(struct aa_audit *sa)
+static int aa_audit_iface(struct aa_audit *sa)
 {
-	struct aa_profile *profile;
-	const struct cred *cred = get_current_cred();
-	int error;
-	profile = aa_cred_profile(cred);
-	error = aa_audit(AUDIT_APPARMOR_STATUS, profile, sa, audit_cb);
-	put_cred(cred);
-	return error;
+	struct aa_profile *profile = __aa_current_profile();
+	return aa_audit(AUDIT_APPARMOR_STATUS, profile, sa, audit_cb);
 }
 
 /* test if read will be in packed data bounds */
