@@ -303,12 +303,12 @@ static bool verify_accept(struct aa_dfa *dfa, int flags)
 }
 
 /**
- * aa_unpack_dfa - unpack a file rule dfa
+ * unpack_dfa - unpack a file rule dfa
  * @e: serialized data extent information
  *
  * returns dfa or ERR_PTR
  */
-static struct aa_dfa *aa_unpack_dfa(struct aa_ext *e)
+static struct aa_dfa *unpack_dfa(struct aa_ext *e)
 {
 	char *blob = NULL;
 	size_t size;
@@ -342,7 +342,7 @@ fail:
 	return ERR_PTR(-EPROTO);
 }
 
-static bool aa_unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
+static bool unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
 {
 	void *pos = e->pos;
 
@@ -397,7 +397,7 @@ fail:
 	return 0;
 }
 
-static bool aa_unpack_rlimits(struct aa_ext *e, struct aa_profile *profile)
+static bool unpack_rlimits(struct aa_ext *e, struct aa_profile *profile)
 {
 	void *pos = e->pos;
 
@@ -431,13 +431,13 @@ fail:
 }
 
 /**
- * aa_unpack_profile - unpack a serialized profile
+ * unpack_profile - unpack a serialized profile
  * @e: serialized data extent information
  * @sa: audit struct for the operation
  *
  * NOTE: unpack profile sets audit struct if there is a failure
  */
-static struct aa_profile *aa_unpack_profile(struct aa_ext *e,
+static struct aa_profile *unpack_profile(struct aa_ext *e,
 					    struct aa_audit_iface *sa)
 {
 	struct aa_profile *profile = NULL;
@@ -458,7 +458,7 @@ static struct aa_profile *aa_unpack_profile(struct aa_ext *e,
 		return ERR_PTR(-ENOMEM);
 
 	/* xmatch is optional and may be NULL */
-	profile->xmatch = aa_unpack_dfa(e);
+	profile->xmatch = unpack_dfa(e);
 	if (IS_ERR(profile->xmatch)) {
 		error = PTR_ERR(profile->xmatch);
 		profile->xmatch = NULL;
@@ -522,7 +522,7 @@ static struct aa_profile *aa_unpack_profile(struct aa_ext *e,
 			goto fail;
 	}
 
-	if (!aa_unpack_rlimits(e, profile))
+	if (!unpack_rlimits(e, profile))
 		goto fail;
 
 	size = unpack_array(e, "net_allowed_af");
@@ -549,14 +549,14 @@ static struct aa_profile *aa_unpack_profile(struct aa_ext *e,
 	profile->net.allowed[AF_NETLINK] = 0xffff;
 
 	/* get file rules */
-	profile->file.dfa = aa_unpack_dfa(e);
+	profile->file.dfa = unpack_dfa(e);
 	if (IS_ERR(profile->file.dfa)) {
 		error = PTR_ERR(profile->file.dfa);
 		profile->file.dfa = NULL;
 		goto fail;
 	}
 
-	if (!aa_unpack_trans_table(e, profile))
+	if (!unpack_trans_table(e, profile))
 		goto fail;
 
 	if (!unpack_nameX(e, AA_STRUCTEND, NULL))
@@ -669,7 +669,7 @@ struct aa_profile *aa_unpack(void *udata, size_t size,
 	if (error)
 		return ERR_PTR(error);
 
-	profile = aa_unpack_profile(&e, sa);
+	profile = unpack_profile(&e, sa);
 	if (IS_ERR(profile))
 		sa->pos = e.pos - e.start;
 
