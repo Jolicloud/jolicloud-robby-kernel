@@ -442,7 +442,7 @@ apply:
 	sa.name2 = new_profile->base.hname;
 	/* When switching namespace ensure its part of audit message */
 	if (new_profile->ns != ns)
-		sa.name3 = new_profile->ns->base.name;
+		sa.name3 = new_profile->ns->base.hname;
 
 	/* when transitioning profiles clear unsafe personality bits */
 	bprm->per_clear |= PER_CLEAR_ON_SETID;
@@ -557,7 +557,7 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 		/* attempting to change into a new hat or switch to a sibling */
 		struct aa_profile *root;
 		root = PROFILE_IS_HAT(profile) ? profile->parent : profile;
-		sa.name2 = profile->ns->base.name;
+		sa.name2 = profile->ns->base.hname;
 
 		/* released below */
 		hat = aa_find_child(root, hat_name);
@@ -665,19 +665,20 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 	cxt = cred->security;
 
 	if (ns_name) {
-		sa.name2 = ns_name;
 		/* released below */
 		ns = aa_find_namespace(ns_name);
 		if (!ns) {
 			/* we don't create new namespace in complain mode */
+			sa.name2 = ns_name;
 			sa.base.info = "namespace not found";
 			sa.base.error = -ENOENT;
 			goto audit;
 		}
+		sa.name2 = ns->base.hname;
 	} else {
 		/* released below */
 		ns = aa_get_namespace(cxt->sys.profile->ns);
-		sa.name2 = ns->base.name;
+		sa.name2 = ns->base.hname;
 	}
 
 	/* if the name was not specified, use the name of the current profile */
