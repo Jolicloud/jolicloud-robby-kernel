@@ -366,6 +366,7 @@ static bool unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
 			int c, j, size = unpack_strdup(e, &str, NULL);
 			if (!size)
 				goto fail;
+			profile->file.trans.table[i] = str;
 			/*
 			 * verify: transition names string
 			 */
@@ -379,7 +380,6 @@ static bool unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
 			/* fail - all other cases with embedded \0 */
 			else if (c)
 				goto fail;
-			profile->file.trans.table[i] = str;
 		}
 		if (!unpack_nameX(e, AA_ARRAYEND, NULL))
 			goto fail;
