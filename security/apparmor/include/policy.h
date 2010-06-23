@@ -75,6 +75,7 @@ enum profile_flags {
 struct aa_profile;
 
 /* struct aa_policy - common part of both namespaces and profiles
+ * @parent: parent of the namespace or profile
  * @name: name of the object
  * @hname - The hierarchical name
  * @count: reference count of the obj
@@ -83,6 +84,7 @@ struct aa_profile;
  * @profiles: head of the profiles list contained in the object
  */
 struct aa_policy {
+	struct aa_policy *parent;
 	char *name;
 	char *hname;
 	struct kref count;
@@ -115,6 +117,9 @@ struct aa_ns_acct {
  * unique.  When profiles in seperate namespaces have the same name they
  * are NOT considered to be equivalent.
  *
+ * Namespaces are hierarchical and only namespaces and profiles below the
+ * current namespace are visible.
+ *
  * Namespace names must be unique and can not contain the characters :/\0
  *
  * FIXME TODO: add vserver support so a vserer gets a default namespace
@@ -128,7 +133,6 @@ struct aa_namespace {
 /* struct aa_profile - basic confinement data
  * @base - base componets of the profile (name, refcount, lists, lock ...)
  * @ns: namespace the profile is in
- * @parent: parent profile of this profile, if one exists
  * @replacedby: is set profile that replaced this profile
  * @xmatch: optional extended matching for unconfined executables names
  * @xmatch_len: xmatch prefix len, used to determine xmatch priority
@@ -161,7 +165,6 @@ struct aa_profile {
 	struct aa_policy base;
 
 	struct aa_namespace *ns;
-	struct aa_profile *parent;
 	union {
 		struct aa_profile *replacedby;
 		const char *rename;

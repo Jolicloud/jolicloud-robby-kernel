@@ -180,13 +180,13 @@ static struct aa_profile *next_profile(struct aa_profile *profile)
 					struct aa_profile, base.list);
 
 	/* is next a sibling, parent sibling, gp sibling */
-	parent = profile->parent;
+	parent = profile->base.parent;
 	while (parent) {
-		list_for_each_entry_continue(profile, &parent->base.profiles,
+		list_for_each_entry_continue(profile, &base.parent->base.profiles,
 					     base.list)
 			return profile;
 		profile = parent;
-		parent = parent->parent;
+		parent = parent->base.parent;
 	}
 
 	/* is next the another profile in the namespace */
@@ -264,8 +264,8 @@ static void p_stop(struct seq_file *f, void *p) __releases(ns_list_lock)
 
 static void print_name(struct seq_file *f, struct aa_profile *profile)
 {
-	if (profile->parent) {
-		print_name(f, profile->parent);
+	if (profile->base.parent) {
+		print_name(f, profile->base.parent);
 		seq_printf(f, "//");
 	}
 	seq_printf(f, "%s", profile->base.name);

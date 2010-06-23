@@ -150,6 +150,8 @@ static void policy_free(struct aa_policy *policy)
 		BUG();
 	}
 
+	aa_put_profile(policy->parent);
+
 	/* don't free name as its a subset of hname */
 	kzfree(policy->hname);
 }
@@ -426,14 +428,14 @@ static void __aa_replace_profile(struct aa_profile *old,
 	struct aa_policy *policy;
 	struct aa_profile *child, *tmp;
 
-	if (old->parent)
-		policy = &old->parent->base;
+	if (old->base.parent)
+		policy = &old->base.parent->base;
 	else
 		policy = &old->ns->base;
 
 	if (new) {
 		/* released when @new is freed */
-		new->parent = aa_get_profile(old->parent);
+		new->base.parent = aa_get_profile(old->base.parent);
 		new->ns = aa_get_namespace(old->ns);
 		new->sid = old->sid;
 		__aa_add_profile(policy, new);
@@ -444,8 +446,8 @@ static void __aa_replace_profile(struct aa_profile *old,
 
 	/* inherit children */
 	list_for_each_entry_safe(child, tmp, &old->base.profiles, base.list) {
-		aa_put_profile(child->parent);
-		child->parent = aa_get_profile(new);
+		aa_put_profile(child->base.parent);
+		child->base.parent = aa_get_profile(new);
 		/* list refcount transfered to @new*/
 		list_move(&child->base.list, &new->base.profiles);
 	}
@@ -489,7 +491,8 @@ static void __aa_remove_namespace(struct aa_namespace *ns)
 	 * This will result in all confined tasks that have a profile
 	 * being removed inheriting the parent->unconfined profile.
 	 */
-	ns->unconfined = aa_get_profile(root_ns->unconfined);
+	if (ns->parent)
+		ns->unconfined = aa_get_profile(ns->parent->unconfined);
 	__aa_profile_list_release(&ns->base.profiles);
 	/* release original ns->unconfined ref */
 	aa_put_profile(unconfined);
@@ -575,7 +578,7 @@ struct aa_profile *aa_new_null_profile(struct aa_profile *parent, int hat)
 		profile->flags |= PFLAG_HAT;
 
 	/* released on aa_free_profile */
-	profile->parent = aa_get_profile(parent);
+	profile->base.parent = aa_get_profile(parent);
 	profile->ns = aa_get_namespace(parent->ns);
 
 	write_lock(&profile->ns->base.lock);
@@ -626,10 +629,7 @@ static void aa_free_profile(struct aa_profile *profile)
 	/* free children profiles */
 	policy_free(&profile->base);
 
-	BUG_ON(!list_empty(&profile->base.profiles));
-
 	aa_put_namespace(profile->ns);
-	aa_put_profile(profile->parent);
 
 	aa_free_file_rules(&profile->file);
 	aa_free_cap_rules(&profile->caps);
@@ -829,7 +829,7 @@ static void __add_new_profile(struct aa_namespace *ns,
 {
 	if (policy != &ns->base)
 		/* released on profile replacement or aa_free_profile */
-		profile->parent = aa_get_profile((struct aa_profile *) policy);
+		profile->base.parent = aa_get_profile((struct aa_profile *) policy);
 	__aa_add_profile(policy, profile);
 	/* released on aa_free_profile */
 	profile->sid = aa_alloc_sid(AA_ALLOC_SYS_SID);

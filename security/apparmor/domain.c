@@ -553,7 +553,7 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 	if (count) {
 		/* attempting to change into a new hat or switch to a sibling */
 		struct aa_profile *root;
-		root = PROFILE_IS_HAT(profile) ? profile->parent : profile;
+		root = PROFILE_IS_HAT(profile) ? profile->base.parent : profile;
 		sa.name2 = profile->ns->base.hname;
 
 		/* find first matching hat */
