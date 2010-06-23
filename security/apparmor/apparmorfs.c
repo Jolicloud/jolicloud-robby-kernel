@@ -72,6 +72,9 @@ out:
 	return data;
 }
 
+#ifdef CONFIG_SECURITY_APPARMOR_COMPAT_24
+/* Enable old AppArmor 2.4 interface */
+
 static struct aa_profile *next_profile(struct aa_profile *profile)
 {
 	struct aa_profile *parent;
@@ -223,6 +226,7 @@ static ssize_t aa_features_read(struct file *file, char __user *buf,
 static struct file_operations apparmorfs_features_fops = {
 	.read = 	aa_features_read,
 };
+#endif /* CONFIG_SECURITY_APPARMOR_COMPAT_24 */
 
 /* apparmor/.load */
 static ssize_t aa_profile_load(struct file *f, const char __user *buf,
@@ -329,9 +333,11 @@ void destroy_apparmorfs(void)
 		aafs_remove(".remove");
 		aafs_remove(".replace");
 		aafs_remove(".load");
+#ifdef CONFIG_SECURITY_APPARMOR_COMPAT_24
 		aafs_remove("matching");
 		aafs_remove("features");
 		aafs_remove("profiles");
+#endif
 		securityfs_remove(apparmorfs_dentry);
 		apparmorfs_dentry = NULL;
 	}
@@ -355,6 +361,7 @@ int create_apparmorfs(void)
 		apparmorfs_dentry = NULL;
 		goto error;
 	}
+#ifdef CONFIG_SECURITY_APPARMOR_COMPAT_24
 	error = aafs_create("profiles", 0440, &apparmorfs_profiles_fops);
 	if (error)
 		goto error;
@@ -364,6 +371,7 @@ int create_apparmorfs(void)
 	error = aafs_create("features", 0444, &apparmorfs_features_fops);
 	if (error)
 		goto error;
+#endif
 	error = aafs_create(".load", 0640, &apparmorfs_profile_load);
 	if (error)
 		goto error;
