@@ -37,7 +37,7 @@ extern const char *profile_mode_names[];
 	((aa_g_profile_mode == APPARMOR_COMPLAIN) || ((_profile) &&	\
 					(_profile)->mode == APPARMOR_COMPLAIN))
 
-#define PROFILE_KILL(_profile)					\
+#define DO_KILL(_profile)					\
 	((aa_g_profile_mode == APPARMOR_KILL) || ((_profile) &&	\
 					(_profile)->mode == APPARMOR_KILL))
 

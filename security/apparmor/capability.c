@@ -59,7 +59,7 @@ static int aa_audit_caps(struct aa_profile *profile, struct aa_audit_caps *sa)
 			   !cap_raised(profile->caps.audit, sa->cap)))
 			return 0;
 		type = AUDIT_APPARMOR_AUDIT;
-	} else if (PROFILE_KILL(profile) ||
+	} else if (DO_KILL(profile) ||
 		   cap_raised(profile->caps.kill, sa->cap)) {
 		type = AUDIT_APPARMOR_KILL;
 	} else if (cap_raised(profile->caps.quiet, sa->cap) &&

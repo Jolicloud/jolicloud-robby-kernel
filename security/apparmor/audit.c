@@ -57,7 +57,7 @@ static int aa_audit_base(int type, struct aa_profile *profile,
 	struct audit_buffer *ab = NULL;
 	struct task_struct *task = sa->task ? sa->task : current;
 
-	if (profile && PROFILE_KILL(profile) && type == AUDIT_APPARMOR_DENIED)
+	if (profile && DO_KILL(profile) && type == AUDIT_APPARMOR_DENIED)
 		type = AUDIT_APPARMOR_KILL;
 
 	/* ab freed below in audit_log_end */
