@@ -548,12 +548,11 @@ static int apparmor_setprocattr(struct task_struct *task, char *name,
 
 	args = value;
 	args[size] = '\0';
-	args = strstrip(args);
+	args = strim(args);
 	command = strsep(&args, " ");
 	if (!args)
 		return -EINVAL;
-	while (isspace(*args))
-		args++;
+	args = skip_spaces(args);
 	if (!*args)
 		return -EINVAL;
 
@@ -583,7 +582,7 @@ static int apparmor_setprocattr(struct task_struct *task, char *name,
 			return aa_audit(AUDIT_APPARMOR_DENIED, NULL, &sa, NULL);
 		}
 	} else if (strcmp(name, "exec") == 0) {
-		error = aa_setprocattr_changeprofile(strstrip(args), AA_ONEXEC,
+		error = aa_setprocattr_changeprofile(args, AA_ONEXEC,
 						     !AA_DO_TEST);
 	} else {
 		/* only support the "current" and "exec" process attributes */
