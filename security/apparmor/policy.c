@@ -316,6 +316,7 @@ struct aa_namespace *aa_prepare_namespace(const char *name)
 		/* released by caller */
 		ns = aa_get_namespace(default_namespace);
 	if (!ns) {
+		/* name && namespace not found */
 		struct aa_namespace *new_ns;
 		write_unlock(&ns_list_lock);
 		new_ns = alloc_aa_namespace(name);
