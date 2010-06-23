@@ -949,12 +949,9 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size, bool add_only)
 		/* released below */
 		aa_get_profile(rename_profile);
 
-		/* must be cleared as it is shared with replaced-by */
-		kzfree(new_profile->rename);
-		new_profile->rename = NULL;
-
 		if (!rename_profile) {
 			sa.base.info = "profile to rename does not exist";
+			sa.name = new_profile->rename;
 			sa.base.error = -ENOENT;
 			goto audit;
 		}
@@ -971,6 +968,12 @@ audit:
 		sa.base.operation = "profile_load";
 
 	error = aa_audit_iface(&sa);
+
+	/* rename field must be cleared as it is shared with replaced-by */
+	if (new_profile->rename) {
+		kzfree(new_profile->rename);
+		new_profile->rename = NULL;
+	}
 
 	if (!error) {
 		if (old_profile)
