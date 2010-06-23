@@ -331,13 +331,6 @@ static void apparmor_file_free_security(struct file *file)
 static int apparmor_file_permission(struct file *file, int mask)
 {
 	/*
-	 * Most basic (rw) file access is revalidated at exec.
-	 * The revalidation done here is for parent/child hat
-	 * file accesses.
-	 *
-	 * Currently profile replacement does not cause revalidation
-	 * or file revocation.
-	 *
 	 * TODO: cache profiles that have revalidated?
 	 */
 	struct aa_file_cxt *fcxt = file->f_security;
@@ -349,14 +342,15 @@ static int apparmor_file_permission(struct file *file, int mask)
 		return 0;
 
 	profile = aa_current_profile();
-	/* TODO: Enable at exec time revalidation of files
-	if (profile && (fprofile != profile) &&
-	    ((PROFILE_IS_HAT(profile) && (profile->parent == fprofile)) ||
-	     (PROFILE_IS_HAT(fprofile) && (fprofile->parent == profile))))
-		error = aa_file_perm(profile, "file_perm", file, mask);
-	*/
+
+#ifdef CONFIG_SECURITY_APPARMOR_COMPAT_24
+	/*
+	 * AppArmor <= 2.4 revalidates files at access time instead
+	 * of at exec.
+	 */
 	if (profile && ((fprofile != profile) || (mask & ~fcxt->allowed)))
 		error = aa_file_perm(profile, "file_perm", file, mask);
+#endif
 
 	return error;
 }
@@ -388,28 +382,6 @@ static int apparmor_file_lock(struct file *file, unsigned int cmd)
 	return common_file_perm("file_lock", file, mask);
 }
 
-
-/*
- * AppArmor doesn't current use the fcntl hook.
- * 
- * FIXME - these are not implemented yet - REMOVE file_fcntl hook
- * NOTE: some of the file control commands are further mediated
- *       by other hooks
- * F_SETOWN - security_file_set_fowner
- * F_SETLK - security_file_lock
- * F_SETLKW - security_file_lock
- * O_APPEND - AppArmor mediates append as a subset of full write
- *            so changing from full write to appending write is
- *            dropping priviledge and not restricted.
-
-
-static int apparmor_file_fcntl(struct file *file, unsigned int cmd,
-			     unsigned long arg)
-{
-	return 0;
-}
-*/
-
 static int common_mmap(struct file *file, const char *operation,
 		   unsigned long prot, unsigned long flags)
 {
@@ -421,8 +393,10 @@ static int common_mmap(struct file *file, const char *operation,
 
 	if (prot & PROT_READ)
 		mask |= MAY_READ;
-	/* Private mappings don't require write perms since they don't
-	 * write back to the files */
+	/*
+	 *Private mappings don't require write perms since they don't
+	 * write back to the files
+	 */
 	if ((prot & PROT_WRITE) && !(flags & MAP_PRIVATE))
 		mask |= MAY_WRITE;
 	if (prot & PROT_EXEC)
@@ -698,15 +672,6 @@ static struct security_operations apparmor_ops = {
 	.capget =			apparmor_capget,
 	.sysctl =			apparmor_sysctl,
 	.capable =			apparmor_capable,
-/*
-	.inode_create =			apparmor_inode_create,
-	.inode_setattr =		apparmor_inode_setattr,
-	.inode_setxattr =		apparmor_inode_setxattr,
-	.inode_getxattr =		apparmor_inode_getxattr,
-	.inode_listxattr =		apparmor_inode_listxattr,
-	.inode_removexattr =		apparmor_inode_removexattr,
-	.inode_permission = ??? use to mediate owner access to non-mediated fs
-*/
 
 	.path_link =			apparmor_path_link,
 	.path_unlink =			apparmor_path_unlink,
@@ -724,8 +689,6 @@ static struct security_operations apparmor_ops = {
 	.file_mmap =			apparmor_file_mmap,
 	.file_mprotect =		apparmor_file_mprotect,
 	.file_lock =			apparmor_file_lock,
-
-/*	.file_fcntl =			apparmor_file_fcntl, */
 
 	.getprocattr =			apparmor_getprocattr,
 	.setprocattr =			apparmor_setprocattr,
@@ -1009,15 +972,6 @@ static int __init apparmor_init(void)
 		return 0;
 	}
 
-	/*
-	 * Activated with fs_initcall
-	error = create_apparmorfs();
-	if (error) {
-		AA_ERROR("Unable to activate AppArmor filesystem\n");
-		goto createfs_out;
-	}
-	*/
-
 	error = alloc_default_namespace();
 	if (error) {
 		AA_ERROR("Unable to allocate default profile namespace\n");
@@ -1053,7 +1007,6 @@ register_security_out:
 alloc_out:
 	destroy_apparmorfs();
 
-/*createfs_out:*/
 	apparmor_enabled = 0;
 	return error;
 
@@ -1069,15 +1022,8 @@ void apparmor_disable(void)
 	/* FIXME: cleanup profiles references on files */
 	free_default_namespace();
 
-	/*
-	 * Delay for an rcu cycle to make sure that all active task
-	 * context readers have finished, and all profiles have been
-	 * freed by their rcu callbacks.
-	 */
-	synchronize_rcu();
 	destroy_apparmorfs();
 	apparmor_initialized = 0;
 
 	info_message("AppArmor protection disabled");
 }
-
