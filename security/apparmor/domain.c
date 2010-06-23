@@ -93,41 +93,39 @@ out:
  * @profile: the current profile  (NOT NULL)
  * @ns: the namespace being switched to  (NOT NULL)
  * @name: the name of the profile to change to  (NOT NULL)
- * @rstate: if !NULL will contain the state the match finished in (MAYBE NULL)
+ * @request: requested perms
+ * @start: state to start matching in
  *
  * Returns: permission set
  */
 static struct file_perms change_profile_perms(struct aa_profile *profile,
 					      struct aa_namespace *ns,
-					      const char *name,
-					      unsigned int *rstate)
+					      const char *name, u16 request,
+					      unsigned int start)
 {
 	struct file_perms perms;
 	struct path_cond cond = { };
 	unsigned int state;
 
 	if (unconfined(profile)) {
-		perms.allowed = AA_MAY_CHANGE_PROFILE;
+		perms.allowed = AA_MAY_CHANGE_PROFILE | AA_MAY_ONEXEC;
 		perms.xindex = perms.xdelegate = perms.dindex = 0;
 		perms.audit = perms.quiet = perms.kill = 0;
-		if (rstate)
-			*rstate = 0;
 		return perms;
 	} else if (!profile->file.dfa) {
 		return nullperms;
 	} else if ((ns == profile->ns)) {
 		/* try matching against rules with out namespace prependend */
-		perms = aa_str_perms(profile->file.dfa, profile->file.start,
-				     name, &cond, rstate);
-		if (COMBINED_PERM_MASK(perms) & AA_MAY_CHANGE_PROFILE)
+		perms = aa_str_perms(profile->file.dfa, start, name, &cond,
+				     NULL);
+		if (COMBINED_PERM_MASK(perms) & request)
 			return perms;
 	}
 
 	/* try matching with namespace name and then profile */
-	state = aa_dfa_match(profile->file.dfa, profile->file.start,
-			     ns->base.name);
-	state = aa_dfa_null_transition(profile->file.dfa, state, 0);
-	return aa_str_perms(profile->file.dfa, state, name, &cond, rstate);
+	state = aa_dfa_match(profile->file.dfa, start, ns->base.name);
+	state = aa_dfa_match_len(profile->file.dfa, state, ":", 1);
+	return aa_str_perms(profile->file.dfa, state, name, &cond, NULL);
 }
 
 /**
@@ -391,35 +389,43 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	/* Test for onexec first as onexec directives override other
 	 * x transitions.
 	 */
-	if (cxt->onexec) {
-		/* change_profile onexec permissions are stored in a pair.
-		 *    change_profile\0exec
-		 * When onexec was set, the change_profile permissions
-		 * were checked.  Rewalk the pair to get the start position
-		 * in the dfa for exec portion of the pair.
-		 * This deliberately ignores the permissions returned
-		 * from change_profile_perms
-		 */
-		change_profile_perms(profile, cxt->onexec->ns, sa.name, &state);
-		state = aa_dfa_null_transition(profile->file.dfa, state, 0);
-	} else if (unconfined(profile)) {
-		/* unconfined task - attach profile if one matches */
-		new_profile = aa_find_attach(ns, &ns->base.profiles, sa.name);
+	if (unconfined(profile)) {
+		/* unconfined task */
+		if (cxt->onexec)
+			/* change_profile on exec already been granted */
+			new_profile = aa_get_profile(cxt->onexec);
+		else
+			new_profile = aa_find_attach(ns, &ns->base.profiles,
+						     sa.name);
 		if (!new_profile)
 			goto cleanup;
 		goto apply;
 	}
 
 	/* find exec permissions for name */
-	sa.perms = aa_str_perms(profile->file.dfa, state, sa.name, &cond, NULL);
-	if (cxt->onexec && sa.perms.allowed & AA_MAY_ONEXEC) {
-		/* transfer the onexec reference, this is allowed as the
-		 * cred is being prepared, and isn't committed yet.
-		 */
-		new_profile = cxt->onexec;
-		cxt->onexec = NULL;
+	sa.perms = aa_str_perms(profile->file.dfa, state, sa.name, &cond,
+				&state);
+	if (cxt->onexec) {
+		struct file_perms perms;
 		sa.base.info = "change_profile onexec";
-	} else if (sa.perms.allowed & MAY_EXEC) {
+		if (!(sa.perms.allowed & AA_MAY_ONEXEC))
+			goto audit;
+
+		/* test if this exec can be paired with change_profile onexec.
+		 * onexec permission is linked to exec with a standard pairing
+		 * exec\0change_profile
+		 */
+		state = aa_dfa_null_transition(profile->file.dfa, state, 0);
+		perms = change_profile_perms(profile, cxt->onexec->ns,
+					     sa.name, AA_MAY_ONEXEC, state);
+
+		if (!(perms.allowed & AA_MAY_ONEXEC))
+			goto audit;
+		new_profile = aa_get_profile(aa_newest_version(cxt->onexec));
+		goto apply;
+	}
+
+	if (sa.perms.allowed & MAY_EXEC) {
 		/* exec permission determine how to transition */
 		new_profile = x_to_profile(profile, sa.name, sa.perms.xindex);
 		if (!new_profile) {
@@ -733,17 +739,19 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 	struct aa_profile *profile, *target = NULL;
 	struct aa_namespace *ns = NULL;
 	struct aa_audit_file sa = {
-		.request = AA_MAY_CHANGE_PROFILE,
 		.base.gfp_mask = GFP_KERNEL,
 	};
 
 	if (!hname && !ns_name)
 		return -EINVAL;
 
-	if (onexec)
+	if (onexec) {
+		sa.request = AA_MAY_ONEXEC;
 		sa.base.operation = "change_onexec";
-	else
+	} else {
+		sa.request = AA_MAY_CHANGE_PROFILE;
 		sa.base.operation = "change_profile";
+	}
 
 	cred = get_current_cred();
 	cxt = cred->security;
@@ -775,8 +783,9 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 	}
 	sa.name = hname;
 
-	sa.perms = change_profile_perms(profile, ns, hname, NULL);
-	if (!(sa.perms.allowed & AA_MAY_CHANGE_PROFILE)) {
+	sa.perms = change_profile_perms(profile, ns, hname, sa.request,
+					profile->file.start);
+	if (!(sa.perms.allowed & sa.request)) {
 		sa.base.error = -EACCES;
 		goto audit;
 	}
