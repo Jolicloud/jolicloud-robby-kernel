@@ -79,11 +79,6 @@ int aa_set_current_onexec(struct aa_profile *sys);
 int aa_set_current_hat(struct aa_profile *profile, u64 token);
 int aa_restore_previous_profile(u64 cookie);
 
-static inline struct aa_task_context *__aa_task_cxt(struct task_struct *task)
-{
-	return __task_cred(task)->security;
-}
-
 /**
  * __aa_task_is_confined - determine if @task has any confinement
  * @task: task to check confinement of
