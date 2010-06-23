@@ -617,11 +617,13 @@ fail:
 /**
  * verify_head - unpack serialized stream header
  * @e: serialized data read head
- * sa: audit structure
+ * @ns: Returns namespace if one is specified else NULL
+ * @sa: audit structure
  *
  * Returns: error or 0 if header is good
  */
-static int verify_header(struct aa_ext *e, struct aa_audit_iface *sa)
+static int verify_header(struct aa_ext *e, const char **ns,
+			 struct aa_audit_iface *sa)
 {
 	/* get the interface version */
 	if (!unpack_u32(e, &e->version, "version")) {
@@ -638,8 +640,8 @@ static int verify_header(struct aa_ext *e, struct aa_audit_iface *sa)
 	}
 
 	/* read the namespace if present */
-	if (!unpack_str(e, &sa->name2, "namespace"))
-		sa->name2 = NULL;
+	if (!unpack_str(e, ns, "namespace"))
+		*ns = NULL;
 
 	return 0;
 }
@@ -691,13 +693,14 @@ static int verify_profile(struct aa_profile *profile, struct aa_audit_iface *sa)
  * aa_unpack - unpack packed binary profile data loaded from user space
  * @udata: user data copied to kmem  (NOT NULL)
  * @size: the size of the user data
+ * @ns: Returns namespace profile is in if specified else NULL
  * @sa: audit struct for unpacking  (NOT NULL)
  *
  * Unpack user data and return refcounted allocated profile or ERR_PTR
  *
  * Returns: profile else error pointer if fails to unpack
  */
-struct aa_profile *aa_unpack(void *udata, size_t size,
+struct aa_profile *aa_unpack(void *udata, size_t size, const char **ns,
 			     struct aa_audit_iface *sa)
 {
 	struct aa_profile *profile;
@@ -708,7 +711,7 @@ struct aa_profile *aa_unpack(void *udata, size_t size,
 		.pos = udata,
 	};
 
-	error = verify_header(&e, sa);
+	error = verify_header(&e, ns, sa);
 	if (error)
 		return ERR_PTR(error);
 

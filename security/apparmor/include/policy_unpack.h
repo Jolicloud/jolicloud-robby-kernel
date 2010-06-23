@@ -24,7 +24,7 @@ struct aa_audit_iface {
 };
 
 int aa_audit_iface(struct aa_audit_iface *sa);
-struct aa_profile *aa_unpack(void *udata, size_t size,
+struct aa_profile *aa_unpack(void *udata, size_t size, const char **ns,
 			     struct aa_audit_iface *sa);
 
 #endif /* __POLICY_INTERFACE_H */

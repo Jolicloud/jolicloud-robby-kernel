@@ -965,6 +965,7 @@ ssize_t aa_replace_profiles(void *udata, size_t size, bool noreplace)
 	struct aa_profile *old_profile = NULL, *new_profile = NULL;
 	struct aa_profile *rename_profile = NULL;
 	struct aa_namespace *ns = NULL;
+	const char *ns_name;
 	ssize_t error;
 	struct aa_audit_iface sa = {
 		.base.op = OP_PROF_REPL,
@@ -979,17 +980,18 @@ ssize_t aa_replace_profiles(void *udata, size_t size, bool noreplace)
 	}
 
 	/* released below */
-	new_profile = aa_unpack(udata, size, &sa);
+	new_profile = aa_unpack(udata, size, &ns_name, &sa);
 	if (IS_ERR(new_profile)) {
 		sa.base.error = PTR_ERR(new_profile);
 		goto fail;
 	}
 
 	/* released below */
-	ns = aa_prepare_namespace(sa.name2);
+	ns = aa_prepare_namespace(ns_name);
 	if (!ns) {
 		sa.base.info = "failed to prepare namespace";
 		sa.base.error = -ENOMEM;
+		sa.name = ns_name;
 		goto fail;
 	}
 
