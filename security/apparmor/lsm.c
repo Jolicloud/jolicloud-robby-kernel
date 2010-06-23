@@ -1021,7 +1021,7 @@ static int __init apparmor_init(void)
 	error = set_init_cxt();
 	if (error) {
 		AA_ERROR("Failed to set context on init task\n");
-		goto alloc_out;
+		goto register_security_out;
 	}
 
 	error = register_security(&apparmor_ops);
