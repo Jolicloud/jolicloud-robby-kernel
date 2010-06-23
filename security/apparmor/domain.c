@@ -378,7 +378,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	ns = profile->ns;
 	state = profile->file.start;
 
-	/* buffer freed below, name is pointer inside of buffer */
+	/* buffer freed below, name is pointer into buffer */
 	sa.base.error = aa_get_name(&bprm->file->f_path, profile->path_flags,
 				    &buffer, (char **)&sa.name);
 	if (sa.base.error) {
@@ -390,11 +390,17 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 		goto audit;
 	}
 
+	/* Test for onexec first as onexec directives override other
+	 * x transitions.
+	 */
 	if (cxt->onexec) {
-		/*
-		 * onexec permissions are stored in a pair, rewalk the
-		 * dfa to get start of the exec path match.  Drop the
-		 * returned permissions.
+		/* change_profile onexec permissions are stored in a pair.
+		 *    change_profile\0exec
+		 * When onexec was set, the change_profile permissions
+		 * were checked.  Rewalk the pair to get the start position
+		 * in the dfa for exec portion of the pair.
+		 * This deliberately ignores the permissions returned
+		 * from change_profile_perms
 		 */
 		change_profile_perms(profile, cxt->onexec->ns, sa.name, &state);
 		state = aa_dfa_null_transition(profile->file.dfa, state, 0);
@@ -405,6 +411,8 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 			goto cleanup;
 		goto apply;
 	}
+
+	/* find exec permissions for name */
 	sa.perms = aa_str_perms(profile->file.dfa, state, sa.name, &cond, NULL);
 	if (cxt->onexec && sa.perms.allowed & AA_MAY_ONEXEC) {
 		/* transfer the onexec reference, this is allowed as the
@@ -414,6 +422,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 		cxt->onexec = NULL;
 		sa.base.info = "change_profile onexec";
 	} else if (sa.perms.allowed & MAY_EXEC) {
+		/* exec permission determine how to transition */
 		new_profile = x_to_profile(profile, sa.name, sa.perms.xindex);
 		if (!new_profile) {
 			if (sa.perms.xindex & AA_X_INHERIT) {
@@ -429,6 +438,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 			}
 		}
 	} else if (COMPLAIN_MODE(profile)) {
+		/* no exec permission - are we in learning mode */
 		new_profile = aa_new_null_profile(profile, 0);
 		sa.base.error = -EACCES;
 		if (!new_profile) {
@@ -437,9 +447,9 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 		} else
 			sa.name2 = new_profile->base.hname;
 		sa.perms.xindex |= AA_X_UNSAFE;
-	} else {
+	} else
+		/* fail exec */
 		sa.base.error = -EACCES;
-	}
 
 	if (!new_profile)
 		goto audit;
@@ -489,6 +499,7 @@ apply:
 	/* transfer new profile reference will be released when cxt is freed */
 	cxt->profile = new_profile;
 
+	/* clear out all temporary/transitional state from the context */
 x_clear:
 	aa_put_profile(cxt->previous);
 	aa_put_profile(cxt->onexec);
