@@ -75,7 +75,6 @@ void aa_cred_policy(const struct cred *cred, struct aa_profile **sys);
 struct cred *aa_get_task_cred(const struct task_struct *task,
 				struct aa_profile **sys);
 int aa_replace_current_profiles(struct aa_profile *sys);
-void aa_put_task_policy(struct cred *cred);
 int aa_set_current_onexec(struct aa_profile *sys);
 int aa_set_current_hat(struct aa_profile *profile, u64 token);
 int aa_restore_previous_profile(u64 cookie);
