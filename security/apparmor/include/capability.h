@@ -33,7 +33,6 @@ struct aa_caps {
 	kernel_cap_t kill;
 };
 
-int aa_profile_capable(struct aa_profile *profile, int cap);
 int aa_capable(struct task_struct *task, struct aa_profile *profile, int cap,
 	       int audit);
 

@@ -197,12 +197,9 @@ void aa_add_profile(struct aa_policy_common *common,
 
 int aa_alloc_default_namespace(void);
 void aa_free_default_namespace(void);
-struct aa_namespace *alloc_aa_namespace(const char *name);
 void free_aa_namespace_kref(struct kref *kref);
-void free_aa_namespace(struct aa_namespace *ns);
 
 struct aa_namespace *aa_find_namespace(const char *name);
-struct aa_namespace *aa_prepare_namespace(const char *name);
 void aa_profile_ns_list_release(void);
 
 static inline struct aa_policy_common *aa_get_common(struct aa_policy_common *c)

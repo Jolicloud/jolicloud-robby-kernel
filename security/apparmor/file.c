@@ -57,7 +57,7 @@ static void aa_audit_file_mask(struct audit_buffer *ab, u16 mask, int xindex,
 	audit_log_string(ab, str);
 }
 
-void file_audit_cb(struct audit_buffer *ab, void *va)
+static void file_audit_cb(struct audit_buffer *ab, void *va)
 {
 	struct aa_audit_file *sa = va;
 	u16 denied = sa->request & ~sa->perms.allowed;
@@ -140,8 +140,9 @@ int aa_audit_file(struct aa_profile *profile, struct aa_audit_file *sa)
 }
 
 /* TODO: convert from dfa + state to permission entry */
-struct file_perms aa_compute_perms(struct aa_dfa *dfa, unsigned int state,
-				   struct path_cond *cond)
+static struct file_perms aa_compute_perms(struct aa_dfa *dfa,
+					  unsigned int state,
+					  struct path_cond *cond)
 {
 	struct file_perms perms;
 
@@ -367,9 +368,9 @@ static inline int aa_is_deleted_file(struct dentry *dentry)
 	return 0;
 }
 
-int aa_file_common_perm(struct aa_profile *profile, const char *operation,
-			struct file *file, u16 request, const char *name,
-			int error)
+static int aa_file_common_perm(struct aa_profile *profile,
+			       const char *operation, struct file *file,
+			       u16 request, const char *name, int error)
 {
 	struct path_cond cond = {
 		.uid = file->f_path.dentry->d_inode->i_uid,

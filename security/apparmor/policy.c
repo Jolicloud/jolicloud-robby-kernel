@@ -194,7 +194,7 @@ void aa_free_default_namespace(void)
  * @name: a preallocated name
  * Returns NULL on failure.
  */
-struct aa_namespace *alloc_aa_namespace(const char *name)
+static struct aa_namespace *alloc_aa_namespace(const char *name)
 {
 	struct aa_namespace *ns;
 
@@ -250,7 +250,7 @@ void free_aa_namespace_kref(struct kref *kref)
  * Requires: All references to the namespace must have been put, if the
  *           namespace was referenced by a profile confining a task,
  */
-void free_aa_namespace(struct aa_namespace *ns)
+static void free_aa_namespace(struct aa_namespace *ns)
 {
 	if (!ns)
 		return;
@@ -304,7 +304,7 @@ struct aa_namespace *aa_find_namespace(const char *name)
  *
  * Return: refcounted namespace or NULL if failed to create one
  */
-struct aa_namespace *aa_prepare_namespace(const char *name)
+static struct aa_namespace *aa_prepare_namespace(const char *name)
 {
 	struct aa_namespace *ns;
 
@@ -351,8 +351,8 @@ struct aa_namespace *aa_prepare_namespace(const char *name)
  *
  * Requires: namespace list lock be held, or list not be shared
  */
-void __aa_add_profile(struct aa_policy_common *common,
-		      struct aa_profile *profile)
+static void __aa_add_profile(struct aa_policy_common *common,
+			     struct aa_profile *profile)
 {
 	list_add(&profile->base.list, &common->profiles);
 	if (!(profile->flags & PFLAG_NO_LIST_REF))
@@ -372,7 +372,7 @@ void __aa_add_profile(struct aa_policy_common *common,
  *
  * Requires: namespace list lock be held, or list not be shared
  */
-void __aa_remove_profile(struct aa_profile *profile)
+static void __aa_remove_profile(struct aa_profile *profile)
 {
 	list_del_init(&profile->base.list);
 	if (!(profile->flags & PFLAG_NO_LIST_REF))
@@ -393,8 +393,8 @@ void __aa_remove_profile(struct aa_profile *profile)
  *
  * Requires: namespace list lock be held, or list not be shared
  */
-void __aa_replace_profile(struct aa_profile *old,
-			  struct aa_profile *new)
+static void __aa_replace_profile(struct aa_profile *old,
+				 struct aa_profile *new)
 {
 	struct aa_policy_common *common;
 	struct aa_profile *child, *tmp;
@@ -434,7 +434,7 @@ void __aa_replace_profile(struct aa_profile *old,
  *
  * Requires: namespace lock be held
  */
-void __aa_profile_list_release(struct list_head *head)
+static void __aa_profile_list_release(struct list_head *head)
 {
 	struct aa_profile *profile, *tmp;
 	list_for_each_entry_safe(profile, tmp, head, base.list) {
@@ -450,7 +450,7 @@ void __aa_profile_list_release(struct list_head *head)
  * 
  * Requires: ns_list_lock && ns->base.lock be held
  */
-void __aa_remove_namespace(struct aa_namespace *ns)
+static void __aa_remove_namespace(struct aa_namespace *ns)
 {
 	struct aa_profile *unconfined = ns->unconfined;
 	/* remove ns from namespace list */

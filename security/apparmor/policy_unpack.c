@@ -387,7 +387,7 @@ fail:
 	return 0;
 }
 
-int aa_unpack_rlimits(struct aa_ext *e, struct aa_profile *profile)
+static int aa_unpack_rlimits(struct aa_ext *e, struct aa_profile *profile)
 {
 	void *pos = e->pos;
 

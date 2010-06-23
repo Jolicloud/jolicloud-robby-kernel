@@ -85,7 +85,7 @@ static int aa_audit_caps(struct aa_profile *profile, struct aa_audit_caps *sa)
 	return aa_audit(type, profile, &sa->base, audit_cb);
 }
 
-int aa_profile_capable(struct aa_profile *profile, int cap)
+static int aa_profile_capable(struct aa_profile *profile, int cap)
 {
 	return cap_raised(profile->caps.allowed, cap) ? 0 : -EPERM;
 }

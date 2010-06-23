@@ -51,7 +51,4 @@ struct aa_audit {
 int aa_audit(int type, struct aa_profile *profile, struct aa_audit *sa,
 	     void (*cb) (struct audit_buffer *, void *));
 
-int aa_audit_syscallreject(struct aa_profile *profile, gfp_t gfp, const char *,
-			   void (*cb) (struct audit_buffer *, void *));
-
 #endif /* __AA_AUDIT_H */

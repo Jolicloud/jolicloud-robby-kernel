@@ -152,7 +152,6 @@ struct aa_audit_file {
 };
 
 int aa_audit_file(struct aa_profile *profile, struct aa_audit_file *sa);
-void file_audit_cb(struct audit_buffer *ab, void *va);
 
 /**
  * struct aa_file_rules - components used for file rule permissions
@@ -184,10 +183,6 @@ int aa_path_perm(struct aa_profile *profile, const char *operation,
 
 int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 		 struct path *new_dir, struct dentry *new_dentry);
-
-int aa_file_common_perm(struct aa_profile *profile, const char *operation,
-			struct file *file, u16 request, const char *name,
-			int error);
 
 int aa_file_perm(struct aa_profile *profile, const char *operation,
 		 struct file *file, u16 request);
