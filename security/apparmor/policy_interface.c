@@ -822,7 +822,10 @@ ssize_t aa_interface_remove_profiles(char *name, size_t size)
 	write_lock(&ns->base.lock);
 	if (!name) {
 		/* remove namespace */
-	  //		__aa_remove_namespace(ns);
+		if (ns == default_namespace)
+			__aa_profile_list_release(&ns->base.profiles);
+		else
+			__aa_remove_namespace(ns);
 	} else {
 		/* remove profile */
 		profile = __aa_find_profile_by_fqname(ns, name);
