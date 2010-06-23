@@ -136,7 +136,7 @@ int aa_revalidate_sk(struct sock *sk, char *operation)
 		return 0;
 
 	profile = __aa_current_profile();
-	if (aa_confined(profile))
+	if (!unconfined(profile))
 		error = aa_net_perm(profile, operation,
 				    sk->sk_family, sk->sk_type,
 				    sk->sk_protocol);

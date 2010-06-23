@@ -89,7 +89,7 @@ static inline bool __aa_task_is_confined(struct task_struct *task)
 	struct aa_task_context *cxt = __task_cred(task)->security;
 
 	BUG_ON(!cxt);
-	if (!aa_confined(cxt->sys.profile))
+	if (unconfined(cxt->sys.profile))
 		return 0;
 
 	return 1;

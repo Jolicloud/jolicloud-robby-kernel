@@ -73,7 +73,7 @@ int aa_ptrace(struct task_struct *tracer, struct task_struct *tracee,
 	const struct cred *cred = aa_get_task_cred(tracer, &tracer_p);
 	int error = 0;
 
-	if (aa_confined(tracer_p)) {
+	if (!unconfined(tracer_p)) {
 		struct aa_audit_ptrace sa = {
 			.base.operation = "ptrace",
 			.base.gfp_mask = GFP_ATOMIC,

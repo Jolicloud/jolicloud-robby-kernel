@@ -125,7 +125,7 @@ static int apparmor_capget(struct task_struct *target, kernel_cap_t *effective,
 	*inheritable = cred->cap_inheritable;
 	*permitted = cred->cap_permitted;
 
-	if (aa_confined(profile)) {
+	if (!unconfined(profile)) {
 		*effective = cap_combine(*effective, profile->caps.set);
 		*effective = cap_intersect(*effective, profile->caps.allowed);
 	}
@@ -142,7 +142,7 @@ static int apparmor_capable(struct task_struct *task, const struct cred *cred,
 	int error = cap_capable(task, cred, cap, audit);
 
 	profile = aa_cred_policy(cred);
-	if (aa_confined(profile) &&
+	if (!unconfined(profile) &&
 	    (!error || cap_raised(profile->caps.set, cap)))
 		error = aa_capable(task, profile, cap, audit);
 
@@ -154,7 +154,7 @@ static int apparmor_sysctl(struct ctl_table *table, int op)
 	int error = 0;
 	struct aa_profile *profile = aa_current_profile();
 
-	if (aa_confined(profile)) {
+	if (!unconfined(profile)) {
 		char *buffer, *name;
 		int mask;
 
@@ -196,7 +196,7 @@ static int common_perm(const char *op, struct path *path, u16 mask,
 	int error = 0;
 
 	profile = __aa_current_profile();
-	if (aa_confined(profile))
+	if (!unconfined(profile))
 		error = aa_path_perm(profile, op, path, mask, cond);
 
 	return error;
@@ -288,7 +288,7 @@ static int apparmor_path_link(struct dentry *old_dentry, struct path *new_dir,
 		return 0;
 
 	profile = aa_current_profile();
-	if (aa_confined(profile))
+	if (!unconfined(profile))
 		error = aa_path_link(profile, old_dentry, new_dir, new_dentry);
 	return error;
 }
@@ -303,7 +303,7 @@ static int apparmor_path_rename(struct path *old_dir, struct dentry *old_dentry,
 		return 0;
 
 	profile = aa_current_profile();
-	if (aa_confined(profile)) {
+	if (!unconfined(profile)) {
 		struct path old_path = { old_dir->mnt, old_dentry };
 		struct path new_path = { new_dir->mnt, new_dentry };
 		struct path_cond cond = { old_dentry->d_inode->i_uid,
@@ -330,7 +330,7 @@ static int apparmor_path_chmod(struct dentry *dentry, struct vfsmount *mnt,
 		return 0;
 
 	profile = aa_current_profile();
-	if (aa_confined(profile)) {
+	if (!unconfined(profile)) {
 		struct path path = { mnt, dentry };
 		struct path_cond cond = { dentry->d_inode->i_uid,
 					  dentry->d_inode->i_mode
@@ -352,7 +352,7 @@ static int apparmor_path_chown(struct path *path, uid_t uid, gid_t gid)
 		return 0;
 
 	profile = aa_current_profile();
-	if (aa_confined(profile)) {
+	if (!unconfined(profile)) {
 		struct path_cond cond =  { path->dentry->d_inode->i_uid,
 					   path->dentry->d_inode->i_mode
 		};
@@ -374,7 +374,7 @@ static int apparmor_dentry_open(struct file *file, const struct cred *cred)
 		return 0;
 
 	profile = aa_cred_policy(cred);
-	if (aa_confined(profile)) {
+	if (!unconfined(profile)) {
 		struct aa_file_cxt *fcxt = file->f_security;
 		struct inode *inode = file->f_path.dentry->d_inode;
 		struct path_cond cond = { inode->i_uid, inode->i_mode };
@@ -427,7 +427,7 @@ static int apparmor_file_permission(struct file *file, int mask)
 	 * AppArmor <= 2.4 revalidates files at access time instead
 	 * of at exec.
 	 */
-	if (aa_confined(profile) &&
+	if (!unconfined(profile) &&
 	    ((fprofile != profile) || (mask & ~fcxt->allowed)))
 		error = aa_file_perm(profile, "file_perm", file, mask);
 #endif
@@ -446,8 +446,8 @@ static int common_file_perm(const char *op, struct file *file, u16 mask)
 		return 0;
 
 	profile = aa_current_profile();
-	if (aa_confined(profile) && ((fprofile != profile) ||
-					(mask & ~fcxt->allowed)))
+	if (!unconfined(profile) && ((fprofile != profile) ||
+				     (mask & ~fcxt->allowed)))
 		error = aa_file_perm(profile, op, file, mask);
 
 	return error;
@@ -595,7 +595,7 @@ static int apparmor_task_setrlimit(unsigned int resource,
 	struct aa_profile *profile = aa_current_profile();
 	int error = 0;
 
-	if (aa_confined(profile))
+	if (!unconfined(profile))
 		error = aa_task_setrlimit(profile, resource, new_rlim);
 
 	return error;
@@ -611,7 +611,7 @@ static int apparmor_socket_create(int family, int type, int protocol, int kern)
 		return 0;
 
 	profile = __aa_current_profile();
-	if (aa_confined(profile))
+	if (!unconfined(profile))
 		error = aa_net_perm(profile, "socket_create", family,
 				    type, protocol);
 	return error;

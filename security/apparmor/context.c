@@ -77,7 +77,7 @@ static void replace_group(struct aa_task_cxt_group *cgrp,
 		return;
 
 	BUG_ON(!profile);
-	if (!aa_confined(profile) || (cgrp->profile->ns != profile->ns)) {
+	if (unconfined(profile) || (cgrp->profile->ns != profile->ns)) {
 		/* if switching to unconfined or a different profile namespace
 		 * clear out context state
 		 */
