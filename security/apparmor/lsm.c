@@ -48,9 +48,8 @@ int apparmor_initialized;
  */
 static void apparmor_cred_free(struct cred *cred)
 {
-	struct aa_task_context *cxt = cred->security;
+	aa_free_task_context(cred->security);
 	cred->security = NULL;
-	aa_free_task_context(cxt);
 }
 
 /*
