@@ -18,9 +18,7 @@
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 
-#include "include/apparmor.h"
 #include "include/match.h"
-#include "include/file.h"
 
 static void free_table(struct table_header *table)
 {
@@ -130,18 +128,6 @@ static int verify_dfa(struct aa_dfa *dfa, int flags)
 		if (NEXT_TABLE(dfa)[i] >= state_count)
 			goto out;
 		if (CHECK_TABLE(dfa)[i] >= state_count)
-			goto out;
-	}
-
-	/* verify accept permissions */
-	for (i = 0; i < state_count; i++) {
-		int mode = ACCEPT_TABLE(dfa)[i];
-
-		if (ACCEPT1_FLAGS(flags) && (mode & ~DFA_VALID_PERM_MASK))
-			goto out;
-
-		if (ACCEPT2_FLAGS(flags) &&
-		    (ACCEPT_TABLE2(dfa)[i] & ~DFA_VALID_PERM2_MASK))
 			goto out;
 	}
 

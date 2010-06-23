@@ -304,12 +304,30 @@ static struct aa_dfa *aa_unpack_dfa(struct aa_ext *e)
 		 */
 		size_t sz = blob - (char *)e->start;
 		size_t pad = ALIGN(sz, 8) - sz;
-		dfa = aa_dfa_unpack(blob + pad, size - pad,
-				    TO_ACCEPT1_FLAG(YYTD_DATA32) |
-				    TO_ACCEPT2_FLAG(YYTD_DATA32));
+		int i;
+		int flags = TO_ACCEPT1_FLAG(YYTD_DATA32) |
+			TO_ACCEPT2_FLAG(YYTD_DATA32);
+
+		dfa = aa_dfa_unpack(blob + pad, size - pad, flags);
+
+		/* verify accept permissions */
+		for (i = 0; i < dfa->tables[YYTD_ID_ACCEPT - 1]->td_lolen; i++) {
+			int mode = ACCEPT_TABLE(dfa)[i];
+
+			if (mode & ~DFA_VALID_PERM_MASK)
+				goto fail;
+
+			if (ACCEPT_TABLE2(dfa)[i] & ~DFA_VALID_PERM2_MASK)
+				goto fail;
+		}
+
 	}
 
 	return dfa;
+
+fail:
+	aa_dfa_free(dfa);
+	return ERR_PTR(-EPROTO);
 }
 
 static int aa_unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
