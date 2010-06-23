@@ -119,6 +119,8 @@ static const char *hname_tail(const char *hname)
  * policy_init - initialize a policy structure
  * @policy: policy to initialize  (NOT NULL)
  * @name: name of the policy, init will make a copy of it  (NOT NULL)
+ *
+ * Returns: true if policy init successful
  */
 static bool policy_init(struct aa_policy *policy, const char *name)
 {
@@ -213,7 +215,7 @@ static struct aa_policy *__policy_strn_find(struct list_head *head,
  * aa_alloc_namespace - allocate, initialize and return a new namespace
  * @name: a preallocated name  (NOT NULL)
  *
- * Returns: NULL on failure.
+ * Returns: refcounted namespace or NULL on failure.
  */
 static struct aa_namespace *aa_alloc_namespace(const char *name)
 {
@@ -305,8 +307,8 @@ static struct aa_namespace *__aa_find_namespace(struct list_head *head,
  * @root: namespace to search in  (NOT NULL)
  * @name: name of namespace to find  (NOT NULL)
  *
- * Returns: a pointer to the namespace on the list, or NULL if no namespace
- * called @name exists.
+ * Returns: a refcounted namespace on the list, or NULL if no namespace
+ *          called @name exists.
  *
  * refcount released by caller
  */
@@ -347,7 +349,7 @@ static struct aa_namespace *aa_prepare_namespace(const char *name)
 	/* released by caller */
 	ns = aa_get_namespace(__aa_find_namespace(&root->sub_ns, name));
 	if (!ns) {
-		/* name && namespace not found */
+		/* namespace not found */
 		struct aa_namespace *new_ns;
 		write_unlock(&root->lock);
 		new_ns = aa_alloc_namespace(name);
@@ -598,7 +600,7 @@ struct aa_profile *aa_alloc_profile(const char *hname)
 		return NULL;
 	}
 
-	/* return ref */
+	/* refcount released by caller */
 	return profile;
 }
 
@@ -614,7 +616,7 @@ struct aa_profile *aa_alloc_profile(const char *hname)
  * hold a count on them so that they are automatically released when
  * not in use.
  *
- * Returns: new profile else NULL on failure
+ * Returns: new refcounted profile else NULL on failure
  */
 struct aa_profile *aa_new_null_profile(struct aa_profile *parent, int hat)
 {
@@ -647,6 +649,7 @@ struct aa_profile *aa_new_null_profile(struct aa_profile *parent, int hat)
 	__list_add_profile(&parent->base.profiles, profile);
 	write_unlock(&profile->ns->lock);
 
+	/* refcount released by caller */
 	return profile;
 
 fail:
@@ -748,7 +751,7 @@ static struct aa_profile *__aa_strn_find_child(struct list_head *head,
  * @parent: profile to search  (NOT NULL)
  * @name: profile name to search for  (NOT NULL)
  *
- * Returns: a ref counted profile or NULL if not found
+ * Returns: a refcounted profile or NULL if not found
  */
 struct aa_profile *aa_find_child(struct aa_profile *parent, const char *name)
 {
@@ -758,6 +761,7 @@ struct aa_profile *aa_find_child(struct aa_profile *parent, const char *name)
 	profile = aa_get_profile(__aa_find_child(&parent->base.profiles, name));
 	read_unlock(&parent->ns->lock);
 
+	/* refcount released by caller */
 	return profile;
 }
 
@@ -844,6 +848,8 @@ struct aa_profile *aa_find_profile(struct aa_namespace *ns, const char *hname)
 	read_lock(&ns->lock);
 	profile = aa_get_profile(__aa_find_profile(&ns->base, hname));
 	read_unlock(&ns->lock);
+
+	/* refcount released by caller */
 	return profile;
 }
 
