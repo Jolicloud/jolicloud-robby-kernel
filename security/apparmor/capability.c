@@ -73,7 +73,7 @@ static int aa_audit_caps(struct aa_profile *profile, struct aa_audit_caps *sa)
 	ent = &get_cpu_var(audit_cache);
 	if (sa->base.task == ent->task && cap_raised(ent->caps, sa->cap)) {
 		put_cpu_var(audit_cache);
-		if (PROFILE_COMPLAIN(profile))
+		if (COMPLAIN_MODE(profile))
 			return 0;
 		return sa->base.error;
 	} else {
@@ -113,7 +113,7 @@ int aa_capable(struct task_struct *task, struct aa_profile *profile, int cap,
 	};
 
 	if (!audit) {
-		if (PROFILE_COMPLAIN(profile))
+		if (COMPLAIN_MODE(profile))
 			return 0;
 		return error;
 	}

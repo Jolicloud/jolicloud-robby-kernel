@@ -357,7 +357,7 @@ static int seq_show_profile(struct seq_file *f, void *p)
 	if (print_ns_name(f, root, profile->ns))
 		seq_printf(f, "://");
 	seq_printf(f, "%s (%s)\n", profile->base.hname,
-		   PROFILE_COMPLAIN(profile) ? "complain" : "enforce");
+		   COMPLAIN_MODE(profile) ? "complain" : "enforce");
 
 	return 0;
 }

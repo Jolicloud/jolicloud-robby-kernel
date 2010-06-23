@@ -135,7 +135,7 @@ int aa_audit(int type, struct aa_profile *profile, struct aa_audit *sa,
 			if (AUDIT_MODE(profile) != AUDIT_ALL)
 				return 0;
 			type = AUDIT_APPARMOR_AUDIT;
-		} else if (PROFILE_COMPLAIN(profile))
+		} else if (COMPLAIN_MODE(profile))
 			type = AUDIT_APPARMOR_ALLOWED;
 		else
 			type = AUDIT_APPARMOR_DENIED;

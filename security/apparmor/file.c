@@ -137,7 +137,7 @@ int aa_audit_file(struct aa_profile *profile, struct aa_audit_file *sa)
 			sa->request &= ~sa->perms.quiet;
 
 		if (!sa->request)
-			return PROFILE_COMPLAIN(profile) ? 0 : sa->base.error;
+			return COMPLAIN_MODE(profile) ? 0 : sa->base.error;
 	}
 	return aa_audit(type, profile, &sa->base, file_audit_cb);
 }

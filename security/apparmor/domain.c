@@ -391,7 +391,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 				sa.base.info = "profile not found";
 			}
 		}
-	} else if (PROFILE_COMPLAIN(profile)) {
+	} else if (COMPLAIN_MODE(profile)) {
 		new_profile = aa_new_null_profile(profile, 0);
 		sa.base.error = -EACCES;
 		if (!new_profile) {
@@ -565,7 +565,7 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 			/* released below */
 			hat = aa_find_child(root, hats[i]);
 		if (!hat) {
-			if (!PROFILE_COMPLAIN(root) || permtest) {
+			if (!COMPLAIN_MODE(root) || permtest) {
 				sa.base.info = "hat not found";
 				if (list_empty(&root->base.profiles))
 					sa.base.error = -ECHILD;
@@ -705,7 +705,7 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 	if (!target) {
 		sa.base.info = "profile not found";
 		sa.base.error = -ENOENT;
-		if (permtest || !PROFILE_COMPLAIN(profile))
+		if (permtest || !COMPLAIN_MODE(profile))
 			goto audit;
 		/* release below */
 		target = aa_new_null_profile(profile, 0);

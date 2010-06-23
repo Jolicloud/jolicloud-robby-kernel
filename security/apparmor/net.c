@@ -87,7 +87,7 @@ static int aa_audit_net(struct aa_profile *profile, struct aa_audit_net *sa)
 		if ((denied & quiet_mask) &&
 		    AUDIT_MODE(profile) != AUDIT_NOQUIET &&
 		    AUDIT_MODE(profile) != AUDIT_ALL)
-			return PROFILE_COMPLAIN(profile) ? 0 : sa->base.error;
+			return COMPLAIN_MODE(profile) ? 0 : sa->base.error;
 	}
 
 	return aa_audit(type, profile, &sa->base, audit_cb);

@@ -33,7 +33,7 @@
 extern const char *profile_mode_names[];
 #define APPARMOR_NAMES_MAX_INDEX 3
 
-#define PROFILE_COMPLAIN(_profile)				\
+#define COMPLAIN_MODE(_profile)				\
 	((aa_g_profile_mode == APPARMOR_COMPLAIN) || ((_profile) &&	\
 					(_profile)->mode == APPARMOR_COMPLAIN))
 
