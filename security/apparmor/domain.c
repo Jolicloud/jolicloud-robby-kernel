@@ -417,108 +417,11 @@ int apparmor_bprm_secureexec(struct linux_binprm *bprm)
 	return ret;
 }
 
-
-static int aa_revalidate_perm(struct aa_profile *profile, struct file *file,
-			      char *buffer, int size)
-{
-	umode_t mode = file->f_path.dentry->d_inode->i_mode;
-	char *name;
-	int error;
-
-	error = aa_get_name_to_buffer(&file->f_path, S_ISDIR(mode), buffer,
-				      size, &name);
-	return aa_file_common_perm(profile, "file_inherit", file,
-				   aa_map_file_to_perms(file), name,
-				   error);
-}
-
-static void revalidate_file(struct aa_profile *profile, struct file *file,
-			    unsigned long i, char *buffer, int size,
-			    struct cred *cred)
-{
-	if (aa_revalidate_perm(profile, file, buffer, size)) {
-		struct file *devnull = NULL;
-		int fd = get_unused_fd();
-		sys_close(i);
-		if (fd != i) {
-			if (fd >= 0)
-				put_unused_fd(fd);
-			return;
-		}
-		if (devnull) {
-			get_file(devnull);
-		} else if (apparmorfs_null) {
-			devnull = dentry_open(dget(apparmorfs_null),
-					      mntget(apparmorfs_mnt),
-					      O_RDWR, cred);
-			if (IS_ERR(devnull)) {
-				devnull = NULL;
-				put_unused_fd(fd);
-				return;
-			}
-		} else {
-			/* apparmorfs_null not setup */
-			put_unused_fd(fd);
-			return;
-		}
-		fd_install(fd, devnull);
-	}
-}
-
-/* 
- * derived from security/selinux/hooks.c: flush_unauthorized_files &&
- * fs/exec.c:flush_old_files
- *
- * TODO: update for selective revalidation based of AppArmor 2.4
- *       compatability
- */
-static int revalidate_files(struct aa_profile *profile,
-			    struct files_struct *files, gfp_t gfp,
-			    struct cred *cred)
-{
-	struct file *file;
-	struct fdtable *fdt;
-	long j = -1;
-	char *buffer = kmalloc(g_apparmor_path_max, gfp);
-	if (!buffer)
-		return -ENOMEM;
-
-	spin_lock(&files->file_lock);
-	for (;;) {
-		unsigned long set, i;
-
-		j++;
-		i = j * __NFDBITS;
-		fdt = files_fdtable(files);
-		if (i >= fdt->max_fds)
-			break;
-		set = fdt->open_fds->fds_bits[j];
-		if (!set)
-			continue;
-		spin_unlock(&files->file_lock);
-		for ( ; set ; i++,set >>= 1) {
-			if (set & 1) {
-				file = fget(i);
-				if (!file)
-					continue;
-				revalidate_file(profile, file, i, buffer,
-						g_apparmor_path_max, cred);
-				fput(file);
-			}
-		}
-		spin_lock(&files->file_lock);
-	}
-	spin_unlock(&files->file_lock);	
-	kfree(buffer);
-	return 0;
-}
-
 void apparmor_bprm_committing_creds(struct linux_binprm *bprm)
 {
 	struct aa_profile *profile;
 	struct cred *cred = aa_get_task_policy(current, &profile);
 	struct aa_task_context *new_cxt = bprm->cred->security;
-	int error;
 
 	/* bail out if unconfiged or not changing profile */
 	if ((new_cxt->sys.profile == profile) ||
@@ -528,12 +431,6 @@ void apparmor_bprm_committing_creds(struct linux_binprm *bprm)
 	}
 	put_cred(cred);
 
-	/*
-	error = revalidate_files(new_cxt->sys.profile, current->files,
-				 GFP_KERNEL, bprm->cred);
-	if (error)
-		return error;
-	*/
 	current->pdeath_signal = 0;
 
 	/* reset soft limits and set hard limits for the new profile */
