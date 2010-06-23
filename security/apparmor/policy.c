@@ -417,11 +417,10 @@ static void __list_remove_profile(struct aa_profile *profile)
 /**
  * __aa_replace_profile - replace @old with @new on a list
  * @old: profile to be replaced  (NOT NULL)
- * @new: profile to replace @old with  (MAYBE NULL)
+ * @new: profile to replace @old with  (NOT NULL)
  *
  * Will duplicaticate and refcount elements that @new inherits from @old
- * and will inherit @old children.  If new is NULL it will replace to the
- * unconfined profile for old's namespace.
+ * and will inherit @old children.
  *
  * refcount @new for list, put @old list refcount
  *
@@ -438,28 +437,39 @@ static void __aa_replace_profile(struct aa_profile *old,
 	else
 		policy = &old->ns->base;
 
-	if (new) {
-		/* released when @new is freed */
-		new->parent = aa_get_profile(old->parent);
-		new->ns = aa_get_namespace(old->ns);
-		new->sid = old->sid;
-		__list_add_profile(&policy->profiles, new);
-		/* inherit children */
-		list_for_each_entry_safe(child, tmp, &old->base.profiles,
-					 base.list) {
-			aa_put_profile(child->parent);
-			child->parent = aa_get_profile(new);
-			/* list refcount transfered to @new*/
-			list_move(&child->base.list, &new->base.profiles);
-		}
-	} else {
-		/* refcount not taken, held via @old refcount */
-		new = old->ns->unconfined;
+	/* released when @new is freed */
+	new->parent = aa_get_profile(old->parent);
+	new->ns = aa_get_namespace(old->ns);
+	new->sid = old->sid;
+	__list_add_profile(&policy->profiles, new);
+	/* inherit children */
+	list_for_each_entry_safe(child, tmp, &old->base.profiles, base.list) {
+		aa_put_profile(child->parent);
+		child->parent = aa_get_profile(new);
+		/* list refcount transfered to @new*/
+		list_move(&child->base.list, &new->base.profiles);
 	}
 
 	/* released by aa_free_profile */
 	old->replacedby = aa_get_profile(new);
 	__list_remove_profile(old);
+}
+
+static void __aa_profile_list_release(struct list_head *head);
+
+/**
+ * __aa_replace_profile - remove old profile, and children
+ * @profile: profile to be replaced  (NOT NULL)
+ *
+ * Requires: namespace list lock be held, or list not be shared
+ */
+static void __aa_remove_profile(struct aa_profile *profile)
+{
+	/* release any children lists first */
+	__aa_profile_list_release(&profile->base.profiles);
+	/* released by aa_free_profile */
+	profile->replacedby = aa_get_profile(profile->ns->unconfined);
+	__list_remove_profile(profile);
 }
 
 /**
@@ -471,11 +481,8 @@ static void __aa_replace_profile(struct aa_profile *old,
 static void __aa_profile_list_release(struct list_head *head)
 {
 	struct aa_profile *profile, *tmp;
-	list_for_each_entry_safe(profile, tmp, head, base.list) {
-		/* release any children lists first */
-		__aa_profile_list_release(&profile->base.profiles);
-		__aa_replace_profile(profile, NULL);
-	}
+	list_for_each_entry_safe(profile, tmp, head, base.list)
+		__aa_remove_profile(profile);
 }
 
 static void __aa_remove_namespace(struct aa_namespace *ns);
@@ -1076,8 +1083,7 @@ ssize_t aa_interface_remove_profiles(char *fqname, size_t size)
 			goto fail_ns_lock;
 		}
 		sa.name = profile->base.hname;
-		__aa_profile_list_release(&profile->base.profiles);
-		__aa_replace_profile(profile, NULL);
+		__aa_remove_profile(profile);
 	}
 	write_unlock(&ns->lock);
 
