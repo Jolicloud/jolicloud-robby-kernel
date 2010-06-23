@@ -16,7 +16,6 @@
 #include "include/policy.h"
 #include "include/domain.h"
 
-/* FIXME show profile multiplexing */
 int aa_getprocattr(struct aa_namespace *ns, struct aa_profile *profile,
 		   char **string)
 {
