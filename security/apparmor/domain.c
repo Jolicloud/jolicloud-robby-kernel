@@ -576,6 +576,16 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 					sa.base.error = -ENOENT;
 				goto out;
 			}
+
+			/*
+			 * In complain mode and failed to match any hats.
+			 * Audit the failure based off of the first hat
+			 * supplied.  This is done due how userspace
+			 * interacts with change_hat.
+			 *
+			 * TODO: Add logging of all failed hats
+			 */
+
 			/* freed below */
 			name = new_compound_name(root->base.hname, hats[0]);
 			sa.name = name;
