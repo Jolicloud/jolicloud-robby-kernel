@@ -487,21 +487,7 @@ static void __aa_profile_list_release(struct list_head *head)
 		__aa_remove_profile(profile);
 }
 
-static void __aa_remove_namespace(struct aa_namespace *ns);
-
-/**
- * __aa_ns_list_release - remove all profile namespaces on the list put refs
- * @head: list of profile namespaces  (NOT NULL)
- *
- * Requires: namespace lock be held
- */
-static void __aa_ns_list_release(struct list_head *head)
-{
-	struct aa_namespace *ns, *tmp;
-	list_for_each_entry_safe(ns, tmp, head, base.list)
-		__aa_remove_namespace(ns);
-
-}
+static void __aa_ns_list_release(struct list_head *head);
 
 /**
  * aa_destroy_namespace - remove everything contained by @ns
@@ -550,6 +536,20 @@ static void __aa_remove_namespace(struct aa_namespace *ns)
 	aa_put_profile(unconfined);
 	/* release ns->base.list ref, from removal above */
 	aa_put_namespace(ns);
+}
+
+/**
+ * __aa_ns_list_release - remove all profile namespaces on the list put refs
+ * @head: list of profile namespaces  (NOT NULL)
+ *
+ * Requires: namespace lock be held
+ */
+static void __aa_ns_list_release(struct list_head *head)
+{
+	struct aa_namespace *ns, *tmp;
+	list_for_each_entry_safe(ns, tmp, head, base.list)
+		__aa_remove_namespace(ns);
+
 }
 
 /**
