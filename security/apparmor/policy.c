@@ -220,6 +220,44 @@ static struct aa_policy *__policy_strn_find(struct list_head *head,
  * Routines for AppArmor namespaces
  */
 
+static const char *hidden_ns_name = "---";
+/**
+ * aa_ns_visible - test if @child is visible from @parent
+ * @parent: namespace to treat as the parent
+ * @child:  namespace to test if visible from @parent
+ *
+ * Returns: true if @child is visible from @parent else false
+ */
+bool aa_ns_visible(struct aa_namespace *parent, struct aa_namespace *child)
+{
+	if (parent == child)
+		return true;
+
+	for ( ; child; child = child->parent) {
+		if (child->parent == parent)
+			return true;
+	}
+	return false;
+}
+
+const char *aa_ns_name(struct aa_namespace *parent, struct aa_namespace *child)
+{
+	/* if child == parent then the namespace name isn't displayed */
+	if (parent == child)
+		return "";
+
+	if (aa_ns_visible(parent, child)) {
+		/* at this point if a ns is visible it is in a child ns
+		 * thus the parent ns.hname is a prefix of its name.
+		 * Only output the virtualized portion of the name
+		 * Add + 2 to skip over // seperating parent hname prefix
+		 * from the visible tail of the childs hname
+		 */
+		return child->base.hname + strlen(parent->base.hname) + 2;
+	} else
+		return hidden_ns_name;
+}
+
 /**
  * alloc_namespace - allocate, initialize and return a new namespace
  * @prefix: parent namespace name (MAYBE NULL)

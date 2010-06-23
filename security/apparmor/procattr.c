@@ -17,21 +17,6 @@
 #include "include/policy.h"
 #include "include/domain.h"
 
-/**
- * ns_visible - test if @child is visible from @parent
- * @parent: namespace to treat as the parent
- * @child:  namespace to test if visible from @parent
- *
- * Returns: true if @child is visible from @parent else false
- */
-static bool ns_visible(struct aa_namespace *parent, struct aa_namespace *child)
-{
-	for ( ; child; child = child->parent) {
-		if (child->parent == parent)
-			return true;
-	}
-	return false;
-}
 
 /**
  * aa_getprocattr - Return the profile information for @profile
@@ -52,20 +37,21 @@ int aa_getprocattr(struct aa_profile *profile, char **string)
 	char *str;
 	int len = 0, mode_len = 0, ns_len = 0, name_len;
 	const char *mode_str = profile_mode_names[profile->mode];
+	const char *ns_name = NULL;
 	struct aa_namespace *ns = profile->ns;
 	struct aa_namespace *current_ns = __aa_current_profile()->ns;
 	char *s;
 
-	if (ns != current_ns) {
-		if (!ns_visible(current_ns, ns))
-			return -EACCES;
-		/* if ns is visible it is a child of current_ns and thus
-		 * its hname includes current_ns hname as a prefix
-		 * but we don't display that part of the name.
-		 */
-		ns_len = strlen(ns->base.hname) - 2 -	    /*- 2 for // */
-			strlen(current_ns->base.hname) + 3; /*+ 3 for :// */
-	}
+	if (!aa_ns_visible(current_ns, ns))
+		return -EACCES;
+
+	ns_name = aa_ns_name(current_ns, ns);
+	ns_len = strlen(ns_name);
+
+	/* if the visible ns_name is > 0 increase size for : :// seperator */
+	if (ns_len)
+		ns_len += 4;
+
 	/* unconfined profiles don't have a mode string appended */
 	if (!unconfined(profile))
 		mode_len = strlen(mode_str) + 3;	/* + 3 for _() */
@@ -78,8 +64,7 @@ int aa_getprocattr(struct aa_profile *profile, char **string)
 
 	if (ns_len) {
 		/* skip over prefix current_ns->base.hname and seperating // */
-		sprintf(s, "%s://", ns->base.hname + 2 +
-			strlen(current_ns->base.hname));
+		sprintf(s, ":%s://", ns_name);
 		s += ns_len;
 	}
 	if (unconfined(profile))
