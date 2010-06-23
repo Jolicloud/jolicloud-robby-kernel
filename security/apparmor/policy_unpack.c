@@ -521,6 +521,14 @@ static struct aa_profile *unpack_profile(struct aa_ext *e,
 			goto fail;
 	}
 
+	if (unpack_nameX(e, AA_STRUCT, "capsx")) {
+		/* optional extended caps mediation mask */
+		if (!unpack_u32(e, &(profile->caps.extended.cap[0]), NULL))
+			goto fail;
+		if (!unpack_u32(e, &(profile->caps.extended.cap[1]), NULL))
+			goto fail;
+	}
+
 	if (!unpack_rlimits(e, profile))
 		goto fail;
 

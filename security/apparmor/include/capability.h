@@ -20,10 +20,12 @@
 struct aa_profile;
 
 /* aa_caps - confinement data for capabilities
- * @set_caps: capabilities that are being set
- * @capabilities: capabilities mask
- * @audit_caps: caps that are to be audited
- * @quiet_caps: caps that should not be audited
+ * @set: capabilities that are being set
+ * @allowed: capabilities mask
+ * @audit: caps that are to be audited
+ * @quiet: caps that should not be audited
+ * @kill: caps that when requested will result in the task being killed
+ * @extended: caps that are subject finer grained mediation
  */
 struct aa_caps {
 	kernel_cap_t set;
@@ -31,6 +33,7 @@ struct aa_caps {
 	kernel_cap_t audit;
 	kernel_cap_t quiet;
 	kernel_cap_t kill;
+	kernel_cap_t extended;
 };
 
 int aa_capable(struct task_struct *task, struct aa_profile *profile, int cap,
