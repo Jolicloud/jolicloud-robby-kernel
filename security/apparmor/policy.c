@@ -291,40 +291,6 @@ void aa_free_namespace_kref(struct kref *kref)
 }
 
 /**
- * aa_alloc_root_ns - allocate the base default namespace
- *
- * Returns 0 on success else error
- *
- */
-int __init aa_alloc_root_ns(void)
-{
-	struct aa_namespace *ns;
-	/* released by aa_free_root_ns - used as list ref*/
-	ns = aa_alloc_namespace("root");
-	if (!ns)
-		return -ENOMEM;
-
-	/* released by aa_free_root_ns - global var ref*/
-	root_ns = aa_get_namespace(ns);
-	write_lock(&ns_list_lock);
-	list_add(&ns->base.list, &ns_list);
-	write_unlock(&ns_list_lock);
-
-	return 0;
-}
-
-void aa_free_root_ns(void)
-{
-	write_lock(&ns_list_lock);
-	list_del_init(&root_ns->base.list);
-	write_unlock(&ns_list_lock);
-	/* drop the list ref and the global root_ns ref */
-	aa_put_namespace(root_ns);
-	aa_put_namespace(root_ns);
-	root_ns = NULL;
-}
-
-/**
  * __aa_find_namespace - find a namespace on a list by @name
  * @name - name of namespace to look for
  *
@@ -531,6 +497,39 @@ static void __aa_remove_namespace(struct aa_namespace *ns)
 	aa_put_namespace(ns);
 }
 
+/**
+ * aa_alloc_root_ns - allocate the base default namespace
+ *
+ * Returns 0 on success else error
+ *
+ */
+int __init aa_alloc_root_ns(void)
+{
+	struct aa_namespace *ns;
+	/* released by aa_free_root_ns - used as list ref*/
+	ns = aa_alloc_namespace("root");
+	if (!ns)
+		return -ENOMEM;
+
+	/* released by aa_free_root_ns - global var ref*/
+	root_ns = aa_get_namespace(ns);
+	write_lock(&ns_list_lock);
+	list_add(&ns->base.list, &ns_list);
+	write_unlock(&ns_list_lock);
+
+	return 0;
+}
+
+void aa_free_root_ns(void)
+{
+	write_lock(&ns_list_lock);
+	list_del_init(&root_ns->base.list);
+	write_unlock(&ns_list_lock);
+	/* drop the list ref and the global root_ns ref */
+	aa_put_namespace(root_ns);
+	aa_put_namespace(root_ns);
+	root_ns = NULL;
+}
 
 /**
  * aa_profilelist_release - remove all namespaces and all associated profiles
