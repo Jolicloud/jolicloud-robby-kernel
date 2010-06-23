@@ -518,13 +518,13 @@ static int apparmor_getprocattr(struct task_struct *task, char *name,
 	struct aa_task_context *cxt = cred->security;
 
 	if (strcmp(name, "current") == 0)
-		error = aa_getprocattr(aa_profile_newest(cxt->sys.profile),
+		error = aa_getprocattr(aa_newest_version(cxt->sys.profile),
 				       value);
 	else if (strcmp(name, "prev") == 0  && cxt->sys.previous)
-		error = aa_getprocattr(aa_profile_newest(cxt->sys.previous),
+		error = aa_getprocattr(aa_newest_version(cxt->sys.previous),
 				       value);
 	else if (strcmp(name, "exec") == 0 && cxt->sys.onexec)
-		error = aa_getprocattr(aa_profile_newest(cxt->sys.onexec),
+		error = aa_getprocattr(aa_newest_version(cxt->sys.onexec),
 				       value);
 	else
 		error = -EINVAL;

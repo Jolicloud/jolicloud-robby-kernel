@@ -107,7 +107,7 @@ static inline struct aa_profile *aa_cred_policy(const struct cred *cred)
 {
 	struct aa_task_context *cxt = cred->security;
 	BUG_ON(!cxt);
-	return aa_confining_profile(cxt->sys.profile);
+	return aa_newest_version(cxt->sys.profile);
 }
 
 /**
@@ -137,7 +137,7 @@ static inline struct aa_profile *aa_current_profile(void)
 	struct aa_profile *profile;
 	BUG_ON(!cxt);
 
-	profile = aa_profile_newest(cxt->sys.profile);
+	profile = aa_newest_version(cxt->sys.profile);
 	/*
 	 * Whether or not replacement succeeds, use newest profile so
 	 * there is no need to update it after replacement.

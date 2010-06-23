@@ -240,7 +240,7 @@ ssize_t aa_interface_remove_profiles(char *name, size_t size);
 #define unconfined(X) ((X)->flags & PFLAG_UNCONFINED)
 
 /**
- * aa_profile_newest - find the newest version of @profile
+ * aa_newest_version - find the newest version of @profile
  * @profile: the profile to check for newer versions of
  *
  * Find the newest version of @profile, if @profile is the newest version
@@ -250,25 +250,12 @@ ssize_t aa_interface_remove_profiles(char *name, size_t size);
  * must be held until the caller decides what to do with the returned newest
  * version.
  */
-static inline struct aa_profile *aa_profile_newest(struct aa_profile *profile)
+static inline struct aa_profile *aa_newest_version(struct aa_profile *profile)
 {
 	if (unlikely(profile && profile->replacedby))
 		for (; profile->replacedby; profile = profile->replacedby) ;
 
 	return profile;
-}
-
-/**
- * aa_confining_profile - find the newest confining profile version
- * @p - profile to check if newest version
- *
- * NOTE: the profile returned is not refcounted, The refcount on @p
- * must be held until the caller decides what to do with the returned newest
- * version.
- */
-static inline struct aa_profile *aa_confining_profile(struct aa_profile *p)
-{
-	return aa_profile_newest(p);
 }
 
 /**

@@ -329,7 +329,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	cxt = bprm->cred->security;
 	BUG_ON(!cxt);
 
-	profile = aa_profile_newest(cxt->sys.profile);
+	profile = aa_newest_version(cxt->sys.profile);
 	/*
 	 * get the namespace from the replacement profile as replacement
 	 * can change the namespace

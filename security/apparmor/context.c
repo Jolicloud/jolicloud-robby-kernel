@@ -198,7 +198,7 @@ int aa_restore_previous_profile(u64 token)
 	}
 
 	aa_put_profile(cxt->sys.profile);
-	cxt->sys.profile = aa_profile_newest(cxt->sys.previous);
+	cxt->sys.profile = aa_newest_version(cxt->sys.previous);
 	if (unlikely(cxt->sys.profile != cxt->sys.previous)) {
 		aa_get_profile(cxt->sys.profile);
 		aa_put_profile(cxt->sys.previous);
