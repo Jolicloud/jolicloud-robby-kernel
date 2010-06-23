@@ -306,7 +306,7 @@ static int unpack_dynstring(struct aa_ext *e, char **string, const char *name)
 	*string = NULL;
 
 	if (!res)
-		return res;
+		return 0;
 
 	*string = kstrdup(tmp, GFP_KERNEL);
 	if (!*string) {
@@ -372,6 +372,7 @@ static int aa_unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
 		if (!profile->file.trans.table)
 			goto fail;
 
+		profile->file.trans.size = size;
 		for (i = 0; i < size; i++) {
 			char *tmp;
 			if (!unpack_dynstring(e, &tmp, NULL))
@@ -387,11 +388,15 @@ static int aa_unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
 			goto fail;
 		if (!unpack_nameX(e, AA_STRUCTEND, NULL))
 			goto fail;
-		profile->file.trans.size = size;
 	}
 	return 1;
 
 fail:
+	if (profile->file.trans.table) {
+		int i;
+		for (i = 0; i < profile->file.trans.size; i++)
+			kfree(profile->file.trans.table[i]);
+	}
 	e->pos = pos;
 	return 0;
 }

@@ -27,12 +27,12 @@ int aa_getprocattr(struct aa_namespace *ns, struct aa_profile *profile,
 		const char *mode_str = profile_mode_names[profile->mode];
 		char *s;
 
-		mode_len = strlen(mode_str) + 3;	/* _(mode_str)\n */
+		mode_len = strlen(mode_str) + 3;	/* + 3 for _() */
 		name_len = strlen(profile->fqname);
 		if (ns != default_namespace)
-			ns_len = strlen(ns->base.name) + 3;
-		len = mode_len + ns_len + name_len + 1;
-		s = str = kmalloc(len + 1, GFP_ATOMIC);
+			ns_len = strlen(ns->base.name) + 3; /*+ 3 for :// */
+		len = mode_len + ns_len + name_len + 1;	    /*+ 1 for \n */
+		s = str = kmalloc(len + 1, GFP_ATOMIC);	    /* + 1 \0 */
 		if (!str)
 			return -ENOMEM;
 
@@ -40,15 +40,13 @@ int aa_getprocattr(struct aa_namespace *ns, struct aa_profile *profile,
 			sprintf(s, "%s://", ns->base.name);
 			s += ns_len;
 		}
-		memcpy(s, profile->fqname, name_len);
-		s += name_len;
-		sprintf(s, " (%s)\n", mode_str);
+		sprintf(s, "%s (%s)\n",profile->fqname, mode_str);
 	} else {
 		const char unconfined_str[] = "unconfined\n";
 
-		len = sizeof(unconfined_str) - 1;
+		len = sizeof(unconfined_str) - 1;	/* - 1 for \0 */
 		if (ns != default_namespace)
-			len += strlen(ns->base.name) + 3;
+			len += strlen(ns->base.name) + 3; /* + 3 for :// */
 
 		str = kmalloc(len + 1, GFP_ATOMIC);
 		if (!str)
@@ -61,6 +59,7 @@ int aa_getprocattr(struct aa_namespace *ns, struct aa_profile *profile,
 	}
 	*string = str;
 
+	/* NOTE: len does not include \0 of string, not saved as part of file */
 	return len;
 }
 

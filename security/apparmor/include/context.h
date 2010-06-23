@@ -38,8 +38,7 @@ static inline struct aa_file_cxt *aa_alloc_file_context(gfp_t gfp)
 static inline void aa_free_file_context(struct aa_file_cxt *cxt)
 {
 	aa_put_profile(cxt->profile);
-	memset(cxt, 0, sizeof(struct aa_file_cxt));
-	kfree(cxt);
+	kzfree(cxt);
 }
 
 /* struct aa_task_cxt_group - a grouping label data for confined tasks
@@ -70,8 +69,8 @@ struct aa_task_context {
 
 struct aa_task_context *aa_alloc_task_context(gfp_t flags);
 void aa_free_task_context(struct aa_task_context *cxt);
-struct aa_task_context *aa_dup_task_context(struct aa_task_context *old_cxt,
-					    gfp_t gfp);
+void aa_dup_task_context(struct aa_task_context *new,
+			 const struct aa_task_context *old);
 void aa_cred_policy(const struct cred *cred, struct aa_profile **sys);
 struct cred *aa_get_task_policy(const struct task_struct *task,
 				struct aa_profile **sys);

@@ -44,19 +44,6 @@ int apparmor_initialized;
  */
 
 /*
- * prepare new aa_task_context for modification by prepare_cred block
- */
-static int apparmor_cred_prepare(struct cred *new, const struct cred *old,
-				 gfp_t gfp)
-{
-	struct aa_task_context *cxt = aa_dup_task_context(old->security, gfp);
-	if (!cxt)
-		return -ENOMEM;
-	new->security = cxt;
-	return 0;
-}
-
-/*
  * free the associated aa_task_context and put its profiles
  */
 static void apparmor_cred_free(struct cred *cred)
@@ -64,6 +51,45 @@ static void apparmor_cred_free(struct cred *cred)
 	struct aa_task_context *cxt = cred->security;
 	cred->security = NULL;
 	aa_free_task_context(cxt);
+}
+
+/*
+ * allocate the apparmor part of blank credentials
+ */
+static int apparmor_cred_alloc_blank(struct cred *cred, gfp_t gfp)
+{
+	struct aa_task_context *cxt = aa_alloc_task_context(gfp);
+	if (cxt)
+		return -ENOMEM;
+
+	cred->security = cxt;
+	return 0;
+}
+
+/*
+ * prepare new aa_task_context for modification by prepare_cred block
+ */
+static int apparmor_cred_prepare(struct cred *new, const struct cred *old,
+				 gfp_t gfp)
+{
+	struct aa_task_context *cxt = aa_alloc_task_context(gfp);
+	if (!cxt)
+		return -ENOMEM;
+
+	aa_dup_task_context(cxt, old->security);
+	new->security = cxt;
+	return 0;
+}
+
+/*
+ * transfer the apparmor data to a blank set of creds
+ */
+static void apparmor_cred_transfer(struct cred *new, const struct cred *old)
+{
+	const struct aa_task_context *old_cxt = old->security;
+	struct aa_task_context *new_cxt = new->security;
+
+	aa_dup_task_context(new_cxt, old_cxt);
 }
 
 static int apparmor_ptrace_access_check(struct task_struct *child,
@@ -664,59 +690,61 @@ static int apparmor_socket_shutdown(struct socket *sock, int how)
 #endif
 
 static struct security_operations apparmor_ops = {
-	.name = "apparmor",
+	.name =				"apparmor",
 
-	.ptrace_access_check = apparmor_ptrace_access_check,
-	.ptrace_traceme = apparmor_ptrace_traceme,
-	.capget = apparmor_capget,
-	.sysctl = apparmor_sysctl,
-	.capable = apparmor_capable,
+	.ptrace_access_check =		apparmor_ptrace_access_check,
+	.ptrace_traceme =		apparmor_ptrace_traceme,
+	.capget =			apparmor_capget,
+	.sysctl =			apparmor_sysctl,
+	.capable =			apparmor_capable,
 
-	.path_link = apparmor_path_link,
-	.path_unlink = apparmor_path_unlink,
-	.path_symlink = apparmor_path_symlink,
-	.path_mkdir = apparmor_path_mkdir,
-	.path_rmdir = apparmor_path_rmdir,
-	.path_mknod = apparmor_path_mknod,
-	.path_rename = apparmor_path_rename,
-	.path_truncate = apparmor_path_truncate,
-	.dentry_open = apparmor_dentry_open,
+	.path_link =			apparmor_path_link,
+	.path_unlink =			apparmor_path_unlink,
+	.path_symlink =			apparmor_path_symlink,
+	.path_mkdir =			apparmor_path_mkdir,
+	.path_rmdir =			apparmor_path_rmdir,
+	.path_mknod =			apparmor_path_mknod,
+	.path_rename =			apparmor_path_rename,
+	.path_truncate =		apparmor_path_truncate,
+	.dentry_open =			apparmor_dentry_open,
 
-	.file_permission = apparmor_file_permission,
-	.file_alloc_security = apparmor_file_alloc_security,
-	.file_free_security = apparmor_file_free_security,
-	.file_mmap = apparmor_file_mmap,
-	.file_mprotect = apparmor_file_mprotect,
-	.file_lock = apparmor_file_lock,
+	.file_permission =		apparmor_file_permission,
+	.file_alloc_security =		apparmor_file_alloc_security,
+	.file_free_security =		apparmor_file_free_security,
+	.file_mmap =			apparmor_file_mmap,
+	.file_mprotect =		apparmor_file_mprotect,
+	.file_lock =			apparmor_file_lock,
 
-	.getprocattr = apparmor_getprocattr,
-	.setprocattr = apparmor_setprocattr,
+	.getprocattr =			apparmor_getprocattr,
+	.setprocattr =			apparmor_setprocattr,
 
 #ifdef CONFIG_SECURITY_APPARMOR_NETWORK
-	.socket_create = apparmor_socket_create,
-	.socket_post_create = apparmor_socket_post_create,
-	.socket_bind = apparmor_socket_bind,
-	.socket_connect = apparmor_socket_connect,
-	.socket_listen = apparmor_socket_listen,
-	.socket_accept = apparmor_socket_accept,
-	.socket_sendmsg = apparmor_socket_sendmsg,
-	.socket_recvmsg = apparmor_socket_recvmsg,
-	.socket_getsockname = apparmor_socket_getsockname,
-	.socket_getpeername = apparmor_socket_getpeername,
-	.socket_getsockopt = apparmor_socket_getsockopt,
-	.socket_setsockopt = apparmor_socket_setsockopt,
-	.socket_shutdown = apparmor_socket_shutdown,
+	.socket_create =		apparmor_socket_create,
+	.socket_post_create =		apparmor_socket_post_create,
+	.socket_bind =			apparmor_socket_bind,
+	.socket_connect =		apparmor_socket_connect,
+	.socket_listen =		apparmor_socket_listen,
+	.socket_accept =		apparmor_socket_accept,
+	.socket_sendmsg =		apparmor_socket_sendmsg,
+	.socket_recvmsg =		apparmor_socket_recvmsg,
+	.socket_getsockname =		apparmor_socket_getsockname,
+	.socket_getpeername =		apparmor_socket_getpeername,
+	.socket_getsockopt =		apparmor_socket_getsockopt,
+	.socket_setsockopt =		apparmor_socket_setsockopt,
+	.socket_shutdown =		apparmor_socket_shutdown,
 #endif
 
-	.cred_free = apparmor_cred_free,
-	.cred_prepare = apparmor_cred_prepare,
+	.cred_alloc_blank =		apparmor_cred_alloc_blank,
+	.cred_free =			apparmor_cred_free,
+	.cred_prepare =			apparmor_cred_prepare,
+	.cred_transfer =		apparmor_cred_transfer,
 
-	.bprm_set_creds = apparmor_bprm_set_creds,
-	.bprm_committing_creds = apparmor_bprm_committing_creds,
-	.bprm_committed_creds = apparmor_bprm_committed_creds,
-	.bprm_secureexec = apparmor_bprm_secureexec,
+	.bprm_set_creds =		apparmor_bprm_set_creds,
+	.bprm_committing_creds =	apparmor_bprm_committing_creds,
+	.bprm_committed_creds =		apparmor_bprm_committed_creds,
+	.bprm_secureexec =		apparmor_bprm_secureexec,
 
-	.task_setrlimit = apparmor_task_setrlimit,
+	.task_setrlimit =		apparmor_task_setrlimit,
 };
 
 /*
@@ -947,7 +975,7 @@ static int param_set_mode(const char *val, struct kernel_param *kp)
 /*
  * AppArmor init functions
  */
-static int set_init_cxt(void)
+static int __init set_init_cxt(void)
 {
 	struct cred *cred = (struct cred *)current->real_cred;
 	struct aa_task_context *cxt;

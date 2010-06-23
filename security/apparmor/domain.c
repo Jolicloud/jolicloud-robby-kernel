@@ -64,11 +64,15 @@ static int aa_may_change_ptraced_domain(struct task_struct *task,
 		cred = aa_get_task_policy(tracer, &tracerp);
 	rcu_read_unlock();
 
-	if (!tracerp)
-		return error;
+	/* not ptraced */
+	if (!tracer || !tracerp)
+		goto out;
 
 	error = aa_may_ptrace(tracer, tracerp, to_profile, PTRACE_MODE_ATTACH);
-	put_cred(cred);
+
+out:
+	if (cred)
+		put_cred(cred);
 
 	return error;
 }

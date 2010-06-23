@@ -35,20 +35,13 @@ void aa_free_task_context(struct aa_task_context *cxt)
 /*
  * duplicate a task context, incrementing reference counts
  */
-struct aa_task_context *aa_dup_task_context(struct aa_task_context *old_cxt,
-					    gfp_t gfp)
+void aa_dup_task_context(struct aa_task_context *new,
+			 const struct aa_task_context *old)
 {
-	struct aa_task_context *cxt;
-
-	cxt = kmemdup(old_cxt, sizeof(*cxt), gfp);
-	if (!cxt)
-		return NULL;
-
-	aa_get_profile(cxt->sys.profile);
-	aa_get_profile(cxt->sys.previous);
-	aa_get_profile(cxt->sys.onexec);
-
-	return cxt;
+	*new = *old;
+	aa_get_profile(new->sys.profile);
+	aa_get_profile(new->sys.previous);
+	aa_get_profile(new->sys.onexec);
 }
 
 /**

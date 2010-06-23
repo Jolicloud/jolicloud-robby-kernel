@@ -29,6 +29,7 @@ static int d_namespace_path(struct path *path, char *buf, int buflen,
 {
 	struct path root, tmp, ns_root = { };
 	char *res;
+	int deleted;
 	int error = 0;
 
 	read_lock(&current->fs->lock);
@@ -42,8 +43,17 @@ static int d_namespace_path(struct path *path, char *buf, int buflen,
 		ns_root.dentry = dget(ns_root.mnt->mnt_root);
 	spin_unlock(&vfsmount_lock);
 	spin_lock(&dcache_lock);
-	tmp = ns_root;
-	res = __d_path(path, &tmp, buf, buflen);
+
+	/* There is a race window between path lookup here and the
+	 * need to strip the " (deleted) string that __d_path applies
+	 * Detect the race and relookup the path
+	 */
+	do {
+		tmp = ns_root;
+		deleted = d_unlinked(path->dentry);
+		res = __d_path(path, &tmp, buf, buflen);
+
+	} while (deleted != d_unlinked(path->dentry));
 
 	*name = res;
 	/* handle error conditions - and still allow a partial path to
@@ -52,12 +62,12 @@ static int d_namespace_path(struct path *path, char *buf, int buflen,
 	if (IS_ERR(res)) {
 		error = PTR_ERR(res);
 		*name = buf;
-	} else if (d_unlinked(path->dentry)) {
+	} else if (deleted) {
 		/* The stripping of (deleted) is a hack that could be removed
 		 * with an updated __d_path
 		 */
 
-		if (!path->dentry->d_inode) {
+		if (!path->dentry->d_inode || flags & PFLAG_DELETED_NAMES)
 			/* On some filesystems, newly allocated dentries appear
 			 * to the security_path hooks as a deleted
 			 * dentry except without an inode allocated.
@@ -68,11 +78,7 @@ static int d_namespace_path(struct path *path, char *buf, int buflen,
 			 * strip it.
 			 */
 			buf[buflen - 11] = 0;	/* - (len(" (deleted)") +\0) */
-		} else if (flags & PFLAG_DELETED_NAMES &&
-			   (buf + buflen) - res > 11 &&
-			   strcmp(buf + buflen - 11, " (deleted)") == 0) {
-			buf[buflen - 11] = 0;   /* - (len(" (deleted)") +\0) */
-		} else
+		else
 			error = -ENOENT;
 	} else if (flags & ~PFLAG_CONNECT_PATH &&
 		   tmp.dentry != ns_root.dentry && tmp.mnt != ns_root.mnt) {

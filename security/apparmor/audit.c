@@ -51,6 +51,7 @@ static int aa_audit_base(int type, struct aa_profile *profile,
 			 void (*cb) (struct audit_buffer *, void *))
 {
 	struct audit_buffer *ab = NULL;
+	struct task_struct *task = sa->task ? sa->task : current;
 
 	if (profile && PROFILE_KILL(profile) && type == AUDIT_APPARMOR_DENIED)
 		type = AUDIT_APPARMOR_KILL;
@@ -60,9 +61,8 @@ static int aa_audit_base(int type, struct aa_profile *profile,
 	if (!ab) {
 		AA_ERROR("(%d) Unable to log event of type (%d)\n",
 			 -ENOMEM, type);
-		/* don't fail operations in complain mode even if logging
-		 * fails */
-		return type == AUDIT_APPARMOR_ALLOWED ? 0 : -ENOMEM;
+		sa->error = -ENOMEM;
+		goto out;
 	}
 
 	if (aa_g_audit_header)
@@ -78,12 +78,10 @@ static int aa_audit_base(int type, struct aa_profile *profile,
 			audit_log_format(ab, " error=%d", sa->error);
 	}
 
-	audit_log_format(ab, " pid=%d",
-			 sa->task ? sa->task->pid : current->pid);
+	audit_log_format(ab, " pid=%d", task->pid);
 
 	if (profile) {
-		pid_t pid = sa->task ? sa->task->real_parent->pid :
-				       current->real_parent->pid;
+		pid_t pid = task->real_parent->pid;
 		audit_log_format(ab, " parent=%d", pid);
 		audit_log_format(ab, " profile=");
 		audit_log_untrustedstring(ab, profile->fqname);
@@ -99,9 +97,9 @@ static int aa_audit_base(int type, struct aa_profile *profile,
 
 	audit_log_end(ab);
 
+out:
 	if (type == AUDIT_APPARMOR_KILL)
-		(void)send_sig_info(SIGKILL, NULL,
-				    sa->task ? sa->task : current);
+		(void)send_sig_info(SIGKILL, NULL, task);
 
 	return type == AUDIT_APPARMOR_ALLOWED ? 0 : sa->error;
 }

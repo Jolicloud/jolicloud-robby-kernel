@@ -146,8 +146,9 @@ void aa_free_default_namespace(void)
 {
 	write_lock(&ns_list_lock);
 	list_del_init(&default_namespace->base.list);
-	aa_put_namespace(default_namespace);
 	write_unlock(&ns_list_lock);
+	/* drop the list ref and the global default_namespace ref */
+	aa_put_namespace(default_namespace);
 	aa_put_namespace(default_namespace);
 	default_namespace = NULL;
 }
