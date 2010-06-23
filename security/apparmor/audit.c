@@ -103,31 +103,13 @@ static char *aa_audit_type[] = {
 
 /**
  * audit_base - core AppArmor function.
+ * @ab: audit buffer to fill
  * @sa: audit structure containing data to audit
- * @audit_cxt: audit_cxt that event is under
- * @cb: audit cb for this event
  *
- * Record an audit message for data is @sa, and handle deal with kill and
- * complain messages switches.
- *
- * Returns: 0 or sa->error on success, else error
+ * Record common AppArmor audit data from @sa
  */
-static int audit_base(struct aa_audit *sa, struct audit_context *audit_cxt,
-		      void (*cb) (struct audit_buffer *, struct aa_audit *))
+static void audit_pre(struct audit_buffer *ab, struct aa_audit *sa)
 {
-	struct audit_buffer *ab = NULL;
-	struct task_struct *task = sa->task ? sa->task : current;
-
-	/* ab freed below in audit_log_end */
-	ab = audit_log_start(audit_cxt, GFP_ATOMIC, sa->type);
-
-	if (!ab) {
-		AA_ERROR("(%d) Unable to log event of type (%d)\n",
-			 -ENOMEM, sa->type);
-		sa->error = -ENOMEM;
-		goto out;
-	}
-
 	if (aa_g_audit_header) {
 		audit_log_format(ab, " type=");
 		audit_log_string(ab, aa_audit_type[sa->type - AUDIT_APPARMOR_AUDIT]);
@@ -145,12 +127,12 @@ static int audit_base(struct aa_audit *sa, struct audit_context *audit_cxt,
 			audit_log_format(ab, " error=%d", sa->error);
 	}
 
-	audit_log_format(ab, " pid=%d", task->pid);
+	audit_log_format(ab, " pid=%d", sa->task->pid);
 
 	if (sa->profile) {
 		pid_t pid;
 		rcu_read_lock();
-		pid = task->real_parent->pid;
+		pid = sa->task->real_parent->pid;
 		rcu_read_unlock();
 		audit_log_format(ab, " parent=%d", pid);
 		audit_log_format(ab, " profile=");
@@ -166,7 +148,37 @@ static int audit_base(struct aa_audit *sa, struct audit_context *audit_cxt,
 		audit_log_format(ab, " name=");
 		audit_log_untrustedstring(ab, sa->name);
 	}
+}
 
+static int audit_wrapper(int type, struct aa_profile *profile,
+			 struct aa_audit *sa, struct audit_context *audit_cxt,
+			 void (*cb) (struct audit_buffer *, struct aa_audit *))
+{
+	struct audit_buffer *ab = NULL;
+
+	if (!sa->task)
+		sa->task = current;
+
+	if (profile && DO_KILL(profile) && type == AUDIT_APPARMOR_DENIED)
+		type = AUDIT_APPARMOR_KILL;
+	sa->type = type;
+
+	/* ab freed below in audit_log_end */
+	ab = audit_log_start(audit_cxt, GFP_ATOMIC, sa->type);
+
+	if (!ab) {
+		AA_ERROR("(%d) Unable to log event of type (%d)\n",
+			 -ENOMEM, sa->type);
+		sa->error = -ENOMEM;
+		goto out;
+	}
+
+	if (profile && !unconfined(profile))
+		sa->profile = profile->base.hname;
+	if (profile->ns != root_ns)
+		sa->ns = profile->ns->base.hname;
+
+	audit_pre(ab, sa);
 	if (cb)
 		cb(ab, sa);
 
@@ -174,27 +186,12 @@ static int audit_base(struct aa_audit *sa, struct audit_context *audit_cxt,
 
 out:
 	if (sa->type == AUDIT_APPARMOR_KILL)
-		(void)send_sig_info(SIGKILL, NULL, task);
+		(void)send_sig_info(SIGKILL, NULL, sa->task);
 
 	if (sa->type == AUDIT_APPARMOR_ALLOWED)
 		return complain_error(sa->error);
+
 	return sa->error;
-}
-
-static int audit_wrapper(int type, struct aa_profile *profile,
-			 struct aa_audit *sa, struct audit_context *audit_cxt,
-			 void (*cb) (struct audit_buffer *, struct aa_audit *))
-{
-	if (profile && DO_KILL(profile) && type == AUDIT_APPARMOR_DENIED)
-		type = AUDIT_APPARMOR_KILL;
-	sa->type = type;
-
-	if (profile && !unconfined(profile))
-		sa->profile = profile->base.hname;
-	if (profile->ns != root_ns)
-		sa->ns = profile->ns->base.hname;
-
-	return audit_base(sa, audit_cxt, cb);
 }
 
 /**
