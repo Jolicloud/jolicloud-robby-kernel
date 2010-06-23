@@ -193,6 +193,8 @@ static struct aa_profile *aa_find_attach(struct aa_namespace *ns,
  * profile_name\0
  * :ns_name\0profile_name\0
  * :ns_name\0\0
+ *
+ * NOTE: the xtable fqname is prevalidated at load time in unpack_trans_table
  */
 static const char *separate_fqname(const char *fqname, const char **ns_name)
 {
