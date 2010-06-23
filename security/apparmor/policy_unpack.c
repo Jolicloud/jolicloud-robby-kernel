@@ -304,7 +304,7 @@ static struct aa_dfa *aa_unpack_dfa(struct aa_ext *e)
 		 */
 		size_t sz = blob - (char *)e->start;
 		size_t pad = ALIGN(sz, 8) - sz;
-		dfa = unpack_dfa(blob + pad, size - pad);
+		dfa = aa_dfa_unpack(blob + pad, size - pad);
 	}
 
 	return dfa;

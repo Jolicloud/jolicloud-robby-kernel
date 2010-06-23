@@ -140,7 +140,18 @@ out:
 	return error;
 }
 
-struct aa_dfa *unpack_dfa(void *blob, size_t size)
+/**
+ * aa_dfa_unpack - unpack the binary tables of a serialized dfa
+ * @blob: aligned serialized stream of data to unpack
+ * @size: size of data to unpack
+ *
+ * Unpack a dfa that has been serialized.  Dfa format and information in
+ * Documentation/AppArmor/dfa.txt
+ * Assumes the dfa @blob stream has been aligned on a 8 byte boundry
+ *
+ * Returns: an unpacked dfa ready for matching or ERR_PTR on failure
+ */
+struct aa_dfa *aa_dfa_unpack(void *blob, size_t size)
 {
 	int hsize;
 	int error = -ENOMEM;
@@ -205,11 +216,11 @@ struct aa_dfa *unpack_dfa(void *blob, size_t size)
 	return dfa;
 
 fail:
-	aa_match_free(dfa);
+	aa_dfa_free(dfa);
 	return ERR_PTR(error);
 }
 
-void aa_match_free(struct aa_dfa *dfa)
+void aa_dfa_free(struct aa_dfa *dfa)
 {
 	if (dfa) {
 		int i;
