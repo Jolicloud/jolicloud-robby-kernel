@@ -276,7 +276,7 @@ static int unpack_dynstring(struct aa_ext *e, char **string, const char *name)
 	if (!res)
 		return 0;
 
-	*string = kstrdup(tmp, GFP_KERNEL);
+	*string = kmemdup(tmp, res, GFP_KERNEL);
 	if (!*string) {
 		e->pos = pos;
 		return 0;
