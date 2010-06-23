@@ -220,7 +220,7 @@ static const char *next_name(int xtype, const char *name)
  *
  * find profile for a transition index
  *
- * Returns: refcounted profile or ERR_PTR
+ * Returns: refcounted profile or NULL if not found available
  */
 static struct aa_profile *x_to_profile(struct aa_namespace *ns,
 				       struct aa_profile *profile,
@@ -236,7 +236,7 @@ static struct aa_profile *x_to_profile(struct aa_namespace *ns,
 	switch (xtype) {
 	case AA_X_NONE:
 		/* fail exec unless ix || ux fallback - handled by caller */
-		return ERR_PTR(-EACCES);
+		return NULL;
 	case AA_X_NAME:
 		if (xindex & AA_X_CHILD)
 			/* released by caller */
@@ -291,9 +291,6 @@ static struct aa_profile *x_to_profile(struct aa_namespace *ns,
 	}
 
 out:
-	if (!new_profile)
-		return ERR_PTR(-ENOENT);
-
 	/* released by caller */
 	return new_profile;
 }
@@ -375,7 +372,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 	} else if (sa.perms.allowed & MAY_EXEC) {
 		new_profile = x_to_profile(ns, profile, sa.name,
 					   sa.perms.xindex);
-		if (IS_ERR(new_profile)) {
+		if (!new_profile) {
 			if (sa.perms.xindex & AA_X_INHERIT) {
 				/* (p|c|n)ix - don't change profile */
 				sa.base.info = "ix fallback";
@@ -384,10 +381,8 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 				new_profile = aa_get_profile(ns->unconfined);
 				sa.base.info = "ux fallback";
 			} else {
-				sa.base.error = PTR_ERR(new_profile);
-				if (sa.base.error == -ENOENT)
-					sa.base.info = "profile not found";
-				new_profile = NULL;
+				sa.base.error = -ENOENT;
+				sa.base.info = "profile not found";
 			}
 		}
 	} else if (PROFILE_COMPLAIN(profile)) {
