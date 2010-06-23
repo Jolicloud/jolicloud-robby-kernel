@@ -90,16 +90,15 @@ static inline struct aa_task_context *__aa_task_cxt(struct task_struct *task)
  *
  * If @task != current needs to be in RCU safe critical section
  */
-static inline int __aa_task_is_confined(struct task_struct *task)
+static inline bool __aa_task_is_confined(struct task_struct *task)
 {
 	struct aa_task_context *cxt;
-	int rc = 1;
 
 	cxt = __aa_task_cxt(task);
-	if (!cxt || (cxt->sys.profile->flags & PFLAG_UNCONFINED))
-		rc = 0;
+	if (!cxt || !aa_confined(cxt->sys.profile))
+		return 0;
 
-	return rc;
+	return 1;
 }
 
 static inline struct aa_profile *__aa_current_profile(void)

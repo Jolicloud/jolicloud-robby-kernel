@@ -90,7 +90,7 @@ static void replace_group(struct aa_task_cxt_group *cgrp,
 	if (cgrp->profile == profile)
 		return;
 
-	if (!profile || (profile->flags & PFLAG_UNCONFINED) ||
+	if (!profile || !aa_confined(profile)) ||
 	    (cgrp->profile && cgrp->profile->ns != profile->ns)) {
 		aa_put_profile(cgrp->previous);
 		aa_put_profile(cgrp->onexec);

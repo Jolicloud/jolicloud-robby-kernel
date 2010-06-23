@@ -237,6 +237,17 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size, bool add_only);
 ssize_t aa_interface_remove_profiles(char *name, size_t size);
 
 /**
+ * aa_confined - test whether @profile is confining
+ * @profile: profile to test if is confining
+ *
+ * Returns: true if profile will confine a task
+ */
+static inline bool aa_confined(struct aa_profile *profile)
+{
+	return !(profile->flags & PFLAG_UNCONFINED);
+}
+
+/**
  * aa_filter_profile - filter out profiles that shouldn't be used to mediate
  * @profile: profile to filter
  *
@@ -246,11 +257,10 @@ ssize_t aa_interface_remove_profiles(char *name, size_t size);
  */
 static inline struct aa_profile *aa_filter_profile(struct aa_profile *profile)
 {
-	if (profile->flags & PFLAG_UNCONFINED)
+	if (!aa_confined(profile))
 		return NULL;
 	return profile;
 }
-
 
 /**
  * aa_profile_newest - find the newest version of @profile

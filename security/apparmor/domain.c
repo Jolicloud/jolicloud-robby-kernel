@@ -483,7 +483,7 @@ void apparmor_bprm_committing_creds(struct linux_binprm *bprm)
 
 	/* bail out if unconfined or not changing profile */
 	if ((new_cxt->sys.profile == profile) ||
-	    (new_cxt->sys.profile->flags & PFLAG_UNCONFINED))
+	    (!aa_confined(new_cxt->sys.profile)))
 		return;
 
 	current->pdeath_signal = 0;
