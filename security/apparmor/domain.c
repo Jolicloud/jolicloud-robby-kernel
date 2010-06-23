@@ -244,7 +244,7 @@ static struct aa_profile *x_to_profile(struct aa_namespace *ns,
 				continue;
 		} else if (*name == '@') {
 			/* TODO: variable support */
-
+			continue;
 		} else {
 			xname = name;
 		}
