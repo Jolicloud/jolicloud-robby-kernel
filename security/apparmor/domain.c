@@ -518,6 +518,7 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 	}
 
 	if (hat_name) {
+		/* attempting to change into a new hat or switch to a sibling */
 		struct aa_profile *root;
 		root = PROFILE_IS_HAT(profile) ? profile->parent : profile;
 		sa.name2 = profile->ns->base.name;
@@ -563,12 +564,16 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 		if (!permtest) {
 			sa.base.error = aa_set_current_hat(hat, token);
 			if (sa.base.error == -EACCES)
+				/* kill task incase of brute force attacks */
 				sa.perms.kill = AA_MAY_CHANGEHAT;
 			else if (name && !sa.base.error)
 				/* reset error for learning of new hats */
 				sa.base.error = -ENOENT;
 		}
 	} else if (previous_profile) {
+		/* Return to saved profile.  Kill task if restore fails
+		 * to avoid brute force attacks
+		 */
 		sa.name = previous_profile->fqname;
 		sa.base.error = aa_restore_previous_profile(token);
 		sa.perms.kill = AA_MAY_CHANGEHAT;
