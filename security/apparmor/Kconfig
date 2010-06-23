@@ -30,21 +30,6 @@ config SECURITY_APPARMOR_BOOTPARAM_VALUE
 
 	  If you are unsure how to answer this question, answer 1.
 
-config SECURITY_APPARMOR_DISABLE
-	bool "AppArmor runtime disable"
-	depends on SECURITY_APPARMOR
-	default n
-	help
-	  This option enables writing to a apparmorfs node 'disable', which
-	  allows AppArmor to be disabled at runtime prior to the policy load.
-	  AppArmor will then remain disabled until the next boot.
-	  This option is similar to the apparmor.enabled=0 boot parameter,
-	  but is to support runtime disabling of AppArmor, e.g. from
-	  /sbin/init, for portability across platforms where boot
-	  parameters are difficult to employ.
-
-	  If you are unsure how to answer this question, answer N.
-
 config SECURITY_APPARMOR_COMPAT_24
 	bool "Enable AppArmor 2.4 compatability"
 	depends on SECURITY_APPARMOR

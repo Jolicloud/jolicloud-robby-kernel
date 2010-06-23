@@ -883,15 +883,8 @@ module_param_named(paranoid_load, aa_g_paranoid_load, aabool,
 		   S_IRUSR | S_IWUSR);
 
 /* Boot time disable flag */
-#ifdef CONFIG_SECURITY_APPARMOR_DISABLE
-#define AA_ENABLED_PERMS 0600
-#else
-#define AA_ENABLED_PERMS 0400
-#endif
-static int param_set_aa_enabled(const char *val, struct kernel_param *kp);
 static unsigned int apparmor_enabled = CONFIG_SECURITY_APPARMOR_BOOTPARAM_VALUE;
-module_param_call(enabled, param_set_aa_enabled, param_get_aauint,
-		  &apparmor_enabled, AA_ENABLED_PERMS);
+module_param_named(enabled, apparmor_enabled, aabool, S_IRUSR);
 
 static int __init apparmor_enabled_setup(char *str)
 {
@@ -947,33 +940,6 @@ static int param_get_aauint(char *buffer, struct kernel_param *kp)
 	if (!capable(CAP_MAC_ADMIN))
 		return -EPERM;
 	return param_get_uint(buffer, kp);
-}
-
-/* allow run time disabling of apparmor */
-static int param_set_aa_enabled(const char *val, struct kernel_param *kp)
-{
-	unsigned long l;
-
-	if (!apparmor_initialized) {
-		apparmor_enabled = 0;
-		return 0;
-	}
-
-	if (!capable(CAP_MAC_ADMIN))
-		return -EPERM;
-
-	if (!apparmor_enabled)
-		return -EINVAL;
-
-	if (!val)
-		return -EINVAL;
-
-	if (strict_strtoul(val, 0, &l) || l != 0)
-		return -EINVAL;
-
-	apparmor_enabled = 0;
-	apparmor_disable();
-	return 0;
 }
 
 static int param_get_audit(char *buffer, struct kernel_param *kp)
@@ -1117,14 +1083,3 @@ alloc_out:
 }
 
 security_initcall(apparmor_init);
-
-void apparmor_disable(void)
-{
-	/* FIXME: cleanup profiles references on files */
-	aa_free_root_ns();
-
-	aa_destroy_aafs();
-	apparmor_initialized = 0;
-
-	aa_info_message("AppArmor protection disabled");
-}

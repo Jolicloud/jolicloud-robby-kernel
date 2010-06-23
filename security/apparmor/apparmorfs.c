@@ -555,7 +555,6 @@ int aa_create_aafs(void)
 error:
 	aa_destroy_aafs();
 	AA_ERROR("Error creating AppArmor securityfs\n");
-	apparmor_disable();
 	return error;
 }
 
