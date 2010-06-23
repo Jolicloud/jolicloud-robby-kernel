@@ -242,7 +242,7 @@ static int common_perm_rm(const char *op, struct path *dir,
 	struct inode *inode = dentry->d_inode;
 	struct path_cond cond = { };
 
-	if (!dir->mnt || !inode || !mediated_filesystem(inode))
+	if (!inode || !dir->mnt || !mediated_filesystem(inode))
 		return 0;
 
 	cond.uid = inode->i_uid;
@@ -303,6 +303,7 @@ static int apparmor_path_truncate(struct path *path, loff_t length,
 
 	if (!path->mnt || !mediated_filesystem(path->dentry->d_inode))
 		return 0;
+
 	return common_perm("truncate", path, MAY_WRITE, &cond);
 }
 
@@ -358,44 +359,27 @@ static int apparmor_path_rename(struct path *old_dir, struct dentry *old_dentry,
 static int apparmor_path_chmod(struct dentry *dentry, struct vfsmount *mnt,
 			       mode_t mode)
 {
-	struct aa_profile *profile;
-	int error = 0;
+	struct path path = { mnt, dentry };
+	struct path_cond cond = { dentry->d_inode->i_uid,
+				  dentry->d_inode->i_mode
+	};
 
 	if (!mediated_filesystem(dentry->d_inode))
 		return 0;
 
-	profile = aa_current_profile();
-	if (!unconfined(profile)) {
-		struct path path = { mnt, dentry };
-		struct path_cond cond = { dentry->d_inode->i_uid,
-					  dentry->d_inode->i_mode
-		};
-
-		error = aa_path_perm(profile, "chmod", &path, AA_MAY_CHMOD,
-			&cond);
-	}
-
-	return error;
+	return common_perm("chmod", &path, AA_MAY_CHMOD, &cond);
 }
 
 static int apparmor_path_chown(struct path *path, uid_t uid, gid_t gid)
 {
-	struct aa_profile *profile;
-	int error = 0;
+	struct path_cond cond =  { path->dentry->d_inode->i_uid,
+				   path->dentry->d_inode->i_mode
+	};
 
 	if (!mediated_filesystem(path->dentry->d_inode))
 		return 0;
 
-	profile = aa_current_profile();
-	if (!unconfined(profile)) {
-		struct path_cond cond =  { path->dentry->d_inode->i_uid,
-					   path->dentry->d_inode->i_mode
-		};
-		error = aa_path_perm(profile, "chown", path, AA_MAY_CHOWN,
-				     &cond);
-	}
-
-	return error;
+	return common_perm("chown", path, AA_MAY_CHOWN, &cond);
 }
 
 static int apparmor_dentry_open(struct file *file, const struct cred *cred)
