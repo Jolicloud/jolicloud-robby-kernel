@@ -686,6 +686,7 @@ static void aa_free_profile(struct aa_profile *profile)
 	aa_put_profile(profile->parent);
 
 	aa_put_namespace(profile->ns);
+	kzfree(profile->rename);
 
 	aa_free_file_rules(&profile->file);
 	aa_free_cap_rules(&profile->caps);
@@ -987,12 +988,6 @@ audit:
 		sa.base.operation = "profile_load";
 
 	error = aa_audit_iface(&sa);
-
-	/* rename field must be cleared as it is shared with replaced-by */
-	if (new_profile->rename) {
-		kzfree(new_profile->rename);
-		new_profile->rename = NULL;
-	}
 
 	if (!error) {
 		if (old_profile)

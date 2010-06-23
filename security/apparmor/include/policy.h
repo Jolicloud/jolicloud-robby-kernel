@@ -138,6 +138,7 @@ struct aa_namespace {
  * @parent: parent of profile
  * @ns: namespace the profile is in
  * @replacedby: is set profile that replaced this profile
+ * @rename: optional profile name that this profile renamed
  * @xmatch: optional extended matching for unconfined executables names
  * @xmatch_len: xmatch prefix len, used to determine xmatch priority
  * @sid: the unique security id number of this profile
@@ -171,10 +172,9 @@ struct aa_profile {
 	struct aa_profile *parent;
 
 	struct aa_namespace *ns;
-	union {
-		struct aa_profile *replacedby;
-		const char *rename;
-	};
+	struct aa_profile *replacedby;
+	const char *rename;
+
 	struct aa_dfa *xmatch;
 	int xmatch_len;
 	u32 sid;
