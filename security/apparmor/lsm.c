@@ -539,6 +539,7 @@ static int apparmor_setprocattr(struct task_struct *task, char *name,
 				void *value, size_t size)
 {
 	char *command, *args;
+	size_t arg_size;
 	int error;
 
 	if (size == 0 || size >= PAGE_SIZE)
@@ -559,11 +560,14 @@ static int apparmor_setprocattr(struct task_struct *task, char *name,
 	if (!*args)
 		return -EINVAL;
 
+	arg_size = size - (args - (char *) value);
 	if (strcmp(name, "current") == 0) {
 		if (strcmp(command, "changehat") == 0) {
-			error = aa_setprocattr_changehat(args, !AA_DO_TEST);
+			error = aa_setprocattr_changehat(args, arg_size,
+							 !AA_DO_TEST);
 		} else if (strcmp(command, "permhat") == 0) {
-			error = aa_setprocattr_changehat(args, AA_DO_TEST);
+			error = aa_setprocattr_changehat(args, arg_size,
+							 AA_DO_TEST);
 		} else if (strcmp(command, "changeprofile") == 0) {
 			error = aa_setprocattr_changeprofile(args, 0,
 							     !AA_DO_TEST);

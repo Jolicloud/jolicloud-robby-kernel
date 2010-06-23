@@ -75,10 +75,12 @@ static char *split_token_from_name(const char *op, char *args, u64 * token)
 	return name;
 }
 
-int aa_setprocattr_changehat(char *args, int test)
+int aa_setprocattr_changehat(char *args, size_t size, int test)
 {
 	char *hat;
 	u64 token;
+	const char *hats[16];		/* current hard limit on # of names */
+	int count = 0;
 
 	hat = split_token_from_name("change_hat", args, &token);
 	if (IS_ERR(hat))
@@ -89,10 +91,22 @@ int aa_setprocattr_changehat(char *args, int test)
 		return -EINVAL;
 	}
 
+	if (hat) {
+		/* set up hat name vector, args guarenteed null terminated
+		 * at args[size]
+		 */
+		char *end = args + size;
+		for (count = 0; (hat < end) && count < 16; ++count) {
+			char *next = hat + strlen(hat) + 1;
+			hats[count] = hat;
+			hat = next;
+		}
+	}
+
 	AA_DEBUG("%s: Magic 0x%llx Hat '%s'\n",
 		 __func__, token, hat ? hat : NULL);
 
-	return aa_change_hat(hat, token, test);
+	return aa_change_hat(hats, count, token, test);
 }
 
 int aa_setprocattr_changeprofile(char *fqname, int onexec, int test)

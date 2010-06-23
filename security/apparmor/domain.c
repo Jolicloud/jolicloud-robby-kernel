@@ -511,17 +511,19 @@ static char *new_compound_name(const char *n1, const char *n2)
 
 /**
  * aa_change_hat - change hat to/from subprofile
- * @hat_name: hat to change to
+ * @hats: vector of hat names to try changing into (unused if @count == 0)
+ * @count: number of hat names in @hats
  * @token: magic value to validate the hat change
  * @permtest: true if this is just a permission test
  *
- * Change to new @hat_name, and store the @hat_magic in the current task
- * context.  If the new @hat_name is %NULL and the @token matches that
- * stored in the current task context and is not 0, return to the top level
- * profile.
+ * Change to the first profile specified in @hats that exists, and store
+ * the @hat_magic in the current task context.  If the count == 0 and the
+ * @token matches that stored in the current task context, return to the
+ * top level profile.
+ *
  * Returns %0 on success, error otherwise.
  */
-int aa_change_hat(const char *hat_name, u64 token, int permtest)
+int aa_change_hat(const char *hats[], int count, u64 token, int permtest)
 {
 	const struct cred *cred;
 	struct aa_task_context *cxt;
@@ -532,6 +534,7 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 		.request = AA_MAY_CHANGEHAT,
 	};
 	char *name = NULL;
+	int i;
 
 	/* released below */
 	cred = get_current_cred();
@@ -545,14 +548,16 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 		goto audit;
 	}
 
-	if (hat_name) {
+	if (count) {
 		/* attempting to change into a new hat or switch to a sibling */
 		struct aa_profile *root;
 		root = PROFILE_IS_HAT(profile) ? profile->parent : profile;
 		sa.name2 = profile->ns->base.hname;
 
-		/* released below */
-		hat = aa_find_child(root, hat_name);
+		/* find first matching hat */
+		for (i = 0; i < count && !hat; i++)
+			/* released below */
+			hat = aa_find_child(root, hats[i]);
 		if (!hat) {
 			if (!PROFILE_COMPLAIN(root) || permtest) {
 				sa.base.info = "hat not found";
@@ -563,7 +568,7 @@ int aa_change_hat(const char *hat_name, u64 token, int permtest)
 				goto out;
 			}
 			/* freed below */
-			name = new_compound_name(root->base.hname, hat_name);
+			name = new_compound_name(root->base.hname, hats[0]);
 			sa.name = name;
 			/* released below */
 			hat = aa_new_null_profile(profile, 1);
