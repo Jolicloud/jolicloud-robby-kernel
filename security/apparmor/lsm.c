@@ -606,7 +606,6 @@ static int apparmor_task_setrlimit(unsigned int resource,
 	return error;
 }
 
-#ifdef CONFIG_SECURITY_APPARMOR_NETWORK
 static int apparmor_socket_create(int family, int type, int protocol, int kern)
 {
 	struct aa_profile *profile;
@@ -715,7 +714,6 @@ static int apparmor_socket_shutdown(struct socket *sock, int how)
 
 	return aa_revalidate_sk(sk, "socket_shutdown");
 }
-#endif
 
 static struct security_operations apparmor_ops = {
 	.name =				"apparmor",
@@ -748,7 +746,6 @@ static struct security_operations apparmor_ops = {
 	.getprocattr =			apparmor_getprocattr,
 	.setprocattr =			apparmor_setprocattr,
 
-#ifdef CONFIG_SECURITY_APPARMOR_NETWORK
 	.socket_create =		apparmor_socket_create,
 	.socket_post_create =		apparmor_socket_post_create,
 	.socket_bind =			apparmor_socket_bind,
@@ -762,7 +759,6 @@ static struct security_operations apparmor_ops = {
 	.socket_getsockopt =		apparmor_socket_getsockopt,
 	.socket_setsockopt =		apparmor_socket_setsockopt,
 	.socket_shutdown =		apparmor_socket_shutdown,
-#endif
 
 	.cred_alloc_blank =		apparmor_cred_alloc_blank,
 	.cred_free =			apparmor_cred_free,

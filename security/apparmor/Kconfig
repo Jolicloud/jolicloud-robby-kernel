@@ -1,9 +1,10 @@
 config SECURITY_APPARMOR
 	bool "AppArmor support"
-	depends on SECURITY && SECURITY_NETWORK && NET && INET
+	depends on SECURITY
 	select AUDIT
 	select SECURITY_PATH
 	select SECURITYFS
+	select SECURITY_NETWORK
 	default n
 	help
 	  This enables the AppArmor security module.
@@ -12,14 +13,6 @@ config SECURITY_APPARMOR
 	  <http://forge.novell.com/modules/xfmod/project/?apparmor>
 
 	  If you are unsure how to answer this question, answer N.
-
-config SECURITY_APPARMOR_NETWORK
-       bool "AppArmor network support"
-       depends on SECURITY_APPARMOR
-       default n
-       help
-	 This enables AppArmor to mediate applications network use.
-	 This will enable the SECURITY_NETWORK hooks.
 
 config SECURITY_APPARMOR_BOOTPARAM_VALUE
 	int "AppArmor boot parameter default value"
