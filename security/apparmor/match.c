@@ -214,6 +214,7 @@ struct aa_dfa *aa_dfa_unpack(void *blob, size_t size, int flags)
 	int hsize;
 	int error = -ENOMEM;
 	char *data = blob;
+	struct table_header *table = NULL;
 	struct aa_dfa *dfa = kzalloc(sizeof(struct aa_dfa), GFP_KERNEL);
 	if (!dfa)
 		goto fail;
@@ -238,7 +239,6 @@ struct aa_dfa *aa_dfa_unpack(void *blob, size_t size, int flags)
 	size -= hsize;
 
 	while (size > 0) {
-		struct table_header *table;
 		table = unpack_table(data, size);
 		if (!table)
 			goto fail;
@@ -267,12 +267,15 @@ struct aa_dfa *aa_dfa_unpack(void *blob, size_t size, int flags)
 				goto fail;
 			break;
 		default:
-			free_table(table);
 			goto fail;
 		}
+		/* check for duplicate table entry */
+		if (dfa->tables[table->td_id])
+			goto fail;
 		dfa->tables[table->td_id] = table;
 		data += table_size(table->td_lolen, table->td_flags);
 		size -= table_size(table->td_lolen, table->td_flags);
+		table = NULL;
 	}
 
 	error = verify_dfa(dfa, flags);
@@ -282,6 +285,7 @@ struct aa_dfa *aa_dfa_unpack(void *blob, size_t size, int flags)
 	return dfa;
 
 fail:
+	free_table(table);
 	aa_dfa_free(dfa);
 	return ERR_PTR(error);
 }
