@@ -122,6 +122,7 @@ struct aa_audit {
 		} fs;
 		struct {
 			int family, type, protocol;
+			struct sock *sk;
 		} net;
 	};
 };

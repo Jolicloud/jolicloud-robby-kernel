@@ -102,8 +102,8 @@ static int audit_net(struct aa_profile *profile, struct aa_audit *sa)
  *
  * Returns: %0 else error if permission denied
  */
-int aa_net_perm(int op, struct aa_profile *profile, int family, int type,
-		int protocol)
+int aa_net_perm(int op, struct aa_profile *profile, u16 family, int type,
+		int protocol, struct sock *sk)
 {
 	u16 family_mask;
 	struct aa_audit sa = {
@@ -112,6 +112,7 @@ int aa_net_perm(int op, struct aa_profile *profile, int family, int type,
 	sa.net.family = family;
 	sa.net.type = type;
 	sa.net.protocol = protocol;
+	sa.net.sk = sk;
 
 	if ((family < 0) || (family >= AF_MAX))
 		return -EINVAL;
@@ -151,7 +152,7 @@ int aa_revalidate_sk(int op, struct sock *sk)
 	profile = __aa_current_profile();
 	if (!unconfined(profile))
 		error = aa_net_perm(op, profile, sk->sk_family, sk->sk_type,
-				    sk->sk_protocol);
+				    sk->sk_protocol, sk);
 
 	return error;
 }

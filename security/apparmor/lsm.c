@@ -659,19 +659,9 @@ static int apparmor_socket_create(int family, int type, int protocol, int kern)
 
 	profile = __aa_current_profile();
 	if (!unconfined(profile))
-		error = aa_net_perm(OP_CREATE, profile, family, type, protocol);
+		error = aa_net_perm(OP_CREATE, profile, family, type, protocol,
+				    NULL);
 	return error;
-}
-
-static int apparmor_socket_post_create(struct socket *sock, int family,
-				       int type, int protocol, int kern)
-{
-	struct sock *sk = sock->sk;
-
-	if (kern)
-		return 0;
-
-	return aa_revalidate_sk(OP_POST_CREATE, sk);
 }
 
 static int apparmor_socket_bind(struct socket *sock,
@@ -790,7 +780,6 @@ static struct security_operations apparmor_ops = {
 	.setprocattr =			apparmor_setprocattr,
 
 	.socket_create =		apparmor_socket_create,
-	.socket_post_create =		apparmor_socket_post_create,
 	.socket_bind =			apparmor_socket_bind,
 	.socket_connect =		apparmor_socket_connect,
 	.socket_listen =		apparmor_socket_listen,

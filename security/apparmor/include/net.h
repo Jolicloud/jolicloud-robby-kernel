@@ -28,8 +28,8 @@ struct aa_net {
 	u16 quiet[AF_MAX];
 };
 
-extern int aa_net_perm(int op, struct aa_profile *profile, int family,
-		       int type, int protocol);
+extern int aa_net_perm(int op, struct aa_profile *profile, u16 family,
+		       int type, int protocol, struct sock *sk);
 extern int aa_revalidate_sk(int op, struct sock *sk);
 
 static inline void aa_free_net_rules(struct aa_net *new)
