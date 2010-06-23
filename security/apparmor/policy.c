@@ -625,7 +625,7 @@ struct aa_profile *aa_new_null_profile(struct aa_profile *parent, int hat)
 	if (!profile)
 		goto fail;
 
-	profile->sid = aa_alloc_sid();
+	profile->sid = sid;
 	profile->mode = APPARMOR_COMPLAIN;
 	profile->flags = PFLAG_NULL | PFLAG_NO_LIST_REF;
 	if (hat)

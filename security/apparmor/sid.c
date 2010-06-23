@@ -24,8 +24,7 @@
 #include "include/sid.h"
 
 /* global counter from which sids are allocated */
-static u16 global_sys_sid;
-static u16 global_usr_sid;
+static u16 global_sid;
 static DEFINE_SPINLOCK(sid_lock);
 
 /* TODO FIXME: add sid to profile mapping, and sid recycling */
@@ -41,10 +40,7 @@ u32 aa_alloc_sid(void)
 	 * TODO FIXME: sid recycling - part of profile mapping table
 	 */
 	spin_lock(&sid_lock);
-	if (is_usr)
-		sid = (++global_usr_sid) << 16;
-	else
-		sid = ++global_sys_sid;
+	sid = (++global_sid);
 	spin_unlock(&sid_lock);
 	return sid;
 }
