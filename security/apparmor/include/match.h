@@ -61,7 +61,7 @@ struct table_set_header {
 /* Each ACCEPT2 table gets 6 dedicated flags, YYTD_DATAX define the
  * first flags
  */
-#define ACCEPT1_FLAGS(X) ((X) & 0x7f)
+#define ACCEPT1_FLAGS(X) ((X) & 0x3f)
 #define ACCEPT2_FLAGS(X) ACCEPT1_FLAGS((X) >> YYTD_ID_ACCEPT2)
 #define TO_ACCEPT1_FLAG(X) ACCEPT1_FLAGS(X)
 #define TO_ACCEPT2_FLAG(X) (ACCEPT1_FLAGS(X) << YYTD_ID_ACCEPT2)

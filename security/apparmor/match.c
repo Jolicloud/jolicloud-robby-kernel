@@ -182,29 +182,24 @@ struct aa_dfa *aa_dfa_unpack(void *blob, size_t size, int flags)
 
 		switch (table->td_id) {
 		case YYTD_ID_ACCEPT:
-			dfa->tables[table->td_id] = table;
 			if (!(table->td_flags & ACCEPT1_FLAGS(flags)))
 				goto fail;
 			break;
 		case YYTD_ID_ACCEPT2:
-			dfa->tables[table->td_id] = table;
 			if (!(table->td_flags & ACCEPT2_FLAGS(flags)))
 				goto fail;
 			break;
 		case YYTD_ID_BASE:
-			dfa->tables[table->td_id] = table;
 			if (table->td_flags != YYTD_DATA32)
 				goto fail;
 			break;
 		case YYTD_ID_DEF:
 		case YYTD_ID_NXT:
 		case YYTD_ID_CHK:
-			dfa->tables[table->td_id] = table;
 			if (table->td_flags != YYTD_DATA16)
 				goto fail;
 			break;
 		case YYTD_ID_EC:
-			dfa->tables[table->td_id] = table;
 			if (table->td_flags != YYTD_DATA8)
 				goto fail;
 			break;
@@ -212,7 +207,7 @@ struct aa_dfa *aa_dfa_unpack(void *blob, size_t size, int flags)
 			free_table(table);
 			goto fail;
 		}
-
+		dfa->tables[table->td_id] = table;
 		blob += table_size(table->td_lolen, table->td_flags);
 		size -= table_size(table->td_lolen, table->td_flags);
 	}
