@@ -811,12 +811,18 @@ module_param_named(lock_policy, aa_g_lock_policy, aalockpolicy,
 
 /* Syscall logging mode */
 int aa_g_logsyscall;
-module_param_named(logsyscall, aa_g_logsyscall, aabool,
-		   S_IRUSR | S_IWUSR);
+module_param_named(logsyscall, aa_g_logsyscall, aabool, S_IRUSR | S_IWUSR);
 
 /* Maximum pathname length before accesses will start getting rejected */
 unsigned int aa_g_path_max = 2 * PATH_MAX;
 module_param_named(path_max, aa_g_path_max, aauint, S_IRUSR | S_IWUSR);
+
+/* Determines how paranoid loading of policy is and how much verification
+ * on the loaded policy is done.
+ */
+int aa_g_paranoid_load = 1;
+module_param_named(paranoid_load, aa_g_paranoid_load, aabool,
+		   S_IRUSR | S_IWUSR);
 
 /* Boot time disable flag */
 #ifdef CONFIG_SECURITY_APPARMOR_DISABLE

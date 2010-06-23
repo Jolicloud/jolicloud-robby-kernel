@@ -65,6 +65,7 @@ struct table_set_header {
 #define ACCEPT2_FLAGS(X) ACCEPT1_FLAGS((X) >> YYTD_ID_ACCEPT2)
 #define TO_ACCEPT1_FLAG(X) ACCEPT1_FLAGS(X)
 #define TO_ACCEPT2_FLAG(X) (ACCEPT1_FLAGS(X) << YYTD_ID_ACCEPT2)
+#define DFA_FLAG_VERIFY_STATES 0x1000
 
 struct table_header {
 	u16 td_id;

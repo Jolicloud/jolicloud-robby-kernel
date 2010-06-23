@@ -24,6 +24,7 @@ extern int aa_g_audit_header;
 extern int aa_g_debug;
 extern int aa_g_lock_policy;
 extern int aa_g_logsyscall;
+extern int aa_g_paranoid_load;
 extern unsigned int aa_g_path_max;
 
 /*

@@ -120,18 +120,20 @@ static int verify_dfa(struct aa_dfa *dfa, int flags)
 	    dfa->tables[YYTD_ID_EC]->td_lolen != 256)
 		goto out;
 
-	for (i = 0; i < state_count; i++) {
-		if (DEFAULT_TABLE(dfa)[i] >= state_count)
-			goto out;
-		if (BASE_TABLE(dfa)[i] >= trans_count + 256)
-			goto out;
-	}
+	if (flags & DFA_FLAG_VERIFY_STATES) {
+		for (i = 0; i < state_count; i++) {
+			if (DEFAULT_TABLE(dfa)[i] >= state_count)
+				goto out;
+			if (BASE_TABLE(dfa)[i] >= trans_count + 256)
+				goto out;
+		}
 
-	for (i = 0; i < trans_count; i++) {
-		if (NEXT_TABLE(dfa)[i] >= state_count)
-			goto out;
-		if (CHECK_TABLE(dfa)[i] >= state_count)
-			goto out;
+		for (i = 0; i < trans_count; i++) {
+			if (NEXT_TABLE(dfa)[i] >= state_count)
+				goto out;
+			if (CHECK_TABLE(dfa)[i] >= state_count)
+				goto out;
+		}
 	}
 
 	error = 0;

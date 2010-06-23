@@ -284,6 +284,23 @@ static int unpack_dynstring(struct aa_ext *e, char **string, const char *name)
 	return res;
 }
 
+static int verify_accept(struct aa_dfa *dfa, int flags)
+{
+	int i;
+
+	/* verify accept permissions */
+	for (i = 0; i < dfa->tables[YYTD_ID_ACCEPT]->td_lolen; i++) {
+		int mode = ACCEPT_TABLE(dfa)[i];
+
+		if (mode & ~DFA_VALID_PERM_MASK)
+			return 0;
+
+		if (ACCEPT_TABLE2(dfa)[i] & ~DFA_VALID_PERM2_MASK)
+			return 0;
+	}
+	return 1;
+}
+
 /**
  * aa_unpack_dfa - unpack a file rule dfa
  * @e: serialized data extent information
@@ -304,23 +321,17 @@ static struct aa_dfa *aa_unpack_dfa(struct aa_ext *e)
 		 */
 		size_t sz = blob - (char *)e->start;
 		size_t pad = ALIGN(sz, 8) - sz;
-		int i;
 		int flags = TO_ACCEPT1_FLAG(YYTD_DATA32) |
 			TO_ACCEPT2_FLAG(YYTD_DATA32);
 
+
+		if (aa_g_paranoid_load)
+			flags |= DFA_FLAG_VERIFY_STATES;
+
 		dfa = aa_dfa_unpack(blob + pad, size - pad, flags);
 
-		/* verify accept permissions */
-		for (i = 0; i < dfa->tables[YYTD_ID_ACCEPT]->td_lolen; i++) {
-			int mode = ACCEPT_TABLE(dfa)[i];
-
-			if (mode & ~DFA_VALID_PERM_MASK)
-				goto fail;
-
-			if (ACCEPT_TABLE2(dfa)[i] & ~DFA_VALID_PERM2_MASK)
-				goto fail;
-		}
-
+		if (aa_g_paranoid_load && !verify_accept(dfa, flags))
+			goto fail;
 	}
 
 	return dfa;
