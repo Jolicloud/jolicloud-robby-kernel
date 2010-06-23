@@ -4,7 +4,7 @@
  * This file contains AppArmor policy attachment and domain transitions
  *
  * Copyright (C) 2002-2008 Novell/SUSE
- * Copyright 2009 Canonical Ltd.
+ * Copyright 2009-2010 Canonical Ltd.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
