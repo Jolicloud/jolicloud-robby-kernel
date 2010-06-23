@@ -27,27 +27,27 @@ struct aa_profile;
  * We use MAY_EXEC, MAY_WRITE, MAY_READ, MAY_APPEND and the following flags
  * for profile permissions
  */
-#define AA_MAY_LINK			0x0010
-#define AA_MAY_LOCK			0x0020
-#define AA_EXEC_MMAP			0x0040
+#define AA_MAY_CREATE                  0x0010
+#define AA_MAY_DELETE                  0x0020
+#define AA_MAY_META_WRITE              0x0040
+#define AA_MAY_META_READ               0x0080
 
-#define AA_MAY_CREATE			0x0080
-#define AA_MAY_DELETE			0x0100
-#define AA_MAY_CHMOD			0x0200
-#define AA_MAY_CHOWN			0x0400
-#define AA_MAY_META_READ		0x0800
-#define AA_MAY_META_WRITE		0x1000
-
+#define AA_MAY_CHMOD                   0x0100
+#define AA_MAY_CHOWN                   0x0200
+#define AA_MAY_LOCK                    0x0400
+#define AA_EXEC_MMAP                   0x0800
+ 
+#define AA_MAY_LINK                    0x1000
 #define AA_LINK_SUBSET			0x2000
 #define AA_MAY_ONEXEC			0x4000	/* exec allows onexec */
 #define AA_MAY_CHANGE_PROFILE		0x8000
 #define AA_MAY_CHANGEHAT		0x8000	/* ctrl auditing only */
 
 #define AA_AUDIT_FILE_MASK	(MAY_READ | MAY_WRITE | MAY_EXEC | MAY_APPEND |\
-				 AA_MAY_LINK | AA_MAY_LOCK | AA_EXEC_MMAP | \
-				 AA_MAY_CREATE | AA_MAY_DELETE | AA_MAY_CHMOD |\
-				 AA_MAY_CHOWN | AA_MAY_META_READ |\
-				 AA_MAY_META_WRITE)
+				 AA_MAY_CREATE | AA_MAY_DELETE |	\
+				 AA_MAY_META_READ | AA_MAY_META_WRITE | \
+				 AA_MAY_CHMOD | AA_MAY_CHOWN | AA_MAY_LOCK | \
+				 AA_EXEC_MMAP | AA_MAY_LINK)
 
 /*
  * The xindex is broken into 3 parts
