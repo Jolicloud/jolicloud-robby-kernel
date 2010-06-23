@@ -146,7 +146,7 @@ static int apparmor_capable(struct task_struct *task, const struct cred *cred,
 	return error;
 }
 
-static int apparmor_sysctl(struct ctl_table *table, int op)
+static int apparmor_sysctl(struct ctl_table *table, int sysctl_op)
 {
 	int error = 0;
 	struct aa_profile *profile = aa_current_profile();
@@ -156,9 +156,9 @@ static int apparmor_sysctl(struct ctl_table *table, int op)
 		int mask;
 
 		mask = 0;
-		if (op & 4)
+		if (sysctl_op & 4)
 			mask |= MAY_READ;
-		if (op & 2)
+		if (sysctl_op & 2)
 			mask |= MAY_WRITE;
 
 		error = -ENOMEM;
@@ -176,7 +176,7 @@ static int apparmor_sysctl(struct ctl_table *table, int op)
 			struct path_cond cond = { 0, S_IFREG };
 			name -= 5;
 			memcpy(name, "/proc", 5);
-			error = aa_pathstr_perm(profile, OP_SYSCTL, name, mask,
+			error = aa_pathstr_perm(OP_SYSCTL, profile, name, mask,
 						&cond);
 		}
 		free_page((unsigned long)buffer);
@@ -203,7 +203,7 @@ static int common_perm(int op, struct path *path, u16 mask,
 
 	profile = __aa_current_profile();
 	if (!unconfined(profile))
-		error = aa_path_perm(profile, op, path, 0, mask, cond);
+		error = aa_path_perm(op, profile, path, 0, mask, cond);
 
 	return error;
 }
@@ -368,12 +368,12 @@ static int apparmor_path_rename(struct path *old_dir, struct dentry *old_dentry,
 					  old_dentry->d_inode->i_mode
 		};
 
-		error = aa_path_perm(profile, OP_RENAME_SRC, &old_path, 0,
+		error = aa_path_perm(OP_RENAME_SRC, profile, &old_path, 0,
 				     MAY_READ | AA_MAY_META_READ | MAY_WRITE |
 				     AA_MAY_META_WRITE | AA_MAY_DELETE,
 				     &cond);
 		if (!error)
-			error = aa_path_perm(profile, OP_RENAME_DEST, &new_path,
+			error = aa_path_perm(OP_RENAME_DEST, profile, &new_path,
 					     0, MAY_WRITE | AA_MAY_META_WRITE |
 					     AA_MAY_CREATE, &cond);
 
@@ -427,7 +427,7 @@ static int apparmor_dentry_open(struct file *file, const struct cred *cred)
 		struct inode *inode = file->f_path.dentry->d_inode;
 		struct path_cond cond = { inode->i_uid, inode->i_mode };
 
-		error = aa_path_perm(profile, OP_OPEN, &file->f_path, 0,
+		error = aa_path_perm(OP_OPEN, profile, &file->f_path, 0,
 				     aa_map_file_to_perms(file), &cond);
 		/* released by aa_free_file_context */
 		fcxt->profile = aa_get_profile(profile);
@@ -477,7 +477,7 @@ static int apparmor_file_permission(struct file *file, int mask)
 	 */
 	if (!unconfined(profile) &&
 	    ((fprofile != profile) || (mask & ~fcxt->allowed)))
-		error = aa_file_perm(profile, OP_FPERM, file, mask);
+		error = aa_file_perm(OP_FPERM, profile, file, mask);
 #endif
 
 	return error;
@@ -496,7 +496,7 @@ static int common_file_perm(int op, struct file *file, u16 mask)
 	profile = aa_current_profile();
 	if (!unconfined(profile) && ((fprofile != profile) ||
 				     (mask & ~fcxt->allowed)))
-		error = aa_file_perm(profile, op, file, mask);
+		error = aa_file_perm(op, profile, file, mask);
 
 	return error;
 }
@@ -511,7 +511,7 @@ static int apparmor_file_lock(struct file *file, unsigned int cmd)
 	return common_file_perm(OP_FLOCK, file, mask);
 }
 
-static int common_mmap(struct file *file, int op, unsigned long prot,
+static int common_mmap(int op, struct file *file, unsigned long prot,
 		       unsigned long flags)
 {
 	struct dentry *dentry;
@@ -546,13 +546,13 @@ static int apparmor_file_mmap(struct file *file, unsigned long reqprot,
 	if (rc || addr_only)
 		return rc;
 
-	return common_mmap(file, OP_FMMAP, prot, flags);
+	return common_mmap(OP_FMMAP, file, prot, flags);
 }
 
 static int apparmor_file_mprotect(struct vm_area_struct *vma,
 				  unsigned long reqprot, unsigned long prot)
 {
-	return common_mmap(vma->vm_file, OP_FMPROT, prot,
+	return common_mmap(OP_FMPROT, vma->vm_file, prot,
 			   !(vma->vm_flags & VM_SHARED) ? MAP_PRIVATE : 0);
 }
 
@@ -666,8 +666,7 @@ static int apparmor_socket_create(int family, int type, int protocol, int kern)
 
 	profile = __aa_current_profile();
 	if (!unconfined(profile))
-		error = aa_net_perm(profile, OP_CREATE, family, type,
-				    protocol);
+		error = aa_net_perm(OP_CREATE, profile, family, type, protocol);
 	return error;
 }
 
@@ -679,7 +678,7 @@ static int apparmor_socket_post_create(struct socket *sock, int family,
 	if (kern)
 		return 0;
 
-	return aa_revalidate_sk(sk, OP_POST_CREATE);
+	return aa_revalidate_sk(OP_POST_CREATE, sk);
 }
 
 static int apparmor_socket_bind(struct socket *sock,
@@ -687,7 +686,7 @@ static int apparmor_socket_bind(struct socket *sock,
 {
 	struct sock *sk = sock->sk;
 
-	return aa_revalidate_sk(sk, OP_BIND);
+	return aa_revalidate_sk(OP_BIND, sk);
 }
 
 static int apparmor_socket_connect(struct socket *sock,
@@ -695,21 +694,21 @@ static int apparmor_socket_connect(struct socket *sock,
 {
 	struct sock *sk = sock->sk;
 
-	return aa_revalidate_sk(sk, OP_CONNECT);
+	return aa_revalidate_sk(OP_CONNECT, sk);
 }
 
 static int apparmor_socket_listen(struct socket *sock, int backlog)
 {
 	struct sock *sk = sock->sk;
 
-	return aa_revalidate_sk(sk, OP_LISTEN);
+	return aa_revalidate_sk(OP_LISTEN, sk);
 }
 
 static int apparmor_socket_accept(struct socket *sock, struct socket *newsock)
 {
 	struct sock *sk = sock->sk;
 
-	return aa_revalidate_sk(sk, OP_ACCEPT);
+	return aa_revalidate_sk(OP_ACCEPT, sk);
 }
 
 static int apparmor_socket_sendmsg(struct socket *sock,
@@ -717,7 +716,7 @@ static int apparmor_socket_sendmsg(struct socket *sock,
 {
 	struct sock *sk = sock->sk;
 
-	return aa_revalidate_sk(sk, OP_SENDMSG);
+	return aa_revalidate_sk(OP_SENDMSG, sk);
 }
 
 static int apparmor_socket_recvmsg(struct socket *sock,
@@ -725,21 +724,21 @@ static int apparmor_socket_recvmsg(struct socket *sock,
 {
 	struct sock *sk = sock->sk;
 
-	return aa_revalidate_sk(sk, OP_RECVMSG);
+	return aa_revalidate_sk(OP_RECVMSG, sk);
 }
 
 static int apparmor_socket_getsockname(struct socket *sock)
 {
 	struct sock *sk = sock->sk;
 
-	return aa_revalidate_sk(sk, OP_GETSOCKNAME);
+	return aa_revalidate_sk(OP_GETSOCKNAME, sk);
 }
 
 static int apparmor_socket_getpeername(struct socket *sock)
 {
 	struct sock *sk = sock->sk;
 
-	return aa_revalidate_sk(sk, OP_GETPEERNAME);
+	return aa_revalidate_sk(OP_GETPEERNAME, sk);
 }
 
 static int apparmor_socket_getsockopt(struct socket *sock, int level,
@@ -747,7 +746,7 @@ static int apparmor_socket_getsockopt(struct socket *sock, int level,
 {
 	struct sock *sk = sock->sk;
 
-	return aa_revalidate_sk(sk, OP_GETSOCKOPT);
+	return aa_revalidate_sk(OP_GETSOCKOPT, sk);
 }
 
 static int apparmor_socket_setsockopt(struct socket *sock, int level,
@@ -755,14 +754,14 @@ static int apparmor_socket_setsockopt(struct socket *sock, int level,
 {
 	struct sock *sk = sock->sk;
 
-	return aa_revalidate_sk(sk, OP_SETSOCKOPT);
+	return aa_revalidate_sk(OP_SETSOCKOPT, sk);
 }
 
 static int apparmor_socket_shutdown(struct socket *sock, int how)
 {
 	struct sock *sk = sock->sk;
 
-	return aa_revalidate_sk(sk, OP_SOCK_SHUTDOWN);
+	return aa_revalidate_sk(OP_SOCK_SHUTDOWN, sk);
 }
 
 static struct security_operations apparmor_ops = {

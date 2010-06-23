@@ -66,18 +66,18 @@ static void kvfree(void *buffer)
 
 /**
  * aa_simple_write_to_buffer - common routine for getting policy from user
+ * @op: operation doing the user buffer copy
  * @userbuf: user buffer to copy data from  (NOT NULL)
  * @alloc_size: size of user buffer
  * @copy_size: size of data to copy from user buffer
  * @pos: position write is at in the file
- * @op: operation doing the user buffer copy
  *
  * Returns: kernel buffer containing copy of user buffer data or an
  *          ERR_PTR on failure.
  */
-static char *aa_simple_write_to_buffer(const char __user *userbuf,
+static char *aa_simple_write_to_buffer(int op, const char __user *userbuf,
 				       size_t alloc_size, size_t copy_size,
-				       loff_t *pos, int op)
+				       loff_t *pos)
 {
 	char *data;
 
@@ -128,11 +128,11 @@ static ssize_t aa_profile_load(struct file *f, const char __user *buf,
 	char *data;
 	ssize_t error;
 
-	data = aa_simple_write_to_buffer(buf, size, size, pos, OP_PROF_LOAD);
+	data = aa_simple_write_to_buffer(OP_PROF_LOAD, buf, size, size, pos);
 
 	error = PTR_ERR(data);
 	if (!IS_ERR(data)) {
-		error = aa_interface_replace_profiles(data, size, OP_PROF_LOAD);
+		error = aa_interface_replace_profiles(data, size, PROF_ADD);
 		kvfree(data);
 	}
 
@@ -150,10 +150,10 @@ static ssize_t aa_profile_replace(struct file *f, const char __user *buf,
 	char *data;
 	ssize_t error;
 
-	data = aa_simple_write_to_buffer(buf, size, size, pos, OP_PROF_REPL);
+	data = aa_simple_write_to_buffer(OP_PROF_REPL, buf, size, size, pos);
 	error = PTR_ERR(data);
 	if (!IS_ERR(data)) {
-		error = aa_interface_replace_profiles(data, size, OP_PROF_REPL);
+		error = aa_interface_replace_profiles(data, size, PROF_REPLACE);
 		kvfree(data);
 	}
 
@@ -175,7 +175,7 @@ static ssize_t aa_profile_remove(struct file *f, const char __user *buf,
 	 * aa_remove_profile needs a null terminated string so 1 extra
 	 * byte is allocated and the copied data is null terminated.
 	 */
-	data = aa_simple_write_to_buffer(buf, size + 1, size, pos, OP_PROF_RM);
+	data = aa_simple_write_to_buffer(OP_PROF_RM, buf, size + 1, size, pos);
 
 	error = PTR_ERR(data);
 	if (!IS_ERR(data)) {

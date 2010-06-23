@@ -102,15 +102,15 @@ static int aa_audit_net(struct aa_profile *profile, struct aa_audit_net *sa)
 
 /**
  * aa_net_perm - very course network access check
+ * @op: operation being checked
  * @profile: profile being enforced  (NOT NULL)
- * @op: name of the operation being checked  (NOT NULL)
  * @family: network family
  * @type:   network type
  * @protocol: network protocol
  *
  * Returns: %0 else error if permission denied
  */
-int aa_net_perm(struct aa_profile *profile, int op, int family, int type,
+int aa_net_perm(int op, struct aa_profile *profile, int family, int type,
 		int protocol)
 {
 	u16 family_mask;
@@ -141,12 +141,12 @@ int aa_net_perm(struct aa_profile *profile, int op, int family, int type,
 
 /**
  * aa_revalidate_sk - Revalidate access to a sock
- * @sk: sock being revalidated  (NOT NULL)
  * @op: operation being checked
+ * @sk: sock being revalidated  (NOT NULL)
  *
  * Returns: %0 else error if permission denied
  */
-int aa_revalidate_sk(struct sock *sk, int op)
+int aa_revalidate_sk(int op, struct sock *sk)
 {
 	struct aa_profile *profile;
 	int error = 0;
@@ -159,7 +159,7 @@ int aa_revalidate_sk(struct sock *sk, int op)
 
 	profile = __aa_current_profile();
 	if (!unconfined(profile))
-		error = aa_net_perm(profile, op, sk->sk_family, sk->sk_type,
+		error = aa_net_perm(op, profile, sk->sk_family, sk->sk_type,
 				    sk->sk_protocol);
 
 	return error;
