@@ -405,7 +405,7 @@ static int aa_file_common_perm(struct aa_profile *profile,
 		if (sa.base.error == -ENOENT &&
 		    aa_is_deleted_file(file->f_path.dentry)) {
 			/* Access to open files that are deleted are
-			 * give a pass (implicit delegation
+			 * give a pass (implicit delegation)
 			 */
 			sa.base.error = 0;
 			sa.perms.allowed = sa.request;

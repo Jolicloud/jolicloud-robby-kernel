@@ -17,7 +17,7 @@
  * to it determined either by matching "unconfined" tasks against the
  * visible set of profiles or by following a profiles attachment rules.
  *
- * Each profile exists in an profile namespace which is a container of
+ * Each profile exists in a profile namespace which is a container of
  * visible profiles.  Each namespace contains a special "unconfined" profile,
  * which doesn't enforce any confinement on a task beyond DAC.
  *

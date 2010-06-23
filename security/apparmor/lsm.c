@@ -367,7 +367,7 @@ static int apparmor_dentry_open(struct file *file, const struct cred *cred)
 	struct aa_profile *profile;
 	int error = 0;
 
-	/* If in exec permission is handled by bprm hooks */
+	/* If in exec, permission is handled by bprm hooks */
 	if (current->in_execve ||
 	    !mediated_filesystem(file->f_path.dentry->d_inode))
 		return 0;
@@ -472,7 +472,7 @@ static int common_mmap(struct file *file, const char *operation,
 	if (prot & PROT_READ)
 		mask |= MAY_READ;
 	/*
-	 *Private mappings don't require write perms since they don't
+	 * Private mappings don't require write perms since they don't
 	 * write back to the files
 	 */
 	if ((prot & PROT_WRITE) && !(flags & MAP_PRIVATE))
