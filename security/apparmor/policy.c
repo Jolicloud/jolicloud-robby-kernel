@@ -135,7 +135,11 @@ static bool policy_init(struct aa_policy *policy, const char *name)
 	return 1;
 }
 
-static void policy_free(struct aa_policy *policy)
+/**
+ * policy_destroy - free the elements referenced by @policy
+ * @policy: policy that is to have its elements freed
+ */
+static void policy_destroy(struct aa_policy *policy)
 {
 	/* still contains profiles -- invalid */
 	if (!list_empty(&policy->profiles)) {
@@ -241,7 +245,7 @@ static void aa_free_namespace(struct aa_namespace *ns)
 	if (!ns)
 		return;
 
-	policy_free(&ns->base);
+	policy_destroy(&ns->base);
 
 	if (ns->unconfined && ns->unconfined->ns == ns)
 		ns->unconfined->ns = NULL;
@@ -627,7 +631,7 @@ static void aa_free_profile(struct aa_profile *profile)
 	}
 
 	/* free children profiles */
-	policy_free(&profile->base);
+	policy_destroy(&profile->base);
 
 	aa_put_namespace(profile->ns);
 
