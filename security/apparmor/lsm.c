@@ -209,7 +209,7 @@ static int common_perm(const char *op, struct path *path, u16 mask,
 }
 
 /**
- * common_perm_dentry - common permission wrapper when path is dir, dentry
+ * common_perm_dir_dentry - common permission wrapper when path is dir, dentry
  * @op: operation name  (NOT NULL)
  * @dir: directory of the dentry  (NOT NULL)
  * @dentry: dentry to check  (NOT NULL)
@@ -218,9 +218,9 @@ static int common_perm(const char *op, struct path *path, u16 mask,
  *
  * Returns: %0 else error code if error or permission denied
  */
-static int common_perm_dentry(const char *op, struct path *dir,
-			      struct dentry *dentry, u16 mask,
-			      struct path_cond *cond)
+static int common_perm_dir_dentry(const char *op, struct path *dir,
+				  struct dentry *dentry, u16 mask,
+				  struct path_cond *cond)
 {
 	struct path path = { dir->mnt, dentry };
 
@@ -248,7 +248,7 @@ static int common_perm_rm(const char *op, struct path *dir,
 	cond.uid = inode->i_uid;
 	cond.mode = inode->i_mode;
 
-	return common_perm_dentry(op, dir, dentry, mask, &cond);
+	return common_perm_dir_dentry(op, dir, dentry, mask, &cond);
 }
 
 /**
@@ -269,7 +269,7 @@ static int common_perm_create(const char *op, struct path *dir,
 	if (!dir->mnt || !mediated_filesystem(dir->dentry->d_inode))
 		return 0;
 
-	return common_perm_dentry(op, dir, dentry, mask, &cond);
+	return common_perm_dir_dentry(op, dir, dentry, mask, &cond);
 }
 
 static int apparmor_path_unlink(struct path *dir, struct dentry *dentry)
