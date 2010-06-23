@@ -77,27 +77,36 @@ out:
  * verify_dfa - verify that all the transitions and states in the dfa tables
  *              are in bounds.
  * @dfa: dfa to test
+ * @flags: flags controlling what type of accept table are acceptable
  *
  * assumes dfa has gone through the verification done by unpacking
  */
-static int verify_dfa(struct aa_dfa *dfa)
+static int verify_dfa(struct aa_dfa *dfa, int flags)
 {
 	size_t i, state_count, trans_count;
 	int error = -EPROTO;
 
 	/* check that required tables exist */
-	if (!(dfa->tables[YYTD_ID_ACCEPT - 1] &&
-	      dfa->tables[YYTD_ID_ACCEPT2 - 1] &&
-	      dfa->tables[YYTD_ID_DEF - 1] &&
+	if (!(dfa->tables[YYTD_ID_DEF - 1] &&
 	      dfa->tables[YYTD_ID_BASE - 1] &&
 	      dfa->tables[YYTD_ID_NXT - 1] && dfa->tables[YYTD_ID_CHK - 1]))
 		goto out;
 
 	/* accept.size == default.size == base.size */
 	state_count = dfa->tables[YYTD_ID_BASE - 1]->td_lolen;
-	if (!(state_count == dfa->tables[YYTD_ID_DEF - 1]->td_lolen &&
-	      state_count == dfa->tables[YYTD_ID_ACCEPT - 1]->td_lolen &&
-	      state_count == dfa->tables[YYTD_ID_ACCEPT2 - 1]->td_lolen))
+	if (ACCEPT1_FLAGS(flags)) {
+		if (!dfa->tables[YYTD_ID_ACCEPT - 1])
+			goto out;
+		if (state_count != dfa->tables[YYTD_ID_ACCEPT - 1]->td_lolen)
+			goto out;
+	}
+	if (ACCEPT2_FLAGS(flags)) {
+		if (!dfa->tables[YYTD_ID_ACCEPT2 - 1])
+			goto out;
+		if (state_count != dfa->tables[YYTD_ID_ACCEPT2 - 1]->td_lolen)
+			goto out;
+	}
+	if (state_count != dfa->tables[YYTD_ID_DEF - 1]->td_lolen)
 		goto out;
 
 	/* next.size == chk.size */
@@ -128,11 +137,12 @@ static int verify_dfa(struct aa_dfa *dfa)
 	for (i = 0; i < state_count; i++) {
 		int mode = ACCEPT_TABLE(dfa)[i];
 
-		if (mode & ~DFA_VALID_PERM_MASK)
-			goto out;
-		if (ACCEPT_TABLE2(dfa)[i] & ~DFA_VALID_PERM2_MASK)
+		if (ACCEPT1_FLAGS(flags) && (mode & ~DFA_VALID_PERM_MASK))
 			goto out;
 
+		if (ACCEPT2_FLAGS(flags) &&
+		    (ACCEPT_TABLE2(dfa)[i] & ~DFA_VALID_PERM2_MASK))
+			goto out;
 	}
 
 	error = 0;
@@ -144,6 +154,7 @@ out:
  * aa_dfa_unpack - unpack the binary tables of a serialized dfa
  * @blob: aligned serialized stream of data to unpack
  * @size: size of data to unpack
+ * @flags: flags controlling what type of accept tables are acceptable
  *
  * Unpack a dfa that has been serialized.  Dfa format and information in
  * Documentation/AppArmor/dfa.txt
@@ -151,7 +162,7 @@ out:
  *
  * Returns: an unpacked dfa ready for matching or ERR_PTR on failure
  */
-struct aa_dfa *aa_dfa_unpack(void *blob, size_t size)
+struct aa_dfa *aa_dfa_unpack(void *blob, size_t size, int flags)
 {
 	int hsize;
 	int error = -ENOMEM;
@@ -182,7 +193,15 @@ struct aa_dfa *aa_dfa_unpack(void *blob, size_t size)
 
 		switch (table->td_id) {
 		case YYTD_ID_ACCEPT:
+			dfa->tables[table->td_id - 1] = table;
+			if (!(table->td_flags & ACCEPT1_FLAGS(flags)))
+				goto fail;
+			break;
 		case YYTD_ID_ACCEPT2:
+			dfa->tables[table->td_id - 1] = table;
+			if (!(table->td_flags & ACCEPT2_FLAGS(flags)))
+				goto fail;
+			break;
 		case YYTD_ID_BASE:
 			dfa->tables[table->td_id - 1] = table;
 			if (table->td_flags != YYTD_DATA32)
@@ -209,7 +228,7 @@ struct aa_dfa *aa_dfa_unpack(void *blob, size_t size)
 		size -= table_size(table->td_lolen, table->td_flags);
 	}
 
-	error = verify_dfa(dfa);
+	error = verify_dfa(dfa, flags);
 	if (error)
 		goto fail;
 

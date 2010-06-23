@@ -53,6 +53,14 @@ struct table_set_header {
 #define YYTD_DATA16	2
 #define YYTD_DATA32	4
 
+/* Each ACCEPT2 table gets 7 dedicated flags, YYTD_DATAX define the
+ * first flags
+ */
+#define ACCEPT1_FLAGS(X) ((X) & 0x7f)
+#define ACCEPT2_FLAGS(X) ACCEPT1_FLAGS((X) >> YYTD_ID_ACCEPT2)
+#define TO_ACCEPT1_FLAG(X) ACCEPT1_FLAGS(X)
+#define TO_ACCEPT2_FLAG(X) (ACCEPT1_FLAGS(X) << YYTD_ID_ACCEPT2)
+
 struct table_header {
 	u16 td_id;
 	u16 td_flags;
@@ -92,7 +100,7 @@ static inline size_t table_size(size_t len, size_t el_size)
 }
 
 void aa_dfa_free(struct aa_dfa *dfa);
-struct aa_dfa *aa_dfa_unpack(void *blob, size_t size);
+struct aa_dfa *aa_dfa_unpack(void *blob, size_t size, int flags);
 unsigned int aa_dfa_match_len(struct aa_dfa *dfa, unsigned int start,
 			      const char *str, int len);
 unsigned int aa_dfa_match(struct aa_dfa *dfa, unsigned int start,

@@ -304,7 +304,9 @@ static struct aa_dfa *aa_unpack_dfa(struct aa_ext *e)
 		 */
 		size_t sz = blob - (char *)e->start;
 		size_t pad = ALIGN(sz, 8) - sz;
-		dfa = aa_dfa_unpack(blob + pad, size - pad);
+		dfa = aa_dfa_unpack(blob + pad, size - pad,
+				    TO_ACCEPT1_FLAG(YYTD_DATA32) |
+				    TO_ACCEPT2_FLAG(YYTD_DATA32));
 	}
 
 	return dfa;
