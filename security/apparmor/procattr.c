@@ -38,7 +38,7 @@ int aa_getprocattr(struct aa_profile *profile, char **string)
 
 	mode_len = strlen(mode_str) + 3;	/* + 3 for _() */
 	name_len = strlen(profile->base.hname);
-	if (ns != default_namespace)
+	if (ns != root_ns)
 		ns_len = strlen(ns->base.name) + 3; /*+ 3 for :// */
 	len = mode_len + ns_len + name_len + 1;	    /*+ 1 for \n */
 	s = str = kmalloc(len + 1, GFP_ATOMIC);	    /* + 1 \0 */

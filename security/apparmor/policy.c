@@ -35,7 +35,6 @@
  *
  * Namespace names may not start with / or @ and may not contain \0 or :
  * Reserved namespace namespace
- *	default - the default namespace setup by AppArmor
  *	user-XXXX - user defined profiles
  *
  * a // in a profile or namespace name indicates a hierarcical name with the
@@ -94,7 +93,7 @@ LIST_HEAD(ns_list);
 DEFINE_RWLOCK(ns_list_lock);
 
 /* base profile namespace */
-struct aa_namespace *default_namespace;
+struct aa_namespace *root_ns;
 
 const char *profile_mode_names[] = {
 	"enforce",
@@ -214,8 +213,8 @@ static struct aa_namespace *aa_alloc_namespace(const char *name)
 
 	/*
 	 * released by aa_free_namespace, however aa_remove_namespace breaks
-	 * the cyclic references (ns->unconfined, and unconfinged->ns) and
-	 * replaces with refs to default namespace unconfined
+	 * the cyclic references (ns->unconfined, and unconfined->ns) and
+	 * replaces with refs to parent namespace unconfined
 	 */
 	ns->unconfined->ns = aa_get_namespace(ns);
 
@@ -259,21 +258,21 @@ void aa_free_namespace_kref(struct kref *kref)
 }
 
 /**
- * aa_alloc_default_namespace - allocate the base default namespace
+ * aa_alloc_root_ns - allocate the base default namespace
  *
  * Returns 0 on success else error
  *
  */
-int __init aa_alloc_default_namespace(void)
+int __init aa_alloc_root_ns(void)
 {
 	struct aa_namespace *ns;
-	/* released by aa_free_default_namespace - used as list ref*/
-	ns = aa_alloc_namespace("default");
+	/* released by aa_free_root_ns - used as list ref*/
+	ns = aa_alloc_namespace("root");
 	if (!ns)
 		return -ENOMEM;
 
-	/* released by aa_free_default_namespace - global var ref*/
-	default_namespace = aa_get_namespace(ns);
+	/* released by aa_free_root_ns - global var ref*/
+	root_ns = aa_get_namespace(ns);
 	write_lock(&ns_list_lock);
 	list_add(&ns->base.list, &ns_list);
 	write_unlock(&ns_list_lock);
@@ -281,15 +280,15 @@ int __init aa_alloc_default_namespace(void)
 	return 0;
 }
 
-void aa_free_default_namespace(void)
+void aa_free_root_ns(void)
 {
 	write_lock(&ns_list_lock);
-	list_del_init(&default_namespace->base.list);
+	list_del_init(&root_ns->base.list);
 	write_unlock(&ns_list_lock);
-	/* drop the list ref and the global default_namespace ref */
-	aa_put_namespace(default_namespace);
-	aa_put_namespace(default_namespace);
-	default_namespace = NULL;
+	/* drop the list ref and the global root_ns ref */
+	aa_put_namespace(root_ns);
+	aa_put_namespace(root_ns);
+	root_ns = NULL;
 }
 
 /**
@@ -342,7 +341,7 @@ static struct aa_namespace *aa_prepare_namespace(const char *name)
 		ns = aa_get_namespace(__aa_find_namespace(&ns_list, name));
 	else
 		/* released by caller */
-		ns = aa_get_namespace(default_namespace);
+		ns = aa_get_namespace(root_ns);
 	if (!ns) {
 		/* name && namespace not found */
 		struct aa_namespace *new_ns;
@@ -486,11 +485,11 @@ static void __aa_remove_namespace(struct aa_namespace *ns)
 
 	/*
 	 * break the ns, unconfined profile cyclic reference and forward
-	 * all new unconfined profiles requests to the default namespace
+	 * all new unconfined profiles requests to the parent namespace
 	 * This will result in all confined tasks that have a profile
-	 * being removed inheriting the default->unconfined profile.
+	 * being removed inheriting the parent->unconfined profile.
 	 */
-	ns->unconfined = aa_get_profile(default_namespace->unconfined);
+	ns->unconfined = aa_get_profile(root_ns->unconfined);
 	__aa_profile_list_release(&ns->base.profiles);
 	/* release original ns->unconfined ref */
 	aa_put_profile(unconfined);
@@ -988,7 +987,7 @@ ssize_t aa_interface_remove_profiles(char *fqname, size_t size)
 								  ns_name));
 	} else {
 		/* released below */
-		ns = aa_get_namespace(default_namespace);
+		ns = aa_get_namespace(root_ns);
 	}
 
 	if (!ns) {
@@ -1001,7 +1000,7 @@ ssize_t aa_interface_remove_profiles(char *fqname, size_t size)
 	write_lock(&ns->base.lock);
 	if (!name) {
 		/* remove namespace */
-		if (ns == default_namespace)
+		if (ns == root_ns)
 			__aa_profile_list_release(&ns->base.profiles);
 		else
 			__aa_remove_namespace(ns);

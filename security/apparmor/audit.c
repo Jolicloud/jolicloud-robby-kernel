@@ -95,7 +95,7 @@ static int aa_audit_base(int type, struct aa_profile *profile,
 		audit_log_format(ab, " profile=");
 		audit_log_untrustedstring(ab, profile->base.hname);
 
-		if (profile->ns != default_namespace) {
+		if (profile->ns != root_ns) {
 			audit_log_format(ab, " namespace=");
 			audit_log_untrustedstring(ab, profile->ns->base.hname);
 		}

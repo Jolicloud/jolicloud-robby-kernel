@@ -276,7 +276,7 @@ static int seq_show_profile(struct seq_file *f, void *p)
 {
 	struct aa_profile *profile = (struct aa_profile *)p;
 
-	if (profile->ns != default_namespace)
+	if (profile->ns != root_ns)
 		seq_printf(f, ":%s:", profile->ns->base.name);
 	print_name(f, profile);
 	seq_printf(f, " (%s)\n",

@@ -1024,7 +1024,7 @@ static int __init set_init_cxt(void)
 	if (!cxt)
 		return -ENOMEM;
 
-	cxt->profile = aa_get_profile(default_namespace->unconfined);
+	cxt->profile = aa_get_profile(root_ns->unconfined);
 	cred->security = cxt;
 
 	return 0;
@@ -1040,7 +1040,7 @@ static int __init apparmor_init(void)
 		return 0;
 	}
 
-	error = aa_alloc_default_namespace();
+	error = aa_alloc_root_ns();
 	if (error) {
 		AA_ERROR("Unable to allocate default profile namespace\n");
 		goto alloc_out;
@@ -1070,7 +1070,7 @@ static int __init apparmor_init(void)
 	return error;
 
 register_security_out:
-	aa_free_default_namespace();
+	aa_free_root_ns();
 
 alloc_out:
 	aa_destroy_aafs();
@@ -1088,7 +1088,7 @@ void apparmor_disable(void)
 	aa_profile_ns_list_release();
 
 	/* FIXME: cleanup profiles references on files */
-	aa_free_default_namespace();
+	aa_free_root_ns();
 
 	aa_destroy_aafs();
 	apparmor_initialized = 0;

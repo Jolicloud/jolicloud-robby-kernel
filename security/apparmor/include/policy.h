@@ -185,13 +185,13 @@ struct aa_profile {
 extern struct list_head ns_list;
 extern rwlock_t ns_list_lock;
 
-extern struct aa_namespace *default_namespace;
+extern struct aa_namespace *root_ns;
 extern enum profile_mode aa_g_profile_mode;
 
 void aa_add_profile(struct aa_policy *common, struct aa_profile *profile);
 
-int aa_alloc_default_namespace(void);
-void aa_free_default_namespace(void);
+int aa_alloc_root_ns(void);
+void aa_free_root_ns(void);
 void aa_free_namespace_kref(struct kref *kref);
 
 struct aa_namespace *aa_find_namespace(const char *name);
