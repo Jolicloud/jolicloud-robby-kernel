@@ -37,11 +37,14 @@ static void aa_audit_file_sub_mask(char *buffer, u16 mask, u16 xindex)
 		*m++ = 'm';
 	if (mask & MAY_READ)
 		*m++ = 'r';
-	if (mask & (MAY_WRITE | AA_MAY_CREATE | AA_MAY_DELETE | AA_MAY_CHMOD |
-		    AA_MAY_CHOWN))
+	if (mask & (MAY_WRITE | AA_MAY_CHMOD | AA_MAY_CHOWN))
 		*m++ = 'w';
 	else if (mask & MAY_APPEND)
 		*m++ = 'a';
+	if (mask & AA_MAY_CREATE)
+		*m++ = 'c';
+	if (mask & AA_MAY_DELETE)
+		*m++ = 'd';
 	if (mask & AA_MAY_LINK)
 		*m++ = 'l';
 	if (mask & AA_MAY_LOCK)
