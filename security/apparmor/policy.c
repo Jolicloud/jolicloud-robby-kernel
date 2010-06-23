@@ -766,7 +766,7 @@ struct aa_profile *aa_find_child(struct aa_profile *parent, const char *name)
 }
 
 /**
- * __aa_find_parent - lookup the parent of a profile of name @hname
+ * __aa_lookup_parent - lookup the parent of a profile of name @hname
  * @ns: namespace to lookup profile in  (NOT NULL)
  * @hname: hierarchical profile name to find parent of  (NOT NULL)
  *
@@ -778,8 +778,8 @@ struct aa_profile *aa_find_child(struct aa_profile *parent, const char *name)
  *
  * Returns: unrefcounted policy or NULL if not found
  */
-static struct aa_policy *__aa_find_parent(struct aa_namespace *ns,
-					  const char *hname)
+static struct aa_policy *__aa_lookup_parent(struct aa_namespace *ns,
+					    const char *hname)
 {
 	struct aa_policy *policy;
 	struct aa_profile *profile = NULL;
@@ -802,7 +802,7 @@ static struct aa_policy *__aa_find_parent(struct aa_namespace *ns,
 }
 
 /**
- * __aa_find_profile - lookup the profile matching @hname
+ * __aa_lookup_profile - lookup the profile matching @hname
  * @base: base list to start looking up profile name from  (NOT NULL)
  * @hname: hierarchical profile name  (NOT NULL)
  *
@@ -812,8 +812,8 @@ static struct aa_policy *__aa_find_parent(struct aa_namespace *ns,
  *
  * Do a relative name lookup, recursing through profile tree.
  */
-static struct aa_profile *__aa_find_profile(struct aa_policy *base,
-					    const char *hname)
+static struct aa_profile *__aa_lookup_profile(struct aa_policy *base,
+					      const char *hname)
 {
 	struct aa_profile *profile = NULL;
 	char *split;
@@ -835,18 +835,18 @@ static struct aa_profile *__aa_find_profile(struct aa_policy *base,
 }
 
 /**
- * aa_find_profile_by_name - find a profile by its full or partial name
+ * aa_lookup_profile - find a profile by its full or partial name
  * @ns: the namespace to start from
  * @hname: name to do lookup on.  Does not contain namespace prefix
  *
  * Returns: refcounted profile or NULL if not found
  */
-struct aa_profile *aa_find_profile(struct aa_namespace *ns, const char *hname)
+struct aa_profile *aa_lookup_profile(struct aa_namespace *ns, const char *hname)
 {
 	struct aa_profile *profile;
 
 	read_lock(&ns->lock);
-	profile = aa_get_profile(__aa_find_profile(&ns->base, hname));
+	profile = aa_get_profile(__aa_lookup_profile(&ns->base, hname));
 	read_unlock(&ns->lock);
 
 	/* refcount released by caller */
@@ -950,7 +950,7 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size, bool noreplace)
 
 	write_lock(&ns->lock);
 	/* no ref on policy only use inside lock */
-	policy = __aa_find_parent(ns, new_profile->base.hname);
+	policy = __aa_lookup_parent(ns, new_profile->base.hname);
 
 	if (!policy) {
 		sa.base.info = "parent does not exist";
@@ -964,8 +964,8 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size, bool noreplace)
 	aa_get_profile(old_profile);
 
 	if (new_profile->rename) {
-		rename_profile = __aa_find_profile(&ns->base,
-						   new_profile->rename);
+		rename_profile = __aa_lookup_profile(&ns->base,
+						     new_profile->rename);
 		/* released below */
 		aa_get_profile(rename_profile);
 
@@ -1081,7 +1081,7 @@ ssize_t aa_interface_remove_profiles(char *fqname, size_t size)
 		__aa_remove_namespace(ns);
 	} else {
 		/* remove profile */
-		profile = aa_get_profile(__aa_find_profile(&ns->base, name));
+		profile = aa_get_profile(__aa_lookup_profile(&ns->base, name));
 		if (!profile) {
 			sa.name = name;
 			sa.base.error = -ENOENT;

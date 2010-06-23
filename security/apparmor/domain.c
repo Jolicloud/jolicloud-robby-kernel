@@ -284,7 +284,7 @@ static struct aa_profile *x_table_lookup(struct aa_profile *profile, u16 xindex)
 		}
 
 		/* released by caller */
-		new_profile = aa_find_profile(new_ns ? new_ns : ns, xname);
+		new_profile = aa_lookup_profile(new_ns ? new_ns : ns, xname);
 		aa_put_namespace(new_ns);
 	}
 
@@ -778,7 +778,7 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 	}
 
 	/* released below */
-	target = aa_find_profile(ns, hname);
+	target = aa_lookup_profile(ns, hname);
 	if (!target) {
 		sa.base.info = "profile not found";
 		sa.base.error = -ENOENT;
