@@ -236,7 +236,7 @@ static struct aa_namespace *aa_alloc_namespace(const char *name)
 	if (!ns->unconfined)
 		goto fail_unconfined;
 
-	ns->unconfined->sid = aa_alloc_sid(AA_ALLOC_SYS_SID);
+	ns->unconfined->sid = aa_alloc_sid();
 	ns->unconfined->flags = PFLAG_UNCONFINED | PFLAG_IX_ON_NAME_ERROR |
 	    PFLAG_IMMUTABLE;
 
@@ -612,7 +612,7 @@ struct aa_profile *aa_new_null_profile(struct aa_profile *parent, int hat)
 {
 	struct aa_profile *profile = NULL;
 	char *name;
-	u32 sid = aa_alloc_sid(AA_ALLOC_SYS_SID);
+	u32 sid = aa_alloc_sid();
 
 	/* freed below */
 	name = kmalloc(strlen(parent->base.hname) + 2 + 7 + 8, GFP_KERNEL);
@@ -625,7 +625,7 @@ struct aa_profile *aa_new_null_profile(struct aa_profile *parent, int hat)
 	if (!profile)
 		goto fail;
 
-	profile->sid = aa_alloc_sid(AA_ALLOC_SYS_SID);
+	profile->sid = aa_alloc_sid();
 	profile->mode = APPARMOR_COMPLAIN;
 	profile->flags = PFLAG_NULL | PFLAG_NO_LIST_REF;
 	if (hat)
@@ -877,7 +877,7 @@ static void __add_new_profile(struct aa_namespace *ns,
 		profile->parent = aa_get_profile((struct aa_profile *) policy);
 	__aa_add_profile(&policy->profiles, profile);
 	/* released on aa_free_profile */
-	profile->sid = aa_alloc_sid(AA_ALLOC_SYS_SID);
+	profile->sid = aa_alloc_sid();
 	profile->ns = aa_get_namespace(ns);
 }
 

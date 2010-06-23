@@ -12,19 +12,9 @@
  *
  *
  * AppArmor allocates a unique sid for every profile loaded.  If a profile
- * is replaced it receive the sid of the profile it is replacing.  Each sid
- * is a u32 with the lower u16 being sids of system profiles and the
- * upper u16 being user profile sids.
+ * is replaced it receive the sid of the profile it is replacing.
  *
- * The sid value of 0 is invalid for system sids and is used to indicate
- * unconfined for user sids.
- *
- * A compound sid is a pair of user and system sids that is used to identify
- * both profiles confining a task.
- *
- * Both system and user sids are globally unique with all users pulling
- * from the same sid pool.  User sid allocation is limited by the
- * user controls, that can limit how many profiles are loaded by a user.
+ * The sid value of 0 is invalid.
  */
 
 #include <linux/spinlock.h>
@@ -42,9 +32,8 @@ static DEFINE_SPINLOCK(sid_lock);
 
 /**
  * aa_alloc_sid - allocate a new sid for a profile
- * @is_usr: true if the new sid is a user based sid
  */
-u32 aa_alloc_sid(int is_usr)
+u32 aa_alloc_sid(void)
 {
 	u32 sid;
 
