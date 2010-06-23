@@ -136,7 +136,7 @@ int aa_audit_file(struct aa_profile *profile, struct aa_audit_file *sa)
 		if (!sa->request)
 			return PROFILE_COMPLAIN(profile) ? 0 : sa->base.error;
 	}
-	return aa_audit(type, profile, (struct aa_audit *)sa, file_audit_cb);
+	return aa_audit(type, profile, &sa->base, file_audit_cb);
 }
 
 /* TODO: convert from dfa + state to permission entry */

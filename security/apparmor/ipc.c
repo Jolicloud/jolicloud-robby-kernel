@@ -36,8 +36,7 @@ static void audit_cb(struct audit_buffer *ab, void *va)
 static int aa_audit_ptrace(struct aa_profile *profile,
 			   struct aa_audit_ptrace *sa)
 {
-	return aa_audit(AUDIT_APPARMOR_AUTO, profile, (struct aa_audit *)sa,
-			audit_cb);
+	return aa_audit(AUDIT_APPARMOR_AUTO, profile, &sa->base, audit_cb);
 }
 
 int aa_may_ptrace(struct task_struct *tracer_task, struct aa_profile *tracer,

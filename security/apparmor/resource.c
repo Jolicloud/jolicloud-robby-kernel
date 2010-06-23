@@ -35,8 +35,7 @@ static void audit_cb(struct audit_buffer *ab, void *va)
 static int aa_audit_resource(struct aa_profile *profile,
 			     struct aa_audit_resource *sa)
 {
-	return aa_audit(AUDIT_APPARMOR_AUTO, profile, (struct aa_audit *)sa,
-			audit_cb);
+	return aa_audit(AUDIT_APPARMOR_AUTO, profile, &sa->base, audit_cb);
 }
 
 /**
