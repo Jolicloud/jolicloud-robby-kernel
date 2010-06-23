@@ -151,7 +151,7 @@ static void common_free(struct aa_policy_common *common)
 	}
 
 	/* don't free name as its a subset of hname */
-	kfree(common->hname);
+	kzfree(common->hname);
 }
 
 static struct aa_policy_common *__common_find(struct list_head *head,
@@ -222,9 +222,9 @@ static struct aa_namespace *aa_alloc_namespace(const char *name)
 	return ns;
 
 fail_unconfined:
-	kfree(ns->base.name);
+	kzfree(ns->base.name);
 fail_ns:
-	kfree(ns);
+	kzfree(ns);
 	return NULL;
 }
 
@@ -532,7 +532,7 @@ struct aa_profile *aa_alloc_profile(const char *hname)
 		return NULL;
 
 	if (!common_init(&profile->base, hname)) {
-		kfree(profile);
+		kzfree(profile);
 		return NULL;
 	}
 
@@ -905,7 +905,7 @@ ssize_t aa_interface_replace_profiles(void *udata, size_t size, bool add_only)
 		aa_get_profile(rename_profile);
 
 		/* must be cleared as it is shared with replaced-by */
-		kfree(new_profile->rename);
+		kzfree(new_profile->rename);
 		new_profile->rename = NULL;
 
 		if (!rename_profile) {

@@ -391,7 +391,7 @@ fail:
 	if (profile->file.trans.table) {
 		int i;
 		for (i = 0; i < profile->file.trans.size; i++)
-			kfree(profile->file.trans.table[i]);
+			kzfree(profile->file.trans.table[i]);
 	}
 	e->pos = pos;
 	return 0;

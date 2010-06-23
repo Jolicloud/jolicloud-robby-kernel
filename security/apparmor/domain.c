@@ -42,8 +42,8 @@ void aa_free_domain_entries(struct aa_domain *domain)
 		return;
 
 	for (i = 0; i < domain->size; i++)
-		kfree(domain->table[i]);
-	kfree(domain->table);
+		kzfree(domain->table[i]);
+	kzfree(domain->table);
 }
 
 /*
