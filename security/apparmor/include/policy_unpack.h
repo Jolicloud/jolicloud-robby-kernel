@@ -15,9 +15,6 @@
 #ifndef __POLICY_INTERFACE_H
 #define __POLICY_INTERFACE_H
 
-#include "include/audit.h"
-
-struct aa_profile *aa_unpack(void *udata, size_t size, const char **ns,
-			     struct common_audit_data *sa);
+struct aa_profile *aa_unpack(void *udata, size_t size, const char **ns);
 
 #endif /* __POLICY_INTERFACE_H */

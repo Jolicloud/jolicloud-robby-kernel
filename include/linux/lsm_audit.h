@@ -104,7 +104,10 @@ struct common_audit_data {
 			const char *info;
 			union {
 				void *target;
-				long pos;
+                                struct {
+					long pos;
+					void *target;
+				} iface;
 				struct {
 					int rlim;
 					unsigned long max;
