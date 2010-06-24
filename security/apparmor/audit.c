@@ -108,90 +108,50 @@ static char *aa_audit_type[] = {
  *
  * Record common AppArmor audit data from @sa
  */
-static void audit_pre(struct audit_buffer *ab, struct aa_audit *sa)
+static void audit_pre(struct audit_buffer *ab, void *ca)
 {
+	struct common_audit_data *sa = ca;
+	struct task_struct *tsk = sa->tsk ? sa->tsk : current;
+
 	if (aa_g_audit_header) {
 		audit_log_format(ab, " type=");
-		audit_log_string(ab, aa_audit_type[sa->type - AUDIT_APPARMOR_AUDIT]);
+		audit_log_string(ab, aa_audit_type[sa->aad.type - AUDIT_APPARMOR_AUDIT]);
 	}
 
-	if (sa->op) {
+	if (sa->aad.op) {
 		audit_log_format(ab, " operation=");
-		audit_log_string(ab, op_table[sa->op]);
+		audit_log_string(ab, op_table[sa->aad.op]);
 	}
 
-	if (sa->info) {
+	if (sa->aad.info) {
 		audit_log_format(ab, " info=");
-		audit_log_string(ab, sa->info);
-		if (sa->error)
-			audit_log_format(ab, " error=%d", sa->error);
+		audit_log_string(ab, sa->aad.info);
+		if (sa->aad.error)
+			audit_log_format(ab, " error=%d", sa->aad.error);
 	}
 
-	audit_log_format(ab, " pid=%d", sa->task->pid);
+	audit_log_format(ab, " pid=%d", tsk->pid);
 
-	if (sa->profile) {
+	if (sa->aad.profile) {
+		struct aa_profile *profile = sa->aad.profile;
 		pid_t pid;
 		rcu_read_lock();
-		pid = sa->task->real_parent->pid;
+		pid = tsk->real_parent->pid;
 		rcu_read_unlock();
 		audit_log_format(ab, " parent=%d", pid);
 		audit_log_format(ab, " profile=");
-		if (sa->ns) {
+		if (profile->ns != root_ns) {
 			audit_log_format(ab, ":");
-			audit_log_untrustedstring(ab, sa->ns);
+			audit_log_untrustedstring(ab, profile->ns->base.hname);
 			audit_log_format(ab, "://");
 		}
-		audit_log_untrustedstring(ab, sa->profile);
+		audit_log_untrustedstring(ab, profile->base.hname);
 	}
 
-	if (sa->name) {
+	if (sa->aad.name) {
 		audit_log_format(ab, " name=");
-		audit_log_untrustedstring(ab, sa->name);
+		audit_log_untrustedstring(ab, sa->aad.name);
 	}
-}
-
-static int audit_wrapper(int type, struct aa_profile *profile,
-			 struct aa_audit *sa, struct audit_context *audit_cxt,
-			 void (*cb) (struct audit_buffer *, struct aa_audit *))
-{
-	struct audit_buffer *ab = NULL;
-
-	if (!sa->task)
-		sa->task = current;
-
-	if (profile && DO_KILL(profile) && type == AUDIT_APPARMOR_DENIED)
-		type = AUDIT_APPARMOR_KILL;
-	sa->type = type;
-
-	/* ab freed below in audit_log_end */
-	ab = audit_log_start(audit_cxt, GFP_ATOMIC, sa->type);
-
-	if (!ab) {
-		AA_ERROR("(%d) Unable to log event of type (%d)\n",
-			 -ENOMEM, sa->type);
-		sa->error = -ENOMEM;
-		goto out;
-	}
-
-	if (profile && !unconfined(profile))
-		sa->profile = profile->base.hname;
-	if (profile->ns != root_ns)
-		sa->ns = profile->ns->base.hname;
-
-	audit_pre(ab, sa);
-	if (cb)
-		cb(ab, sa);
-
-	audit_log_end(ab);
-
-out:
-	if (sa->type == AUDIT_APPARMOR_KILL)
-		(void)send_sig_info(SIGKILL, NULL, sa->task);
-
-	if (sa->type == AUDIT_APPARMOR_ALLOWED)
-		return complain_error(sa->error);
-
-	return sa->error;
 }
 
 /**
@@ -207,14 +167,11 @@ out:
  * Returns: error on failure
  */
 int aa_audit(int type, struct aa_profile *profile, gfp_t gfp,
-	     struct aa_audit *sa,
-	     void (*cb) (struct audit_buffer *, struct aa_audit *))
+	     struct common_audit_data *sa,
+	     void (*cb) (struct audit_buffer *, void *))
 {
-	struct audit_context *audit_cxt;
-	audit_cxt = aa_g_logsyscall ? current->audit_context : NULL;
-
 	if (type == AUDIT_APPARMOR_AUTO) {
-		if (likely(!sa->error)) {
+		if (likely(!sa->aad.error)) {
 			if (AUDIT_MODE(profile) != AUDIT_ALL)
 				return 0;
 			type = AUDIT_APPARMOR_AUDIT;
@@ -226,7 +183,24 @@ int aa_audit(int type, struct aa_profile *profile, gfp_t gfp,
 	if (AUDIT_MODE(profile) == AUDIT_QUIET ||
 	    (type == AUDIT_APPARMOR_DENIED &&
 	     AUDIT_MODE(profile) == AUDIT_QUIET))
-		return sa->error;
+		return sa->aad.error;
 
-	return audit_wrapper(type, profile, sa, audit_cxt, cb);
+	if (profile && DO_KILL(profile) && type == AUDIT_APPARMOR_DENIED)
+		type = AUDIT_APPARMOR_KILL;
+	sa->aad.type = type;
+
+	if (profile && !unconfined(profile))
+		sa->aad.profile = profile;
+
+	sa->lsm_pre_audit = audit_pre;
+	sa->lsm_post_audit = cb;
+	common_lsm_audit(sa);
+
+	if (sa->aad.type == AUDIT_APPARMOR_KILL)
+		(void)send_sig_info(SIGKILL, NULL, sa->tsk ? sa->tsk : current);
+
+	if (sa->aad.type == AUDIT_APPARMOR_ALLOWED)
+		return complain_error(sa->aad.error);
+
+	return sa->aad.error;
 }

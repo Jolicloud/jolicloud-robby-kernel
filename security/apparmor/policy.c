@@ -908,17 +908,17 @@ struct aa_profile *aa_lookup_profile(struct aa_namespace *ns, const char *hname)
  *
  * Returns: %1 if replacement allowed else %0
  */
-static bool replacement_allowed(struct aa_profile *profile, struct aa_audit *sa,
+static bool replacement_allowed(struct aa_profile *profile, struct common_audit_data *sa,
 				int noreplace)
 {
 	if (profile) {
 		if (profile->flags & PFLAG_IMMUTABLE) {
-			sa->info = "cannot replace immutible profile";
-			sa->error = -EPERM;
+			sa->aad.info = "cannot replace immutible profile";
+			sa->aad.error = -EPERM;
 			return 0;
 		} else if (noreplace) {
-			sa->info = "profile already exists";
-			sa->error = -EEXIST;
+			sa->aad.info = "profile already exists";
+			sa->aad.error = -EEXIST;
 			return 0;
 		}
 	}
@@ -965,45 +965,45 @@ ssize_t aa_replace_profiles(void *udata, size_t size, bool noreplace)
 	struct aa_namespace *ns = NULL;
 	const char *ns_name;
 	ssize_t error;
-	struct aa_audit sa = {
-		.op = OP_PROF_REPL,
-	};
+	struct common_audit_data sa;
+	COMMON_AUDIT_DATA_INIT_NONE(&sa);
+	sa.aad.op = OP_PROF_REPL,
 
 	/* ref count released below */
 	current_profile = aa_get_profile(__aa_current_profile());
 
 	/* check if loading policy is locked out */
 	if (aa_g_lock_policy) {
-		sa.info = "policy locked";
-		sa.error = -EACCES;
+		sa.aad.info = "policy locked";
+		sa.aad.error = -EACCES;
 		goto fail;
 	}
 
 	/* released below */
 	new_profile = aa_unpack(udata, size, &ns_name, &sa);
 	if (IS_ERR(new_profile)) {
-		sa.error = PTR_ERR(new_profile);
+		sa.aad.error = PTR_ERR(new_profile);
 		goto fail;
 	}
 
 	/* released below */
 	ns = aa_prepare_namespace(ns_name);
 	if (!ns) {
-		sa.info = "failed to prepare namespace";
-		sa.error = -ENOMEM;
-		sa.name = ns_name;
+		sa.aad.info = "failed to prepare namespace";
+		sa.aad.error = -ENOMEM;
+		sa.aad.name = ns_name;
 		goto fail;
 	}
 
-	sa.name = new_profile->base.hname;
+	sa.aad.name = new_profile->base.hname;
 
 	write_lock(&ns->lock);
 	/* no ref on policy only use inside lock */
 	policy = __lookup_parent(ns, new_profile->base.hname);
 
 	if (!policy) {
-		sa.info = "parent does not exist";
-		sa.error = -ENOENT;
+		sa.aad.info = "parent does not exist";
+		sa.aad.error = -ENOENT;
 		goto audit;
 	}
 
@@ -1018,9 +1018,9 @@ ssize_t aa_replace_profiles(void *udata, size_t size, bool noreplace)
 		aa_get_profile(rename_profile);
 
 		if (!rename_profile) {
-			sa.info = "profile to rename does not exist";
-			sa.name = new_profile->rename;
-			sa.error = -ENOENT;
+			sa.aad.info = "profile to rename does not exist";
+			sa.aad.name = new_profile->rename;
+			sa.aad.error = -ENOENT;
 			goto audit;
 		}
 	}
@@ -1033,7 +1033,7 @@ ssize_t aa_replace_profiles(void *udata, size_t size, bool noreplace)
 
 audit:
 	if (!old_profile && !rename_profile)
-		sa.op = OP_PROF_LOAD;
+		sa.aad.op = OP_PROF_LOAD;
 
 	error = aa_audit(AUDIT_APPARMOR_STATUS, current_profile, GFP_ATOMIC,
 			 &sa, NULL);
@@ -1086,21 +1086,21 @@ ssize_t aa_remove_profiles(char *fqname, size_t size)
 {
 	struct aa_namespace *root, *ns = NULL;
 	struct aa_profile *profile = NULL, *current_profile = NULL;
-	struct aa_audit sa = {
-		.op = OP_PROF_RM,
-	};
+	struct common_audit_data sa;
 	const char *name = fqname;
+	COMMON_AUDIT_DATA_INIT_NONE(&sa);
+	sa.aad.op = OP_PROF_RM;
 
 	/* check if loading policy is locked out */
 	if (aa_g_lock_policy) {
-		sa.info = "policy locked";
-		sa.error = -EACCES;
+		sa.aad.info = "policy locked";
+		sa.aad.error = -EACCES;
 		goto fail;
 	}
 
 	if (*fqname == 0) {
-		sa.info = "no profile specified";
-		sa.error = -ENOENT;
+		sa.aad.info = "no profile specified";
+		sa.aad.error = -ENOENT;
 		goto fail;
 	}
 
@@ -1115,8 +1115,8 @@ ssize_t aa_remove_profiles(char *fqname, size_t size)
 			/* released below */
 			ns = aa_find_namespace(root, ns_name);
 			if (!ns) {
-				sa.info = "namespace does not exist";
-				sa.error = -ENOENT;
+				sa.aad.info = "namespace does not exist";
+				sa.aad.error = -ENOENT;
 				goto fail;
 			}
 		}
@@ -1132,12 +1132,12 @@ ssize_t aa_remove_profiles(char *fqname, size_t size)
 		/* remove profile */
 		profile = aa_get_profile(__lookup_profile(&ns->base, name));
 		if (!profile) {
-			sa.name = name;
-			sa.error = -ENOENT;
-			sa.info = "profile does not exist";
+			sa.aad.name = name;
+			sa.aad.error = -ENOENT;
+			sa.aad.info = "profile does not exist";
 			goto fail_ns_lock;
 		}
-		sa.name = profile->base.hname;
+		sa.aad.name = profile->base.hname;
 		__remove_profile(profile);
 	}
 	write_unlock(&ns->lock);
@@ -1158,5 +1158,5 @@ fail:
 	(void) aa_audit(AUDIT_APPARMOR_STATUS, current_profile, GFP_KERNEL,
 			&sa, NULL);
 	aa_put_profile(current_profile);
-	return sa.error;
+	return sa.aad.error;
 }

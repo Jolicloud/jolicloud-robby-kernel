@@ -24,10 +24,12 @@
 #include "rlim_names.h"
 
 /* audit callback for resource specific fields */
-static void audit_cb(struct audit_buffer *ab, struct aa_audit *sa)
+static void audit_cb(struct audit_buffer *ab, void *va)
 {
-	audit_log_format(ab, " rlimit=%s value=%lu", rlim_names[sa->rlim.rlim],
-			 sa->rlim.max);
+	struct common_audit_data *sa = va;
+
+	audit_log_format(ab, " rlimit=%s value=%lu",
+			 rlim_names[sa->aad.rlim.rlim], sa->aad.rlim.max);
 }
 
 /**
@@ -37,7 +39,8 @@ static void audit_cb(struct audit_buffer *ab, struct aa_audit *sa)
  *
  * Returns: 0 or sa->error else other error code on failure
  */
-static int audit_resource(struct aa_profile *profile, struct aa_audit *sa)
+static int audit_resource(struct aa_profile *profile,
+			  struct common_audit_data *sa)
 {
 	return aa_audit(AUDIT_APPARMOR_AUTO, profile, GFP_KERNEL, sa, audit_cb);
 }
@@ -70,15 +73,15 @@ int aa_task_setrlimit(struct aa_profile *profile, unsigned int resource,
 		      struct rlimit *new_rlim)
 {
 	int error = 0;
-	struct aa_audit sa = {
-		.op = OP_SETRLIMIT,
-	};
-	sa.rlim.rlim = resource;
-	sa.rlim.max = new_rlim->rlim_max;
+	struct common_audit_data sa;
+	COMMON_AUDIT_DATA_INIT_NONE(&sa);
+	sa.aad.op = OP_SETRLIMIT,
+	sa.aad.rlim.rlim = resource;
+	sa.aad.rlim.max = new_rlim->rlim_max;
 
 	if (profile->rlimits.mask & (1 << resource) &&
 	    new_rlim->rlim_max > profile->rlimits.limits[resource].rlim_max) {
-		sa.error = -EACCES;
+		sa.aad.error = -EACCES;
 
 		error = audit_resource(profile, &sa);
 	}

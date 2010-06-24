@@ -94,6 +94,37 @@ struct common_audit_data {
 			int result;
 		} selinux_audit_data;
 #endif
+#ifdef CONFIG_SECURITY_APPARMOR
+		struct {
+			int error;
+			int op;
+			int type;
+			void *profile;
+			const char *name;
+			const char *info;
+			union {
+				long pos;
+				struct {
+					int rlim;
+					unsigned long max;
+				} rlim;
+				struct {
+					pid_t tracer, tracee;
+				} ptrace;
+				struct {
+					const char *path;
+					const char *target;
+					u16 request;
+					u16 denied;
+					uid_t ouid;
+				} fs;
+				struct {
+					int type, protocol;
+					struct sock *sk;
+				} net;
+			};
+		} apparmor_audit_data;
+#endif
 	};
 	/* these callback will be implemented by a specific LSM */
 	void (*lsm_pre_audit)(struct audit_buffer *, void *);

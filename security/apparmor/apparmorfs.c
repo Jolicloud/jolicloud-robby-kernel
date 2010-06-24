@@ -93,10 +93,11 @@ static char *aa_simple_write_to_buffer(int op, const char __user *userbuf,
 	 */
 	if (!capable(CAP_MAC_ADMIN)) {
 		struct aa_profile *profile = NULL;
-		struct aa_audit sa = {
-			.op = op,
-			.error = -EACCES,
-		};
+		struct common_audit_data sa;
+		COMMON_AUDIT_DATA_INIT_NONE(&sa);
+		sa.aad.op = op;
+		sa.aad.error = -EACCES,
+
 		profile = aa_current_profile();
 		data = ERR_PTR(aa_audit(AUDIT_APPARMOR_DENIED, profile,
 					GFP_KERNEL, &sa, NULL));

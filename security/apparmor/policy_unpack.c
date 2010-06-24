@@ -67,10 +67,11 @@ struct aa_ext {
 };
 
 /* audit callback for unpack fields */
-static void audit_cb(struct audit_buffer *ab, struct aa_audit *sa)
+static void audit_cb(struct audit_buffer *ab, void *va)
 {
-	if (sa->error && sa->pos)
-		audit_log_format(ab, " offset=%ld", sa->pos);
+	struct common_audit_data *sa = va;
+	if (sa->aad.error && sa->aad.pos)
+		audit_log_format(ab, " offset=%ld", sa->aad.pos);
 }
 
 /**
@@ -80,7 +81,7 @@ static void audit_cb(struct audit_buffer *ab, struct aa_audit *sa)
  *
  * Returns: %0 or error
  */
-static int aa_audit_iface(struct aa_audit *sa)
+static int aa_audit_iface(struct common_audit_data *sa)
 {
 	struct aa_profile *profile = __aa_current_profile();
 	return aa_audit(AUDIT_APPARMOR_STATUS, profile, GFP_KERNEL, sa,
@@ -439,7 +440,7 @@ fail:
  *
  * NOTE: unpack profile sets audit struct if there is a failure
  */
-static struct aa_profile *unpack_profile(struct aa_ext *e, struct aa_audit *sa)
+static struct aa_profile *unpack_profile(struct aa_ext *e, struct common_audit_data *sa)
 {
 	struct aa_profile *profile = NULL;
 	const char *name = NULL;
@@ -508,7 +509,7 @@ static struct aa_profile *unpack_profile(struct aa_ext *e, struct aa_audit *sa)
 		if (((u64) profile->mmap_min_addr) == tmp64) {
 			profile->flags |= PFLAG_MMAP_MIN_ADDR;
 		} else {
-			sa->info = "invalid set mmap_min_addr";
+			sa->aad.info = "invalid set mmap_min_addr";
 			goto fail;
 		}
 	}
@@ -591,9 +592,9 @@ static struct aa_profile *unpack_profile(struct aa_ext *e, struct aa_audit *sa)
 	return profile;
 
 fail:
-	sa->name = name ? name : "unknown";
-	if (!sa->info)
-		sa->info = "failed to unpack profile";
+	sa->aad.name = name ? name : "unknown";
+	if (!sa->aad.info)
+		sa->aad.info = "failed to unpack profile";
 
 	aa_put_profile(profile);
 
@@ -608,18 +609,18 @@ fail:
  *
  * Returns: error or 0 if header is good
  */
-static int verify_header(struct aa_ext *e, const char **ns, struct aa_audit *sa)
+static int verify_header(struct aa_ext *e, const char **ns, struct common_audit_data *sa)
 {
 	/* get the interface version */
 	if (!unpack_u32(e, &e->version, "version")) {
-		sa->info = "invalid profile format";
+		sa->aad.info = "invalid profile format";
 		aa_audit_iface(sa);
 		return -EPROTONOSUPPORT;
 	}
 
 	/* check that the interface version is currently supported */
 	if (e->version != 5) {
-		sa->info = "unsupported interface version";
+		sa->aad.info = "unsupported interface version";
 		aa_audit_iface(sa);
 		return -EPROTONOSUPPORT;
 	}
@@ -660,13 +661,13 @@ static bool verify_dfa_xindex(struct aa_dfa *dfa, int table_size)
 	return 1;
 }
 
-static int verify_profile(struct aa_profile *profile, struct aa_audit *sa)
+static int verify_profile(struct aa_profile *profile, struct common_audit_data *sa)
 {
 	if (aa_g_paranoid_load) {
 		if (profile->file.dfa &&
 		    !verify_dfa_xindex(profile->file.dfa,
 				       profile->file.trans.size)) {
-			sa->info = "Invalid named transition";
+			sa->aad.info = "Invalid named transition";
 			return -EPROTO;
 		}
 	}
@@ -686,7 +687,7 @@ static int verify_profile(struct aa_profile *profile, struct aa_audit *sa)
  * Returns: profile else error pointer if fails to unpack
  */
 struct aa_profile *aa_unpack(void *udata, size_t size, const char **ns,
-			     struct aa_audit *sa)
+			     struct common_audit_data *sa)
 {
 	struct aa_profile *profile;
 	int error;
@@ -702,7 +703,7 @@ struct aa_profile *aa_unpack(void *udata, size_t size, const char **ns,
 
 	profile = unpack_profile(&e, sa);
 	if (IS_ERR(profile)) {
-		sa->pos = e.pos - e.start;
+		sa->aad.pos = e.pos - e.start;
 		return profile;
 	}
 	error = verify_profile(profile, sa);

@@ -617,11 +617,11 @@ static int apparmor_setprocattr(struct task_struct *task, char *name,
 		} else if (strcmp(command, "permipc") == 0) {
 			error = aa_setprocattr_permipc(args);
 		} else {
-			struct aa_audit sa = {
-				.op = OP_SETPROCATTR,
-				.info = name,
-				.error = -EINVAL,
-			};
+			struct common_audit_data sa;
+			COMMON_AUDIT_DATA_INIT_NONE(&sa);
+			sa.aad.op = OP_SETPROCATTR;
+			sa.aad.info = name;
+			sa.aad.error = -EINVAL;
 			return aa_audit(AUDIT_APPARMOR_DENIED, NULL, GFP_KERNEL,
 					&sa, NULL);
 		}

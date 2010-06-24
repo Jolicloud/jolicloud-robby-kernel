@@ -17,6 +17,7 @@
 
 #include <linux/audit.h>
 #include <linux/fs.h>
+#include <linux/lsm_audit.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
 
@@ -92,47 +93,13 @@ enum aa_ops {
 	OP_PROF_RM,
 };
 
-/*
- * aa_audit - AppArmor auditing structure
- * Structure is populated by access control code and passed to aa_audit which
- * provides for a single point of logging.
- */
-struct aa_audit {
-	struct task_struct *task;
-	int error;
-	int op;
-	int type;
-	const char *ns;
-	const char *profile;
-	const char *name;
-	const char *info;
-	union {
-		long pos;
-		int cap;
-		struct {
-			int rlim;
-			unsigned long max;
-		} rlim;
-		struct {
-			pid_t tracer, tracee;
-		} ptrace;
-		struct {
-			const char *path;
-			const char *target;
-			u16 request;
-			u16 denied;
-			uid_t ouid;
-		} fs;
-		struct {
-			int family, type, protocol;
-			struct sock *sk;
-		} net;
-	};
-};
+
+/* define a short hand for apparmor_audit_data portion of common_audit_data */
+#define aad apparmor_audit_data
 
 int aa_audit(int type, struct aa_profile *profile, gfp_t gfp,
-	     struct aa_audit *sa,
-	     void (*cb) (struct audit_buffer *, struct aa_audit *));
+	     struct common_audit_data *sa,
+	     void (*cb) (struct audit_buffer *, void *));
 
 static inline int complain_error(int error)
 {
@@ -140,5 +107,11 @@ static inline int complain_error(int error)
 		return 0;
 	return error;
 }
+
+#define COMMON_AUDIT_DATA_INIT_NONE(_d) \
+	do { \
+		memset((_d), 0, sizeof(struct common_audit_data)); \
+		(_d)->type = LSM_AUDIT_DATA_NONE; \
+	} while (0)
 
 #endif /* __AA_AUDIT_H */
