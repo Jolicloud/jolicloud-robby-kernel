@@ -81,11 +81,6 @@ static void file_audit_cb(struct audit_buffer *ab, void *va)
 		audit_log_format(ab, " ouid=%d", sa->aad.fs.ouid);
 	}
 
-	if (sa->aad.fs.path) {
-		audit_log_format(ab, " path=");
-		audit_log_untrustedstring(ab, sa->aad.fs.path);
-	}
-
 	if (sa->aad.fs.target) {
 		audit_log_format(ab, " target=");
 		audit_log_untrustedstring(ab, sa->aad.fs.target);
@@ -115,7 +110,7 @@ int aa_audit_file(struct aa_profile *profile, struct file_perms *perms,
 	COMMON_AUDIT_DATA_INIT_NONE(&sa);
 	sa.aad.op = op,
 	sa.aad.fs.request = request;
-	sa.aad.fs.path = name;
+	sa.aad.name = name;
 	sa.aad.fs.target = target;
 	sa.aad.fs.ouid = ouid;
 	sa.aad.info = info;

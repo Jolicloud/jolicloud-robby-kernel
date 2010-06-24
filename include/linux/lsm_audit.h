@@ -113,7 +113,6 @@ struct common_audit_data {
 					unsigned long max;
 				} rlim;
 				struct {
-					const char *path;
 					const char *target;
 					u16 request;
 					u16 denied;
