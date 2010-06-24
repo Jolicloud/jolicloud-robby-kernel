@@ -49,49 +49,58 @@ static void audit_cb(struct audit_buffer *ab, void *va)
 /**
  * audit_caps - audit a capability
  * @profile: profile confining task
- * @sa: audit structure containing data to audit
+ * @task: task capability test was performed against
+ * @cap: capability tested
+ * @error: error code returned by test
  *
  * Do auditing of capability and handle, audit/complain/kill modes switching
  * and duplicate message elimination.
  *
  * returns: 0 or sa->error on succes,  error code on failure
  */
-static int audit_caps(struct aa_profile *profile, struct common_audit_data *sa)
+static int audit_caps(struct aa_profile *profile, struct task_struct *task,
+		      int cap, int error)
 {
 	struct audit_cache *ent;
 	int type = AUDIT_APPARMOR_AUTO;
+	struct common_audit_data sa;
+	COMMON_AUDIT_DATA_INIT(&sa, CAP);
+	sa.tsk = task;
+	sa.u.cap = cap;
+	sa.aad.op = OP_CAPABLE;
+	sa.aad.error = error;
 
-	if (likely(!sa->aad.error)) {
+	if (likely(!error)) {
 		/* test if auditing is being forced */
 		if (likely((AUDIT_MODE(profile) != AUDIT_ALL) &&
-			   !cap_raised(profile->caps.audit, sa->u.cap)))
+			   !cap_raised(profile->caps.audit, cap)))
 			return 0;
 		type = AUDIT_APPARMOR_AUDIT;
 	} else if (DO_KILL(profile) ||
-		   cap_raised(profile->caps.kill, sa->u.cap)) {
+		   cap_raised(profile->caps.kill, cap)) {
 		type = AUDIT_APPARMOR_KILL;
-	} else if (cap_raised(profile->caps.quiet, sa->u.cap) &&
+	} else if (cap_raised(profile->caps.quiet, cap) &&
 		   AUDIT_MODE(profile) != AUDIT_NOQUIET &&
 		   AUDIT_MODE(profile) != AUDIT_ALL) {
 		/* quiet auditing */
-		return sa->aad.error;
+		return error;
 	}
 
 	/* Do simple duplicate message elimination */
 	ent = &get_cpu_var(audit_cache);
-	if (profile == ent->profile && cap_raised(ent->caps, sa->u.cap)) {
+	if (profile == ent->profile && cap_raised(ent->caps, cap)) {
 		put_cpu_var(audit_cache);
 		if (COMPLAIN_MODE(profile))
-			return complain_error(sa->aad.error);
-		return sa->aad.error;
+			return complain_error(error);
+		return error;
 	} else {
 		aa_put_profile(ent->profile);
 		ent->profile = aa_get_profile(profile);
-		cap_raise(ent->caps, sa->u.cap);
+		cap_raise(ent->caps, cap);
 	}
 	put_cpu_var(audit_cache);
 
-	return aa_audit(type, profile, GFP_ATOMIC, sa, audit_cb);
+	return aa_audit(type, profile, GFP_ATOMIC, &sa, audit_cb);
 }
 
 /**
@@ -121,12 +130,6 @@ int aa_capable(struct task_struct *task, struct aa_profile *profile, int cap,
 	       int audit)
 {
 	int error = profile_capable(profile, cap);
-	struct common_audit_data sa;
-	COMMON_AUDIT_DATA_INIT(&sa, CAP);
-	sa.tsk = task;
-	sa.u.cap = cap;
-	sa.aad.op = OP_CAPABLE;
-	sa.aad.error = error;
 
 	if (!audit) {
 		if (COMPLAIN_MODE(profile))
@@ -134,5 +137,5 @@ int aa_capable(struct task_struct *task, struct aa_profile *profile, int cap,
 		return error;
 	}
 
-	return audit_caps(profile, &sa);
+	return audit_caps(profile, task, cap, error);
 }
