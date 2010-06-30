@@ -1032,7 +1032,7 @@ static int __init apparmor_init(void)
 	int error;
 
 	if (!apparmor_enabled || !security_module_enable(&apparmor_ops)) {
-		aa_info_message("AppArmor disabled by boot time parameter\n");
+		aa_info_message("AppArmor disabled by boot time parameter");
 		apparmor_enabled = 0;
 		return 0;
 	}
