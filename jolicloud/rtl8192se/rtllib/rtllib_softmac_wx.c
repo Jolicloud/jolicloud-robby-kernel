@@ -64,7 +64,7 @@ int rtllib_wx_set_freq(struct rtllib_device *ieee, struct iw_request_info *a,
 	}else { /* Set the channel */
 		
 #ifdef ENABLE_DOT11D
-		if (!(GET_DOT11D_INFO(ieee)->channel_map)[fwrq->m]) {
+		if (ieee->active_channel_map[fwrq->m] != 1) {
 			ret = -EINVAL;
 			goto out;
 		}
@@ -174,6 +174,16 @@ int rtllib_wx_set_wap(struct rtllib_device *ieee,
 		goto out;
 	}
 	
+        if (memcmp(temp->sa_data, zero,ETH_ALEN) == 0){
+                spin_lock_irqsave(&ieee->lock, flags);
+                memcpy(ieee->current_network.bssid, temp->sa_data, ETH_ALEN);
+                ieee->wap_set = 0;
+                spin_unlock_irqrestore(&ieee->lock, flags);
+                ret = -1;
+                goto out;
+        }
+
+	
 	if (ifup)
 		rtllib_stop_protocol(ieee,true);
 	
@@ -182,6 +192,7 @@ int rtllib_wx_set_wap(struct rtllib_device *ieee,
 	 */
 	spin_lock_irqsave(&ieee->lock, flags);
 	
+	ieee->cannot_notify = false;
 	memcpy(ieee->current_network.bssid, temp->sa_data, ETH_ALEN); 
 	ieee->wap_set = (memcmp(temp->sa_data, zero,ETH_ALEN)!=0);
 	
@@ -245,7 +256,7 @@ int rtllib_wx_get_rate(struct rtllib_device *ieee,
 			     union iwreq_data *wrqu, char *extra)
 {
 	u32 tmp_rate = 0;
-#if defined RTL8192SU|| defined RTL8192CE
+#if defined RTL8192SU
 	if (ieee->mode & (IEEE_A | IEEE_B | IEEE_G))
 		tmp_rate = ieee->rate;
 	else if (ieee->mode & IEEE_N_5G)
@@ -256,7 +267,7 @@ int rtllib_wx_get_rate(struct rtllib_device *ieee,
 		else
 			tmp_rate = HTMcsToDataRate(ieee, 15);
 	}
-#elif defined RTL8192SE
+#elif defined RTL8192SE || defined RTL8192CE
 	tmp_rate = ieee->rtl_11n_user_show_rates(ieee->dev);
 #else
         tmp_rate = TxCountToDataRate(ieee, ieee->softmac_stats.CurrentShowTxate);
@@ -320,13 +331,17 @@ int rtllib_wx_set_mode(struct rtllib_device *ieee, struct iw_request_info *a,
 		goto out;
 	
 	if (wrqu->mode == IW_MODE_MONITOR) {
-#ifdef CONFIG_RTL819x_RADIOTAP
+#if defined(RTLLIB_RADIOTAP) && (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,10)) 
 		ieee->dev->type = ARPHRD_IEEE80211_RADIOTAP;
 #else
 		ieee->dev->type = ARPHRD_IEEE80211;
 #endif
+		rtllib_EnableNetMonitorMode(ieee->dev,false);	
+		
 	} else {
 		ieee->dev->type = ARPHRD_ETHER;
+		if (ieee->iw_mode == IW_MODE_MONITOR)
+			rtllib_DisableNetMonitorMode(ieee->dev,false);
 	}
 	
 	if (!ieee->proto_started) {
@@ -366,12 +381,13 @@ void rtllib_wx_sync_scan_wq(void *data)
 	if (ieee->LeisurePSLeave) {
 		ieee->LeisurePSLeave(ieee->dev);
 	}
-#endif
 	/* notify AP to be in PS mode */
 	rtllib_sta_ps_send_null_frame(ieee, 1);
 	rtllib_sta_ps_send_null_frame(ieee, 1);
+#endif
 
-	netif_carrier_off(ieee->dev);
+	rtllib_stop_all_queues(ieee);
+
 	if (ieee->data_hard_stop)
 		ieee->data_hard_stop(ieee->dev);
 	rtllib_stop_send_beacons(ieee);
@@ -380,19 +396,8 @@ void rtllib_wx_sync_scan_wq(void *data)
 	/* wait for ps packet to be kicked out successfully */
 	msleep(50);
 
-#if !(defined RTL8192SE ||defined RTL8192CE)	
-	ieee->InitialGainHandler(ieee->dev,IG_Backup);
-#endif
-#if defined(RTL8192SE)
-#if(RTL8192S_DISABLE_FW_DM == 0)
-	if (ieee->SetFwCmdHandler) {
-		ieee->SetFwCmdHandler(ieee->dev, FW_CMD_PAUSE_DM_BY_SCAN);
-	}
-#endif
-#endif	
-#ifdef RTL8192SU
-	ieee->ScanOperationBackupHandler(ieee->dev,SCAN_OPT_BACKUP);
-#endif
+	if(ieee->ScanOperationBackupHandler)
+		ieee->ScanOperationBackupHandler(ieee->dev,SCAN_OPT_BACKUP);
 
 	if (ieee->pHTInfo->bCurrentHTSupport && ieee->pHTInfo->bEnableHT && ieee->pHTInfo->bCurBW40MHz) {
 		b40M = 1;
@@ -417,25 +422,17 @@ void rtllib_wx_sync_scan_wq(void *data)
 		ieee->set_chan(ieee->dev, chan);
 	}
 	
-#if !(defined RTL8192SE ||defined RTL8192CE)
-	ieee->InitialGainHandler(ieee->dev,IG_Restore);
-#endif
-
-#if defined(RTL8192SE)
-#if(RTL8192S_DISABLE_FW_DM == 0)
-	if (ieee->SetFwCmdHandler) {
-		ieee->SetFwCmdHandler(ieee->dev, FW_CMD_RESUME_DM_BY_SCAN);
-	}
-#endif
-#endif	
-#ifdef RTL8192SU
-	ieee->ScanOperationBackupHandler(ieee->dev,SCAN_OPT_RESTORE);
-#endif
+	if(ieee->ScanOperationBackupHandler)
+		ieee->ScanOperationBackupHandler(ieee->dev,SCAN_OPT_RESTORE);
+	
 	ieee->state = RTLLIB_LINKED;
 	ieee->link_change(ieee->dev);
 
+#ifdef ENABLE_LPS
 	/* Notify AP that I wake up again */
 	rtllib_sta_ps_send_null_frame(ieee, 0);
+#endif
+
 	if (ieee->LinkDetectInfo.NumRecvBcnInPeriod == 0 || 
 			ieee->LinkDetectInfo.NumRecvDataInPeriod == 0 ) {
 		ieee->LinkDetectInfo.NumRecvBcnInPeriod = 1;
@@ -448,7 +445,8 @@ void rtllib_wx_sync_scan_wq(void *data)
 	if(ieee->iw_mode == IW_MODE_ADHOC || ieee->iw_mode == IW_MODE_MASTER)
 		rtllib_start_send_beacons(ieee);
 	
-	netif_carrier_on(ieee->dev);
+	rtllib_wake_all_queues(ieee);
+
 	count = 0;	
 out:
 	up(&ieee->wx_sem);
@@ -483,7 +481,7 @@ int rtllib_wx_set_essid(struct rtllib_device *ieee,
 			      union iwreq_data *wrqu, char *extra)
 {
 	
-	int ret=0,len;
+	int ret=0,len,i;
 	short proto_started;
 	unsigned long flags;
 	
@@ -508,6 +506,13 @@ int rtllib_wx_set_essid(struct rtllib_device *ieee,
 		goto out;
 	}
 	
+	for (i=0; i<len; i++){
+		if(extra[i] < 0){
+			ret= -1;
+			goto out;
+		}
+	}
+	
 	if(proto_started)
 		rtllib_stop_protocol(ieee,true);
 	
@@ -524,10 +529,11 @@ int rtllib_wx_set_essid(struct rtllib_device *ieee,
 		{
 			int i;
 			for (i=0; i<len; i++)
-				printk("%c ", extra[i]);
+				printk("%c:%d ", extra[i], extra[i]);
 			printk("\n");
 		}
 #endif
+		ieee->cannot_notify = false;
 		ieee->ssid_set = 1;
 	}
 	else{ 

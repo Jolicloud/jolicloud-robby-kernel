@@ -19,10 +19,11 @@
 #ifndef __INC_HAL8192SE_FW_IMG_H
 #define __INC_HAL8192SE_FW_IMG_H
 
-/*Created on  2009/11/17, 16:15*/
-
 #include <linux/types.h>
-#define ImgArrayLength 88592
+
+/*Created on  2010/ 4/12,  5:56*/
+
+#define ImgArrayLength 87000
 extern u8 Rtl8192SEFwImgArray[ImgArrayLength];
 #define MainArrayLength 1
 extern u8 Rtl8192SEFwMainArray[MainArrayLength];
@@ -56,5 +57,7 @@ extern u32 Rtl8192SEMAC_2T_Array[MAC_2T_ArrayLength];
 extern u32 Rtl8192SEMACPHY_Array_PG[MACPHY_Array_PGLength];
 #define AGCTAB_ArrayLength 320
 extern u32 Rtl8192SEAGCTAB_Array[AGCTAB_ArrayLength];
+#define AGCTAB_1TArrayLength 1
+extern u32 Rtl8192SEAGCTAB_1TArray[AGCTAB_1TArrayLength];
 
 #endif 

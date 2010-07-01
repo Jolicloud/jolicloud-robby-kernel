@@ -5,6 +5,7 @@ card=RTL8192se
 
 SYSTEM=`uname -r|cut -d. -f1,2`
 
+
 if [ $SYSTEM = 2.4 ]
 then
 cd rtllib
@@ -40,13 +41,25 @@ case "$card" in
 	"RTL8192ce")
 	cd ../HAL/rtl8192;
 	insmod r8192ce_pci.o;;
+	"RTL8192ce_Mesh")
+	cd ../HAL/rtl8192;
+	insmod r8192ce_pci_mesh.o;;
+
         *)
         echo "Unknown NIC type"
 	;;
 esac
 
 else
-cp RadioPower.sh /etc/acpi/events
+#cp ./realtek/RadioPower.sh /etc/acpi/events
+
+#for CRDA
+#KERNEL_VER=`uname -r|cut -d- -f1|cut -d. -f3`
+#if [ $KERNEL_VER -gt 29 ]
+#then
+	#modprobe cfg80211
+#fi
+
 cd rtllib/
 #insmod rtllib_crypt-rsl.ko
 #insmod rtllib_crypt_wep-rsl.ko
@@ -77,6 +90,10 @@ case "$card" in
 	"RTL8192ce")
 	cd ../HAL/rtl8192;
 	insmod r8192ce_pci.ko;;
+	"RTL8192ce_Mesh")
+	cd ../HAL/rtl8192;
+	insmod r8192ce_pci_mesh.ko;;
+
         *)
         echo "Unknown NIC type"
 	;;

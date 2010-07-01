@@ -60,13 +60,40 @@ MODULE_AUTHOR("Copyright (C) 2004 Intel Corporation <jketreno@linux.intel.com>")
 MODULE_LICENSE("GPL");
 #endif
 
-#define DRV_NAME "rtllib"
+#ifdef RTL8192CE
+#define DRV_NAME "rtllib_92ce"
+#elif defined RTL8192SE
+#define DRV_NAME "rtllib_92se"
+#elif defined RTL8192E
+#define DRV_NAME "rtllib_92e"
+#elif defined RTL8190P
+#define DRV_NAME "rtllib_90p"
+#elif defined RTL8192SU
+#define DRV_NAME "rtllib_92su"
+#elif defined RTL8192U
+#define DRV_NAME "rtllib_92u"
+#else
+#define DRV_NAME "rtllib_9x"
+#endif
 
+#ifdef CONFIG_CFG_80211 
+#ifdef CONFIG_RTL_RFKILL
+static inline void rtllib_rfkill_poll(struct wiphy *wiphy)
+{
+	struct rtllib_device *rtllib = NULL;
 
-#ifdef CONFIG_CRDA
-struct cfg80211_ops rtllib_config_ops = { };
+	rtllib = (struct rtllib_device *)wiphy_priv(wiphy);
+
+	rtllib = (struct rtllib_device *)netdev_priv_rsl(rtllib->dev);
+
+	if (rtllib->rtllib_rfkill_poll)
+		rtllib->rtllib_rfkill_poll(rtllib->dev);
+}
+#else
+static inline void rtllib_rfkill_poll(struct wiphy *wiphy) {}
+#endif
+struct cfg80211_ops rtllib_config_ops = {.rfkill_poll = rtllib_rfkill_poll };
 void *rtllib_wiphy_privid = &rtllib_wiphy_privid;
-
 #endif
 
 void _setup_timer( struct timer_list* ptimer, void* fun, unsigned long data )
@@ -159,7 +186,7 @@ static inline void rtllib_networks_initialize(struct rtllib_device *ieee)
 #endif
 }
 
-#ifdef CONFIG_CRDA
+#if defined CONFIG_CFG_80211 
 static bool rtllib_wdev_alloc(struct rtllib_device *ieee, int sizeof_priv)
 {
 	int priv_size;
@@ -213,11 +240,10 @@ struct net_device *alloc_rtllib(int sizeof_priv)
 	memset(ieee, 0, sizeof(struct rtllib_device)+sizeof_priv);
 	ieee->dev = dev;
 
-#ifdef CONFIG_CRDA
+#ifdef CONFIG_CFG_80211
 	if(!rtllib_wdev_alloc(ieee, sizeof_priv))
 		goto failed;
 #endif
-
 	err = rtllib_networks_allocate(ieee);
 	if (err) {
 		RTLLIB_ERROR("Unable to allocate beacon storage: %d\n",
@@ -456,7 +482,7 @@ void free_rtllib(struct net_device *dev)
 	}
 #endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0))	
-#ifdef CONFIG_CRDA
+#ifdef CONFIG_CFG_80211
 	wiphy_unregister(ieee->wdev.wiphy);
 	wiphy_free(ieee->wdev.wiphy);
 #endif

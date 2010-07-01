@@ -18,9 +18,7 @@
 ******************************************************************************/
 #if defined(RTL8192SE)
 #include "../rtl_core.h"
-#include "../rtl_endianfree.h"
-#include "r8192S_hwimg.h"
-#include "r8192S_dev.h"
+#include "../../../rtllib/rtllib_endianfree.h"
 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,5,0) && defined(USE_FW_SOURCE_IMG_FILE)
 #include <linux/firmware.h>
@@ -341,7 +339,11 @@ bool FirmwareDownload92S(struct net_device *dev)
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,5,0) && defined(USE_FW_SOURCE_IMG_FILE)			
 			if(pFirmware->szFwTmpBufferLen == 0)
 			{
-				const char 		*pFwImageFileName[1] = {"rtl8192s.bin"};
+#ifdef _RTL8192_EXT_PATCH_
+				const char 		*pFwImageFileName[1] = {"RTL8191SE_MESH/rtl8192sfw.bin"};
+#else
+				const char 		*pFwImageFileName[1] = {"RTL8192SE/rtl8192sfw.bin"};
+#endif
 				const struct firmware 	*fw_entry = NULL;
 				u32 ulInitStep = 0;
 				int 			rc = 0;
@@ -725,7 +727,7 @@ FirmwareSetH2CCmd(
 		
 	}
 	
-	write_nic_byte(dev, TPPoll, BIT0<<(TXCMD_QUEUE));
+	write_nic_byte(dev, TPPoll, TPPoll_CQ);
 
 	return RT_STATUS_SUCCESS;
 }
@@ -767,7 +769,7 @@ rtl8192se_set_scan_cmd(struct net_device *dev, u32 start_flag)
 		SiteSurveyPara->desc.MacID 	= 0;
 		SiteSurveyPara->desc.TXHT		= (tcb_desc->data_rate&0x80)?1:0;	
 		SiteSurveyPara->desc.TxRate	= MRateToHwRate8192SE(dev,tcb_desc->data_rate);
-		SiteSurveyPara->desc.TxShort	= QueryIsShort(((tcb_desc->data_rate&0x80)?1:0), MRateToHwRate8192SE(dev,tcb_desc->data_rate), tcb_desc);
+		SiteSurveyPara->desc.TxShort	= rtl8192se_QueryIsShort(((tcb_desc->data_rate&0x80)?1:0), MRateToHwRate8192SE(dev,tcb_desc->data_rate), tcb_desc);
 
 		SiteSurveyPara->desc.AggEn 	= 0;
 		SiteSurveyPara->desc.Seq 		= 0; 
@@ -801,7 +803,7 @@ rtl8192se_set_scan_cmd(struct net_device *dev, u32 start_flag)
 		SiteSurveyPara->desc.RaBRSRID 	= tcb_desc->RATRIndex;
 	
 		SiteSurveyPara->desc.PktID		= 0x0;		
-		SiteSurveyPara->desc.QueueSel		= MapHwQueueToFirmwareQueue(tcb_desc->queue_index, tcb_desc->priority); 
+		SiteSurveyPara->desc.QueueSel		= rtl8192se_MapHwQueueToFirmwareQueue(tcb_desc->queue_index, tcb_desc->priority); 
 	
 		SiteSurveyPara->desc.DataRateFBLmt= 0x1F;		
 		SiteSurveyPara->desc.DISFB		= tcb_desc->bTxDisableRateFallBack;

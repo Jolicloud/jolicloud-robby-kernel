@@ -5,6 +5,7 @@ KSRC = /lib/modules/$(KVER)/build
 RTL819x_FIRM_DIR = $(RTL819x_DIR)/firmware
 HAL_SUB_DIR = rtl8192
 MODULE_FILE = $(RTL819x_DIR)/rtllib/Module.symvers
+SCRIPT_FOLDER = /etc/realtek
 
 export LINUX_KSRC_MODULE_DIR RTL819x_FIRM_DIR
 
@@ -17,16 +18,19 @@ else
 #	@make -C $(KSRC) SUBDIRS=$(RTL819x_DIR)/rtllib modules 
 #	@test -f $(MODULE_FILE) && cp $(MODULE_FILE) $(RTL819x_DIR)/HAL/$(HAL_SUB_DIR) || echo > /dev/null 
 	@make -C $(KSRC) SUBDIRS=$(RTL819x_DIR)/HAL/$(HAL_SUB_DIR) modules 
-	#@make -C $(RTL819x_DIR)/wapi_supplicant
+#	@make -C $(RTL819x_DIR)/wapi_supplicant
 endif
 install: all
-	@cp $(RTL819x_DIR)/RadioPower.sh /etc/acpi/events/
-	@cp $(RTL819x_DIR)/wireless-rtl-ac-dc-power.sh /etc/acpi/
+	@grep r8192_pci.ko /lib/modules/$(shell uname -r)/modules.dep && rm -fr /lib/modules/$(shell uname -r)/kernel/drivers/staging/rtl8192e/ || echo > /dev/null
+	@grep r8192se_pci.ko /lib/modules/$(shell uname -r)/modules.dep && rm -fr /lib/modules/$(shell uname -r)/kernel/ubuntu/rtl8192se/* || echo > /dev/null
+	@rm -f /etc/acpi/wireless-rtl-ac-dc-power.sh
+	@rm -f /etc/acpi/events/RadioPower.sh
+	@cp -fr realtek/ /etc
 	@make -C HAL/$(HAL_SUB_DIR)/ install
-	#@cp $(RTL819x_DIR)/wapi_supplicant/wapi_supplicant /usr/bin/
+#	@cp $(RTL819x_DIR)/wapi_supplicant/wapi_supplicant /usr/bin/
 uninstall:
 	@make -C HAL/$(HAL_SUB_DIR)/ uninstall
-	@rm -f /etc/acpi/wireless-rtl-ac-dc-power.sh
+	@rm -fr $(SCRIPT_FOLDER)
 	@rm -f /usr/bin/wapi_supplicant
 clean:
 	@make -C HAL/$(HAL_SUB_DIR)/ clean
@@ -37,4 +41,6 @@ clean:
 	@rm -fr Module.symvers
 	@rm -fr Module.markers
 	@rm -fr modules.order
+	@rm -fr .tmp_versions
 	@rm -fr *~
+	@rm -f tags

@@ -25,8 +25,13 @@
 #ifndef _RTL8192SE_H
 #define _RTL8192SE_H
 
-#include "r8192SE_def.h"
+#include "r8192S_def.h"
 
+u8 rtl8192se_QueryIsShort(u8 TxHT, u8 TxRate, cb_desc *tcb_desc);
+bool rtl8192se_GetHalfNmodeSupportByAPs(struct net_device* dev);
+bool rtl8192se_GetNmodeSupportBySecCfg(struct net_device *dev);
+bool rtl8192se_HalTxCheckStuck(struct net_device *dev);
+bool rtl8192se_HalRxCheckStuck(struct net_device *dev);
 void rtl8192se_interrupt_recognized(struct net_device *dev, u32 *p_inta, u32 *p_intb);
 void rtl8192se_enable_rx(struct net_device *dev);
 void rtl8192se_enable_tx(struct net_device *dev);
@@ -37,8 +42,10 @@ void rtl8192se_InitializeVariables(struct net_device  *dev);
 void rtl8192se_start_beacon(struct net_device *dev);
 u8 MRateToHwRate8192SE(struct net_device*dev, u8 rate);
 void rtl8192se_get_eeprom_size(struct net_device* dev);
+void MacConfigBeforeFwDownload(struct net_device *dev);
 bool rtl8192se_adapter_start(struct net_device* dev);
 void rtl8192se_link_change(struct net_device *dev);
+void rtl8192se_AllowAllDestAddr(struct net_device* dev, bool bAllowAllDA, bool WriteIntoReg);
 void rtl8192se_tx_fill_desc(struct net_device *dev, tx_desc *pDesc, cb_desc *cb_desc, struct sk_buff *skb);
 void rtl8192se_tx_fill_cmd_desc(struct net_device *dev, tx_desc_cmd *entry, cb_desc *cb_desc, 
 		struct sk_buff *skb);
@@ -48,13 +55,26 @@ void rtl8192se_halt_adapter(struct net_device *dev, bool bReset);
 void rtl8192se_update_ratr_table(struct net_device* dev,u8* pMcsRate,struct sta_info* pEntry);
 int r8192se_resume_firm(struct net_device *dev);
 void PHY_SetRtl8192seRfHalt(struct net_device* dev);
-#ifndef _RTL8192_EXT_PATCH_
-void UpdateHalRAMask8192SE(struct net_device* dev,bool bMulticast, u8 macId, u8* MacAddr, u8* pEntry, u8 rssi_level);
-#else
-void UpdateHalRAMask8192SE(struct net_device* dev, bool bMulticast, u8 macId, u8* MacAddr, u8 wirelessMode,     u8 rssi_level);
-#endif
+void UpdateHalRAMask8192SE(struct net_device* dev, bool bMulticast, u8 macId, u8 MimoPs, u8 WirelessMode, u8 bCurTxBW40MHz,	u8 rssi_level);
 u8 HalSetSysClk8192SE(struct net_device *dev, u8 Data);
 bool	rtl8192se_RxCommandPacketHandle(struct net_device *dev, struct sk_buff* skb,rx_desc *pdesc);
+bool rtl8192se_check_ht_cap(struct net_device* dev, struct sta_info *sta, 
+		struct rtllib_network* net);
+u8 rtl8192se_MapHwQueueToFirmwareQueue(u8 QueueID, u8 priority);
+
+void GetHwReg8192SE(struct net_device *dev,u8 variable,u8* val);
+void SetHwReg8192SE(struct net_device *dev,u8 variable,u8* val);
+void Adhoc_InitRateAdaptive(struct net_device *dev,struct sta_info  *pEntry);
+void SetBeaconRelatedRegisters8192SE(struct net_device *dev);
+
+#if LINUX_VERSION_CODE >=KERNEL_VERSION(2,6,20)
+void rtl8192se_check_tsf_wq(struct work_struct * work);
+void rtl8192se_update_assoc_sta_info_wq(struct work_struct * work);
+#else
+void rtl8192se_check_tsf_wq(struct net_device *dev);
+void rtl8192se_update_assoc_sta_info_wq(struct net_device *dev);
+#endif
+void gen_RefreshLedState(struct net_device *dev);
 
 #endif
 

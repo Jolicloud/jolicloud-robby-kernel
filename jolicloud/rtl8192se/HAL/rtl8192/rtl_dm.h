@@ -143,14 +143,27 @@ typedef enum tag_dynamic_init_gain_state_definition
 	DM_STA_DIG_MAX
 }dm_dig_sta_e;
 
-
+#ifndef RTL8192SE
 typedef enum tag_dynamic_ratr_state_definition
 {
 	DM_RATR_STA_HIGH = 0,
 	DM_RATR_STA_MIDDLE = 1,
 	DM_RATR_STA_LOW = 2,
+
 	DM_RATR_STA_MAX
 }dm_ratr_sta_e;
+#else
+typedef enum tag_dynamic_ratr_state_definition
+{
+	DM_RATR_STA_HIGH = 0,
+	DM_RATR_STA_MIDDLEHIGH = 1,		
+	DM_RATR_STA_MIDDLE = 2,
+	DM_RATR_STA_MIDDLELOW = 3,	
+	DM_RATR_STA_LOW = 4,
+	DM_RATR_STA_ULTRALOW = 5,	
+	DM_RATR_STA_MAX
+}dm_ratr_sta_e;
+#endif
 
 typedef enum tag_dynamic_init_gain_operation_type_definition
 {
@@ -294,7 +307,7 @@ extern  void    init_rate_adaptive(struct net_device *dev);
 extern  void    dm_txpower_trackingcallback(void *data);
 
 #ifndef RTL8192SE
-extern  void    dm_cck_txpower_adjust(struct net_device *dev,bool  binch14);
+extern  void dm_cck_txpower_adjust(struct net_device *dev,bool  binch14);
 #endif
 
 extern  void    dm_restore_dynamic_mechanism_state(struct net_device *dev);
@@ -320,9 +333,14 @@ extern  void    dm_shadow_init(struct net_device *dev);
 extern  void dm_initialize_txpower_tracking(struct net_device *dev);
 
 #if (defined RTL8192E || defined RTL8192SE)
-extern  void    dm_gpio_change_rf_callback(void *data);
+extern  void    dm_CheckRfCtrlGPIO(void *data);
 #endif
 
+#ifdef RTL8192SE
+extern void Power_DomainInit92SE(struct net_device *dev);
+#endif
+
+extern void dm_InitRateAdaptiveMask(struct net_device * dev);
 
 #endif	/*__R8192UDM_H__ */
 

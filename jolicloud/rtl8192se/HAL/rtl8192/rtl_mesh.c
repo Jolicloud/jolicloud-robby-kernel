@@ -29,11 +29,6 @@
 
 #include "rtl_wx.h"
 #include "rtl_core.h"
-#include "rtl_dm.h"
-#include "rtl8192s/r8192S_phy.h"
-#include "rtl8192s/r8192S_phyreg.h"
-#include "rtl8192s/r8192S_rtl6052.h"
-#include "rtl8192s/r8192S_Efuse.h"
 #include "../../mshclass/msh_class.h"
 
 int meshdev_up(struct net_device *meshdev,bool is_silent_reset)
@@ -45,6 +40,7 @@ int meshdev_up(struct net_device *meshdev,bool is_silent_reset)
         struct net_device *dev = ieee->dev; 
 	RT_TRACE(COMP_DOWN, "==========>%s()\n", __FUNCTION__);
 
+	mpriv->priv->up_first_time = 0;
 	mpriv->rtllib->iw_mode = IW_MODE_MESH;   
 	if(mpriv->priv->mesh_up){
 		RT_TRACE(COMP_INIT,"%s():mesh is up,return\n",__FUNCTION__);
@@ -60,7 +56,16 @@ int meshdev_up(struct net_device *meshdev,bool is_silent_reset)
         /*RCR_AAP               |*/                                                     
         RCR_APP_PHYST_STAFF | RCR_APP_PHYST_RXFF |      
         (mpriv->priv->EarlyRxThreshold<<RCR_FIFO_OFFSET)       ;
-
+#elif defined RTL8192CE
+		mpriv->priv->ReceiveConfig = (\
+				RCR_APPFCS	
+				| RCR_AMF | RCR_ADF| RCR_APP_MIC| RCR_APP_ICV
+				| RCR_AICV | RCR_ACRC32 
+				| RCR_AB | RCR_AM			
+					| RCR_APM					
+					| RCR_APP_PHYST_RXFF		
+					| RCR_HTC_LOC_CTRL
+				);
 #else
         mpriv->priv->ReceiveConfig = RCR_ADD3  |
                 RCR_AMF | RCR_ADF |             
@@ -89,16 +94,18 @@ int meshdev_up(struct net_device *meshdev,bool is_silent_reset)
 			check_rfctrl_gpio_timer((unsigned long)dev);
 		}
 #endif
-		mpriv->rtllib->current_network.channel = INIT_DEFAULT_CHAN;
-		mpriv->rtllib->current_mesh_network.channel = INIT_DEFAULT_CHAN;
-		if((mpriv->priv->mshobj->ext_patch_r819x_wx_set_mesh_chan) && (!is_silent_reset))
-			mpriv->priv->mshobj->ext_patch_r819x_wx_set_mesh_chan(dev,INIT_DEFAULT_CHAN);          
-		if((mpriv->priv->mshobj->ext_patch_r819x_wx_set_channel) && (!is_silent_reset))
-		{
-			mpriv->priv->mshobj->ext_patch_r819x_wx_set_channel(mpriv->rtllib, INIT_DEFAULT_CHAN);
+		if(!is_silent_reset){
+			mpriv->rtllib->current_network.channel = INIT_DEFAULT_CHAN;
+			mpriv->rtllib->current_mesh_network.channel = INIT_DEFAULT_CHAN;
+			if(mpriv->priv->mshobj->ext_patch_r819x_wx_set_mesh_chan) 
+				mpriv->priv->mshobj->ext_patch_r819x_wx_set_mesh_chan(dev,INIT_DEFAULT_CHAN);          
+			if(mpriv->priv->mshobj->ext_patch_r819x_wx_set_channel)
+			{
+				mpriv->priv->mshobj->ext_patch_r819x_wx_set_channel(mpriv->rtllib, INIT_DEFAULT_CHAN);
+			}
+			printk("%s():set chan %d\n",__FUNCTION__,INIT_DEFAULT_CHAN);
+			mpriv->rtllib->set_chan(dev, INIT_DEFAULT_CHAN);
 		}
-		printk("%s():set chan %d\n",__FUNCTION__,INIT_DEFAULT_CHAN);
-		mpriv->rtllib->set_chan(dev, INIT_DEFAULT_CHAN);
 		dm_InitRateAdaptiveMask(dev);
 		watch_dog_timer_callback((unsigned long) dev);
 	
@@ -109,7 +116,7 @@ int meshdev_up(struct net_device *meshdev,bool is_silent_reset)
         if(!ieee->mesh_started) {
 #ifdef RTL8192E
             if(ieee->eRFPowerState!=eRfOn)
-                MgntActSet_RF_State(dev, eRfOn, ieee->RfOffReason);	
+                MgntActSet_RF_State(dev, eRfOn, ieee->RfOffReason,true);	
 #endif
             if(mpriv->priv->mshobj && mpriv->priv->mshobj->ext_patch_rtl819x_up )
                 mpriv->priv->mshobj->ext_patch_rtl819x_up(mpriv->priv->mshobj);
@@ -150,7 +157,6 @@ int meshdev_down(struct net_device *meshdev)
 
 	if(!priv->up)
 	{
-		printk("===>%s():priv->up is 0\n",__FUNCTION__);
         	priv->bDriverIsGoingToUnload = true;	
 		ieee->ieee_up = 0;  
 		rtl8192_irq_disable(dev);
@@ -160,8 +166,8 @@ int meshdev_down(struct net_device *meshdev)
 #endif
 		deinit_hal_dm(dev);
 		del_timer_sync(&priv->watch_dog_timer);	
-
 		rtllib_softmac_stop_protocol(ieee, 1, true);
+
 		SPIN_LOCK_PRIV_RFPS(&priv->rf_ps_lock);
 		while(priv->RFChangeInProgress)
 		{
@@ -176,18 +182,16 @@ int meshdev_down(struct net_device *meshdev)
 			RFInProgressTimeOut ++;
 			SPIN_LOCK_PRIV_RFPS(&priv->rf_ps_lock);
 		}
-		printk("=====>%s(): priv->RFChangeInProgress = true\n",__FUNCTION__);
 		priv->RFChangeInProgress = true;
 		SPIN_UNLOCK_PRIV_RFPS(&priv->rf_ps_lock);
 		priv->ops->stop_adapter(dev, false);
 		SPIN_LOCK_PRIV_RFPS(&priv->rf_ps_lock);
-		printk("=====>%s(): priv->RFChangeInProgress = false\n",__FUNCTION__);
 		priv->RFChangeInProgress = false;
 		SPIN_UNLOCK_PRIV_RFPS(&priv->rf_ps_lock);
 		udelay(100);
 		memset(&priv->rtllib->current_network, 0 , offsetof(struct rtllib_network, list));
 		priv->rtllib->current_network.channel = INIT_DEFAULT_CHAN;
-#ifdef RTL8192SE_CONFIG_ASPM_OR_D3
+#ifdef CONFIG_ASPM_OR_D3
 		RT_ENABLE_ASPM(dev);
 #endif
 		memset(&ieee->current_mesh_network, 0 , offsetof(struct rtllib_network, list));
@@ -200,7 +204,6 @@ int meshdev_down(struct net_device *meshdev)
 			priv->rtllib->current_mesh_network.channel = ieee->current_network.channel;
 		else
 			priv->rtllib->current_mesh_network.channel = INIT_DEFAULT_CHAN;
-		printk("============>%s():priv->rtllib->current_mesh_network.channel is %d,ieee->current_network.channel is %d\n",__FUNCTION__,priv->rtllib->current_mesh_network.channel,ieee->current_network.channel);
 				
 		ieee->mesh_state = RTLLIB_NOLINK;
 		ieee->iw_mode = IW_MODE_INFRA;
@@ -279,7 +282,7 @@ static void meshdev_tx_timeout(struct net_device *meshdev)
 	struct rtllib_device * ieee = mpriv->rtllib;
 	struct net_device *dev = ieee->dev;
 
-	tx_timeout(dev);	
+	rtl8192_tx_timeout(dev);	
 }
 
 #ifdef HAVE_NET_DEVICE_OPS
@@ -333,8 +336,8 @@ int meshdev_update_ext_chnl_offset_as_client(void *data)
 	u8 bserverHT = 0;
 
 	updateBW=mshobj->ext_patch_r819x_wx_update_beacon(dev,&bserverHT);
-	printk("$$$$$$ Cur_networ.chan=%d, cur_mesh_net.chan=%d,bserverHT=%d\n",
-			ieee->current_network.channel,ieee->current_mesh_network.channel,bserverHT);
+	printk("%s(): Cur_network.chan=%d, cur_mesh_net.chan=%d, updateBW=%d, bserverHT=%d\n",
+			__FUNCTION__,ieee->current_network.channel,ieee->current_mesh_network.channel,updateBW, bserverHT);
 	if (updateBW == 1) {
 		if (bserverHT == 0) {
 			printk("===>server is not HT supported,set 20M\n");
@@ -354,4 +357,19 @@ int meshdev_update_ext_chnl_offset_as_client(void *data)
 	return 0;
 }
 
+int meshdev_start_mesh_protocol_wq(void *data)
+{
+	struct rtllib_device *ieee = container_of_work_rsl(data, struct rtllib_device,
+			ext_start_mesh_protocol_wq);
+
+	ieee->set_chan(ieee->dev, ieee->current_mesh_network.channel);
+	if(ieee->pHTInfo->bCurBW40MHz)
+		HTSetConnectBwMode(ieee, HT_CHANNEL_WIDTH_20_40, (ieee->current_mesh_network.channel<=6)?HT_EXTCHNL_OFFSET_UPPER:HT_EXTCHNL_OFFSET_LOWER);  
+	else
+		HTSetConnectBwMode(ieee, HT_CHANNEL_WIDTH_20, (ieee->current_mesh_network.channel<=6)?HT_EXTCHNL_OFFSET_UPPER:HT_EXTCHNL_OFFSET_LOWER);  
+
+	rtllib_start_mesh_protocol(ieee);
+
+	return 0;
+}
 #endif 

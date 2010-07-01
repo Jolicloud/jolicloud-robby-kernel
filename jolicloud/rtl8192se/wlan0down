@@ -19,6 +19,9 @@ case "$card" in
 	  ifconfig ra0 down;;
         "RTL8192ce")
 	  ifconfig wlan0 down;;
+	"RTL8192ce_Mesh")
+	  ifconfig mesh0 down;
+	  ifconfig ra0 down;;
         *)
         echo "Unknown NIC type"
 	break;;
@@ -45,6 +48,8 @@ case "$card" in
 	rmmod r8192se_pci_mesh;;
         "RTL8192ce")
 	rmmod r8192ce_pci;;
+	"RTL8192ce_Mesh")
+	rmmod r8192ce_pci_mesh;;
 	*)
 		echo "Unknown NIC type";;
 esac
@@ -57,6 +62,7 @@ esac
 #rmmod crypto-rsl
 #rmmod rtllib_crypt-rsl
 else
+
 #rmmod 
 case "$card" in
         "RTL8192u")
@@ -73,13 +79,24 @@ case "$card" in
 	rmmod r8192se_pci_mesh.ko;;
         "RTL8192ce")
         rmmod r8192ce_pci.ko;;
+	"RTL8192ce_Mesh")
+	rmmod r8192ce_pci_mesh.ko;;
         *)
         echo "Unknown NIC type"
 	break;;
 esac
+
+#for CRDA
+#KERNEL_VER=`uname -r|cut -d- -f1|cut -d. -f3`
+#if [ $KERNEL_VER -gt 29 ]
+#then
+	#modprobe -r cfg80211
+#fi
+
 #rmmod rtllib-rsl.ko
 #rmmod rtllib_crypt_ccmp-rsl.ko
 #rmmod rtllib_crypt_tkip-rsl.ko
 #rmmod rtllib_crypt_wep-rsl.ko
 #rmmod rtllib_crypt-rsl.ko
 fi
+
