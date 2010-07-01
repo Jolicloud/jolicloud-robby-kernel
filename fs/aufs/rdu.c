@@ -20,6 +20,7 @@
  * readdir in userspace.
  */
 
+#include <linux/compat.h>
 #include <linux/security.h>
 #include <linux/uaccess.h>
 #include <linux/aufs_type.h>
@@ -325,3 +326,51 @@ long au_rdu_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	AuTraceErr(err);
 	return err;
 }
+
+#ifdef CONFIG_COMPAT
+long au_rdu_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+	long err, e;
+	struct aufs_rdu rdu;
+	void __user *p = compat_ptr(arg);
+
+	/* todo: get_user()? */
+	err = copy_from_user(&rdu, p, sizeof(rdu));
+	if (unlikely(err)) {
+		err = -EFAULT;
+		AuTraceErr(err);
+		goto out;
+	}
+	rdu.ent.e = compat_ptr(rdu.ent.ul);
+	err = au_rdu_verify(&rdu);
+	if (unlikely(err))
+		goto out;
+
+	switch (cmd) {
+	case AUFS_CTL_RDU:
+		err = au_rdu(file, &rdu);
+		if (unlikely(err))
+			break;
+
+		rdu.ent.ul = ptr_to_compat(rdu.ent.e);
+		rdu.tail.ul = ptr_to_compat(rdu.tail.e);
+		e = copy_to_user(p, &rdu, sizeof(rdu));
+		if (unlikely(e)) {
+			err = -EFAULT;
+			AuTraceErr(err);
+		}
+		break;
+	case AUFS_CTL_RDU_INO:
+		err = au_rdu_ino(file, &rdu);
+		break;
+
+	default:
+		/* err = -ENOTTY; */
+		err = -EINVAL;
+	}
+
+ out:
+	AuTraceErr(err);
+	return err;
+}
+#endif

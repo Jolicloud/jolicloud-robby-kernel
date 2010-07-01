@@ -867,6 +867,9 @@ struct file_operations aufs_file_fop = {
 	.aio_read	= aufs_aio_read,
 	.aio_write	= aufs_aio_write,
 	.unlocked_ioctl	= aufs_ioctl_nondir,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl	= aufs_ioctl_nondir, /* same */
+#endif
 	.mmap		= aufs_mmap,
 	.open		= aufs_open_nondir,
 	.flush		= aufs_flush_nondir,
