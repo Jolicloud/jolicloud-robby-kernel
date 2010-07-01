@@ -160,7 +160,6 @@ union au_rdu_ent_ul {
 
 enum {
 	AufsCtlRduV_SZ,
-	AufsCtlRduV_SZ_PTR,
 	AufsCtlRduV_End
 };
 

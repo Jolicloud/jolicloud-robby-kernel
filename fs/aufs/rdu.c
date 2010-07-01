@@ -268,21 +268,19 @@ static int au_rdu_ino(struct file *file, struct aufs_rdu *rdu)
 
 static int au_rdu_verify(struct aufs_rdu *rdu)
 {
-	AuDbg("rdu{%llu, %p, (%u, %u) | %u | %llu, %u, %u | "
+	AuDbg("rdu{%llu, %p, %u | %u | %llu, %u, %u | "
 	      "%llu, b%d, 0x%x, g%u}\n",
-	      rdu->sz, rdu->ent.e, rdu->verify[0], rdu->verify[1],
+	      rdu->sz, rdu->ent.e, rdu->verify[AufsCtlRduV_SZ],
 	      rdu->blk,
 	      rdu->rent, rdu->shwh, rdu->full,
 	      rdu->cookie.h_pos, rdu->cookie.bindex, rdu->cookie.flags,
 	      rdu->cookie.generation);
 
-	if (rdu->verify[AufsCtlRduV_SZ] == sizeof(*rdu)
-	    && rdu->verify[AufsCtlRduV_SZ_PTR] == sizeof(rdu))
+	if (rdu->verify[AufsCtlRduV_SZ] == sizeof(*rdu))
 		return 0;
 
-	AuDbg("%u:%u, %u:%u\n",
-	      rdu->verify[AufsCtlRduV_SZ], (unsigned int)sizeof(*rdu),
-	      rdu->verify[AufsCtlRduV_SZ_PTR], (unsigned int)sizeof(rdu));
+	AuDbg("%u:%u\n",
+	      rdu->verify[AufsCtlRduV_SZ], (unsigned int)sizeof(*rdu));
 	return -EINVAL;
 }
 
