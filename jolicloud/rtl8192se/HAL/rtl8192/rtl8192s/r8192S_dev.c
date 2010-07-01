@@ -25,30 +25,38 @@
 #include "../rtl_core.h"
 #include "../rtl_dm.h"
 #include "../rtl_wx.h"
-#include "r8192S_phy.h"
-#include "r8192S_phyreg.h"
-#include "r8192S_rtl6052.h"
-#include "r8192S_Efuse.h"
+
+#ifdef _RTL8192_EXT_PATCH_
+#include "../../../mshclass/msh_class.h"
+#include "../rtl_mesh.h"
+#endif
 
 extern int WDCAPARA_ADD[];
 
 void rtl8192se_start_beacon(struct net_device *dev)
 {
 	struct r8192_priv *priv = (struct r8192_priv *)rtllib_priv(dev);
-	struct rtllib_network *net = &priv->rtllib->current_network;
+	struct rtllib_network *net = NULL;
 	u16 BcnTimeCfg = 0;
         u16 BcnCW = 6;
         u16 BcnIFS = 0xf;
 
-	DMESG("Enabling beacon TX");
+	if((priv->rtllib->iw_mode == IW_MODE_ADHOC) || (priv->rtllib->iw_mode == IW_MODE_MASTER))
+		net = &priv->rtllib->current_network;
+#ifdef _RTL8192_EXT_PATCH_
+	else if(priv->rtllib->iw_mode == IW_MODE_MESH)
+		net = &priv->rtllib->current_mesh_network;
+#endif
+	else 
+	    return;
+
 	rtl8192_irq_disable(dev);
 
 	write_nic_word(dev, ATIMWND, 2);
 
 	write_nic_word(dev, BCN_INTERVAL, net->beacon_interval);
-#ifdef _RTL8192_EXT_PATCH_
 	PHY_SetBeaconHwReg(dev, net->beacon_interval);
-#endif
+
 #ifdef RTL8192SE
 	write_nic_word(dev, BCN_DRV_EARLY_INT, 10<<4);
 #else
@@ -57,10 +65,32 @@ void rtl8192se_start_beacon(struct net_device *dev)
 	write_nic_word(dev, BCN_DMATIME, 256); 
 
 	write_nic_byte(dev, BCN_ERR_THRESH, 100);	
-	
+
+if(priv->pFirmware->FirmwareVersion > 49){
+	switch(priv->rtllib->iw_mode)
+	{
+		case IW_MODE_ADHOC:
+		case IW_MODE_MESH:
+			BcnTimeCfg |= (BcnCW<<BCN_TCFG_CW_SHIFT);
+			break;
+		default:
+			printk("Invalid Operation Mode!!\n");
+			break;
+	}
+
+	BcnTimeCfg |= BcnIFS<<BCN_TCFG_IFS;
+
+
+	{
+		u8 u1Temp = (u8)(net->beacon_interval);
+		write_nic_dword(dev, WFM5, 0xF1000000 |((u16)( u1Temp) << 8));
+		ChkFwCmdIoDone(dev);
+	}
+}else{
 	BcnTimeCfg |= BcnCW<<BCN_TCFG_CW_SHIFT;
 	BcnTimeCfg |= BcnIFS<<BCN_TCFG_IFS;
 	write_nic_word(dev, BCN_TCFG, BcnTimeCfg);
+}	
 	rtl8192_irq_enable(dev);
 }
 
@@ -94,8 +124,7 @@ void rtl8192se_update_msr(struct net_device *dev)
 		break;
 #ifdef _RTL8192_EXT_PATCH_
 	case IW_MODE_MESH:
-		printk("%s: only_mesh=%d state=%d\n", __FUNCTION__, 
-				priv->rtllib->only_mesh, priv->rtllib->mesh_state);
+		printk("%s: iw_mode=%d state=%d only_mesh=%d mesh_state=%d\n", __FUNCTION__,priv->rtllib->iw_mode,priv->rtllib->state, priv->rtllib->only_mesh, priv->rtllib->mesh_state); 
 		if (priv->rtllib->only_mesh) {
 			if (priv->rtllib->mesh_state == RTLLIB_MESH_LINKED)
 				msr |= (MSR_LINK_MASTER<<MSR_LINK_SHIFT); 
@@ -104,11 +133,11 @@ void rtl8192se_update_msr(struct net_device *dev)
 		} else {
 			if (priv->rtllib->mesh_state == RTLLIB_MESH_LINKED) {
 				msr |= (MSR_LINK_ADHOC << MSR_LINK_SHIFT);
-				if (priv->rtllib->state == RTLLIB_LINKED)
-					msr |= (MSR_LINK_MANAGED << MSR_LINK_SHIFT);
 			} else {	
 				msr |= (MSR_LINK_NONE << MSR_LINK_SHIFT);
 			}
+			if (priv->rtllib->state == RTLLIB_LINKED)
+				msr |= (MSR_LINK_MANAGED << MSR_LINK_SHIFT);
 		}
 		break;
 #endif			
@@ -197,11 +226,7 @@ static void rtl8192se_config_hw_for_load_fail(struct net_device* dev)
 		{
 			if (i < 3)			
 				index = 0;
-#ifdef _RTL8192_EXT_PATCH_	
-			else if (i < 9)		
-#else
 			else if (i < 8)		
-#endif
 				index = 1;
 			else				
 				index = 2;
@@ -241,7 +266,6 @@ static void rtl8192se_config_hw_for_load_fail(struct net_device* dev)
 	priv->LegacyHTTxPowerDiff = priv->EEPROMTxPowerDiff;
 	RT_TRACE(COMP_INIT, "TxPowerDiff = %#x\n", priv->EEPROMTxPowerDiff);
 
-#ifndef _RTL8192_EXT_PATCH_	
 	for (rf_path = 0; rf_path < 2; rf_path++)
 	{
 		for (i = 0; i < 3; i++)
@@ -265,8 +289,6 @@ static void rtl8192se_config_hw_for_load_fail(struct net_device* dev)
 		}
 	}
 	priv->EEPROMRegulatory = 0;
-
-#endif
 
 	priv->EEPROMTSSI_A = EEPROM_Default_TSSI;
 	priv->EEPROMTSSI_B = EEPROM_Default_TSSI;			
@@ -302,11 +324,7 @@ static void rtl8192se_config_hw_for_load_fail(struct net_device* dev)
 	priv->EEPROMBoardType = EEPROM_Default_BoardType;	
 	RT_TRACE(COMP_INIT, "BoardType = %#x\n", priv->EEPROMBoardType);
 
-#ifdef _RTL8192_EXT_PATCH_	
-	priv->LedStrategy = SW_LED_MODE0;
-#else
 	priv->LedStrategy = SW_LED_MODE7;
-#endif
 
 	
 	RT_TRACE(COMP_INIT,"<==== rtl8192se_config_hw_for_load_fail\n");
@@ -330,58 +348,6 @@ static void rtl8192se_get_IC_Inferiority(struct net_device *dev)
 	}
 }
 
-#ifdef _RTL8192_EXT_PATCH_	
-void HalCustomizedBehavior8192S(struct net_device* dev)
-{
-	struct r8192_priv *priv = rtllib_priv(dev);
-	switch(priv->CustomerID)
-	{
-		case RT_CID_DEFAULT:
-			priv->LedStrategy = SW_LED_MODE7;	
-			if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
-				priv->eeprom_svid == 0x1A3B && priv->eeprom_smid == 0x1A07)
-			{
-				priv->RegWirelessMode = WIRELESS_MODE_G;
-			}
-			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8172 &&
-					priv->eeprom_svid == 0x1A3B && priv->eeprom_smid == 0x1A04)
-			{
-				priv->RegWirelessMode = WIRELESS_MODE_G;	
-			}
-			break;
-			
-		case RT_CID_TOSHIBA:
-			priv->rtllib->current_network.channel = 10;
-			priv->LedStrategy = SW_LED_MODE7;		
-			if(priv->eeprom_smid >= 0x7000 && priv->eeprom_smid < 0x8000)
-				priv->RegWirelessMode = WIRELESS_MODE_G;
-			break;
-
-		case RT_CID_CCX:
-			priv->DMFlag |= (HAL_DM_DIG_DISABLE | HAL_DM_HIPWR_DISABLE);
-			break;
-
-		case RT_CID_819x_Lenovo:
-			priv->LedStrategy = SW_LED_MODE7;
-			break;
-			
-		case RT_CID_819x_QMI:
-			priv->LedStrategy = SW_LED_MODE8;			
-			break;
-
-		case RT_CID_819x_MSI:	
-			priv->LedStrategy = SW_LED_MODE9;			
-			break;		
-
-		case RT_CID_WHQL:
-			break;
-	
-		default:
-			RT_TRACE(COMP_INIT,"Unkown hardware Type \n");
-			break;
-	}
-}
-#else	
 void
 HalCustomizedBehavior8192S(struct net_device* dev)
 {
@@ -390,22 +356,29 @@ HalCustomizedBehavior8192S(struct net_device* dev)
 	switch(priv->CustomerID)
 	{
 		case RT_CID_DEFAULT:
+		case RT_CID_819x_SAMSUNG:
+			if(priv->CustomerID == RT_CID_819x_SAMSUNG)
+				;
 			priv->LedStrategy = SW_LED_MODE7;
 			if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
 				priv->eeprom_svid == 0x1A3B && priv->eeprom_smid == 0x1A07)
 			{
-				priv->RegWirelessMode = WIRELESS_MODE_G;
-				priv->rtllib->mode = WIRELESS_MODE_G;
-				priv->rtllib->bForcedBgMode = true;
-				priv->rtllib->bForcedShowRateStill = true;
+				if(priv->RegWirelessMode != WIRELESS_MODE_B){
+					priv->RegWirelessMode = WIRELESS_MODE_G;
+					priv->rtllib->mode = WIRELESS_MODE_G;
+					priv->rtllib->bForcedBgMode = true;
+					priv->rtllib->bForcedShowRateStill = true;
+				}
 			}
 			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8172 &&
 					priv->eeprom_svid == 0x1A3B && priv->eeprom_smid == 0x1A04)
 			{
-				priv->RegWirelessMode = WIRELESS_MODE_G;	
-				priv->rtllib->mode = WIRELESS_MODE_G;
-				priv->rtllib->bForcedBgMode = true;
-				priv->rtllib->bForcedShowRateStill = true;
+				if(priv->RegWirelessMode != WIRELESS_MODE_B){
+					priv->RegWirelessMode = WIRELESS_MODE_G;	
+					priv->rtllib->mode = WIRELESS_MODE_G;
+					priv->rtllib->bForcedBgMode = true;
+					priv->rtllib->bForcedShowRateStill = true;
+				}
 			}
 			else if(priv->eeprom_svid == 0x1A3B && (priv->eeprom_smid == 0x1104 ||
 				priv->eeprom_smid == 0x1107))
@@ -413,37 +386,100 @@ HalCustomizedBehavior8192S(struct net_device* dev)
 				priv->rtllib->bForcedShowRateStill = true;
 			}
 			else if(priv->eeprom_vid == 0x10ec && priv->eeprom_did == 0x8171 &&
-				priv->eeprom_svid == 0x10ec && priv->eeprom_smid == 0x7171){
-				 priv->RegWirelessMode = WIRELESS_MODE_G;	
-				 priv->rtllib->mode = WIRELESS_MODE_G;
-				priv->rtllib->bForcedBgMode = true;
-			}else if(priv->eeprom_vid == 0x10ec && priv->eeprom_did == 0x8174 &&
-				priv->eeprom_svid == 0x10ec && priv->eeprom_smid == 0x7174){
-				 priv->RegWirelessMode = WIRELESS_MODE_G;	
-				 priv->RegWirelessMode = WIRELESS_MODE_G;	
-				 priv->rtllib->mode = WIRELESS_MODE_G;
-			}else if(priv->eeprom_vid == 0x10ec && priv->eeprom_did == 0x8174 &&
-				priv->eeprom_svid == 0x10ec && priv->eeprom_smid == 0x7150){
-				 priv->RegWirelessMode = WIRELESS_MODE_G;	
-				 priv->RegWirelessMode = WIRELESS_MODE_G;	
-				 priv->rtllib->mode = WIRELESS_MODE_G;
-			}else if(priv->eeprom_vid == 0x10ec && priv->eeprom_did == 0x8172 &&
-				priv->eeprom_svid == 0x10ec && priv->eeprom_smid == 0x7172){
-				 priv->RegWirelessMode = WIRELESS_MODE_G;	
-				 priv->RegWirelessMode = WIRELESS_MODE_G;	
-				 priv->rtllib->mode = WIRELESS_MODE_G;
-			}else if(priv->eeprom_vid == 0x10ec && priv->eeprom_did == 0x8172 &&
-				priv->eeprom_svid == 0x10ec && priv->eeprom_smid == 0x7186){
-				 priv->RegWirelessMode = WIRELESS_MODE_G;	
-				 priv->RegWirelessMode = WIRELESS_MODE_G;	
-				 priv->rtllib->mode = WIRELESS_MODE_G;
+				priv->eeprom_svid == 0x10ec && priv->eeprom_smid == 0x7171)
+			{
+				if(priv->RegWirelessMode != WIRELESS_MODE_B){
+				 	priv->RegWirelessMode = WIRELESS_MODE_G;	
+					priv->rtllib->mode = WIRELESS_MODE_G;
+					priv->rtllib->bForcedBgMode = true;
+				}
 			}
-			break;
+			else if(priv->eeprom_vid == 0x10ec && priv->eeprom_did == 0x8171 &&
+				priv->eeprom_svid == 0x10ec && priv->eeprom_smid == 0x7150)
+			{
+				if(priv->RegWirelessMode != WIRELESS_MODE_B){
+				 	priv->RegWirelessMode = WIRELESS_MODE_G;	
+					priv->rtllib->mode = WIRELESS_MODE_G;
+				}
+			}
+			else if(priv->eeprom_vid == 0x10ec && priv->eeprom_did == 0x8172 &&
+				priv->eeprom_svid == 0x10ec && priv->eeprom_smid == 0x7172)
+			{
+				if(priv->RegWirelessMode != WIRELESS_MODE_B){
+				 	priv->RegWirelessMode = WIRELESS_MODE_G;	
+					priv->rtllib->mode = WIRELESS_MODE_G;
+				}
+			}
+			else if(priv->eeprom_vid == 0x10ec && priv->eeprom_did == 0x8172 &&
+				priv->eeprom_svid == 0x10ec && priv->eeprom_smid == 0x7150)
+			{
+				if(priv->RegWirelessMode != WIRELESS_MODE_B){
+				 	priv->RegWirelessMode = WIRELESS_MODE_G;	
+					priv->rtllib->mode = WIRELESS_MODE_G;
+				}
+			}
+			else if(priv->eeprom_vid == 0x10ec && priv->eeprom_did == 0x8172 &&
+				priv->eeprom_svid == 0x10ec && priv->eeprom_smid == 0x7186)
+			{
+				if(priv->RegWirelessMode != WIRELESS_MODE_B){
+				 	priv->RegWirelessMode = WIRELESS_MODE_G;	
+					priv->rtllib->mode = WIRELESS_MODE_G;
+				}
+			}
+			else if(priv->eeprom_vid == 0x10ec && priv->eeprom_did == 0x8174 &&
+				priv->eeprom_svid == 0x10ec && priv->eeprom_smid == 0x7174)
+			{
+				if(priv->RegWirelessMode != WIRELESS_MODE_B){
+				 	priv->RegWirelessMode = WIRELESS_MODE_G;	
+					priv->rtllib->mode = WIRELESS_MODE_G;
+				}
+			}
+			else if(priv->eeprom_vid == 0x10ec && priv->eeprom_did == 0x8174 &&
+				priv->eeprom_svid == 0x10ec && priv->eeprom_smid == 0x7150)
+			{
+				if(priv->RegWirelessMode != WIRELESS_MODE_B){
+				 	priv->RegWirelessMode = WIRELESS_MODE_G;	
+					priv->rtllib->mode = WIRELESS_MODE_G;
+				}
+			}
 			
 			break;
 			
 		case RT_CID_819x_Acer:
 			priv->LedStrategy = SW_LED_MODE7;	
+						
+			if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
+				priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x7172)
+			{
+				if(priv->RegWirelessMode != WIRELESS_MODE_B){
+				 	priv->RegWirelessMode = WIRELESS_MODE_G;	
+					priv->rtllib->mode = WIRELESS_MODE_G;
+				}
+			}
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
+						priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x7173)
+			{
+				if(priv->RegWirelessMode != WIRELESS_MODE_B){
+				 	priv->RegWirelessMode = WIRELESS_MODE_G;	
+					priv->rtllib->mode = WIRELESS_MODE_G;
+				}
+			}
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8174 &&
+					priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x7186)
+			{
+				if(priv->RegWirelessMode != WIRELESS_MODE_B){
+				 	priv->RegWirelessMode = WIRELESS_MODE_G;	
+					priv->rtllib->mode = WIRELESS_MODE_G;
+				}
+			}
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8174 &&
+					priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x7187)
+			{
+				if(priv->RegWirelessMode != WIRELESS_MODE_B){
+				 	priv->RegWirelessMode = WIRELESS_MODE_G;	
+					priv->rtllib->mode = WIRELESS_MODE_G;
+				}
+			}
 			break;
 			
 		case RT_CID_TOSHIBA:
@@ -451,9 +487,11 @@ HalCustomizedBehavior8192S(struct net_device* dev)
 			priv->LedStrategy = SW_LED_MODE7;
 			priv->EEPROMRegulatory = 1;		
 			if(priv->eeprom_smid >=  0x7000 && priv->eeprom_smid < 0x8000){
-				priv->RegWirelessMode = WIRELESS_MODE_G;
-				priv->rtllib->mode = WIRELESS_MODE_G;
-				priv->rtllib->bForcedBgMode = true;
+				if(priv->RegWirelessMode != WIRELESS_MODE_B){
+				 	priv->RegWirelessMode = WIRELESS_MODE_G;	
+					priv->rtllib->mode = WIRELESS_MODE_G;
+					priv->rtllib->bForcedBgMode = true;
+				}
 			}
 			break;
 		case RT_CID_CCX:
@@ -463,28 +501,46 @@ HalCustomizedBehavior8192S(struct net_device* dev)
 		case RT_CID_819x_Lenovo:
 			priv->LedStrategy = SW_LED_MODE7;
 			if(priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0xE025){
-				priv->RegWirelessMode = WIRELESS_MODE_G;
-				 priv->RegWirelessMode = WIRELESS_MODE_G;	
-				 priv->rtllib->mode = WIRELESS_MODE_G;
+				if(priv->RegWirelessMode != WIRELESS_MODE_B){
+				 	priv->RegWirelessMode = WIRELESS_MODE_G;	
+					priv->rtllib->mode = WIRELESS_MODE_G;
+				}
 			}
+			else if (priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
+				priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x8191)
+				if(priv->RegWirelessMode != WIRELESS_MODE_B){
+				 	priv->RegWirelessMode = WIRELESS_MODE_G;	
+					priv->rtllib->mode = WIRELESS_MODE_G;
+				}
 			break;
 
 		case RT_CID_819x_QMI:
 			priv->LedStrategy = SW_LED_MODE8;			
-			if(priv->eeprom_svid == 0x1462 && priv->eeprom_smid == 0x897A){
-				priv->RegWirelessMode = WIRELESS_MODE_G;
-				 priv->RegWirelessMode = WIRELESS_MODE_G;	
-				 priv->rtllib->mode = WIRELESS_MODE_G;
-			}
 			break;
 
 		case RT_CID_819x_MSI:	
 			priv->LedStrategy = SW_LED_MODE9;			
+			if(priv->eeprom_svid == 0x1462 && priv->eeprom_smid == 0x897A){
+				if(priv->RegWirelessMode != WIRELESS_MODE_B){
+				 	priv->RegWirelessMode = WIRELESS_MODE_G;	
+					priv->rtllib->mode = WIRELESS_MODE_G;
+				}
+			}
 			break;
 
 		case RT_CID_819x_HP:
 			priv->LedStrategy = SW_LED_MODE7;
 			priv->bLedOpenDrain = true;
+			
+		case RT_CID_819x_Foxcoon:
+			priv->LedStrategy = SW_LED_MODE10;
+			if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
+		 		priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x8192)
+				if(priv->RegWirelessMode != WIRELESS_MODE_B){
+				 	priv->RegWirelessMode = WIRELESS_MODE_G;	
+					priv->rtllib->mode = WIRELESS_MODE_G;
+				}					
+			break;	
 			
 		case RT_CID_WHQL:
 			;
@@ -495,7 +551,6 @@ HalCustomizedBehavior8192S(struct net_device* dev)
 			break;
 	}
 }
-#endif
 
 static	void rtl8192se_read_eeprom_info(struct net_device* dev)
 {
@@ -655,11 +710,7 @@ static	void rtl8192se_read_eeprom_info(struct net_device* dev)
 		{
 			if (i < 3)			
 				index = 0;
-#ifdef _RTL8192_EXT_PATCH_	
-			else if (i < 9)		
-#else
 			else if (i < 8)		
-#endif
 				index = 1;
 			else				
 				index = 2;
@@ -686,8 +737,6 @@ static	void rtl8192se_read_eeprom_info(struct net_device* dev)
 			priv->RfTxPwrLevelOfdm2T[rf_path][i] );
 		}
 	}	
-
-#ifndef _RTL8192_EXT_PATCH_	
 	for (rf_path = 0; rf_path < 2; rf_path++)
 	{
 		for (i = 0; i < 3; i++)
@@ -712,17 +761,12 @@ static	void rtl8192se_read_eeprom_info(struct net_device* dev)
 			RT_TRACE(COMP_INIT, "RF-%d PwrGroupHT40[%d] = 0x%x\n", rf_path, i, priv->PwrGroupHT40[rf_path][i]);
 		}
 	}
-#endif
 
 	for(i=0; i<14; i++)	
 	{
 		if (i < 3)			
 			index = 0;
-#ifdef _RTL8192_EXT_PATCH_	
-			else if (i < 9)		
-#else
 			else if (i < 8)		
-#endif
 			index = 1;
 		else				
 			index = 2;
@@ -733,11 +777,7 @@ static	void rtl8192se_read_eeprom_info(struct net_device* dev)
 
 		if (i < 3)			
 			index = 0;
-#ifdef _RTL8192_EXT_PATCH_	
-			else if (i < 9)		
-#else
-			else if (i < 8)		
-#endif
+		else if (i < 8)		
 			index = 0x11;
 		else				
 			index = 1;
@@ -750,7 +790,6 @@ static	void rtl8192se_read_eeprom_info(struct net_device* dev)
 		priv->TxPwrSafetyFlag = (tempval&0x01);		
 	}
 	
-#ifndef _RTL8192_EXT_PATCH_	
 	priv->EEPROMRegulatory = 0;
 	if(priv->eeprom_version >= 2)
 	{
@@ -760,7 +799,7 @@ static	void rtl8192se_read_eeprom_info(struct net_device* dev)
 			priv->EEPROMRegulatory = (hwinfo[EEPROM_Regulatory]&0x1);	
 	}
 	RT_TRACE(COMP_INIT, "EEPROMRegulatory = 0x%x\n", priv->EEPROMRegulatory);
-#endif
+
 	for(i=0; i<14; i++)
 		RT_TRACE(COMP_EPROM, "RF-A Ht20 to HT40 Diff[%d] = 0x%x\n", i, priv->TxPwrHt20Diff[RF90_PATH_A][i]);
 	for(i=0; i<14; i++)
@@ -774,11 +813,7 @@ static	void rtl8192se_read_eeprom_info(struct net_device* dev)
 
 	tempval = (*(u8 *)&hwinfo[EEPROM_RFInd_PowerDiff])&0xff;
 	priv->EEPROMTxPowerDiff = tempval;	
-#ifdef _RTL8192_EXT_PATCH_	
-	priv->LegacyHTTxPowerDiff = priv->EEPROMTxPowerDiff;
-#else
 	priv->LegacyHTTxPowerDiff = priv->TxPwrLegacyHtDiff[RF90_PATH_A][0];
-#endif
 
 	RT_TRACE(COMP_EPROM, "TxPowerDiff = %#x\n", priv->EEPROMTxPowerDiff);
 
@@ -830,9 +865,6 @@ static	void rtl8192se_read_eeprom_info(struct net_device* dev)
 	priv->CrystalCap = priv->EEPROMCrystalCap;	
 	
 	priv->eeprom_ChannelPlan = *(u8 *)&hwinfo[EEPROM_ChannelPlan];
-#ifdef _RTL8192_EXT_PATCH_	
-	priv->eeprom_version = *(u16 *)&hwinfo[EEPROM_Version];
-#endif
 	priv->bTXPowerDataReadFromEEPORM = true;
 	RT_TRACE(COMP_EPROM, "EEPROM ChannelPlan = 0x%4x\n", priv->eeprom_ChannelPlan);
 	
@@ -870,13 +902,20 @@ static	void rtl8192se_read_eeprom_info(struct net_device* dev)
 	switch(priv->eeprom_CustomerID)
 	{	
 		case EEPROM_CID_DEFAULT:
-			if(priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0xE020){
+
+			if(priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
+					priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x8190)
 				priv->CustomerID = RT_CID_819x_Lenovo;	
-				priv->rtllib->b_customer_lenovo_id = true;
-                        }
-			else if(priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0xE025)
+			else if(priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
+					priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x8191)
+					priv->CustomerID = RT_CID_819x_Lenovo;	
+			else	if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8172 &&
+					priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0xE020)
 					priv->CustomerID = RT_CID_819x_Lenovo;
-			else if(priv->eeprom_svid == 0x1A32 && priv->eeprom_smid == 0x4308)
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8172 &&
+					priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0xE025)
+					priv->CustomerID = RT_CID_819x_Lenovo;
+			else if(priv->eeprom_svid == 0x1A32 && priv->eeprom_smid == 0x0308)
 					priv->CustomerID = RT_CID_819x_QMI;											
 			else if(priv->eeprom_svid == 0x1A32 && priv->eeprom_smid == 0x0311)
 					priv->CustomerID = RT_CID_819x_QMI;
@@ -886,11 +925,44 @@ static	void rtl8192se_read_eeprom_info(struct net_device* dev)
 				priv->CustomerID = RT_CID_819x_MSI;			
 			else if(priv->eeprom_svid == 0x1462 && priv->eeprom_smid == 0x897A)
 				priv->CustomerID = RT_CID_819x_MSI;
+			/****************************************************************************/
+			/* 	ACER ID																	*/
+			/****************************************************************************/
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
+					priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x7172)
+				priv->CustomerID = RT_CID_819x_Acer;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
+					priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x7173)
+				priv->CustomerID = RT_CID_819x_Acer;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
+					priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x8186)
+				priv->CustomerID = RT_CID_819x_Acer;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
+					priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x8187)
+				priv->CustomerID = RT_CID_819x_Acer;
 			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
 					priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x8156)
 				priv->CustomerID = RT_CID_819x_Acer;
 			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
 					priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x8157)
+				priv->CustomerID = RT_CID_819x_Acer;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
+					priv->eeprom_svid == 0x1025 && priv->eeprom_smid == 0x7172)
+				priv->CustomerID = RT_CID_819x_Acer;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
+					priv->eeprom_svid == 0x1025 && priv->eeprom_smid == 0x7173)
+				priv->CustomerID = RT_CID_819x_Acer;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
+					priv->eeprom_svid == 0x1025 && priv->eeprom_smid == 0x8186)
+				priv->CustomerID = RT_CID_819x_Acer;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
+					priv->eeprom_svid == 0x1025 && priv->eeprom_smid == 0x8187)
+				priv->CustomerID = RT_CID_819x_Acer;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
+					priv->eeprom_svid == 0x1025 && priv->eeprom_smid == 0x8156)
+				priv->CustomerID = RT_CID_819x_Acer;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
+					priv->eeprom_svid == 0x1025 && priv->eeprom_smid == 0x8157)
 				priv->CustomerID = RT_CID_819x_Acer;
 			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8172 &&
 					priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0xE021)
@@ -904,6 +976,24 @@ static	void rtl8192se_read_eeprom_info(struct net_device* dev)
 			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8172 &&
 					priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x8159)
 				priv->CustomerID = RT_CID_819x_Acer;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8172 &&
+					priv->eeprom_svid == 0x1025 && priv->eeprom_smid == 0xE021)
+				priv->CustomerID = RT_CID_819x_Acer;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8172 &&
+					priv->eeprom_svid == 0x1025 && priv->eeprom_smid == 0xE022)
+				priv->CustomerID = RT_CID_819x_Acer;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8172 &&
+					priv->eeprom_svid == 0x1025 && priv->eeprom_smid == 0x8158)
+				priv->CustomerID = RT_CID_819x_Acer;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8172 &&
+					priv->eeprom_svid == 0x1025 && priv->eeprom_smid == 0x8159)
+				priv->CustomerID = RT_CID_819x_Acer;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8174 &&
+					priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x7186)
+				priv->CustomerID = RT_CID_819x_Acer;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8174 &&
+					priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x7187)
+				priv->CustomerID = RT_CID_819x_Acer;
 			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8174 &&
 					priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x8186)
 				priv->CustomerID = RT_CID_819x_Acer;
@@ -916,9 +1006,59 @@ static	void rtl8192se_read_eeprom_info(struct net_device* dev)
 			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8174 &&
 					priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x8157)
 				priv->CustomerID = RT_CID_819x_Acer;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8174 &&
+					priv->eeprom_svid == 0x1025 && priv->eeprom_smid == 0x7186)
+				priv->CustomerID = RT_CID_819x_Acer;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8174 &&
+					priv->eeprom_svid == 0x1025 && priv->eeprom_smid == 0x7187)
+				priv->CustomerID = RT_CID_819x_Acer;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8174 &&
+					priv->eeprom_svid == 0x1025 && priv->eeprom_smid == 0x8186)
+				priv->CustomerID = RT_CID_819x_Acer;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8174 &&
+					priv->eeprom_svid == 0x1025 && priv->eeprom_smid == 0x8187)
+				priv->CustomerID = RT_CID_819x_Acer;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8174 &&
+					priv->eeprom_svid == 0x1025 && priv->eeprom_smid == 0x8156)
+				priv->CustomerID = RT_CID_819x_Acer;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8174 &&
+					priv->eeprom_svid == 0x1025 && priv->eeprom_smid == 0x8157)
+				priv->CustomerID = RT_CID_819x_Acer;
+			/****************************************************************************/
+			/* 	ACER ID  END																*/
+			/****************************************************************************/				
+
 			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
 			 		priv->eeprom_svid == 0x103C && priv->eeprom_smid == 0x1467)
 			 priv->CustomerID = RT_CID_819x_HP;
+			
+			else if(priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
+	 			priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x8192)
+				priv->CustomerID = RT_CID_819x_Foxcoon;
+			else if(priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
+	 			priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x8193)
+				priv->CustomerID = RT_CID_819x_Foxcoon;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
+		 			priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x8188)
+				priv->CustomerID = RT_CID_819x_SAMSUNG;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8171 &&
+		 			priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x8189)
+				priv->CustomerID = RT_CID_819x_SAMSUNG;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8172 &&
+		 			priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0xE023)
+				priv->CustomerID = RT_CID_819x_SAMSUNG;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8172 &&
+		 			priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0xE024)
+				priv->CustomerID = RT_CID_819x_SAMSUNG;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8174 &&
+		 			priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x8190)
+				priv->CustomerID = RT_CID_819x_SAMSUNG;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8174 &&
+		 			priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x8191)
+				priv->CustomerID = RT_CID_819x_SAMSUNG;
+			else if(	priv->eeprom_vid == 0x10EC && priv->eeprom_did == 0x8174 &&
+		 			priv->eeprom_svid == 0x10EC && priv->eeprom_smid == 0x8192)
+				priv->CustomerID = RT_CID_819x_SAMSUNG;
 			else
 			priv->CustomerID = RT_CID_DEFAULT;
 			break;
@@ -950,10 +1090,6 @@ static	void rtl8192se_read_eeprom_info(struct net_device* dev)
 				
 	}
 	
-#ifdef _RTL8192_EXT_PATCH_	
-	HalCustomizedBehavior8192S(dev);
-#endif
-
 #if defined (RTL8192S_WAPI_SUPPORT)
 	if (priv->rtllib->WapiSupport)
 	{
@@ -966,7 +1102,6 @@ static	void rtl8192se_read_eeprom_info(struct net_device* dev)
 void rtl8192se_get_eeprom_size(struct net_device* dev)
 {
 	struct r8192_priv* priv = rtllib_priv(dev);
-	struct rtllib_device* ieee = priv->rtllib;
 	u8 curCR = 0;
 	curCR = read_nic_byte(dev, EPROM_CMD);
 	PHY_RFShadowRefresh(dev);
@@ -1003,41 +1138,20 @@ void rtl8192se_get_eeprom_size(struct net_device* dev)
 		pMgntInfo->PowerSaveControl.bLeisurePs = false;
 		pMgntInfo->keepAliveLevel = 0;
 	}
-	
-	switch(pHalData->eeprom_CustomerID)
-	{
-		case EEPROM_CID_DEFAULT:
-			pMgntInfo->CustomerID = RT_CID_DEFAULT;
-			break;
-		case EEPROM_CID_TOSHIBA:       
-			pMgntInfo->CustomerID = RT_CID_TOSHIBA;
-			break;
-		default:
-			break;
-	}
-	
-#ifdef _RTL8192_EXT_PATCH_	
-	if(pHalData->eeprom_svid == 0x10EC && pHalData->eeprom_smid == 0xE020)
-#else
-	if(pHalData->EEPROMSVID == 0x10EC && pHalData->EEPROMSMID == 0xE020)
-#endif
-		pMgntInfo->CustomerID = RT_CID_819x_Lenovo;
 #endif	
 #ifdef ENABLE_DOT11D
 	priv->ChannelPlan = COUNTRY_CODE_WORLD_WIDE_13;
-#endif
 
 	if(priv->ChannelPlan == COUNTRY_CODE_GLOBAL_DOMAIN) {
-		GET_DOT11D_INFO(ieee)->bEnabled = 1;
+		GET_DOT11D_INFO(priv->rtllib)->bEnabled = 1;
 		RT_TRACE(COMP_INIT, "%s: Enable dot11d when RT_CHANNEL_DOMAIN_GLOBAL_DOAMIN!\n", __FUNCTION__);
 	}
+#endif
 	
 	RT_TRACE(COMP_INIT, "RegChannelPlan(%d) EEPROMChannelPlan(%d)", \
 			priv->RegChannelPlan, priv->eeprom_ChannelPlan);
 	RT_TRACE(COMP_INIT, "ChannelPlan = %d\n" , priv->ChannelPlan);
-#ifndef _RTL8192_EXT_PATCH_	
 	HalCustomizedBehavior8192S(dev);
-#endif
 }
 
 #if (RTL92SE_FPGA_VERIFY == 1)
@@ -1136,12 +1250,10 @@ static void MacConfigBeforeFwDownload(struct net_device* dev)
 	
 	write_nic_byte(dev, 0x503, 0x22);
 
-	if(priv->bIntelBridgeExist) {
+	if(priv->bSupportASPM){
 		write_nic_byte(dev, 0x560, 0x40);
-#ifndef _RTL8192_EXT_PATCH_	
 	} else {
 		write_nic_byte(dev, 0x560, 0x00);
-#endif
 	}
 
 	write_nic_byte(dev, DBG_PORT, 0x91);	
@@ -1178,7 +1290,7 @@ void gen_RefreshLedState(struct net_device *dev)
 	}
 
 }	
-static void MacConfigBeforeFwDownload(struct net_device *dev)
+void MacConfigBeforeFwDownload(struct net_device *dev)
 {
 	struct r8192_priv *priv = rtllib_priv(dev);	
 	u8				i;
@@ -1187,6 +1299,10 @@ static void MacConfigBeforeFwDownload(struct net_device *dev)
 	u8				PollingCnt = 20;
 
 	RT_TRACE(COMP_INIT, "--->MacConfigBeforeFwDownload()\n");
+
+	if (priv->initialized_at_probe) {
+		return;
+	}
 
 	if(priv->bfirst_init)
 	{
@@ -1278,11 +1394,7 @@ static void MacConfigBeforeFwDownload(struct net_device *dev)
 
 
 	tmpU2b = read_nic_word(dev, SYS_FUNC_EN);
-#ifdef _RTL8192_EXT_PATCH_	
-	write_nic_word(dev, SYS_FUNC_EN, tmpU2b |= BIT13);
-#else
 	write_nic_word(dev, SYS_FUNC_EN, (tmpU2b |BIT13));
-#endif
 
 
 	write_nic_byte(dev, SYS_ISO_CTRL+1, 0x68);
@@ -1352,7 +1464,7 @@ static void MacConfigBeforeFwDownload(struct net_device *dev)
 	write_nic_byte(dev, 0x236, 0xff);
 	
 	write_nic_byte(dev, 0x503, 0x22);
-	if (priv->pci_bridge_vendor & (PCI_BRIDGE_VENDOR_INTEL | PCI_BRIDGE_VENDOR_SIS)) {
+	if(priv->bSupportASPM && !priv->bSupportBackDoor){ 
 		write_nic_byte(dev, 0x560, 0x40);
 	} else {
 		write_nic_byte(dev, 0x560, 0x00);
@@ -1399,15 +1511,9 @@ static void MacConfigAfterFwDownload(struct net_device* dev)
 	struct r8192_priv* priv = rtllib_priv(dev);
 
 	
-#ifdef _RTL8192_EXT_PATCH_	
-	write_nic_word(dev, CMDR, 
-	BBRSTn|BB_GLB_RSTn|SCHEDULE_EN|MACRXEN|MACTXEN|DDMA_EN|FW2HW_EN|
-	RXDMA_EN|TXDMA_EN|HCI_RXDMA_EN|HCI_TXDMA_EN);
-#else
 	write_nic_byte(dev, CMDR, 
 	(u8)(BBRSTn|BB_GLB_RSTn|SCHEDULE_EN|MACRXEN|MACTXEN|DDMA_EN|FW2HW_EN|
 	RXDMA_EN|TXDMA_EN|HCI_RXDMA_EN|HCI_TXDMA_EN));
-#endif
 	write_nic_dword(dev, TCR, 
 	read_nic_dword(dev, TCR)|TXDMAPRE2FULL);
 	write_nic_dword(dev, RCR, priv->ReceiveConfig);
@@ -1423,7 +1529,7 @@ static void MacConfigAfterFwDownload(struct net_device* dev)
 	write_nic_word(dev, BCN_INTERVAL, 100);
 	write_nic_word(dev, ATIMWND, 2);	
 #ifdef _ENABLE_SW_BEACON
-        write_nic_word(dev, BCN_DRV_EARLY_INT, BIT15);
+	write_nic_word(dev, BCN_DRV_EARLY_INT, BIT15);
 #endif        
 
 #if 0
@@ -1446,8 +1552,8 @@ static void MacConfigAfterFwDownload(struct net_device* dev)
 
 	if (priv->card_8192_version== VERSION_8192S_ACUT)
 		write_nic_byte(dev, RRSR, 0xf0);
-#ifdef _RTL8192_EXT_PATCH_	
-#endif
+	else if (priv->card_8192_version == VERSION_8192S_BCUT)
+		write_nic_byte(dev, RRSR, 0xff);
 	write_nic_byte(dev, RRSR+1, 0x01);
 	write_nic_byte(dev, RRSR+2, 0x00);
 
@@ -1456,8 +1562,10 @@ static void MacConfigAfterFwDownload(struct net_device* dev)
 
 		if (priv->card_8192_version == VERSION_8192S_ACUT)
 			write_nic_dword(dev, ARFR0+i*4, 0x1f0ff0f0);
+#if 0 
 		else if (priv->card_8192_version == VERSION_8192S_BCUT)
 			write_nic_dword(dev, ARFR0+i*4, 0x1f0ff0f0);
+#endif
 	}
 
 	write_nic_byte(dev, AGGLEN_LMT_H, 0x0f);
@@ -1643,6 +1751,17 @@ RF_RECOVERY(struct net_device*dev	,u8 Start, u8 End)
 
 }
 
+void	rtl8192se_GPIOBit3CfgInputMode(struct net_device* dev)
+{
+	u8				u1Tmp;
+	
+	write_nic_byte(dev, MAC_PINMUX_CFG, (GPIOMUX_EN | GPIOSEL_GPIO));
+	u1Tmp = read_nic_byte(dev, GPIO_IO_SEL);
+	u1Tmp &= HAL_8192S_HW_GPIO_OFF_MASK;
+	write_nic_byte(dev, GPIO_IO_SEL, u1Tmp);
+	
+}	
+
 bool rtl8192se_adapter_start(struct net_device* dev)
 { 	
 	struct r8192_priv *priv = rtllib_priv(dev);	
@@ -1653,18 +1772,21 @@ bool rtl8192se_adapter_start(struct net_device* dev)
 	u8				i=0;
 	RT_TRACE(COMP_INIT, "rtl8192se_adapter_start()\n");
 	priv->being_init_adapter = true;	
-#ifdef RTL8192SE_CONFIG_ASPM_OR_D3
+#ifdef CONFIG_ASPM_OR_D3
 	RT_DISABLE_ASPM(dev);
 #endif
 start:
 	rtl8192_pci_resetdescring(dev);
 	MacConfigBeforeFwDownload(dev);
+	priv->initialized_at_probe = false;
 
 	priv->card_8192_version = priv->rtllib->VersionID
 	= (VERSION_8192S)((read_nic_dword(dev, PMC_FSM)>>16)&0xF);
 
 	RT_TRACE(COMP_INIT, "NIC version : %s\n", ((read_nic_dword(dev, PMC_FSM)>>15)&0x1)?"C-cut":"B-cut");
 
+	rtl8192se_GPIOBit3CfgInputMode(dev);
+	
 	rtStatus = FirmwareDownload92S((struct net_device*)dev); 
 	if(rtStatus != true)
 	{
@@ -1714,6 +1836,11 @@ start:
 #endif	
 
 
+
+#if 1
+
+	priv->Rf_Mode = RF_OP_By_SW_3wire;
+#else
 	priv->Rf_Mode = RF_OP_By_SW_3wire;
 #if (HAL_RF_ENABLE == 1)		
 	RT_TRACE(COMP_INIT, "RF Config started!\n");
@@ -1764,32 +1891,107 @@ start:
 		rtl8192_phy_setTxPower(dev, priv->chan);
 #endif
 	}
+#endif
 
-	rtl8192se_HalDetectPwrDownMode(dev);
+
+	if(!priv->pwrdown){
+		if(priv->RegRfOff == true)
+		{ 
+			RT_TRACE((COMP_INIT|COMP_RF), "==++==> InitializeAdapter8190(): Turn off RF for RegRfOff ----------\n");
+			MgntActSet_RF_State(dev, eRfOff, RF_CHANGE_BY_SW,true);
+
+			for(eRFPath = 0; eRFPath <priv->NumTotalRFPath; eRFPath++)
+				rtl8192_phy_SetRFReg(dev, (RF90_RADIO_PATH_E)eRFPath, 0x4, 0xC00, 0x0);
+		
+		}
+		else if(priv->rtllib->RfOffReason > RF_CHANGE_BY_PS)
+		{ 
+			RT_RF_CHANGE_SOURCE rfoffreason = priv->rtllib->RfOffReason;
+
+			RT_TRACE((COMP_INIT|COMP_RF), "InitializeAdapter8190(): ==++==> Turn off RF for RfOffReason(%d) ----------\n", priv->rtllib->RfOffReason);
+			printk("InitializeAdapter8190(): ==++==> Turn off RF for RfOffReason(%d) ----------\n", priv->rtllib->RfOffReason);
+			
+			priv->rtllib->RfOffReason = RF_CHANGE_BY_INIT;
+			priv->rtllib->eRFPowerState = eRfOn;
+			MgntActSet_RF_State(dev, eRfOff, rfoffreason,true);
+
+		}
+		else
+		{
+#if 0 
+			u8				u1Tmp;
+			RT_RF_POWER_STATE	eRfPowerStateToSet;
+			
+			write_nic_byte(dev, MAC_PINMUX_CFG, (GPIOMUX_EN | GPIOSEL_GPIO));
+			u1Tmp = read_nic_byte(dev, MAC_PINMUX_CFG);
+			u1Tmp = read_nic_byte(dev, GPIO_IO_SEL);
+			u1Tmp &= HAL_8192S_HW_GPIO_OFF_MASK;			
+			write_nic_byte(dev, GPIO_IO_SEL, u1Tmp);
+			u1Tmp = read_nic_byte(dev, GPIO_IO_SEL);
+			mdelay(5);
+			u1Tmp = read_nic_byte(dev, GPIO_IN);
+			RTPRINT(FPWR, PWRHW, ("GPIO_IN=%02x\n", u1Tmp));
+			eRfPowerStateToSet = (u1Tmp & HAL_8192S_HW_GPIO_OFF_BIT) ? eRfOn : eRfOff;
+
+			RT_TRACE(COMP_INIT, "==++==> InitializeAdapter8190(): RF=%d \n", eRfPowerStateToSet);
+			if (eRfPowerStateToSet == eRfOff)
+			{				
+				MgntActSet_RF_State(dev, eRfOff, RF_CHANGE_BY_HW, TRUE);
+				
+		}
+		else
+		{
+				priv->rtllib->RfOffReason = 0; 
+			}	
+#else					
+	            if(priv->bHwRadioOff == false){
+			priv->rtllib->eRFPowerState = eRfOn;
+			priv->rtllib->RfOffReason = 0; 
+			if(priv->rtllib->LedControlHandler)
+				priv->rtllib->LedControlHandler(dev, LED_CTL_POWER_ON);
+			}		
+#endif
+		}	
+		}	
+
 #if 1
-	if(priv->RegRfOff == true)
-	{ 
-		RT_TRACE((COMP_INIT|COMP_RF), "InitializeAdapter8190(): Turn off RF for RegRfOff ----------\n");
-		MgntActSet_RF_State(dev, eRfOff, RF_CHANGE_BY_SW);
+#if (HAL_RF_ENABLE == 1)		
+	RT_TRACE(COMP_INIT, "RF Config started!\n");
 
-		for(eRFPath = 0; eRFPath <priv->NumTotalRFPath; eRFPath++)
-			rtl8192_phy_SetRFReg(dev, (RF90_RADIO_PATH_E)eRFPath, 0x4, 0xC00, 0x0);
-	
-	}
-	else if(priv->rtllib->RfOffReason > RF_CHANGE_BY_PS)
-	{ 
-		RT_TRACE((COMP_INIT|COMP_RF), "InitializeAdapter8190(): Turn off RF for RfOffReason(%d) ----------\n", priv->rtllib->RfOffReason);
-		MgntActSet_RF_State(dev, eRfOff, priv->rtllib->RfOffReason);
-	}
+#if (RTL92SE_FPGA_VERIFY == 0)
+	write_nic_byte(dev, AFE_XTAL_CTRL+1, 0xDB);
+	if(priv->card_8192_version== VERSION_8192S_ACUT)
+		write_nic_byte(dev, SPS1_CTRL+3, 0x07);
 	else
+		write_nic_byte(dev, RF_CTRL, 0x07);
+#endif	
+	if(PHY_RFConfig8192S(dev) != true)
 	{
-            if(priv->bHwRadioOff == false){
-		priv->rtllib->eRFPowerState = eRfOn;
-		priv->rtllib->RfOffReason = 0; 
-		if(priv->rtllib->LedControlHandler)
-			priv->rtllib->LedControlHandler(dev, LED_CTL_POWER_ON);
-	}		
-	}		
+		RT_TRACE(COMP_INIT, "RF Config failed\n");
+		return rtStatus;
+	}
+	RT_TRACE(COMP_INIT, "RF Config Finished!\n");	
+#endif	
+
+	priv->RfRegChnlVal[0] = rtl8192_phy_QueryRFReg(dev, (RF90_RADIO_PATH_E)0, RF_CHNLBW, bRFRegOffsetMask);
+	priv->RfRegChnlVal[1] = rtl8192_phy_QueryRFReg(dev, (RF90_RADIO_PATH_E)1, RF_CHNLBW, bRFRegOffsetMask);
+
+	/*---- Set CCK and OFDM Block "ON"----*/
+	rtl8192_setBBreg(dev, rFPGA0_RFMOD, bCCKEn, 0x1);
+	rtl8192_setBBreg(dev, rFPGA0_RFMOD, bOFDMEn, 0x1);
+	
+	HwConfigureRTL8192SE(dev);
+
+
+
+	{
+		/* Get original hw reg values */
+		PHY_GetHWRegOriginalValue(dev);
+		/* Write correct tx power index */
+#ifndef CONFIG_MP
+		rtl8192_phy_setTxPower(dev, priv->chan);
+#endif
+	}
 #endif
 
 
@@ -1817,6 +2019,8 @@ start:
 		write_nic_byte(dev, 0xC50, 0x1C);
 		write_nic_byte(dev, 0xC58, 0x1C);
 	}
+	
+		write_nic_byte(dev, 0x4d, 0x0);
 	
 	if(priv->pFirmware->FirmwareVersion >= 0x49){
 		u8 tmp_byte = 0;
@@ -1852,6 +2056,24 @@ start:
 		PHY_SwitchEphyParameter(dev);
 	RF_RECOVERY(dev, 0x25, 0x29);
 
+	if(priv->ResetProgress == RESET_TYPE_NORESET)
+		rtl8192_SetWirelessMode(dev, priv->rtllib->mode);
+
+	CamResetAllEntry(dev);
+	{
+		u8 SECR_value = 0x0;
+		SECR_value |= SCR_TxEncEnable;
+		SECR_value |= SCR_RxDecEnable;
+		SECR_value |= SCR_NoSKMC;
+		write_nic_byte(dev, SECR, SECR_value);
+	}
+
+	{
+		int i;
+		for (i=0; i<4; i++)
+		 write_nic_dword(dev, WDCAPARA_ADD[i], 0x5e4322); 
+	}
+	
 	priv->SilentResetRxSlotIndex = 0;
 	for( i=0; i < MAX_SILENT_RESET_RX_SLOT_NUM; i++ )
 	{
@@ -1866,6 +2088,16 @@ start:
 	
 	priv->bIgnoreSilentReset = true;
 	
+
+	if(priv->rf_type ==RF_1T2R)
+	{			
+#ifdef MERGE_TODO
+		bool		MrcToSet = true;
+		RT_TRACE(COMP_INIT, "InitializeAdapter8192SE(): Set MRC settings on as default!!\n");			
+		priv->rtllib->SetHwRegHandler(dev, HW_VAR_MRC, (u8*)&MrcToSet);
+#endif
+	}
+	
 #ifdef CONFIG_FW_PARSEBEACON
 	if (!(priv->rtllib->softmac_features & IEEE_SOFTMAC_SCAN)){
 		write_nic_dword(dev, RXFILTERMAP, 0x0100);
@@ -1873,6 +2105,9 @@ start:
 #endif
 	rtl8192_irq_enable(dev);
 end:
+
+	priv->rtllib->LPSDelayCnt = 10;	
+
 	priv->being_init_adapter = false;
 	return rtStatus;
 
@@ -1899,6 +2134,8 @@ void rtl8192se_net_update(struct net_device *dev)
 	else if (priv->card_8192_version == VERSION_8192S_BCUT)
 		priv->basic_rate= rate_config = rate_config & 0x15f;
 
+	priv->dot11CurrentPreambleMode = PREAMBLE_AUTO;
+
 #if 1	
   	if(priv->rtllib->pHTInfo->IOTPeer == HT_IOT_PEER_CISCO && ((rate_config &0x150)==0))
 	{
@@ -1910,20 +2147,20 @@ void rtl8192se_net_update(struct net_device *dev)
 		printk("HW_VAR_BASIC_RATE, HT_IOT_ACT_WA_IOT_Broadcom, BrateCfg = 0x%x\n", rate_config);
 	}
 
-			write_nic_byte(dev, RRSR, rate_config&0xff);
-			write_nic_byte(dev, RRSR+1, (rate_config>>8)&0xff);
+	write_nic_byte(dev, RRSR, rate_config&0xff);
+	write_nic_byte(dev, RRSR+1, (rate_config>>8)&0xff);
 
-			while(rate_config > 0x1)
-			{
-				rate_config = (rate_config>> 1);
-				rateIndex++;
-			}
-			write_nic_byte(dev, INIRTSMCS_SEL, rateIndex);
+	while(rate_config > 0x1)
+	{
+		rate_config = (rate_config>> 1);
+		rateIndex++;
+	}
+	write_nic_byte(dev, INIRTSMCS_SEL, rateIndex);
 
-			regTmp = (priv->nCur40MhzPrimeSC) << 5;
-			if (priv->short_preamble)
-				regTmp |= 0x80;
-			write_nic_byte(dev, RRSR+2, regTmp);
+	regTmp = (priv->nCur40MhzPrimeSC) << 5;
+	if (priv->short_preamble)
+		regTmp |= 0x80;
+	write_nic_byte(dev, RRSR+2, regTmp);
 #endif
 	}
 
@@ -1997,73 +2234,118 @@ void rtl8192se_link_change(struct net_device *dev)
 	struct r8192_priv *priv = rtllib_priv(dev);
 	struct rtllib_device* ieee = priv->rtllib;
 	u32 reg = 0;
-	reg = read_nic_dword(dev, RCR);
-#ifdef _RTL8192_EXT_PATCH_
+
+	if(IS_NIC_DOWN(priv))
+		return;
+
+	priv->rtllib->GetHwRegHandler(dev, HW_VAR_RCR, (u8*)(&reg));
+	
 	printk("===>%s():ieee->iw_mode is %d\n",__FUNCTION__,ieee->iw_mode);
-	if (ieee->state == RTLLIB_LINKED) {
-		if(ieee->pHTInfo->IOTAction & HT_IOT_ACT_DISABLE_HIGH_POWER)
-			ieee->SetFwCmdHandler(dev, FW_CMD_HIGH_PWR_DISABLE);
-		else
-			ieee->SetFwCmdHandler(dev, FW_CMD_HIGH_PWR_ENABLE);
-		rtl8192se_net_update(dev);
-		if(ieee->bUseRAMask){
-			ieee->UpdateHalRAMaskHandler(
-									dev,
-									false,
-									0,
-									NULL,
-									ieee->mode,
-									0);
-			priv->rssi_level = 0;
-		}
-		else{
-			rtl8192se_update_ratr_table(dev,ieee->dot11HTOperationalRateSet,NULL);
-		}
-		priv->ReceiveConfig = reg |= RCR_CBSSID;
-	} else if ((ieee->mesh_state == RTLLIB_MESH_LINKED) && ieee->only_mesh) {
-		rtl8192se_mesh_net_update(dev);
-		priv->ReceiveConfig = reg &= ~RCR_CBSSID;
-	} else{
-		priv->ReceiveConfig = reg &= ~RCR_CBSSID;
-	}
-	write_nic_dword(dev, RCR, reg);
-#else
 	if (ieee->state == RTLLIB_LINKED) {
 #ifdef CONFIG_FW_PARSEBEACON
 		if (!(priv->rtllib->softmac_features & IEEE_SOFTMAC_SCAN)){
 			write_nic_dword(dev, RXFILTERMAP, 0x0000);
 		}	
 #endif
+		if(priv->DM_Type == DM_Type_ByFW) 
+		{
+			if(ieee->pHTInfo->IOTAction & HT_IOT_ACT_DISABLE_HIGH_POWER)
+				ieee->SetFwCmdHandler(dev, FW_CMD_HIGH_PWR_DISABLE);
+			else
+				ieee->SetFwCmdHandler(dev, FW_CMD_HIGH_PWR_ENABLE);	
+		}
+		
+		rtl8192se_net_update(dev);
 
-		if(priv->DM_Type == DM_Type_ByFW) {
-		if(ieee->pHTInfo->IOTAction & HT_IOT_ACT_DISABLE_HIGH_POWER)
-			ieee->SetFwCmdHandler(dev, FW_CMD_HIGH_PWR_DISABLE);
+		if(ieee->bUseRAMask)
+		{
+			ieee->UpdateHalRAMaskHandler(
+									dev,
+									false,
+									0,
+									ieee->pHTInfo->PeerMimoPs,
+									ieee->mode,
+									ieee->pHTInfo->bCurTxBW40MHz,
+									0);
+			priv->rssi_level = 0;
+		}
 		else
-			ieee->SetFwCmdHandler(dev, FW_CMD_HIGH_PWR_ENABLE);	
+		{
+			rtl8192se_update_ratr_table(dev,ieee->dot11HTOperationalRateSet,NULL);
 		}
 
-		rtl8192se_net_update(dev);
-		rtl8192se_update_ratr_table(dev,ieee->dot11HTOperationalRateSet,NULL);
-		priv->ReceiveConfig = reg |= RCR_CBSSID;
-	} else {
+		{
+			prate_adaptive	pRA =  (prate_adaptive)&priv->rate_adaptive;
+			pRA->PreRATRState = DM_RATR_STA_MAX;
+		}
+	
+		if(ieee->IntelPromiscuousModeInfo.bPromiscuousOn)
+			;
+		else
+			reg |= RCR_CBSSID;
+	} 
+#ifdef _RTL8192_EXT_PATCH_
+	else if ((ieee->mesh_state == RTLLIB_MESH_LINKED) && ieee->only_mesh) {
+		rtl8192se_mesh_net_update(dev);
+		if(ieee->bUseRAMask){
+			ieee->UpdateHalRAMaskHandler(
+									dev,
+									false,
+									0,
+									ieee->pHTInfo->PeerMimoPs,
+									ieee->mode,
+									ieee->pHTInfo->bCurTxBW40MHz,
+									0);
+			priv->rssi_level = 0;
+		}else{
+			rtl8192se_update_ratr_table(dev,ieee->dot11HTOperationalRateSet,NULL);
+		}
 #ifdef CONFIG_FW_PARSEBEACON
 		if (!(priv->rtllib->softmac_features & IEEE_SOFTMAC_SCAN)){
 			write_nic_dword(dev, RXFILTERMAP, 0x0100);
 		}	
 #endif
-
-		priv->ReceiveConfig = reg &= ~RCR_CBSSID;
+		reg &= ~RCR_CBSSID;
+	} 
+#endif
+	else{
+#ifdef CONFIG_FW_PARSEBEACON
+		if (!(priv->rtllib->softmac_features & IEEE_SOFTMAC_SCAN)){
+			write_nic_dword(dev, RXFILTERMAP, 0x0100);
+		}	
+#endif
+		reg &= ~RCR_CBSSID;
 	}
-	write_nic_dword(dev, RCR, reg);
-#endif	
+	priv->rtllib->SetHwRegHandler( dev, HW_VAR_RCR, (u8*)(&reg) );
+
 	rtl8192se_update_msr(dev);
 	{		
 		u32	temp = read_nic_dword(dev, TCR);
 		write_nic_dword(dev, TCR, temp&(~BIT8));
 		write_nic_dword(dev, TCR, temp|BIT8);
 	}
-	
 }
+
+void rtl8192se_AllowAllDestAddr(struct net_device* dev,
+                        bool bAllowAllDA, bool WriteIntoReg)
+{
+        struct r8192_priv* priv = rtllib_priv(dev);
+
+	if( bAllowAllDA )
+        {
+                priv->ReceiveConfig |= RCR_AAP;         
+        }
+        else
+        {
+                priv->ReceiveConfig &= ~RCR_AAP;                
+        }
+
+        if( WriteIntoReg )
+        {
+                write_nic_dword( dev, RCR, priv->ReceiveConfig );
+        }
+}
+
 
 u8 MRateToHwRate8192SE(struct net_device*dev, u8 rate)
 {
@@ -2140,6 +2422,73 @@ u8 MRateToHwRate8192SE(struct net_device*dev, u8 rate)
 	return ret;
 }
 
+u8 rtl8192se_MapHwQueueToFirmwareQueue(u8 QueueID, u8 priority)
+{
+	u8 QueueSelect = 0x0;       
+
+	switch(QueueID) {
+#if defined RTL8192E || defined RTL8190P
+		case BE_QUEUE:
+			QueueSelect = QSLT_BE;  
+			break;
+
+		case BK_QUEUE:
+			QueueSelect = QSLT_BK;  
+			break;
+
+		case VO_QUEUE:
+			QueueSelect = QSLT_VO;  
+			break;
+
+		case VI_QUEUE:
+			QueueSelect = QSLT_VI;  
+			break;
+		case MGNT_QUEUE:
+			QueueSelect = QSLT_MGNT;
+			break;
+		case BEACON_QUEUE:
+			QueueSelect = QSLT_BEACON;
+			break;
+		case TXCMD_QUEUE:
+			QueueSelect = QSLT_CMD;
+			break;
+		case HIGH_QUEUE:
+			QueueSelect = QSLT_HIGH;
+			break;
+#elif defined RTL8192SE
+		case BE_QUEUE:
+			QueueSelect = priority; 
+			break;
+		case BK_QUEUE:
+			QueueSelect = priority; 
+			break;
+		case VO_QUEUE:
+			QueueSelect = priority; 
+			break;
+		case VI_QUEUE:
+			QueueSelect = priority; 
+			break;
+		case MGNT_QUEUE:
+			QueueSelect = QSLT_BE;
+			break;
+		case BEACON_QUEUE:
+			QueueSelect = QSLT_BEACON;
+			break;
+		case TXCMD_QUEUE:
+			QueueSelect = QSLT_CMD;
+			break;
+		case HIGH_QUEUE:
+			QueueSelect = QSLT_HIGH;
+			break;
+#endif
+		default:
+			RT_TRACE(COMP_ERR, "TransmitTCB(): Impossible Queue Selection: %d \n", QueueID);
+			break;
+	}
+	return QueueSelect;
+}
+
+
 void  rtl8192se_tx_fill_desc(struct net_device* dev, tx_desc * pDesc, cb_desc * cb_desc, struct sk_buff* skb)
 {
 	u8				*pSeq;
@@ -2158,7 +2507,6 @@ void  rtl8192se_tx_fill_desc(struct net_device* dev, tx_desc * pDesc, cb_desc * 
 
 	{
 		
-#ifdef _RTL8192_EXT_PATCH_
 		if(priv->rtllib->bUseRAMask){
 			if(cb_desc->macId < 32)
 			{
@@ -2166,7 +2514,6 @@ void  rtl8192se_tx_fill_desc(struct net_device* dev, tx_desc * pDesc, cb_desc * 
 				pDesc->Rsvd_MacID = cb_desc->macId;
 			}
 		}
-#endif			
 		pDesc->TXHT		= (cb_desc->data_rate&0x80)?1:0;	
 
 #if (RTL92SE_FPGA_VERIFY == 0)
@@ -2180,7 +2527,7 @@ void  rtl8192se_tx_fill_desc(struct net_device* dev, tx_desc * pDesc, cb_desc * 
 		}
 #endif			
 		pDesc->TxRate	= MRateToHwRate8192SE(dev,cb_desc->data_rate);
-		pDesc->TxShort	= QueryIsShort(((cb_desc->data_rate&0x80)?1:0), MRateToHwRate8192SE(dev,cb_desc->data_rate), cb_desc);
+		pDesc->TxShort	= rtl8192se_QueryIsShort(((cb_desc->data_rate&0x80)?1:0), MRateToHwRate8192SE(dev,cb_desc->data_rate), cb_desc);
 
 		if(cb_desc->bAMPDUEnable)
 		{			
@@ -2300,7 +2647,7 @@ printk("\tRatrIdx: %d\n", pDesc->RaBRSRID);
 		}
 
 		pDesc->PktID			= 0x0;		
-		pDesc->QueueSel		= MapHwQueueToFirmwareQueue(cb_desc->queue_index, cb_desc->priority); 
+		pDesc->QueueSel		= rtl8192se_MapHwQueueToFirmwareQueue(cb_desc->queue_index, cb_desc->priority); 
 		
 		pDesc->DataRateFBLmt	= 0x1F;		
 		pDesc->DISFB	= cb_desc->bTxDisableRateFallBack;
@@ -2479,6 +2826,933 @@ u8 HwRateToMRate92S(bool bIsHT,	u8 rate)
 	return ret_rate;
 }
 
+long
+rtl8192se_signal_scale_mapping(struct r8192_priv * priv,
+	long currsig
+	)
+{
+	long retsig = 0;
+
+	if(currsig> 47)
+		retsig = 100; 
+	else if(currsig >14 && currsig <=47)
+		retsig = 100 - ((47-currsig)*3)/2;
+	else if(currsig >2 && currsig <=14)
+		retsig = 48-((14-currsig)*15)/7;
+	else if(currsig >=0)
+		retsig = currsig * 9+1;
+	
+	return retsig;
+}
+
+
+#define 	rx_hal_is_cck_rate(_pdesc)\
+			(_pdesc->RxMCS == DESC92S_RATE1M ||\
+			 _pdesc->RxMCS == DESC92S_RATE2M ||\
+			 _pdesc->RxMCS == DESC92S_RATE5_5M ||\
+			 _pdesc->RxMCS == DESC92S_RATE11M)
+#ifdef _RTL8192_EXT_PATCH_
+void rtl8192se_query_rxphystatus(
+	struct r8192_priv * priv,
+	struct rtllib_rx_stats * pstats,
+	prx_desc  pdesc,	
+	prx_fwinfo   pDrvInfo,
+	bool bpacket_match_bssid,
+	bool bpacket_toself,
+	bool bPacketBeacon
+	)
+{
+	bool is_cck_rate;
+	phy_sts_cck_8192s_t* cck_buf;
+	u8 rx_pwr_all=0, rx_pwr[4], rf_rx_num=0, EVM, PWDB_ALL;
+	u8 i, max_spatial_stream;
+	u32 rssi, total_rssi = 0;
+	u8 cck_highpwr = 0;
+	is_cck_rate = rx_hal_is_cck_rate(pdesc);
+
+	pstats->bPacketMatchBSSID = bpacket_match_bssid;
+	pstats->bPacketToSelf = bpacket_toself;
+	pstats->bIsCCK = is_cck_rate;
+	pstats->bPacketBeacon = bPacketBeacon;
+
+	pstats->RxMIMOSignalQuality[0] = -1;
+	pstats->RxMIMOSignalQuality[1] = -1;
+
+	if (is_cck_rate){
+		u8 report;
+			
+		cck_buf = (phy_sts_cck_8192s_t*)pDrvInfo;
+
+		if(priv->rtllib->eRFPowerState == eRfOn)
+			cck_highpwr = (u8)priv->bCckHighPower;
+		else
+			cck_highpwr = false;
+		if (!cck_highpwr){
+			report = cck_buf->cck_agc_rpt & 0xc0;
+			report = report >> 6;
+			switch(report){
+				case 0x3:
+					rx_pwr_all = -40 - (cck_buf->cck_agc_rpt&0x3e);
+					break;
+				case 0x2:
+					rx_pwr_all = -20 - (cck_buf->cck_agc_rpt&0x3e);
+					break;
+				case 0x1:
+					rx_pwr_all = -2 - (cck_buf->cck_agc_rpt&0x3e);
+					break;
+				case 0x0:
+					rx_pwr_all = 14 - (cck_buf->cck_agc_rpt&0x3e);
+					break;
+			}
+		}
+		else{
+			report = pDrvInfo->cfosho[0] & 0x60;
+			report = report >> 5;
+			switch(report){
+				case 0x3:
+					rx_pwr_all = -40 - ((cck_buf->cck_agc_rpt & 0x1f)<<1);
+					break;
+				case 0x2:
+					rx_pwr_all = -20 - ((cck_buf->cck_agc_rpt & 0x1f)<<1);
+					break;
+				case 0x1:
+					rx_pwr_all = -2 - ((cck_buf->cck_agc_rpt & 0x1f)<<1);
+					break;
+				case 0x0:
+					rx_pwr_all = 14 - ((cck_buf->cck_agc_rpt & 0x1f)<<1);
+					break;
+			}
+		}
+
+		PWDB_ALL= rtl819x_query_rxpwrpercentage(rx_pwr_all);
+		{
+			PWDB_ALL+=6;
+			if(PWDB_ALL > 100)
+				PWDB_ALL = 100;
+			if(PWDB_ALL > 34 && PWDB_ALL <= 42)
+				PWDB_ALL -= 2;
+			else if(PWDB_ALL > 26 && PWDB_ALL <= 34)
+				PWDB_ALL -= 6;
+			else if(PWDB_ALL > 14 && PWDB_ALL <= 26)
+				PWDB_ALL -= 8;
+			else if(PWDB_ALL > 4 && PWDB_ALL <= 14)
+				PWDB_ALL -= 4;
+		}
+		pstats->RxPWDBAll = PWDB_ALL;
+		pstats->RecvSignalPower = rx_pwr_all;
+
+		if (bpacket_match_bssid){
+			u8 sq;
+			if(priv->CustomerID == RT_CID_819x_Lenovo)		
+			{
+				if(PWDB_ALL >= 50)
+					sq = 100;
+				else if(PWDB_ALL >= 35 && PWDB_ALL < 50)
+					sq = 80;
+				else if(PWDB_ALL >= 22 && PWDB_ALL < 35)
+					sq = 60;
+				else if(PWDB_ALL >= 18 && PWDB_ALL < 22)
+					sq = 40;
+				else
+					sq = 20;
+			}
+			else
+			{
+			if (pstats->RxPWDBAll > 40)
+				sq = 100;
+			else{
+				sq = cck_buf->sq_rpt;
+				if (sq > 64)
+					sq = 0;
+				else if(sq < 20)
+					sq = 100;
+				else
+					sq = ((64-sq)*100)/44;
+			}
+			}
+			pstats->SignalQuality = sq;
+			pstats->RxMIMOSignalQuality[0] = sq;
+			pstats->RxMIMOSignalQuality[1] = -1;
+		}
+	}
+	else{
+		priv->brfpath_rxenable[0] = priv->brfpath_rxenable[1] = true;
+
+		for (i=RF90_PATH_A; i<RF90_PATH_MAX; i++){
+			if (priv->brfpath_rxenable[i])
+				rf_rx_num ++;
+
+			rx_pwr[i] = ((pDrvInfo->gain_trsw[i]&0x3f)*2) - 110;
+			rssi = rtl819x_query_rxpwrpercentage(rx_pwr[i]);
+			total_rssi += rssi;
+
+			priv->stats.rxSNRdB[i] = (long)(pDrvInfo->rxsnr[i]/2);
+
+			if (bpacket_match_bssid){
+				pstats->RxMIMOSignalStrength[i] = (u8)rssi;
+				if(priv->CustomerID == RT_CID_819x_Lenovo)
+				{
+					u8	SQ;
+					
+					if(i == 0)
+					{
+						if(rssi >= 50)
+							SQ = 100;
+						else if(rssi >= 35 && rssi < 50)
+							SQ = 80;
+						else if(rssi >= 22 && rssi < 35)
+							SQ = 60;
+						else if(rssi >= 18 && rssi < 22)
+							SQ = 40;
+						else
+							SQ = 20;
+						pstats->SignalQuality = SQ;
+			}
+		}
+			}
+		}
+		rx_pwr_all = ((pDrvInfo->pwdb_all >> 1) & 0x7f) - 106;
+		PWDB_ALL = rtl819x_query_rxpwrpercentage(rx_pwr_all);
+
+		pstats->RxPWDBAll = PWDB_ALL;
+		pstats->RxPower = rx_pwr_all;
+		pstats->RecvSignalPower = rx_pwr_all;
+
+		if(priv->CustomerID != RT_CID_819x_Lenovo){	
+		if (pdesc->RxHT && pdesc->RxMCS >= DESC92S_RATEMCS8 && pdesc->RxMCS <= DESC92S_RATEMCS15)
+			max_spatial_stream = 2;
+		else
+			max_spatial_stream = 1;
+
+		for(i=0; i<max_spatial_stream; i++){
+			EVM = rtl819x_evm_dbtopercentage(pDrvInfo->rxevm[i]);
+
+			if (bpacket_match_bssid)
+			{
+				if (i==0)
+						pstats->SignalQuality = (u8)(EVM & 0xff);
+					pstats->RxMIMOSignalQuality[i] = (u8)(EVM&0xff);
+				}
+			}
+		}
+#if 1
+		if (pdesc->BandWidth)
+			priv->stats.received_bwtype[1+pDrvInfo->rxsc]++;
+		else
+			priv->stats.received_bwtype[0]++;
+#endif
+	}
+
+	if (is_cck_rate){
+		pstats->SignalStrength = (u8)(rtl8192se_signal_scale_mapping(priv,PWDB_ALL));
+	}
+	else {
+		if (rf_rx_num != 0)
+			pstats->SignalStrength = (u8)(rtl8192se_signal_scale_mapping(priv,total_rssi/=rf_rx_num));
+	}
+}
+#else
+void rtl8192se_query_rxphystatus(
+	struct r8192_priv * priv,
+	struct rtllib_rx_stats * pstats,
+	prx_desc  pdesc,	
+	prx_fwinfo   pDrvInfo,
+	struct rtllib_rx_stats * precord_stats,
+	bool bpacket_match_bssid,
+	bool bpacket_toself,
+	bool bPacketBeacon,
+	bool bToSelfBA
+	)
+{
+	bool is_cck_rate;
+	phy_sts_cck_8192s_t* cck_buf;
+	s8 rx_pwr_all=0, rx_pwr[4]; 
+	u8 rf_rx_num=0, EVM, PWDB_ALL;
+	u8 i, max_spatial_stream;
+	u32 rssi, total_rssi = 0;
+
+	is_cck_rate = rx_hal_is_cck_rate(pdesc);
+
+	memset(precord_stats, 0, sizeof(struct rtllib_rx_stats));
+	pstats->bPacketMatchBSSID = precord_stats->bPacketMatchBSSID = bpacket_match_bssid;
+	pstats->bPacketToSelf = precord_stats->bPacketToSelf = bpacket_toself;
+	pstats->bIsCCK = precord_stats->bIsCCK = is_cck_rate;
+	pstats->bPacketBeacon = precord_stats->bPacketBeacon = bPacketBeacon;
+	pstats->bToSelfBA = precord_stats->bToSelfBA = bToSelfBA;
+	pstats->bIsCCK = precord_stats->bIsCCK = is_cck_rate;
+
+	pstats->RxMIMOSignalQuality[0] = -1;
+	pstats->RxMIMOSignalQuality[1] = -1;
+	precord_stats->RxMIMOSignalQuality[0] = -1;
+	precord_stats->RxMIMOSignalQuality[1] = -1;
+
+	if (is_cck_rate){
+		u8 report, cck_highpwr;
+			
+		cck_buf = (phy_sts_cck_8192s_t*)pDrvInfo;
+
+		if(!priv->bInPowerSaveMode)
+		cck_highpwr = (u8)rtl8192_QueryBBReg(priv->rtllib->dev, rFPGA0_XA_HSSIParameter2, BIT9);
+		else
+			cck_highpwr = false;
+		if (!cck_highpwr){
+			report = cck_buf->cck_agc_rpt & 0xc0;
+			report = report >> 6;
+			switch(report){
+				case 0x3:
+					rx_pwr_all = -35 - (cck_buf->cck_agc_rpt&0x3e);
+					break;
+				case 0x2:
+					rx_pwr_all = -23 - (cck_buf->cck_agc_rpt&0x3e);
+					break;
+				case 0x1:
+					rx_pwr_all = -11 - (cck_buf->cck_agc_rpt&0x3e);
+					break;
+				case 0x0:
+					rx_pwr_all = 8 - (cck_buf->cck_agc_rpt&0x3e);
+					break;
+			}
+		}
+		else{
+			report = pDrvInfo->cfosho[0] & 0x60;
+			report = report >> 5;
+			switch(report){
+				case 0x3:
+					rx_pwr_all = -35 - ((cck_buf->cck_agc_rpt & 0x1f)<<1);
+					break;
+				case 0x2:
+					rx_pwr_all = -23 - ((cck_buf->cck_agc_rpt & 0x1f)<<1);
+					break;
+				case 0x1:
+					rx_pwr_all = -11 - ((cck_buf->cck_agc_rpt & 0x1f)<<1);
+					break;
+				case 0x0:
+					rx_pwr_all = -8 - ((cck_buf->cck_agc_rpt & 0x1f)<<1);
+					break;
+			}
+		}
+
+		PWDB_ALL= rtl819x_query_rxpwrpercentage(rx_pwr_all);
+		pstats->RxPWDBAll = precord_stats->RxPWDBAll = PWDB_ALL;
+		pstats->RecvSignalPower = rx_pwr_all;
+
+		if (bpacket_match_bssid){
+			u8 sq;
+			if (pstats->RxPWDBAll > 40)
+				sq = 100;
+			else{
+				sq = cck_buf->sq_rpt;
+				if (sq > 64)
+					sq = 0;
+				else if(sq < 20)
+					sq = 100;
+				else
+					sq = ((64-sq)*100)/44;
+			}
+			pstats->SignalQuality = precord_stats->SignalQuality = sq;
+			pstats->RxMIMOSignalQuality[0] = precord_stats->RxMIMOSignalQuality[0] = sq;
+			pstats->RxMIMOSignalQuality[1] = precord_stats->RxMIMOSignalQuality[1] = -1;
+		}
+	}
+	else{
+		priv->brfpath_rxenable[0] = priv->brfpath_rxenable[1] = true;
+
+		for (i=RF90_PATH_A; i<RF90_PATH_MAX; i++){
+			if (priv->brfpath_rxenable[i])
+				rf_rx_num ++;
+
+			rx_pwr[i] = ((pDrvInfo->gain_trsw[i]&0x3f)*2) - 110;
+			rssi = rtl819x_query_rxpwrpercentage(rx_pwr[i]);
+			total_rssi += rssi;
+
+			priv->stats.rxSNRdB[i] = (long)(pDrvInfo->rxsnr[i]/2);
+
+			if (bpacket_match_bssid){
+				pstats->RxMIMOSignalStrength[i] = (u8)rssi;
+				precord_stats->RxMIMOSignalStrength [i] = (u8)rssi;
+			}
+		}
+
+		rx_pwr_all = ((pDrvInfo->pwdb_all >> 1) & 0x7f) - 0x106;
+		PWDB_ALL = rtl819x_query_rxpwrpercentage(rx_pwr_all);
+
+		pstats->RxPWDBAll = precord_stats->RxPWDBAll = PWDB_ALL;
+		pstats->RxPower = precord_stats->RxPower = rx_pwr_all;
+		pstats->RecvSignalPower = precord_stats->RecvSignalPower = rx_pwr_all;
+
+		if (pdesc->RxHT && pdesc->RxMCS >= DESC92S_RATEMCS8 && pdesc->RxMCS <= DESC92S_RATEMCS15)
+			max_spatial_stream = 2;
+		else
+			max_spatial_stream = 1;
+
+		for(i=0; i<max_spatial_stream; i++){
+			EVM = rtl819x_evm_dbtopercentage(pDrvInfo->rxevm[i]);
+
+			if (bpacket_match_bssid)
+			{
+				if (i==0)
+					pstats->SignalQuality = 
+					precord_stats->SignalQuality = (u8)(EVM&0xff);
+				pstats->RxMIMOSignalQuality[i] =
+				precord_stats->RxMIMOSignalQuality[i] = (u8)(EVM&0xff);
+			}
+		}
+#if 0
+		if (pdesc->BW)
+			priv->stats.received_bwtype[1+pDrvInfo->rxsc]++;
+		else
+			priv->stats.received_bwtype[0]++;
+#endif
+	}
+
+	if (is_cck_rate)
+		pstats->SignalStrength = 
+		precord_stats->SignalStrength = (u8)(rtl8192se_signal_scale_mapping(priv,PWDB_ALL));
+	else
+		if (rf_rx_num != 0)
+			pstats->SignalStrength = 
+			precord_stats->SignalStrength = (u8)(rtl8192se_signal_scale_mapping(priv,total_rssi/=rf_rx_num));
+
+}
+#endif
+
+#ifdef _RTL8192_EXT_PATCH_
+void rtl819x_update_rxsignalstatistics8192S(
+	struct r8192_priv * priv,
+	struct rtllib_rx_stats * pstats
+	)
+{
+	int	weighting = 0;
+
+
+	if(priv->stats.recv_signal_power == 0)
+		priv->stats.recv_signal_power = pstats->RecvSignalPower;
+
+	if(pstats->RecvSignalPower > priv->stats.recv_signal_power)
+		weighting = 5;
+	else if(pstats->RecvSignalPower < priv->stats.recv_signal_power)
+		weighting = (-5);
+	priv->stats.recv_signal_power = (priv->stats.recv_signal_power * 5 + pstats->RecvSignalPower + weighting) / 6;
+
+}	
+
+void Process_UI_RSSI_8192S(struct r8192_priv * priv,struct rtllib_rx_stats * pstats)
+{
+	u8			rfPath;
+	u32			last_rssi, tmpVal;
+
+	if(pstats->bPacketToSelf || pstats->bPacketBeacon)
+	{
+		priv->stats.RssiCalculateCnt++;	
+		if(priv->stats.ui_rssi.TotalNum++ >= PHY_RSSI_SLID_WIN_MAX)
+		{
+			priv->stats.ui_rssi.TotalNum = PHY_RSSI_SLID_WIN_MAX;
+			last_rssi = priv->stats.ui_rssi.elements[priv->stats.ui_rssi.index];
+			priv->stats.ui_rssi.TotalVal -= last_rssi;
+		}
+		priv->stats.ui_rssi.TotalVal += pstats->SignalStrength;
+	
+		priv->stats.ui_rssi.elements[priv->stats.ui_rssi.index++] = pstats->SignalStrength;
+		if(priv->stats.ui_rssi.index >= PHY_RSSI_SLID_WIN_MAX)
+			priv->stats.ui_rssi.index = 0;
+	
+		tmpVal = priv->stats.ui_rssi.TotalVal/priv->stats.ui_rssi.TotalNum;
+		priv->stats.signal_strength = rtl819x_translate_todbm(priv, (u8)tmpVal);
+
+	}
+
+	if(!pstats->bIsCCK && pstats->bPacketToSelf)
+	{
+		for (rfPath = RF90_PATH_A; rfPath < priv->NumTotalRFPath; rfPath++)
+		{
+			if (!rtl8192_phy_CheckIsLegalRFPath(priv->rtllib->dev, rfPath))
+				continue;
+			RT_TRACE(COMP_DBG, "pstats->RxMIMOSignalStrength[%d]  = %d \n", rfPath, pstats->RxMIMOSignalStrength[rfPath] );
+
+			if(priv->stats.rx_rssi_percentage[rfPath] == 0)	
+			{
+				priv->stats.rx_rssi_percentage[rfPath] = pstats->RxMIMOSignalStrength[rfPath];
+			}
+			
+			if(pstats->RxMIMOSignalStrength[rfPath]  > priv->stats.rx_rssi_percentage[rfPath])
+			{
+				priv->stats.rx_rssi_percentage[rfPath] = 
+					( (priv->stats.rx_rssi_percentage[rfPath]*(Rx_Smooth_Factor-1)) + 
+					(pstats->RxMIMOSignalStrength[rfPath])) /(Rx_Smooth_Factor);
+				priv->stats.rx_rssi_percentage[rfPath] = priv->stats.rx_rssi_percentage[rfPath] + 1;
+			}
+			else
+			{
+				priv->stats.rx_rssi_percentage[rfPath] = 
+					( (priv->stats.rx_rssi_percentage[rfPath]*(Rx_Smooth_Factor-1)) + 
+					(pstats->RxMIMOSignalStrength[rfPath])) /(Rx_Smooth_Factor);
+			}
+			RT_TRACE(COMP_DBG, "priv->stats.rx_rssi_percentage[%d]  = %d \n",rfPath, priv->stats.rx_rssi_percentage[rfPath] );
+		}
+	}
+	
+}	
+
+void Process_PWDB_8192S(struct r8192_priv * priv,struct rtllib_rx_stats * pstats,struct rtllib_network* pnet, struct sta_info *pEntry)
+{
+	long	UndecoratedSmoothedPWDB=0;
+
+	if(priv->rtllib->iw_mode == IW_MODE_MESH){
+		if(pnet){
+			if(priv->mshobj->ext_patch_get_peermp_rssi_param)
+				UndecoratedSmoothedPWDB = priv->mshobj->ext_patch_get_peermp_rssi_param(pnet);
+		}else
+			UndecoratedSmoothedPWDB = priv->undecorated_smoothed_pwdb;
+	}
+	else if(priv->rtllib->iw_mode == IW_MODE_ADHOC){
+		if(pEntry){
+			UndecoratedSmoothedPWDB = pEntry->rssi_stat.UndecoratedSmoothedPWDB;
+		}
+	}else
+		UndecoratedSmoothedPWDB = priv->undecorated_smoothed_pwdb;
+
+	if(pstats->bPacketToSelf || pstats->bPacketBeacon){
+		if(UndecoratedSmoothedPWDB < 0){	
+			UndecoratedSmoothedPWDB = pstats->RxPWDBAll;
+		}
+		
+		if(pstats->RxPWDBAll > (u32)UndecoratedSmoothedPWDB){
+			UndecoratedSmoothedPWDB = 	
+					( ((UndecoratedSmoothedPWDB)*(Rx_Smooth_Factor-1)) + 
+					(pstats->RxPWDBAll)) /(Rx_Smooth_Factor);
+			UndecoratedSmoothedPWDB = UndecoratedSmoothedPWDB + 1;
+		}else{
+			UndecoratedSmoothedPWDB = 	
+					( ((UndecoratedSmoothedPWDB)*(Rx_Smooth_Factor-1)) + 
+					(pstats->RxPWDBAll)) /(Rx_Smooth_Factor);
+		}
+		if(priv->rtllib->iw_mode == IW_MODE_MESH){
+			if(pnet){
+				if(priv->mshobj->ext_patch_set_peermp_rssi_param)
+					priv->mshobj->ext_patch_set_peermp_rssi_param(pnet,UndecoratedSmoothedPWDB);
+			}else
+				priv->undecorated_smoothed_pwdb = UndecoratedSmoothedPWDB;
+		}else if(priv->rtllib->iw_mode == IW_MODE_ADHOC){
+			if(pEntry){
+				pEntry->rssi_stat.UndecoratedSmoothedPWDB = UndecoratedSmoothedPWDB;
+			}
+		}else{
+			priv->undecorated_smoothed_pwdb = UndecoratedSmoothedPWDB;
+		}
+		rtl819x_update_rxsignalstatistics8192S(priv, pstats);
+	}
+}
+
+void Process_UiLinkQuality8192S(struct r8192_priv * priv,struct rtllib_rx_stats * pstats)
+{
+	u32	last_evm=0, nSpatialStream, tmpVal;
+
+	if(pstats->SignalQuality != 0)	
+	{
+		if (pstats->bPacketToSelf || pstats->bPacketBeacon)
+		{
+			if(priv->stats.ui_link_quality.TotalNum++ >= PHY_LINKQUALITY_SLID_WIN_MAX)
+			{
+				priv->stats.ui_link_quality.TotalNum = PHY_LINKQUALITY_SLID_WIN_MAX;
+				last_evm = priv->stats.ui_link_quality.elements[priv->stats.ui_link_quality.index];
+				priv->stats.ui_link_quality.TotalVal -= last_evm;
+			}
+			priv->stats.ui_link_quality.TotalVal += pstats->SignalQuality;
+
+			priv->stats.ui_link_quality.elements[priv->stats.ui_link_quality.index++] = pstats->SignalQuality;
+			if(priv->stats.ui_link_quality.index >= PHY_LINKQUALITY_SLID_WIN_MAX)
+				priv->stats.ui_link_quality.index = 0;
+
+
+			tmpVal = priv->stats.ui_link_quality.TotalVal/priv->stats.ui_link_quality.TotalNum;
+			priv->stats.signal_quality = tmpVal;
+			priv->stats.last_signal_strength_inpercent = tmpVal;
+		
+			for(nSpatialStream = 0; nSpatialStream<2 ; nSpatialStream++)	
+			{
+				if(pstats->RxMIMOSignalQuality[nSpatialStream] != -1)
+				{
+					if(priv->stats.rx_evm_percentage[nSpatialStream] == 0)	
+					{
+						priv->stats.rx_evm_percentage[nSpatialStream] = pstats->RxMIMOSignalQuality[nSpatialStream];
+					}
+					priv->stats.rx_evm_percentage[nSpatialStream] = 
+					( (priv->stats.rx_evm_percentage[nSpatialStream]*(Rx_Smooth_Factor-1)) + 
+					(pstats->RxMIMOSignalQuality[nSpatialStream]* 1)) /(Rx_Smooth_Factor);
+				}
+			}
+		}
+	}
+	else
+		;
+	
+}	
+#endif
+
+
+#ifdef _RTL8192_EXT_PATCH_
+void rtl8192se_process_phyinfo(struct r8192_priv * priv, u8* buffer,struct rtllib_rx_stats * pcurrent_stats,struct rtllib_network * pnet, struct sta_info *pEntry)
+#else
+void rtl8192se_process_phyinfo(struct r8192_priv * priv, u8* buffer,struct rtllib_rx_stats * pprevious_stats, struct rtllib_rx_stats * pcurrent_stats)
+#endif
+{
+#ifdef _RTL8192_EXT_PATCH_
+	if(!pcurrent_stats->bPacketMatchBSSID)
+		return;
+	Process_UI_RSSI_8192S(priv, pcurrent_stats);
+	Process_PWDB_8192S(priv, pcurrent_stats, pnet, pEntry);
+	Process_UiLinkQuality8192S(priv, pcurrent_stats);	
+#else
+	bool bcheck = false;
+	u8	rfpath;
+	u32 nspatial_stream, tmp_val;
+	static u32 slide_rssi_index=0, slide_rssi_statistics=0; 
+	static u32 slide_evm_index=0, slide_evm_statistics=0;
+	static u32 last_rssi=0, last_evm=0;
+	static u32 slide_beacon_adc_pwdb_index=0, slide_beacon_adc_pwdb_statistics=0;
+	static u32 last_beacon_adc_pwdb=0;
+
+	struct rtllib_hdr_3addr *hdr;
+	u16 sc ;
+	unsigned int frag,seq;
+	hdr = (struct rtllib_hdr_3addr *)buffer;
+	sc = le16_to_cpu(hdr->seq_ctl);
+	frag = WLAN_GET_SEQ_FRAG(sc);
+	seq = WLAN_GET_SEQ_SEQ(sc);
+	pcurrent_stats->Seq_Num = seq;
+	if(!pprevious_stats->bIsAMPDU)
+	{
+		bcheck = true;
+	}else {
+#if 0
+		if( !pcurrent_stats->bIsAMPDU || pcurrent_stats->bFirstMPDU)
+			bcheck = true;
+#endif
+	}
+		
+	if(slide_rssi_statistics++ >= PHY_RSSI_SLID_WIN_MAX)
+	{
+		slide_rssi_statistics = PHY_RSSI_SLID_WIN_MAX;
+		last_rssi = priv->stats.slide_signal_strength[slide_rssi_index];
+		priv->stats.slide_rssi_total -= last_rssi;
+	}
+	priv->stats.slide_rssi_total += pprevious_stats->SignalStrength;
+	
+	priv->stats.slide_signal_strength[slide_rssi_index++] = pprevious_stats->SignalStrength;
+	if(slide_rssi_index >= PHY_RSSI_SLID_WIN_MAX)
+		slide_rssi_index = 0;
+	
+	tmp_val = priv->stats.slide_rssi_total/slide_rssi_statistics;
+	priv->stats.signal_strength = rtl819x_translate_todbm(priv, (u8)tmp_val);
+	pcurrent_stats->rssi = priv->stats.signal_strength;
+	if(!pprevious_stats->bPacketMatchBSSID)
+	{
+		if(!pprevious_stats->bToSelfBA)
+			return;
+	}
+	
+	if(!bcheck)
+		return;
+
+	rtl819x_process_cck_rxpathsel(priv,pprevious_stats);
+
+	priv->stats.num_process_phyinfo++;
+#if 0
+	if(slide_rssi_statistics++ >= PHY_RSSI_SLID_WIN_MAX)
+	{
+		slide_rssi_statistics = PHY_RSSI_SLID_WIN_MAX;
+		last_rssi = priv->stats.slide_signal_strength[slide_rssi_index];
+		priv->stats.slide_rssi_total -= last_rssi;
+	}
+	priv->stats.slide_rssi_total += pprevious_stats->SignalStrength;
+	
+	priv->stats.slide_signal_strength[slide_rssi_index++] = pprevious_stats->SignalStrength;
+	if(slide_rssi_index >= PHY_RSSI_SLID_WIN_MAX)
+		slide_rssi_index = 0;
+	
+	tmp_val = priv->stats.slide_rssi_total/slide_rssi_statistics;
+	priv->stats.signal_strength = rtl819x_translate_todbm(priv, (u8)tmp_val);
+
+#endif
+	if(!pprevious_stats->bIsCCK && pprevious_stats->bPacketToSelf)
+	{
+		for (rfpath = RF90_PATH_A; rfpath < RF90_PATH_C; rfpath++)
+		{
+			if (!rtl8192_phy_CheckIsLegalRFPath(priv->rtllib->dev, rfpath))
+				continue;
+			RT_TRACE(COMP_DBG,"Jacken -> pPreviousstats->RxMIMOSignalStrength[rfpath]  = %d \n" ,pprevious_stats->RxMIMOSignalStrength[rfpath] );		 
+			if(priv->stats.rx_rssi_percentage[rfpath] == 0)
+			{
+				priv->stats.rx_rssi_percentage[rfpath] = pprevious_stats->RxMIMOSignalStrength[rfpath];
+			}	
+			if(pprevious_stats->RxMIMOSignalStrength[rfpath]  > priv->stats.rx_rssi_percentage[rfpath])
+			{
+				priv->stats.rx_rssi_percentage[rfpath] = 
+					( (priv->stats.rx_rssi_percentage[rfpath]*(Rx_Smooth_Factor-1)) + 
+					(pprevious_stats->RxMIMOSignalStrength[rfpath])) /(Rx_Smooth_Factor);
+				priv->stats.rx_rssi_percentage[rfpath] = priv->stats.rx_rssi_percentage[rfpath]  + 1;
+			}
+			else
+			{
+				priv->stats.rx_rssi_percentage[rfpath] = 
+					( (priv->stats.rx_rssi_percentage[rfpath]*(Rx_Smooth_Factor-1)) + 
+					(pprevious_stats->RxMIMOSignalStrength[rfpath])) /(Rx_Smooth_Factor);
+			}	
+			RT_TRACE(COMP_DBG,"Jacken -> priv->RxStats.RxRSSIPercentage[rfPath]  = %d \n" ,priv->stats.rx_rssi_percentage[rfpath] );
+		}		
+	}
+	
+	
+	if(pprevious_stats->bPacketBeacon)
+	{
+		if(slide_beacon_adc_pwdb_statistics++ >= PHY_Beacon_RSSI_SLID_WIN_MAX)
+		{
+			slide_beacon_adc_pwdb_statistics = PHY_Beacon_RSSI_SLID_WIN_MAX;	
+			last_beacon_adc_pwdb = priv->stats.Slide_Beacon_pwdb[slide_beacon_adc_pwdb_index];
+			priv->stats.Slide_Beacon_Total -= last_beacon_adc_pwdb;
+		}
+		priv->stats.Slide_Beacon_Total += pprevious_stats->RxPWDBAll;
+		priv->stats.Slide_Beacon_pwdb[slide_beacon_adc_pwdb_index] = pprevious_stats->RxPWDBAll;
+		slide_beacon_adc_pwdb_index++;
+		if(slide_beacon_adc_pwdb_index >= PHY_Beacon_RSSI_SLID_WIN_MAX)
+			slide_beacon_adc_pwdb_index = 0;
+		pprevious_stats->RxPWDBAll = priv->stats.Slide_Beacon_Total/slide_beacon_adc_pwdb_statistics;
+		if(pprevious_stats->RxPWDBAll >= 3)
+			pprevious_stats->RxPWDBAll -= 3;
+	}
+
+	RT_TRACE(COMP_RXDESC, "Smooth %s PWDB = %d\n", 
+				pprevious_stats->bIsCCK? "CCK": "OFDM",
+				pprevious_stats->RxPWDBAll);
+
+	if(pprevious_stats->bPacketToSelf || pprevious_stats->bPacketBeacon || pprevious_stats->bToSelfBA)
+	{
+		if(priv->undecorated_smoothed_pwdb < 0)	
+		{
+			priv->undecorated_smoothed_pwdb = pprevious_stats->RxPWDBAll;
+		}
+#if 1
+		if(pprevious_stats->RxPWDBAll > (u32)priv->undecorated_smoothed_pwdb)
+		{
+			priv->undecorated_smoothed_pwdb =	
+					( ((priv->undecorated_smoothed_pwdb)*(Rx_Smooth_Factor-1)) + 
+					(pprevious_stats->RxPWDBAll)) /(Rx_Smooth_Factor);
+			priv->undecorated_smoothed_pwdb = priv->undecorated_smoothed_pwdb + 1;
+		}
+		else
+		{
+			priv->undecorated_smoothed_pwdb =	
+					( ((priv->undecorated_smoothed_pwdb)*(Rx_Smooth_Factor-1)) + 
+					(pprevious_stats->RxPWDBAll)) /(Rx_Smooth_Factor);
+		}
+#else
+		if(pPreviousRfd->Status.RxPWDBAll > (u32)pHalData->UndecoratedSmoothedPWDB)
+		{
+			pHalData->UndecoratedSmoothedPWDB = 	
+					( ((pHalData->UndecoratedSmoothedPWDB)* 5) + (pPreviousRfd->Status.RxPWDBAll)) / 6;
+			pHalData->UndecoratedSmoothedPWDB = pHalData->UndecoratedSmoothedPWDB + 1;
+		}
+		else
+		{
+			pHalData->UndecoratedSmoothedPWDB = 	
+					( ((pHalData->UndecoratedSmoothedPWDB)* 5) + (pPreviousRfd->Status.RxPWDBAll)) / 6;
+		}		
+#endif
+		rtl819x_update_rxsignalstatistics8190pci(priv,pprevious_stats);
+	}
+
+	if(pprevious_stats->SignalQuality == 0)
+	{
+	}
+	else
+	{
+		if(pprevious_stats->bPacketToSelf || pprevious_stats->bPacketBeacon || pprevious_stats->bToSelfBA){
+			if(slide_evm_statistics++ >= PHY_RSSI_SLID_WIN_MAX){
+				slide_evm_statistics = PHY_RSSI_SLID_WIN_MAX;
+				last_evm = priv->stats.slide_evm[slide_evm_index];
+				priv->stats.slide_evm_total -= last_evm;
+			}
+	
+			priv->stats.slide_evm_total += pprevious_stats->SignalQuality;
+	
+			priv->stats.slide_evm[slide_evm_index++] = pprevious_stats->SignalQuality;
+			if(slide_evm_index >= PHY_RSSI_SLID_WIN_MAX)
+				slide_evm_index = 0;
+	
+			tmp_val = priv->stats.slide_evm_total/slide_evm_statistics;
+			priv->stats.signal_quality = tmp_val;
+			priv->stats.last_signal_strength_inpercent = tmp_val;
+		}
+
+		if(pprevious_stats->bPacketToSelf || pprevious_stats->bPacketBeacon || pprevious_stats->bToSelfBA)
+		{
+			for(nspatial_stream = 0; nspatial_stream<2 ; nspatial_stream++) 
+			{
+				if(pprevious_stats->RxMIMOSignalQuality[nspatial_stream] != -1)
+				{
+					if(priv->stats.rx_evm_percentage[nspatial_stream] == 0)	
+					{
+						priv->stats.rx_evm_percentage[nspatial_stream] = pprevious_stats->RxMIMOSignalQuality[nspatial_stream];
+					}
+					priv->stats.rx_evm_percentage[nspatial_stream] = 
+						( (priv->stats.rx_evm_percentage[nspatial_stream]* (Rx_Smooth_Factor-1)) + 
+						(pprevious_stats->RxMIMOSignalQuality[nspatial_stream]* 1)) / (Rx_Smooth_Factor);
+				}
+			}
+		}
+	}
+#endif
+	
+}
+
+
+
+void rtl8192se_TranslateRxSignalStuff(struct net_device *dev, 
+        struct sk_buff *skb,
+        struct rtllib_rx_stats * pstats,
+        prx_desc pdesc,	
+        prx_fwinfo pdrvinfo)
+{
+	struct r8192_priv *priv = (struct r8192_priv *)rtllib_priv(dev);
+	bool bpacket_match_bssid, bpacket_toself;
+	bool bPacketBeacon=false;
+	struct rtllib_hdr_3addr *hdr;
+#ifdef _RTL8192_EXT_PATCH_
+	struct rtllib_network* pnet=NULL;
+	u8	*psaddr;
+	struct sta_info *pEntry = NULL;
+#else
+	bool bToSelfBA=false;
+	static struct rtllib_rx_stats  previous_stats;
+#endif
+	u16 fc,type;
+	u8* tmp_buf;
+	u8	*praddr;
+
+	tmp_buf = skb->data + pstats->RxDrvInfoSize + pstats->RxBufShift;
+
+	hdr = (struct rtllib_hdr_3addr *)tmp_buf;
+	fc = le16_to_cpu(hdr->frame_ctl);
+	type = WLAN_FC_GET_TYPE(fc);	
+	praddr = hdr->addr1;
+
+#ifdef _RTL8192_EXT_PATCH_
+	psaddr = hdr->addr2;
+	if((priv->rtllib->iw_mode == IW_MODE_MESH) && (priv->mshobj->ext_patch_get_mpinfo))
+		pnet = priv->mshobj->ext_patch_get_mpinfo(dev,psaddr);	
+	if(priv->rtllib->iw_mode == IW_MODE_ADHOC){
+		pEntry = GetStaInfo(priv->rtllib, psaddr);
+	}
+#endif
+#ifdef _RTL8192_EXT_PATCH_
+	bpacket_match_bssid = ((RTLLIB_FTYPE_CTL != type) && (!pstats->bHwError) && (!pstats->bCRC)&& (!pstats->bICV));
+	if(pnet){
+		bpacket_match_bssid = bpacket_match_bssid;
+	}
+	else{
+		bpacket_match_bssid = bpacket_match_bssid &&
+			(!compare_ether_addr(priv->rtllib->current_network.bssid, 
+					     (fc & RTLLIB_FCTL_TODS)? hdr->addr1 : 
+					     (fc & RTLLIB_FCTL_FROMDS )? hdr->addr2 : hdr->addr3));
+	}
+#else
+	bpacket_match_bssid = ((RTLLIB_FTYPE_CTL != type) &&
+			(!compare_ether_addr(priv->rtllib->current_network.bssid,	
+					     (fc & RTLLIB_FCTL_TODS)? hdr->addr1 : 
+					     (fc & RTLLIB_FCTL_FROMDS )? hdr->addr2 : hdr->addr3))
+			&& (!pstats->bHwError) && (!pstats->bCRC)&& (!pstats->bICV));
+#endif
+	bpacket_toself =  bpacket_match_bssid & (!compare_ether_addr(praddr, priv->rtllib->dev->dev_addr));
+	if(WLAN_FC_GET_FRAMETYPE(fc)== RTLLIB_STYPE_BEACON){
+		bPacketBeacon = true;
+	}
+#ifndef _RTL8192_EXT_PATCH_  
+	if(WLAN_FC_GET_FRAMETYPE(fc) == RTLLIB_STYPE_BLOCKACK){
+		if ((!compare_ether_addr(praddr,dev->dev_addr)))
+			bToSelfBA = true;
+	}
+#endif	
+	if(bpacket_match_bssid){
+		priv->stats.numpacket_matchbssid++;
+	}
+	if(bpacket_toself){
+		priv->stats.numpacket_toself++;
+	}
+#ifdef _RTL8192_EXT_PATCH_
+	rtl8192se_query_rxphystatus(priv, pstats, pdesc, pdrvinfo, bpacket_match_bssid,
+			bpacket_toself ,bPacketBeacon);
+	rtl8192se_process_phyinfo(priv, tmp_buf,pstats,pnet, pEntry);
+
+#else
+	rtl8192se_process_phyinfo(priv, tmp_buf,&previous_stats, pstats);
+	rtl8192se_query_rxphystatus(priv, pstats, pdesc, pdrvinfo, &previous_stats, bpacket_match_bssid,
+			bpacket_toself ,bPacketBeacon, bToSelfBA);
+	rtl8192_record_rxdesc_forlateruse(pstats, &previous_stats);
+#endif	
+
+}
+
+void rtl8192se_UpdateReceivedRateHistogramStatistics(
+	struct net_device *dev,
+	struct rtllib_rx_stats* pstats
+	)
+{
+	struct r8192_priv *priv = (struct r8192_priv *)rtllib_priv(dev);
+	u32 rcvType=1;   
+	u32 rateIndex;
+	u32 preamble_guardinterval;  
+	    
+	#if 0
+	if (pRfd->queue_id == CMPK_RX_QUEUE_ID)
+		return;
+	#endif
+	if(pstats->bCRC)
+		rcvType = 2;
+	else if(pstats->bICV)
+		rcvType = 3;
+	    
+	if(pstats->bShortPreamble)
+		preamble_guardinterval = 1;
+	else
+		preamble_guardinterval = 0;
+
+	switch(pstats->rate)
+	{
+		case MGN_1M:    rateIndex = 0;  break;
+	    	case MGN_2M:    rateIndex = 1;  break;
+	    	case MGN_5_5M:  rateIndex = 2;  break;
+	    	case MGN_11M:   rateIndex = 3;  break;
+	    	case MGN_6M:    rateIndex = 4;  break;
+	    	case MGN_9M:    rateIndex = 5;  break;
+	    	case MGN_12M:   rateIndex = 6;  break;
+	    	case MGN_18M:   rateIndex = 7;  break;
+	    	case MGN_24M:   rateIndex = 8;  break;
+	    	case MGN_36M:   rateIndex = 9;  break;
+	    	case MGN_48M:   rateIndex = 10; break;
+	    	case MGN_54M:   rateIndex = 11; break;
+	    	case MGN_MCS0:  rateIndex = 12; break;
+	    	case MGN_MCS1:  rateIndex = 13; break;
+	    	case MGN_MCS2:  rateIndex = 14; break;
+	    	case MGN_MCS3:  rateIndex = 15; break;
+	    	case MGN_MCS4:  rateIndex = 16; break;
+	    	case MGN_MCS5:  rateIndex = 17; break;
+	    	case MGN_MCS6:  rateIndex = 18; break;
+	    	case MGN_MCS7:  rateIndex = 19; break;
+	    	case MGN_MCS8:  rateIndex = 20; break;
+	    	case MGN_MCS9:  rateIndex = 21; break;
+	    	case MGN_MCS10: rateIndex = 22; break;
+	    	case MGN_MCS11: rateIndex = 23; break;
+	    	case MGN_MCS12: rateIndex = 24; break;
+	    	case MGN_MCS13: rateIndex = 25; break;
+	    	case MGN_MCS14: rateIndex = 26; break;
+	    	case MGN_MCS15: rateIndex = 27; break;
+		default:        rateIndex = 28; break;
+	}
+	priv->stats.received_preamble_GI[preamble_guardinterval][rateIndex]++;
+	priv->stats.received_rate_histogram[0][rateIndex]++; 
+	priv->stats.received_rate_histogram[rcvType][rateIndex]++;
+}
+
 bool rtl8192se_rx_query_status_desc(struct net_device* dev, struct rtllib_rx_stats*  stats, rx_desc *pdesc, struct sk_buff* skb)
 {
 	struct r8192_priv* priv = rtllib_priv(dev);
@@ -2510,10 +3784,9 @@ bool rtl8192se_rx_query_status_desc(struct net_device* dev, struct rtllib_rx_sta
 	
 	if(stats->Length > 0x2000 || stats->Length < 24)
 	{
-		RT_TRACE(COMP_ERR, "Err RX pkt len = 0x%x\n", stats->Length);
 		stats->bHwError |= 1;
 	}
-	UpdateReceivedRateHistogramStatistics8190(dev, stats);
+	rtl8192se_UpdateReceivedRateHistogramStatistics(dev, stats);
 
 	if(!stats->bHwError)
 		stats->rate = HwRateToMRate92S((bool)(pdesc->RxHT), (u8)(pdesc->RxMCS));
@@ -2523,7 +3796,7 @@ bool rtl8192se_rx_query_status_desc(struct net_device* dev, struct rtllib_rx_sta
 		return false;
 	}
 
-	UpdateRxPktTimeStamp8190(dev, stats);	
+	rtl819x_UpdateRxPktTimeStamp(dev, stats);	
 
 	if((stats->RxBufShift + stats->RxDrvInfoSize) > 0)
 		stats->bShift = 1;	
@@ -2532,7 +3805,7 @@ bool rtl8192se_rx_query_status_desc(struct net_device* dev, struct rtllib_rx_sta
 	{
 		pDrvInfo = (rx_fwinfo*)(skb->data + stats->RxBufShift);
 			
-		TranslateRxSignalStuff819xpci(dev, skb, stats, pdesc, pDrvInfo); 
+		rtl8192se_TranslateRxSignalStuff(dev, skb, stats, pdesc, pDrvInfo); 
 
 	}
 	return true;	
@@ -2564,13 +3837,6 @@ void rtl8192se_halt_adapter(struct net_device *dev, bool bReset)
 
 	priv->rtllib->state = RTLLIB_NOLINK;
 	rtl8192se_update_msr(dev);
-	if(priv->rtllib->RfOffReason == RF_CHANGE_BY_IPS && priv->LedStrategy == SW_LED_MODE8)	
-	{
-		SET_RTL8192SE_RF_SLEEP(dev);
-		return;
-	}
-	if(priv->bDriverIsGoingToUnload)
-	write_nic_byte(dev,0x560,0x0);
 #if 1
 	PHY_SetRtl8192seRfHalt(dev);
 #endif
@@ -2630,7 +3896,6 @@ void rtl8192se_update_ratr_table(struct net_device* dev,u8* pMcsRate,struct sta_
 	u8 bCurTxBW40MHz, bCurShortGI40MHz, bCurShortGI20MHz;
 	
 	if(ieee->iw_mode == IW_MODE_ADHOC){	
-
 		if(pEntry == NULL){
 			printk("Doesn't have match Entry\n");
 			return;
@@ -2678,6 +3943,7 @@ void rtl8192se_update_ratr_table(struct net_device* dev,u8* pMcsRate,struct sta_
 			ratr_value &= 0x0000000D;
 			break;
 		case IEEE_G:
+		case IEEE_G|IEEE_B:
 			ratr_value &= 0x00000FF5;
 			break;
 		case IEEE_N_24G:
@@ -2731,6 +3997,7 @@ void rtl8192se_update_ratr_table(struct net_device* dev,u8* pMcsRate,struct sta_
 	}
 	
 	write_nic_dword(dev, ARFR0+ratr_index*4, ratr_value);
+	RT_TRACE(COMP_RATE, "%s: ratr_index=%d ratr_table=0x%8.8x\n", __FUNCTION__,ratr_index, read_nic_dword(dev, ARFR0+ratr_index*4));
 	if (ratr_value & 0xfffff000){
 		rtl8192se_set_fw_cmd(dev, FW_CMD_RA_REFRESH_N);
 	}
@@ -2755,18 +4022,25 @@ int r8192se_resume_firm(struct net_device *dev)
 
 	return 0;
 }
-
 void PHY_SetRtl8192seRfHalt(struct net_device* dev)
 {
 	struct r8192_priv* priv = rtllib_priv(dev);
 	PRT_POWER_SAVE_CONTROL	pPSC = (PRT_POWER_SAVE_CONTROL)(&(priv->rtllib->PowerSaveControl));
-
 	u8 u1bTmp;
+
 	if(priv->rtllib->RfOffReason == RF_CHANGE_BY_IPS && priv->LedStrategy == SW_LED_MODE8)	
 	{
 		SET_RTL8192SE_RF_SLEEP(dev);
 		return;
 	}
+
+#ifdef LOW_DOWN_POWER
+	if(0)
+#else
+	if(priv->bDriverIsGoingToUnload)
+#endif
+		write_nic_byte(dev,0x560,0x0);
+
 	RT_TRACE(COMP_PS, "PHY_SetRtl8192seRfHalt save BB/RF\n");
 	u1bTmp = read_nic_byte(dev, LDOV12D_CTRL);
 	u1bTmp |= BIT0;
@@ -2786,7 +4060,11 @@ void PHY_SetRtl8192seRfHalt(struct net_device* dev)
 	write_nic_word(dev, CMDR, 0x0000);
 
 
+#ifdef LOW_DOWN_POWER
+	if(0)
+#else
 	if(priv->bDriverIsGoingToUnload)
+#endif
         {
 	       u1bTmp = read_nic_byte(dev, (SYS_FUNC_EN+ 1));	
 		u1bTmp &= ~(BIT0);
@@ -2804,13 +4082,17 @@ void PHY_SetRtl8192seRfHalt(struct net_device* dev)
 		}
 	}
 
+#ifdef LOW_DOWN_POWER
+        if((priv->rtllib->RfOffReason & (RF_CHANGE_BY_IPS | RF_CHANGE_BY_HW)) &&
+                !priv->bDriverIsGoingToUnload)
+#else
 	if(priv->rtllib->RfOffReason==RF_CHANGE_BY_IPS  && !priv->bDriverIsGoingToUnload)
+#endif
 	{
 		write_nic_byte(dev, 0x03, 0xF9);
 	} else		
 	{
-		printk("Save max pwr\n");
-		write_nic_byte(dev, 0x03, 0x71);
+		write_nic_byte(dev, 0x03, 0xF9);
 	}
 	write_nic_byte(dev, SYS_CLKR+1, 0x70);
 	write_nic_byte(dev, AFE_PLL_CTRL+1, 0x68);
@@ -2818,8 +4100,6 @@ void PHY_SetRtl8192seRfHalt(struct net_device* dev)
 	write_nic_byte(dev, LDOA15_CTRL, 0x34);
 	write_nic_byte(dev, AFE_XTAL_CTRL, 0x0E);
 	RT_SET_PS_LEVEL(pPSC, RT_RF_OFF_LEVL_HALT_NIC);
-	udelay(100);
-	udelay(20);
 }	
 
 
@@ -2833,279 +4113,34 @@ void PHY_SetRtl8192seRfHalt(struct net_device* dev)
 *	/return	void
 *	
 */
-#ifdef _RTL8192_EXT_PATCH_
 void UpdateHalRAMask8192SE(
-	struct net_device* dev,
-	bool bMulticast,
-	u8   macId,
-	u8*  MacAddr,
-	u8   wirelessMode,
-	u8   rssi_level)
-{
-	struct r8192_priv *priv = rtllib_priv(dev);
-	struct rtllib_device *ieee = priv->rtllib;
-	PRT_HIGH_THROUGHPUT	pHTInfo =ieee->pHTInfo;
-	u32	ratr_bitmap, RateSet;
-	u8	shortGI_rate = 0;
-	u32	tmp_ratr_value = 0;
-	u32	mask=0, band = 0;
-	u8	bShortGI = 0;
-
-	rtl8192_config_rate(dev, (u16*)(&RateSet));
-	RateSet |= (*((u16*)(ieee->dot11HTOperationalRateSet))) << 12;
-	ratr_bitmap = RateSet;
-	
-	switch (wirelessMode)
-	{
-		case WIRELESS_MODE_B:
-		{
-			band |= WIRELESS_11B;
-			ratr_bitmap &= 0x0000000d;
-		}
-		break;
-
-		case WIRELESS_MODE_G:
-		{
-			band |= (WIRELESS_11G | WIRELESS_11B);
-			if(rssi_level == 1)
-				ratr_bitmap &= 0x00000f00;
-			else if(rssi_level == 2)
-				ratr_bitmap &= 0x00000ff0;
-			else
-				ratr_bitmap &= 0x00000ff5;
-		}
-		break;
-			
-		case WIRELESS_MODE_A:
-		{
-			band |= BIT2;
-			ratr_bitmap &= 0x00000ff0;
-		}
-		break;
-			
-		case WIRELESS_MODE_N_24G:
-		case WIRELESS_MODE_N_5G:
-		{
-			band |= (WIRELESS_11N| WIRELESS_11G| WIRELESS_11B);
-			if(macId == 0)	
-			{
-				if(ieee->pHTInfo->PeerMimoPs == MIMO_PS_STATIC)
-				{
-					if(rssi_level == 1)
-						ratr_bitmap &= 0x00070000;
-					else if(rssi_level == 2)
-						ratr_bitmap &= 0x0007f000;
-					else
-						ratr_bitmap &= 0x0007f005;
-				}
-				else
-				{
-					if (	priv->rf_type == RF_1T2R ||
-						priv->rf_type == RF_1T1R	)
-					{
-						if (pHTInfo->bCurTxBW40MHz)
-						{
-							if(rssi_level == 1)
-								ratr_bitmap &= 0x000f0000;
-							else if(rssi_level == 2)
-								ratr_bitmap &= 0x000ff000;
-							else
-								ratr_bitmap &= 0x000ff015;
-						}
-						else
-						{
-							if(rssi_level == 1)
-								ratr_bitmap &= 0x000f0000;
-							else if(rssi_level == 2)
-								ratr_bitmap &= 0x000ff000;
-							else
-								ratr_bitmap &= 0x000ff005;
-						}	
-					}
-					else
-					{
-						if (pHTInfo->bCurTxBW40MHz)
-						{
-							if(rssi_level == 1)
-								ratr_bitmap &= 0x0f0f0000;
-							else if(rssi_level == 2)
-								ratr_bitmap &= 0x0f0ff000;
-							else
-								ratr_bitmap &= 0x0f0ff015;
-						}
-						else
-						{
-							if(rssi_level == 1)
-								ratr_bitmap &= 0x0f0f0000;
-							else if(rssi_level == 2)
-								ratr_bitmap &= 0x0f0ff000;
-							else
-								ratr_bitmap &= 0x0f0ff005;
-						}
-					}
-				}
-
-				if( (pHTInfo->bCurTxBW40MHz && pHTInfo->bCurShortGI40MHz) ||
-					(!pHTInfo->bCurTxBW40MHz && pHTInfo->bCurShortGI20MHz)	)
-				{
-					bShortGI = true;
-
-					tmp_ratr_value = (ratr_bitmap>>12);
-					for(shortGI_rate=15; shortGI_rate>0; shortGI_rate--)
-					{
-						if((1<<shortGI_rate) & tmp_ratr_value)
-							break;
-					}	
-					shortGI_rate = (shortGI_rate<<12)|(shortGI_rate<<8)|(shortGI_rate<<4)|(shortGI_rate);
-					write_nic_byte(dev, SG_RATE, shortGI_rate);
-				}
-			}
-			else if(macId == 1)
-			{
-				if ( priv->rf_type == RF_1T2R || priv->rf_type == RF_1T1R )
-				{
-					if (pHTInfo->bCurBW40MHz)
-					{
-						ratr_bitmap &= 0x000ff015;
-					}
-					else
-					{
-						ratr_bitmap &= 0x000ff005;
-					}
-				}
-				else
-				{
-					if (pHTInfo->bCurBW40MHz)
-					{
-						ratr_bitmap &= 0x0f0ff015;
-					}
-					else
-					{
-						ratr_bitmap &= 0x0f0ff005;
-					}				
-				}
-			}
-			else
-			{
-				if(ieee->iw_mode == IW_MODE_MESH)
-				{
-					if(ieee->ext_patch_rtllib_update_ratr_mask)
-						ieee->ext_patch_rtllib_update_ratr_mask(dev,MacAddr,rssi_level,&ratr_bitmap,&bShortGI);
-				}				
-			}
-		}
-		break;
-
-		default:
-		{
-			band |= (WIRELESS_11N| WIRELESS_11G| WIRELESS_11B);
-			if(priv->rf_type == RF_1T2R)
-			{
-				ratr_bitmap &= 0x000ff0ff;
-			}
-			else
-			{
-				ratr_bitmap &= 0x0f0ff0ff;
-			}
-		}
-	}
-
-	if (priv->card_8192_version >= VERSION_8192S_BCUT)
-		ratr_bitmap &= 0x0FFFFFFF;
-	else if (priv->card_8192_version == VERSION_8192S_ACUT)
-		ratr_bitmap &= 0x0FFFFFF0;	
-
-	if(bShortGI)
-		ratr_bitmap |= 0x10000000;
-	
-	if(macId == 0)
-	{
-		if(pHTInfo->IOTAction & HT_IOT_ACT_WA_IOT_Broadcom)
-		{
-			ratr_bitmap &= 0xfffffff0; 
-			RT_TRACE(COMP_RATE, "UpdateHalRATRTable8192SE(), for HT_IOT_ACT_WA_IOT_Broadcom, ratr_value = 0x%x\n", ratr_bitmap);
-		}
-		if(pHTInfo->IOTAction & HT_IOT_ACT_DISABLE_SHORT_GI)
-		{
-			ratr_bitmap &=0x0fffffff;
-		}		
-	}
-	mask |= (bMulticast ? 1 : 0)<<9 | (macId & 0x1f)<<4 | (band & 0xf);
-
-	RT_TRACE(COMP_RATE, "UpdateHalRAMask92SE(): mask = %x, bitmap = %x\n", mask, ratr_bitmap);
-	write_nic_dword(dev, 0x2c4, ratr_bitmap);
-	write_nic_dword(dev, WFM5, (FW_RA_UPDATE_MASK | (mask << 8)));
-
-}
-#else
-void
-UpdateHalRAMask8192SE(
-	struct net_device* dev,
-	bool				bMulticast,
-	u8				macId, 
-	u8*				MacAddr, 
-	u8*				pEntry, 
-	u8				rssi_level)
-
-{
+			struct net_device* dev,
+			bool bMulticast,
+			u8   macId,
+			u8   MimoPs,
+			u8   WirelessMode,
+			u8   bCurTxBW40MHz,
+			u8   rssi_level){
 	struct r8192_priv* 	priv = rtllib_priv(dev);
-	PRT_HIGH_THROUGHPUT	pHTInfo = priv->rtllib->pHTInfo;
-	WIRELESS_MODE		WirelessMode = WIRELESS_MODE_G;
-	u32			ratr_bitmap, RateSet;
-	u8			shortGI_rate = 0, MimoPs = 0, ratr_index = 8;
-	u32			tmp_ratr_value = 0;
-	u32			mask=0, band = 0;
-	bool			bShortGI = false, bCurTxBW40MHz = 0;
-	struct 	rtllib_device* ieee = priv->rtllib;
+	struct rtllib_device* ieee = priv->rtllib;
+	PRT_HIGH_THROUGHPUT pHTInfo = priv->rtllib->pHTInfo;
 	u8* 	pMcsRate = ieee->dot11HTOperationalRateSet;
+	u32	ratr_bitmap, RateSet, mask=0, band = 0, ratr_value = 0;
+	u8   shortGI_rate = 0, bShortGI = false; 
 
-	if(macId == 0)
-	{
-		MimoPs = pHTInfo->PeerMimoPs;
-		WirelessMode = priv->rtllib->mode;
-		bCurTxBW40MHz = pHTInfo->bCurTxBW40MHz;
-	}	
-	else if (macId == 1)
-	{
-		WirelessMode = WIRELESS_MODE_B;
-	}
-	else
-	{
-#ifdef DO_DO_LIST
-		if(pEntry == NULL)		
-		{
-			printk("Doesn't have match Entry\n");
-			return;
-		}
-	
-		MimoPs = pEntry->HTInfo.MimoPs;
-
-		if(IS_WIRELESS_MODE_G(Adapter) && (pEntry->WirelessMode == WIRELESS_MODE_N_24G))
-			WirelessMode = pMgntInfo->dot11CurrentWirelessMode;
-		else	
-			WirelessMode = pEntry->WirelessMode;
-		
-		bCurTxBW40MHz = pEntry->HTInfo.bBw40MHz;
-#endif		
-	}
+	RT_TRACE(COMP_RATE, "%s: macid:%d MimoPs=%d WirelessMode=0x%x bCurTxBW40MHz=%d rssid_level=%d\n",__FUNCTION__, macId, MimoPs, WirelessMode,bCurTxBW40MHz, rssi_level);
 	rtl8192_config_rate(dev, (u16*)&RateSet);
 	RateSet |= (*(u16*)(pMcsRate)) << 12;
 	ratr_bitmap = RateSet;
-	switch (WirelessMode)
-	{
+	
+	switch (WirelessMode){
 		case WIRELESS_MODE_B:
-		{
 			band |= WIRELESS_11B;
-			ratr_index = RATR_INX_WIRELESS_B;
 			ratr_bitmap &= 0x0000000d;
-		}
-		break;
-
+			break;
 		case WIRELESS_MODE_G:
 		case (WIRELESS_MODE_G |WIRELESS_MODE_B):
-		{
 			band |= (WIRELESS_11G | WIRELESS_11B);
-			ratr_index = RATR_INX_WIRELESS_GB;
 			
 			if(rssi_level == 1)
 				ratr_bitmap &= 0x00000f00;
@@ -3113,133 +4148,107 @@ UpdateHalRAMask8192SE(
 				ratr_bitmap &= 0x00000ff0;
 			else
 				ratr_bitmap &= 0x00000ff5;
-		}
-		break;
-			
+			break;
 		case WIRELESS_MODE_A:
-		{
 			band |= WIRELESS_11A;
-			ratr_index = RATR_INX_WIRELESS_A;
 			ratr_bitmap &= 0x00000ff0;
-		}
-		break;
-			
+			break;
 		case WIRELESS_MODE_N_24G:
 		case WIRELESS_MODE_N_5G:
 		{
 			band |= (WIRELESS_11N| WIRELESS_11G| WIRELESS_11B);
-			ratr_index = RATR_INX_WIRELESS_NGB;
-
-			if(MimoPs == MIMO_PS_STATIC)
-				{
-					if(rssi_level == 1)
-						ratr_bitmap &= 0x00070000;
-					else if(rssi_level == 2)
-						ratr_bitmap &= 0x0007f000;
-					else
-						ratr_bitmap &= 0x0007f005;
-				}
+			if(MimoPs == MIMO_PS_STATIC){
+				if(rssi_level == 1)
+					ratr_bitmap &= 0x00070000;
+				else if(rssi_level == 2)
+					ratr_bitmap &= 0x0007f000;
 				else
+					ratr_bitmap &= 0x0007f005;
+			}else{
+				if (priv->rf_type == RF_1T2R || priv->rf_type == RF_1T1R)
 				{
-				if (	priv->rf_type == RF_1T2R || priv->rf_type == RF_1T1R	)
+
+						if(rssi_level == 1)
+							ratr_bitmap &= 0x000f0000;
+					else if(rssi_level ==3)
+						ratr_bitmap &= 0x000fc000;
+					else if(rssi_level == 5)
+							ratr_bitmap &= 0x000ff000;
+					else  
 					{
-					if (bCurTxBW40MHz)
-						{
-							if(rssi_level == 1)
-								ratr_bitmap &= 0x000f0000;
-							else if(rssi_level == 2)
-								ratr_bitmap &= 0x000ff000;
-							else
-								ratr_bitmap &= 0x000ff015;
-						}
+						if (bCurTxBW40MHz)
+							ratr_bitmap &= 0x000ff015;
 						else
-						{
-							if(rssi_level == 1)
-								ratr_bitmap &= 0x000f0000;
-							else if(rssi_level == 2)
-								ratr_bitmap &= 0x000ff000;
-							else
-								ratr_bitmap &= 0x000ff005;
-						}	
-					}
-					else
-					{
-					if (bCurTxBW40MHz)
-						{
-							if(rssi_level == 1)
-								ratr_bitmap &= 0x0f0f0000;
-							else if(rssi_level == 2)
-								ratr_bitmap &= 0x0f0ff000;
-							else
-								ratr_bitmap &= 0x0f0ff015;
-						}
-						else
-						{
-							if(rssi_level == 1)
-								ratr_bitmap &= 0x0f0f0000;
-							else if(rssi_level == 2)
-								ratr_bitmap &= 0x0f0ff000;
-							else
-								ratr_bitmap &= 0x0f0ff005;
-						}
-					}
+							ratr_bitmap &= 0x000ff005;
+					}	
+
 				}
-				if( (pHTInfo->bCurTxBW40MHz && pHTInfo->bCurShortGI40MHz) ||
-					(!pHTInfo->bCurTxBW40MHz && pHTInfo->bCurShortGI20MHz)	)
+						else
 				{
+						if(rssi_level == 1)
+						ratr_bitmap &= 0x0f8f0000;
+					else if(rssi_level == 3)
+						ratr_bitmap &= 0x0f8fc000;					
+					else if(rssi_level == 5)
+						ratr_bitmap &= 0x0f8ff000;		
+					else
+					{						
+						if (bCurTxBW40MHz)						
+							ratr_bitmap &= 0x0f8ff015;
+						else
+							ratr_bitmap &= 0x0f8ff005;
+					}
+					
+				}
+			}
+			if( (pHTInfo->bCurTxBW40MHz && pHTInfo->bCurShortGI40MHz) ||
+				(!pHTInfo->bCurTxBW40MHz && pHTInfo->bCurShortGI20MHz)){
 				if(macId == 0)
 					bShortGI = true;
 				else
 					bShortGI = false;
 			}
+			break;
 		}
-		break;
-
 		default:
 			band |= (WIRELESS_11N| WIRELESS_11G| WIRELESS_11B);
-			ratr_index = RATR_INX_WIRELESS_NGB;
 			
 			if(priv->rf_type == RF_1T2R)
 				ratr_bitmap &= 0x000ff0ff;
 			else
-				ratr_bitmap &= 0x0f0ff0ff;
+				ratr_bitmap &= 0x0f8ff0ff;
 			break;
 	}
 
-	if (priv->card_8192_version >= VERSION_8192S_BCUT)
+	if (priv->card_8192_version  >= VERSION_8192S_BCUT)
 		ratr_bitmap &= 0x0FFFFFFF;
-	else if (priv->card_8192_version == VERSION_8192S_ACUT)
+	else if (priv->card_8192_version  == VERSION_8192S_ACUT)
 		ratr_bitmap &= 0x0FFFFFF0;	
 
-	if(bShortGI)
-	{
+	if(bShortGI){
 		ratr_bitmap |= 0x10000000;
-		tmp_ratr_value = (ratr_bitmap>>12);
-		for(shortGI_rate=15; shortGI_rate>0; shortGI_rate--)
-		{
-			if((1<<shortGI_rate) & tmp_ratr_value)
+		ratr_value = (ratr_bitmap>>12);
+		for(shortGI_rate=15; shortGI_rate>0; shortGI_rate--){
+			if((1<<shortGI_rate) & ratr_value)
 				break;
 		}	
 		shortGI_rate = (shortGI_rate<<12)|(shortGI_rate<<8)|(shortGI_rate<<4)|(shortGI_rate);
 		write_nic_byte(dev, SG_RATE, shortGI_rate);
 	}	
 	
-	if(macId == 0)	{
+	if(macId == 0)
+	{
 		if(priv->rtllib->pHTInfo->IOTAction & HT_IOT_ACT_WA_IOT_Broadcom)
 			ratr_bitmap &= 0xfffffff0; 
 		if(priv->rtllib->pHTInfo->IOTAction & HT_IOT_ACT_DISABLE_SHORT_GI)
 			ratr_bitmap &=0x0fffffff;
 	}		
-
-		
 	mask |= (bMulticast ? 1 : 0)<<9 | (macId & 0x1f)<<4 | (band & 0xf);
 
-	RT_TRACE(COMP_RATE, "UpdateHalRAMask92SE(): mask = %x, bitmap = %x ratr_index = %x\n", mask, ratr_bitmap, ratr_index);
+	RT_TRACE(COMP_RATE, "%s(): mask = %x, bitmap = %x\n",__func__, mask, ratr_bitmap);
 	write_nic_dword(dev, 0x2c4, ratr_bitmap);
 	write_nic_dword(dev, WFM5, (FW_RA_UPDATE_MASK | (mask << 8)));
-
 }
-#endif
 
 u8 HalSetSysClk8192SE( struct net_device *dev, u8 Data)
 {
@@ -3308,10 +4317,10 @@ u8 HalSetSysClk8192SE( struct net_device *dev, u8 Data)
 #endif
 }
 
-#ifndef _RTL8192_EXT_PATCH_
 static u8 LegacyRateSet[12] = {0x02 , 0x04 , 0x0b , 0x16 , 0x0c , 0x12 , 0x18 , 0x24 , 0x30 , 0x48 , 0x60 , 0x6c};
 void GetHwReg8192SE(struct net_device *dev,u8 variable,u8* val)
 {
+	struct r8192_priv* priv = rtllib_priv(dev);
 	switch(variable)
 	{
 		case HW_VAR_INIT_TX_RATE: 
@@ -3324,11 +4333,21 @@ void GetHwReg8192SE(struct net_device *dev,u8 variable,u8* val)
 			}
 			break;
 
+		case HW_VAR_RCR:
+			*((u32*)(val)) = priv->ReceiveConfig;
+		break;
+		
+		case HW_VAR_MRC:
+		{
+			*((bool*)(val)) = priv->bCurrentMrcSwitch;
+		}
+		break;
+		
 		default:
 			break;
 	}
 }
-#endif
+
 void SetHwReg8192SE(struct net_device *dev,u8 variable,u8* val)
 {
 	struct r8192_priv* priv = rtllib_priv(dev);
@@ -3401,6 +4420,118 @@ void SetHwReg8192SE(struct net_device *dev,u8 variable,u8* val)
 			}
 		}
 		break;
+                case HW_VAR_AC_PARAM:
+                {
+                        u8      pAcParam = *((u8*)val);
+#ifdef MERGE_TO_DO
+                        u32     eACI = GET_WMM_AC_PARAM_ACI(pAcParam);
+#else
+                        u32     eACI = pAcParam;
+#endif
+                        u8              u1bAIFS;
+                        u32             u4bAcParam;
+                        u8 mode = priv->rtllib->mode;
+                        struct rtllib_qos_parameters *qos_parameters = &priv->rtllib->current_network.qos_data.parameters;
+
+
+                        u1bAIFS = qos_parameters->aifs[pAcParam] * ((mode&(IEEE_G|IEEE_N_24G)) ?9:20) + aSifsTime;
+
+                        dm_init_edca_turbo(dev);
+
+                        u4bAcParam = (  (((u32)(qos_parameters->tx_op_limit[pAcParam])) << AC_PARAM_TXOP_LIMIT_OFFSET)  |
+                                                        (((u32)(qos_parameters->cw_max[pAcParam])) << AC_PARAM_ECW_MAX_OFFSET)  |
+                                                        (((u32)(qos_parameters->cw_min[pAcParam])) << AC_PARAM_ECW_MIN_OFFSET)  |
+                                                        (((u32)u1bAIFS) << AC_PARAM_AIFS_OFFSET)        );
+
+			printk("%s():HW_VAR_AC_PARAM eACI:%x:%x\n", __func__,eACI, u4bAcParam);
+                        switch(eACI)
+                        {
+                        case AC1_BK:
+                                write_nic_dword(dev, EDCAPARA_BK, u4bAcParam);
+                                break;
+
+                        case AC0_BE:
+                                write_nic_dword(dev, EDCAPARA_BE, u4bAcParam);
+                                break;
+
+                        case AC2_VI:
+                                write_nic_dword(dev, EDCAPARA_VI, u4bAcParam);
+                                break;
+
+                        case AC3_VO:
+                                write_nic_dword(dev, EDCAPARA_VO, u4bAcParam);
+                                break;
+
+                        default:
+                                printk("SetHwReg8185(): invalid ACI: %d !\n", eACI);
+                                break;
+                        }
+                        if(priv->AcmMethod != eAcmWay2_SW)
+                                priv->rtllib->SetHwRegHandler(dev, HW_VAR_ACM_CTRL, (u8*)(&pAcParam));
+                }
+                break;
+        	case HW_VAR_ACM_CTRL:
+                {
+                        struct rtllib_qos_parameters *qos_parameters = &priv->rtllib->current_network.qos_data.parameters;
+                        u8      pAcParam = *((u8*)val);
+#ifdef MERGE_TO_DO
+                        u32     eACI = GET_WMM_AC_PARAM_ACI(pAciAifsn);
+#else
+                        u32     eACI = pAcParam;
+#endif
+                        PACI_AIFSN      pAciAifsn = (PACI_AIFSN)&(qos_parameters->aifs[0]);
+                        u8              ACM = pAciAifsn->f.ACM;
+                        u8              AcmCtrl = read_nic_byte( dev, AcmHwCtrl);
+
+                        printk("===========>%s():HW_VAR_ACM_CTRL:%x\n", __func__,eACI);
+                        AcmCtrl = AcmCtrl | ((priv->AcmMethod == 2)?0x0:0x1);
+
+                        if( ACM )
+                        { 
+                                switch(eACI)
+                                {
+                                case AC0_BE:
+                                        AcmCtrl |= AcmHw_BeqEn;
+                                        break;
+
+                                case AC2_VI:
+                                        AcmCtrl |= AcmHw_ViqEn;
+                                        break;
+                                case AC3_VO:
+                                        AcmCtrl |= AcmHw_VoqEn;
+                                        break;
+
+                                default:
+                                        RT_TRACE( COMP_QOS, "SetHwReg8185(): [HW_VAR_ACM_CTRL] ACM set failed: eACI is %d\n", eACI );
+                                        break;
+                                }
+                        }
+                        else
+                        { 
+                                switch(eACI)
+                                {
+                                case AC0_BE:
+                                        AcmCtrl &= (~AcmHw_BeqEn);
+                                        break;
+
+                                case AC2_VI:
+                                        AcmCtrl &= (~AcmHw_ViqEn);
+                                        break;
+
+                                case AC3_VO:
+                                        AcmCtrl &= (~AcmHw_BeqEn);
+                                        break;
+
+                                default:
+                                        break;
+                                }
+                        }
+
+                        RT_TRACE( COMP_QOS, "SetHwReg8190pci(): [HW_VAR_ACM_CTRL] Write 0x%X\n", AcmCtrl );
+                        write_nic_byte(dev, AcmHwCtrl, AcmCtrl );
+                }
+                break;
+
 		case HW_VAR_BASIC_RATE:
 		{
 			u16				BrateCfg = 0;
@@ -3423,6 +4554,9 @@ void SetHwReg8192SE(struct net_device *dev,u8 variable,u8* val)
 				BrateCfg &= 0x1f0;
 				printk("HW_VAR_BASIC_RATE, HT_IOT_ACT_WA_IOT_Broadcom, BrateCfg = 0x%x\n", BrateCfg);
 			}
+
+			BrateCfg |= 0x01; 
+			
 			write_nic_byte(dev, RRSR, BrateCfg&0xff);
 			write_nic_byte(dev, RRSR+1, (BrateCfg>>8)&0xff);
 
@@ -3497,13 +4631,19 @@ void SetHwReg8192SE(struct net_device *dev,u8 variable,u8* val)
 		}
 		break;
 		
+		case HW_VAR_RCR:
+		{
+			write_nic_dword(dev, RCR,((u32*)(val))[0]);
+			priv->ReceiveConfig = ((u32*)(val))[0];
+		}
+		break;
+		
 		case HW_VAR_CECHK_BSSID:
 		{
 			u32	RegRCR, Type;
 
 			Type = ((u8*)(val))[0];
-			RegRCR = read_nic_dword(dev,RCR);
-			priv->ReceiveConfig = RegRCR;
+			priv->rtllib->GetHwRegHandler(dev, HW_VAR_RCR, (u8*)(&RegRCR));
 			
 #if (RTL92SE_FPGA_VERIFY == 1)
 			RegRCR &= (~RCR_CBSSID);
@@ -3514,8 +4654,7 @@ void SetHwReg8192SE(struct net_device *dev,u8 variable,u8* val)
 			else if (Type == false)
 				RegRCR &= (~RCR_CBSSID);
 #endif
-			write_nic_dword(dev, RCR,RegRCR);
-			priv->ReceiveConfig = RegRCR;
+			priv->rtllib->SetHwRegHandler( dev, HW_VAR_RCR, (u8*)(&RegRCR) );
 #endif			
 		}
 		break;
@@ -3531,17 +4670,17 @@ void SetHwReg8192SE(struct net_device *dev,u8 variable,u8* val)
 			{
 				for(eACI = 0; eACI < AC_MAX; eACI++)
 				{
-					priv->rtllib->SetHwRegHandler(dev, HW_VAR_AC_PARAM, GET_WMM_PARAM_ELE_SINGLE_AC_PARAM(pStaQos->WMMParamEle, eACI) );
+					priv->rtllib->SetHwRegHandler(dev, HW_VAR_AC_PARAM, (u8*)(&eACI));
 				}
 			}
 			else
 			{
 				u8	u1bAIFS = aSifsTime + (2 * priv->slot_time);
 				
-				write_nic_byte(dev, REG_EDCA_VO_PARAM, u1bAIFS);
-				write_nic_byte(dev, REG_EDCA_VI_PARAM, u1bAIFS);
-				write_nic_byte(dev, REG_EDCA_BE_PARAM, u1bAIFS);
-				write_nic_byte(dev, REG_EDCA_BK_PARAM, u1bAIFS);
+				write_nic_byte(dev, EDCAPARA_VO, u1bAIFS);
+				write_nic_byte(dev, EDCAPARA_VI, u1bAIFS);
+				write_nic_byte(dev, EDCAPARA_BE, u1bAIFS);
+				write_nic_byte(dev, EDCAPARA_BK, u1bAIFS);
 			}
 #endif
 		}
@@ -3559,6 +4698,41 @@ void SetHwReg8192SE(struct net_device *dev,u8 variable,u8* val)
 		}
 		break;	
 
+	case HW_VAR_SIFS:		
+		write_nic_byte(dev, SIFS_OFDM, val[0]);
+		write_nic_byte(dev, SIFS_OFDM+1, val[1]);
+		break;
+		
+	case HW_VAR_MRC:
+		{
+			
+			bool bMrcToSet = *( (bool*)val );
+			u8	U1bData = 0;
+		
+			if( bMrcToSet )
+			{
+
+				rtl8192_setBBreg(dev, rOFDM0_TRxPathEnable, bMaskByte0, 0x33);					
+				U1bData = (u8)rtl8192_QueryBBReg(dev, rOFDM1_TRxPathEnable, bMaskByte0);
+				rtl8192_setBBreg(dev, rOFDM1_TRxPathEnable, bMaskByte0, ((U1bData&0xf0)|0x03));
+				U1bData = (u8)rtl8192_QueryBBReg(dev, rOFDM0_TRxPathEnable, bMaskByte1);			
+				rtl8192_setBBreg(dev, rOFDM0_TRxPathEnable, bMaskByte1, (U1bData|0x04));
+
+				priv->bCurrentMrcSwitch = bMrcToSet; 
+			}
+			else
+			{
+				rtl8192_setBBreg(dev, rOFDM0_TRxPathEnable, bMaskByte0, 0x13);
+				U1bData = (u8)rtl8192_QueryBBReg(dev, rOFDM1_TRxPathEnable, bMaskByte0);
+				rtl8192_setBBreg(dev, rOFDM1_TRxPathEnable, bMaskByte0, ((U1bData&0xf0)|0x01));
+				U1bData = (u8)rtl8192_QueryBBReg(dev, rOFDM0_TRxPathEnable, bMaskByte1);
+				rtl8192_setBBreg(dev, rOFDM0_TRxPathEnable, bMaskByte1, (U1bData&0xfb));
+
+				priv->bCurrentMrcSwitch = bMrcToSet; 
+			}
+		}
+		break;
+		
 		default:
 			break;
 	}
@@ -3576,7 +4750,6 @@ void SetBeaconRelatedRegisters8192SE(struct net_device *dev)
 	write_nic_word(dev, ATIMWND, AtimWindow);
 	
 	write_nic_word(dev, BCN_INTERVAL, BcnInterval);
-	PHY_SetBeaconHwReg( dev, BcnInterval);
 
 	write_nic_word(dev, BCN_DRV_EARLY_INT, 10<<4);
 
@@ -3598,11 +4771,7 @@ void SetBeaconRelatedRegisters8192SE(struct net_device *dev)
 	BcnTimeCfg |= BcnIFS<<BCN_TCFG_IFS;
 
 
-	{
-		u8 u1Temp = (u8)(BcnInterval);
-		write_nic_dword(dev, WFM5, 0xF1000000 |((u16)( u1Temp) << 8));
-		ChkFwCmdIoDone(dev);
-	}
+	PHY_SetBeaconHwReg( dev, BcnInterval );
 }
 
 void UpdateHalRATRTableIndex(struct net_device *dev)
@@ -3637,8 +4806,6 @@ bool rtl8192se_check_ht_cap(struct net_device* dev, struct sta_info *sta,
 
 	if ((ieee->mode != WIRELESS_MODE_N_24G) && 
 			(ieee->mode != WIRELESS_MODE_N_5G)) {
-		printk("%s():i am G mode ,do not need to check Cap IE\n",
-				__FUNCTION__);
 		if (net->mode == IEEE_N_5G)
 			sta->wireless_mode = IEEE_A;
 		else if (net->mode == IEEE_N_24G) {
@@ -3648,6 +4815,8 @@ bool rtl8192se_check_ht_cap(struct net_device* dev, struct sta_info *sta,
 				sta->wireless_mode = IEEE_B;
 		} else
 			sta->wireless_mode = net->mode;
+		printk("%s():i am G mode ,do not need to check Cap IE. wireless_mode=0x%x\n",
+				__FUNCTION__, sta->wireless_mode);
 		return false;
 	}
 	if ((ieee->mode ==WIRELESS_MODE_N_24G) 
@@ -3789,29 +4958,48 @@ void rtl8192se_check_tsf_wq(struct net_device *dev)
 }
 
 #if LINUX_VERSION_CODE >=KERNEL_VERSION(2,6,20)
-void rtl8192se_update_peer_ratr_table_wq(struct work_struct * work)
+void rtl8192se_update_assoc_sta_info_wq(struct work_struct * work)
 {
 	struct delayed_work *dwork = container_of(work,struct delayed_work,work);
 	struct rtllib_device *ieee = container_of(dwork, struct rtllib_device, update_assoc_sta_info_wq);
         struct net_device *dev = ieee->dev;
-        struct r8192_priv *priv = rtllib_priv(dev);
 #else
-void rtl8192se_update_peer_ratr_table_wq(struct net_device *dev)
+void rtl8192se_update_assoc_sta_info_wq(struct net_device *dev)
 {
         struct r8192_priv *priv = rtllib_priv(dev);
 	struct rtllib_device *ieee = priv->rtllib;
 #endif
+	struct sta_info * pEntry = NULL;
 	int idx = 0;
 	for(idx=0; idx<PEER_MAX_ASSOC; idx++)
 	{	
-		if(NULL != priv->rtllib->peer_assoc_list[idx])
+		pEntry = ieee->peer_assoc_list[idx];
+		if(NULL != pEntry)
 		{
-			u8 * addr = priv->rtllib->peer_assoc_list[idx]->macaddr;
-			printk("%s: STA:%x:%x:%x:%x:%x:%x\n",__FUNCTION__,addr[0],addr[1],addr[2],addr[3],addr[4],addr[5]);
-			rtl8192se_update_ratr_table(dev,priv->rtllib->peer_assoc_list[idx]->htinfo.McsRateSet,priv->rtllib->peer_assoc_list[idx]);
+			u8 * addr = pEntry->macaddr;
+				
+			if(ieee->bUseRAMask){
+				if((pEntry->wireless_mode & WIRELESS_MODE_N_24G) || (pEntry->wireless_mode & WIRELESS_MODE_N_5G))
+					pEntry->ratr_index = RATR_INX_WIRELESS_NGB;
+				else if(pEntry->wireless_mode & WIRELESS_MODE_G)
+					pEntry->ratr_index = RATR_INX_WIRELESS_GB;
+				else if(pEntry->wireless_mode & WIRELESS_MODE_B)
+					pEntry->ratr_index = RATR_INX_WIRELESS_B;
+				ieee->UpdateHalRAMaskHandler(dev,
+										false,
+										pEntry->aid+1,
+										pEntry->htinfo.MimoPs,
+										pEntry->wireless_mode,	
+										pEntry->htinfo.bCurTxBW40MHz,
+										0);
+			}
+			else	
+				rtl8192se_update_ratr_table(dev,pEntry->htinfo.McsRateSet,pEntry);
+			printk("%s: STA:"MAC_FMT", aid:%d, wireless_mode=0x%x ratr_index=%d\n",__FUNCTION__,MAC_ARG(addr), pEntry->aid, pEntry->wireless_mode, pEntry->ratr_index);
 		}
 	}
-	UpdateHalRATRTableIndex(dev);
+	if(!ieee->bUseRAMask)
+		UpdateHalRATRTableIndex(dev);
 
 	if(ieee->Peer_bCurBW40M)
 		HTSetConnectBwMode(ieee, HT_CHANNEL_WIDTH_20_40, (ieee->current_network.channel<=6)?HT_EXTCHNL_OFFSET_UPPER:HT_EXTCHNL_OFFSET_LOWER);  
@@ -3937,6 +5125,25 @@ rtl8192se_InitializeVariables(struct net_device  *dev)
 	else
 		strcpy(priv->nick, "rtl8192SE");
 
+#ifdef _ENABLE_SW_BEACON
+	priv->rtllib->softmac_features  = IEEE_SOFTMAC_SCAN | 
+		IEEE_SOFTMAC_ASSOCIATE | IEEE_SOFTMAC_PROBERQ | 
+		IEEE_SOFTMAC_PROBERS | IEEE_SOFTMAC_TX_QUEUE  |
+		IEEE_SOFTMAC_BEACONS;
+#else
+#ifdef _RTL8192_EXT_PATCH_	
+	priv->rtllib->softmac_features  = IEEE_SOFTMAC_SCAN | 
+		IEEE_SOFTMAC_ASSOCIATE | IEEE_SOFTMAC_PROBERQ | 
+		IEEE_SOFTMAC_PROBERS | IEEE_SOFTMAC_TX_QUEUE /* |
+		IEEE_SOFTMAC_BEACONS*/;
+#else
+	priv->rtllib->softmac_features  = IEEE_SOFTMAC_SCAN | 
+		IEEE_SOFTMAC_ASSOCIATE | IEEE_SOFTMAC_PROBERQ | 
+		IEEE_SOFTMAC_PROBERS | IEEE_SOFTMAC_TX_QUEUE /* |
+		IEEE_SOFTMAC_BEACONS*/;
+#endif
+#endif
+
 	priv->rtllib->tx_headroom = 0;
 
 	priv->ShortRetryLimit = 0x30;
@@ -3971,7 +5178,7 @@ rtl8192se_InitializeVariables(struct net_device  *dev)
 	(IMR_ROK | IMR_VODOK | IMR_VIDOK | IMR_BEDOK | IMR_BKDOK |		\
 	IMR_HCCADOK | IMR_MGNTDOK | IMR_COMDOK | IMR_HIGHDOK | 					\
 	IMR_BDOK | IMR_RXCMDOK | /*IMR_TIMEOUT0 |*/ IMR_RDU | IMR_RXFOVW	|		\
-	 IMR_BcnInt/*| IMR_TXFOVW*/ /*| IMR_TBDOK | IMR_TBDER*/);
+	IMR_BcnInt/*| IMR_TXFOVW*/ /*| IMR_TBDOK | IMR_TBDER*/);
 #endif
 	priv->irq_mask[1] = 0;/* IMR_TBDOK | IMR_TBDER*/
 
@@ -3980,10 +5187,14 @@ rtl8192se_InitializeVariables(struct net_device  *dev)
 	priv->MidHighPwrTHR_L2 = 0x40;
 	priv->PwrDomainProtect = false;
 
-	if (!priv->scan_cmd) {
-		priv->scan_cmd = kmalloc(sizeof(H2C_SITESURVEY_PARA) +
+	if (!(priv->rtllib->softmac_features & IEEE_SOFTMAC_SCAN)){
+		if (!priv->scan_cmd) {
+			priv->scan_cmd = kmalloc(sizeof(H2C_SITESURVEY_PARA) +
 				RTL_MAX_SCAN_SIZE, GFP_KERNEL);
+		}
 	}
+
+	rtl8192se_HalDetectPwrDownMode(dev); 
 }
 
 void rtl8192se_EnableInterrupt(struct net_device *dev)
@@ -4088,4 +5299,171 @@ void rtl8192se_interrupt_recognized(struct net_device *dev, u32 *p_inta, u32 *p_
 	*p_intb = read_nic_dword(dev, ISR+4);
 	write_nic_dword(dev, ISR+4, *p_intb);
 #endif
+}
+
+bool rtl8192se_HalRxCheckStuck(struct net_device *dev)
+{
+	
+	struct r8192_priv *priv = rtllib_priv(dev);
+	u16 				RegRxCounter = (u16)(priv->InterruptLog.nIMR_ROK&0xffff);
+	bool				bStuck = false;
+	u32 				SlotIndex = 0, TotalRxStuckCount = 0;
+	u8				i;
+	u8				SilentResetRxSoltNum = 4;
+
+
+	SlotIndex = (priv->SilentResetRxSlotIndex++)%SilentResetRxSoltNum;
+
+	if(priv->RxCounter==RegRxCounter)
+	{		
+		priv->SilentResetRxStuckEvent[SlotIndex] = 1;
+
+		for( i = 0; i < SilentResetRxSoltNum ; i++ )
+			TotalRxStuckCount += priv->SilentResetRxStuckEvent[i];
+
+		if(TotalRxStuckCount  == SilentResetRxSoltNum)
+		{
+			bStuck = true;
+			for( i = 0; i < SilentResetRxSoltNum ; i++ )
+				TotalRxStuckCount += priv->SilentResetRxStuckEvent[i];
+		}
+
+
+	} else {
+		priv->SilentResetRxStuckEvent[SlotIndex] = 0;
+	}
+
+	priv->RxCounter = RegRxCounter;
+
+	return bStuck;
+}
+
+bool rtl8192se_HalTxCheckStuck(struct net_device *dev)
+{
+	struct r8192_priv *priv = rtllib_priv(dev);
+	bool   	bStuck = false;
+#if defined(RTL8192E) || defined(RTL8190P)
+	u16    RegTxCounter = read_nic_word(dev, 0x128);
+#elif defined (RTL8192SE) || defined (RTL8192CE)
+	u16 	RegTxCounter = read_nic_word(dev, 0x366);
+#else
+	u16 	RegTxCounter = priv->TxCounter + 1;
+ 	WARN_ON(1);	
+#endif
+
+	RT_TRACE(COMP_RESET, "%s():RegTxCounter is %d,TxCounter is %d\n", 
+			__FUNCTION__,RegTxCounter,priv->TxCounter);
+
+	if(priv->TxCounter == RegTxCounter)
+		bStuck = true;
+
+	priv->TxCounter = RegTxCounter;
+
+	return bStuck;
+}
+
+bool rtl8192se_GetNmodeSupportBySecCfg(struct net_device *dev)
+{
+#ifdef RTL8192SE
+	return true;
+#else
+	struct r8192_priv *priv = rtllib_priv(dev);
+	struct rtllib_device *ieee = priv->rtllib;
+	if (ieee->rtllib_ap_sec_type && 
+	   (ieee->rtllib_ap_sec_type(priv->rtllib)&(SEC_ALG_WEP|SEC_ALG_TKIP))) {
+		return false;
+	} else {
+		return true;
+	}
+#endif
+}
+
+bool rtl8192se_GetHalfNmodeSupportByAPs(struct net_device* dev)
+{
+#ifdef RTL8192SE
+	return false;
+#else	
+	bool			Reval;
+	struct r8192_priv* priv = rtllib_priv(dev);
+	struct rtllib_device* ieee = priv->rtllib;
+	
+	if(ieee->bHalfWirelessN24GMode == true)
+		Reval = true;
+	else
+		Reval =  false;
+
+	return Reval;
+#endif
+}
+
+u8 rtl8192se_QueryIsShort(u8 TxHT, u8 TxRate, cb_desc *tcb_desc)
+{
+	u8   tmp_Short;
+
+	tmp_Short = (TxHT==1)?((tcb_desc->bUseShortGI)?1:0):((tcb_desc->bUseShortPreamble)?1:0);
+#if defined RTL8192SE || defined RTL8192CE
+	if(TxHT==1 && TxRate != DESC92S_RATEMCS15)
+#elif defined RTL8192E || defined RTL8190P
+	if(TxHT==1 && TxRate != DESC90_RATEMCS15)
+#endif
+		tmp_Short = 0;
+
+	return tmp_Short;
+}
+
+void
+ActUpdateChannelAccessSetting(
+	struct net_device* 			dev,
+	WIRELESS_MODE			WirelessMode,
+	PCHANNEL_ACCESS_SETTING	ChnlAccessSetting
+	)
+{		
+		struct r8192_priv* priv = rtllib_priv(dev);	
+		
+#if 0
+		WIRELESS_MODE Tmp_WirelessMode = WirelessMode;
+
+		switch( Tmp_WirelessMode )
+		{
+		case WIRELESS_MODE_A:
+			ChnlAccessSetting->SlotTimeTimer = 9;
+			ChnlAccessSetting->CWminIndex = 4;
+			ChnlAccessSetting->CWmaxIndex = 10;
+			break;
+		case WIRELESS_MODE_B:
+			ChnlAccessSetting->SlotTimeTimer = 20;
+			ChnlAccessSetting->CWminIndex = 5;
+			ChnlAccessSetting->CWmaxIndex = 10;
+			break;
+		case WIRELESS_MODE_G:
+			ChnlAccessSetting->SlotTimeTimer = 20;
+			ChnlAccessSetting->CWminIndex = 4;
+			ChnlAccessSetting->CWmaxIndex = 10;
+			break;
+		case WIRELESS_MODE_N_24G:
+		case WIRELESS_MODE_N_5G:
+			ChnlAccessSetting->SlotTimeTimer = 9;
+			ChnlAccessSetting->CWminIndex = 4;
+			ChnlAccessSetting->CWmaxIndex = 10;
+			break;
+		default:
+			RT_ASSERT(false, ("ActUpdateChannelAccessSetting(): Wireless mode is not defined!\n"));
+			break;
+		}
+
+#endif
+
+		{
+			u16	SIFS_Timer;
+
+			if(WirelessMode == WIRELESS_MODE_G)
+				SIFS_Timer = 0x0e0e;
+ 			else
+				SIFS_Timer = 0x1010;
+
+			SIFS_Timer = 0x0e0e;
+			priv->rtllib->SetHwRegHandler( dev, HW_VAR_SIFS,  (u8*)&SIFS_Timer);
+		
+		}
+
 }

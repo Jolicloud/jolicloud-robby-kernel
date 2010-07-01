@@ -77,15 +77,56 @@ Change history =
 Release date = 2009-11-2
 Operating system release = Ubuntu 8.10/ubuntu9.04/ubuntu9.10/moblin2/android-x86_090916
 Kernel version = 2.6.28/2.6.30/2.6.31
-Release driver version = 0011.1102.2009
+Release driver version = 0011.1.1102.2009
 Change history = 
 	1. Fix 64BIT CPU skb_tail alignment issue .
-
 
 ---------------------------------------------------------------------------------------------
 Release date = 2009-12-04
 Operating system release = Ubuntu 8.10/ubuntu9.04/ubuntu9.10/moblin2/android-x86_090916
 Kernel version = 2.6.28/2.6.30/2.6.31
 Release driver version = 0013.1204.2009
+Change history =
+        1. Add firmware worldwide13.
+
+---------------------------------------------------------------------------------------------
+Release date = 2010-01-19
+Operating system release = Ubuntu 8.10/ubuntu9.04/ubuntu9.10/moblin2/android-x86_090916
+Kernel version = 2.6.28/2.6.30/2.6.31
+Release driver version = 0014.0119.2010
 Change history = 
-	1. Add firmware worldwide13.
+	1. Add CRDA function.
+	2. sync rate of "iwconfig" and "iwlist wlan0 rate".
+	3. fix B mode throuhput low issue.
+
+---------------------------------------------------------------------------------------------
+Release date = 2010-01-27
+Operating system release = Ubuntu 8.10/ubuntu9.04/ubuntu9.10/moblin2/android-x86_090916
+Kernel version = 2.6.28/2.6.30/2.6.31
+Release driver version = 0015.0127.2010
+Change history =
+	1. Fix some issues related with UI.
+---------------------------------------------------------------------------------------------
+
+---------------------------------------------------------------------------------------------
+Release date = 2010-03-01
+Operating system release = Ubuntu 8.10/ubuntu9.04/ubuntu9.10/moblin2/android-x86_090916
+Kernel version = 2.6.28/2.6.30/2.6.31
+Release driver version = 0016.0301.2010
+Change history =
+	1. update firmware.
+---------------------------------------------------------------------------------------------
+
+---------------------------------------------------------------------------------------------
+Release date = 2010-05-07
+Operating system release = Ubuntu 8.10/ubuntu9.04/ubuntu9.10/ubuntu10.04/moblin2/android-x86_090916
+Kernel version = 2.6.28/2.6.30/2.6.31/2.6.32/2.6.33/2.6.34
+Release driver version = 0017.0507.2010
+Change history =
+	1. update firmware.
+	2. link NO-QOS-11N-AP use N mdoe.
+	3. Close LED when ifconfig wlan0 down.
+	4. Fix RTL8192SE WRT300N TP low issue.
+	5. To make LED dim time short enough when power save open.
+	6. Remove ubuntu10.04 self rtl8192se driver in make install.
+---------------------------------------------------------------------------------------------

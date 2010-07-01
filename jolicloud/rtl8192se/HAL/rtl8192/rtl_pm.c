@@ -18,28 +18,17 @@
 ******************************************************************************/
 
 #ifdef CONFIG_PM_RTL
-#ifdef RTL8192CE
+
 #include "rtl_core.h"
-#include "r8192C_hw.h"
-#include "r8192C_phy.h"
-#include "r8192C_phyreg.h"
-#include "r8192C_rtl6052.h"
-#elif defined RTL8192SE
-#include "rtl_core.h"
-#include "rtl8192s/r8192SE_hw.h"
-#include "rtl8192s/r8192S_phy.h"
-#include "rtl8192s/r8192S_phyreg.h"
-#include "rtl8192s/r8192S_rtl6052.h"
-#else
-#include "rtl_core.h"
-#include "rtl8192e/r8192E_hw.h"
-#include "rtl8192e/r8190_rtl8256.h"
-#endif
 #include "rtl_pm.h"
 
 int rtl8192E_save_state (struct pci_dev *dev, pm_message_t state)
 {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,10))
+        printk(KERN_NOTICE "r8192E save state call (state %u).\n", state);
+#else
         printk(KERN_NOTICE "r8192E save state call (state %u).\n", state.event);
+#endif
 	return(-EAGAIN);
 }
 
@@ -48,6 +37,9 @@ int rtl8192E_suspend (struct pci_dev *pdev, pm_message_t state)
 {
 	struct net_device *dev = pci_get_drvdata(pdev);
 	struct r8192_priv *priv = rtllib_priv(dev); 
+#if !(defined RTL8192SE || defined RTL8192CE)		
+	u32	ulRegRead;
+#endif
 
         RT_TRACE(COMP_POWER, "============> r8192E suspend call.\n");
         printk("============> r8192E suspend call.\n");
@@ -72,7 +64,7 @@ int rtl8192E_suspend (struct pci_dev *pdev, pm_message_t state)
 
 #if !(defined RTL8192SE || defined RTL8192CE)		
 	if(!priv->rtllib->bSupportRemoteWakeUp) {
-		MgntActSet_RF_State(dev, eRfOff, RF_CHANGE_BY_INIT);
+		MgntActSet_RF_State(dev, eRfOff, RF_CHANGE_BY_INIT,true);
 		ulRegRead = read_nic_dword(dev, CPU_GEN);	
 		ulRegRead|=CPU_GEN_SYSTEM_RESET;
 		write_nic_dword(dev, CPU_GEN, ulRegRead);
@@ -81,9 +73,12 @@ int rtl8192E_suspend (struct pci_dev *pdev, pm_message_t state)
 		write_nic_dword(dev, WFCRC1, 0xffffffff);
 		write_nic_dword(dev, WFCRC2, 0xffffffff);
 #ifdef RTL8190P
-		ucRegRead = read_nic_byte(dev, GPO);
-		ucRegRead |= BIT0;
-		write_nic_byte(dev, GPO, ucRegRead);
+		{
+			u8	ucRegRead;	
+			ucRegRead = read_nic_byte(dev, GPO);
+			ucRegRead |= BIT0;
+			write_nic_byte(dev, GPO, ucRegRead);
+		}
 #endif			
 		write_nic_byte(dev, PMR, 0x5);
 		write_nic_byte(dev, MacBlkCtrl, 0xa);
@@ -95,11 +90,19 @@ out_pci_suspend:
 	if(priv->rtllib->bSupportRemoteWakeUp) {
 		RT_TRACE(COMP_POWER, "r8192E support WOL call!!!!!!!!!!!!!!!!!!.\n");
 	}
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,10))
+	pci_save_state(pdev,&(priv->pci_state));
+        pci_disable_device(pdev);
+        pci_enable_wake(pdev, state,\
+                        priv->rtllib->bSupportRemoteWakeUp?1:0);
+        pci_set_power_state(pdev,state);
+#else
 	pci_save_state(pdev);
 	pci_disable_device(pdev);
 	pci_enable_wake(pdev, pci_choose_state(pdev,state),\
 			priv->rtllib->bSupportRemoteWakeUp?1:0);
 	pci_set_power_state(pdev,pci_choose_state(pdev,state));
+#endif
 
         mdelay(20);
 
@@ -109,7 +112,9 @@ out_pci_suspend:
 int rtl8192E_resume (struct pci_dev *pdev)
 {
     struct net_device *dev = pci_get_drvdata(pdev);
+#if defined ENABLE_GPIO_RADIO_CTL || !(defined RTL8192SE || defined RTL8192CE)		
     struct r8192_priv *priv = rtllib_priv(dev); 
+#endif
     int err;
     u32 val;
 
@@ -124,8 +129,11 @@ int rtl8192E_resume (struct pci_dev *pdev)
                 dev->name);
         return err;
     }
-
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,10))
+    pci_restore_state(pdev,&(priv->pci_state));
+#else
     pci_restore_state(pdev);
+#endif
 
     pci_read_config_dword(pdev, 0x40, &val);
     if ((val & 0x0000ff00) != 0) {
@@ -152,6 +160,13 @@ int rtl8192E_resume (struct pci_dev *pdev)
 #else
     dev->open(dev);
 #endif    
+
+#if !(defined RTL8192SE || defined RTL8192CE)		
+    if(!priv->rtllib->bSupportRemoteWakeUp) {
+	    MgntActSet_RF_State(dev, eRfOn, RF_CHANGE_BY_INIT,true);
+    }
+#endif
+
 out:
     RT_TRACE(COMP_POWER, "<================r8192E resume call.\n");
     return 0;
@@ -160,8 +175,13 @@ out:
 
 int rtl8192E_enable_wake (struct pci_dev *dev, pm_message_t state, int enable)
 {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,10))
+        printk(KERN_NOTICE "r8192E enable wake call (state %u, enable %d).\n", 
+	       state, enable);
+#else
         printk(KERN_NOTICE "r8192E enable wake call (state %u, enable %d).\n", 
 	       state.event, enable);
+#endif
 	return(-EAGAIN);
 }
 

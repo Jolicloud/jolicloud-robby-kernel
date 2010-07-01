@@ -1,10 +1,10 @@
-Release Date: 2009-1204, ver 0013 
+Release Date: 2010-0507, ver 0017 
 RTL8192SE Linux driver
    --This driver supports RealTek rtl8192SE PCI Wireless LAN NIC
      for
      2.6 kernel:
      Fedora Core 2/3/4/5, Debian 3.1, Mandrake 10.2/Mandriva 2006, 
-     SUSE 9.3/10.1/10.2, Gentoo 3.1, Ubuntu 7.10/8.04/8.10/9.04/9.10, 
+     SUSE 9.3/10.1/10.2, Gentoo 3.1, Ubuntu 7.10/8.04/8.10/9.04/9.10/10.04, 
      moblin(V2), android-x86_090916, etc.
      2.4 kernel:
      Redhat 9.0/9.1
@@ -135,10 +135,18 @@ For example:
 	iwconfig wlan0 key 0123456789 [2] open
 	iwconfig wlan0 key off
 	iwconfig wlan0 key restricted [3] 0123456789
-        Note: Better to set these MIBS without GUI such as NetworkManager and 
-	      be sure that our nic has been brought up before these settings. 
-	      WEP key index 2-4 is not supportted by NetworkManager.
-	iwconfig wlan0 power {all|unicast|multicast|off}
+        iwconfig wlan0 key s:12345
+
+	Note: There are two types of key, "hex" code or "ascii" code. "hex" code
+	      only contains hexadecimal characters, "ascii" code is consist of 
+              "ascii" characters. Assume the "hex" code key is "0123456789", you 
+              are suggested to use command like this "iwconfig wlan0 key 0123456789". 
+              Assume the "ascii" code key is "12345", you should enter command 
+              like this "iwconfig wlan0 key s:12345".
+
+        Note: Better to set these MIBS without GUI such as NetworkManager and be 
+	      sure that our nic has been brought up before these settings. WEP key
+	      index 2-4 is not supportted by NetworkManager.
 
 ========================================================================================
 				V. Getting IP address
@@ -175,7 +183,7 @@ Note: Wireless Extension is defined use "#define WIRELESS_EXT" in Kernel
 Note: To check the version of wireless extension, please type "iwconfig -v"
 
 
-If IPW driver interface is used, it us suggested to follow the steps from 1 to 6. 
+If IPW driver interface is used, it is suggested to follow the steps from 1 to 6. 
 If wpa_supplicant has been installed in your system, only steps 5 and 6 are 
 required to be executed for WEXT driver interface.
 
@@ -274,25 +282,25 @@ To see detailed description for driver interface and wpa_supplicant, please type
 		   both CCMP and TKIP unless you know exactly which cipher type 
 		   AP is configured.
 	      	3) When connecting to hidden ssid, explicit security policy 
-		   should be given with ap_scan=2 being setting.
+		   should be given with ap_scan=2 being setted.
 	      	4) It is suggested setting ap_scan to 2 and mode to 1 when 
 		   linking to or creating an ad-hoc. Group and pairwise
-		   cipher type should also be explicit, always with group 
+		   cipher type should also be set explicitly, always with group 
 		   setting to TKIP or CCMP and pairwise setting to NONE. 
 		   Lower version wpa_supplicant may not allow setting group to 
 		   CCMP with pairwise setting to NONE. So if any problem, you may 
 		   try to set both group and pairwise to CCMP, leaving other
 		   setting unchanged, when connecting to an CCMP-encrypted ad-hoc.
-	      	5) More config setting option, please refer to wpa_supplicant.conf 
+	      	5) As for more config setting option, please refer to wpa_supplicant.conf 
 		   in wpa_supplicant.tar.gz that we provide.
 
-	6. Execute WPA supplicant (Assume rtl8192E and related modules had been loaded):
+	6. Execute WPA supplicant (Assume module of rtl8192se has been loaded):
            ./runwpa
 
            Note: 
 		 The script runwpa will check Wireless Extension version automatically.
-                 If the version of Wireless Extension is equal or larger than 18, the
-                 option of "-D wext" is selected. If the version of Wireless extension
-                 is less than 18, the option of "-D ipw" is selected.
+                 If the version of Wireless Extension is equal or greater than 18, the
+                 option of "-D wext" will be selected, otherwise, the option of "-D ipw" 
+                 selected.
 
 

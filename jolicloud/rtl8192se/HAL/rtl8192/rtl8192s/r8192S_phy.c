@@ -20,10 +20,6 @@
 
 #include "../rtl_core.h"
 #include "../rtl_dm.h"
-#include "r8192S_phy.h"
-#include "r8192S_phyreg.h"
-#include "r8192S_rtl6052.h"
-#include "r8192S_hwimg.h"
 
 #ifdef ENABLE_DOT11D
 #include "../../../rtllib/dot11d.h"
@@ -911,9 +907,9 @@ phy_ConfigBBWithHeaderFile(struct net_device* dev,u8 ConfigType)
 				udelay(5);
 			else if (Rtl819XPHY_REGArray_Table[i] == 0xf9)
 				udelay(1);
-#ifdef ECS_T20_INIT_DELAY 
-				udelay(1);
-#endif
+
+			udelay(1);
+
 			rtl8192_setBBreg(dev, Rtl819XPHY_REGArray_Table[i], bMaskDWord, Rtl819XPHY_REGArray_Table[i+1]);		
 
 		}
@@ -922,9 +918,7 @@ phy_ConfigBBWithHeaderFile(struct net_device* dev,u8 ConfigType)
 		for(i=0;i<AGCTAB_ArrayLen;i=i+2)
 		{
 			rtl8192_setBBreg(dev, Rtl819XAGCTAB_Array_Table[i], bMaskDWord, Rtl819XAGCTAB_Array_Table[i+1]);		
-#ifdef ECS_T20_INIT_DELAY 
 			udelay(1);
-#endif
 		}
 	}
 	return true;
@@ -1123,6 +1117,8 @@ u8 rtl8192_phy_ConfigRFWithHeaderFile(struct net_device* dev, RF90_RADIO_PATH_E	
 					rtl8192_phy_SetRFReg(dev, eRFPath, Rtl819XRadioA_Array_Table[i], 
 							bMask20Bits, Rtl819XRadioA_Array_Table[i+1]);
 				}
+
+				udelay(1);
 			}
 			rtl8192_phy_configRFPABiascurrent(dev, eRFPath);
 			break;
@@ -1146,9 +1142,8 @@ u8 rtl8192_phy_ConfigRFWithHeaderFile(struct net_device* dev, RF90_RADIO_PATH_E	
 				{
 					rtl8192_phy_SetRFReg(dev, eRFPath, Rtl819XRadioB_Array_Table[i], bMask20Bits, Rtl819XRadioB_Array_Table[i+1]);
 				}
-#ifdef ECS_T20_INIT_DELAY 
-			udelay(1);
-#endif
+				
+			        udelay(1);
 			}			
 			break;
 		case RF90_PATH_C:
@@ -1508,6 +1503,12 @@ static bool phy_SetRFPowerState8192SE(struct net_device* dev,RT_RF_POWER_STATE e
 				{					
 					for(QueueID = 0, i = 0; QueueID < MAX_TX_QUEUE; )
 					{
+						if(QueueID == 5) 
+						{
+							QueueID++;
+							continue;
+						}
+										
 						ring = &priv->tx_ring[QueueID];
 						if(skb_queue_len(&ring->queue) == 0)
 						{
@@ -1643,10 +1644,22 @@ PHY_SwitchEphyParameter(struct net_device* dev)
 	write_nic_byte(dev, 0x554, 0x39);
 	phy_CheckEphySwitchReady(dev);
 
-	if (priv->pci_bridge_vendor & (PCI_BRIDGE_VENDOR_INTEL | PCI_BRIDGE_VENDOR_SIS))
+	if(priv->bSupportASPM && !priv->bSupportBackDoor)
 		write_nic_byte(dev, 0x560, 0x40);
 	else
+	{
 		write_nic_byte(dev, 0x560, 0x00);
+	
+		if (priv->CustomerID == RT_CID_819x_SAMSUNG ||
+			priv->CustomerID == RT_CID_819x_Lenovo)
+		{
+			if (priv->NdisAdapter.PciBridgeVendor == PCI_BRIDGE_VENDOR_AMD ||
+				priv->NdisAdapter.PciBridgeVendor == PCI_BRIDGE_VENDOR_ATI)
+			{
+				write_nic_byte(dev, 0x560, 0x40);
+			}
+		}
+	}
 	
 }	
 
@@ -1783,7 +1796,7 @@ void rtl8192_phy_setTxPower(struct net_device* dev, u8	channel)
 
 	ccxPowerIndexCheck(dev, channel, &cckPowerLevel[0], &ofdmPowerLevel[0]);
 
-	switch(priv->rf_type)
+	switch(priv->rf_chip)
 	{
 		case RF_8225:
 		break;
@@ -1799,6 +1812,8 @@ void rtl8192_phy_setTxPower(struct net_device* dev, u8	channel)
 
 		case RF_8258:
 			break;
+		default:
+            		break;
 	}
 }
 #else
@@ -2078,7 +2093,6 @@ static long phy_TxPwrIdxToDbm(
 	return PwrOutDbm;
 }
 
-#ifdef TO_DO_LIST
 extern	void 
 PHY_ScanOperationBackup8192S(
 	struct net_device* dev,
@@ -2087,26 +2101,28 @@ PHY_ScanOperationBackup8192S(
 {
 #if(RTL8192S_DISABLE_FW_DM == 0)
 
-	if(!Adapter->bDriverStopped)
+	struct r8192_priv *priv = rtllib_priv(dev);
+
+	if(priv->up)
 	{
 		switch(Operation)
 		{
 			case SCAN_OPT_BACKUP:
-				Adapter->HalFunc.SetFwCmdHandler(Adapter, FW_CMD_PAUSE_DM_BY_SCAN);
+				priv->rtllib->SetFwCmdHandler(dev, FW_CMD_PAUSE_DM_BY_SCAN);
 				break;
 
 			case SCAN_OPT_RESTORE:
-				Adapter->HalFunc.SetFwCmdHandler(Adapter, FW_CMD_RESUME_DM_BY_SCAN);
+				priv->rtllib->SetFwCmdHandler(dev, FW_CMD_RESUME_DM_BY_SCAN);
 				break;
 
 			default:
-				RT_TRACE(COMP_SCAN, DBG_LOUD, ("Unknown Scan Backup Operation. \n"));
+				RT_TRACE(COMP_SCAN, "Unknown Scan Backup Operation. \n");
 				break;
 		}
 	}
 #endif
 }
-#endif
+
 void PHY_SetBWModeCallback8192S(struct net_device *dev)
 {
 	struct r8192_priv *priv = rtllib_priv(dev);
@@ -2122,12 +2138,7 @@ void PHY_SetBWModeCallback8192S(struct net_device *dev)
 		priv->SetBWModeInProgress= false;
 		return;
 	}
-#ifdef _RTL8192_EXT_PATCH_
-	if((!priv->up) && (!priv->mesh_up))
-#else
-	if(!priv->up)
-#endif
-	{
+	if(IS_NIC_DOWN(priv)){
 		priv->SwChnlInProgress = priv->SetBWModeInProgress = false;
 		return;
 	}
@@ -2244,12 +2255,7 @@ void rtl8192_SetBWMode(struct net_device *dev, HT_CHANNEL_WIDTH	Bandwidth, HT_EX
 #endif		
 	}
 #endif
-#ifdef _RTL8192_EXT_PATCH_
-	if(priv->up || priv->mesh_up)
-#else
-	if (priv->up) 
-#endif
-	{
+	if(!IS_NIC_DOWN(priv)){
 		PHY_SetBWModeCallback8192S(dev);
 	} else {
 		priv->SetBWModeInProgress= false;
@@ -2262,13 +2268,9 @@ void PHY_SwChnlCallback8192S(struct net_device *dev)
 	struct r8192_priv *priv = rtllib_priv(dev);
 	u32		delay;
 	
-        RT_TRACE(COMP_CH, "==>SwChnlCallback8190Pci(), switch to channel %d\n", priv->chan);
+	RT_TRACE(COMP_CH, "==>SwChnlCallback8190Pci(), switch to channel %d\n", priv->chan);
 	
-#ifdef _RTL8192_EXT_PATCH_
-	if((!priv->up) && (!priv->mesh_up))
-#else
-	if(!priv->up)
-#endif
+	if(IS_NIC_DOWN(priv))
 	{	
 		printk("%s: driver is not up\n", __FUNCTION__);
 		priv->SwChnlInProgress = priv->SetBWModeInProgress = false;
@@ -2306,11 +2308,7 @@ u8 rtl8192_phy_SwChnl(struct net_device* dev, u8 channel)
 {
 	struct r8192_priv *priv = rtllib_priv(dev);
 
-#ifdef _RTL8192_EXT_PATCH_
-	if((!priv->up) && (!priv->mesh_up))
-#else
-	if(!priv->up)
-#endif
+	if(IS_NIC_DOWN(priv))
 	{
 		printk("%s: driver is not up.\n",__FUNCTION__);
 		priv->SwChnlInProgress = priv->SetBWModeInProgress = false;
@@ -2382,12 +2380,7 @@ u8 rtl8192_phy_SwChnl(struct net_device* dev, u8 channel)
 	}
 #endif
 
-#ifdef _RTL8192_EXT_PATCH_
-	if(priv->up || priv->mesh_up)
-#else
-	if(priv->up) 
-#endif
-	{
+	if(!IS_NIC_DOWN(priv)){
 		PHY_SwChnlCallback8192S(dev);
 	} else {
 		priv->SwChnlInProgress = false;
@@ -2454,13 +2447,11 @@ phy_SwChnlStepByStep(
 	u16					u2Channel = 0;
 	
 	RT_TRACE(COMP_CH, "===========>%s(), channel:%d, stage:%d, step:%d\n", __FUNCTION__, channel, *stage, *step);		
-#ifdef ENABLE_DOT11D
 	if (!IsLegalChannel(priv->rtllib, channel))
 	{
 		RT_TRACE(COMP_ERR, "=============>set to illegal channel:%d\n", channel);
 		return true; 
 	}		
-#endif	
 
 	
 	PreCommonCmdCnt = 0;
@@ -2579,11 +2570,15 @@ phy_SwChnlStepByStep(
 			for(eRFPath = 0; eRFPath <priv->NumTotalRFPath; eRFPath++)
 			{
 				if (IS_HARDWARE_TYPE_8192SE(dev)) {
-
+#ifdef CONFIG_FW_SETCHAN
 					u32 rf_bw = ((priv->RfRegChnlVal[eRFPath] & 0xfffffc00) | (CurrentCmd->Para2 & 0xFF00));
+#endif
 					priv->RfRegChnlVal[eRFPath] = ((priv->RfRegChnlVal[eRFPath] & 0xfffffc00) | CurrentCmd->Para2);
+
 #ifdef CONFIG_FW_SETCHAN
 					rtl8192_phy_SetRFReg(dev, (RF90_RADIO_PATH_E)eRFPath, CurrentCmd->Para1, bRFRegOffsetMask, rf_bw);				
+#else
+					rtl8192_phy_SetRFReg(dev, (RF90_RADIO_PATH_E)eRFPath, CurrentCmd->Para1, bRFRegOffsetMask, priv->RfRegChnlVal[eRFPath]);				
 #endif
 				} else {
 					rtl8192_phy_SetRFReg(dev, (RF90_RADIO_PATH_E)eRFPath, CurrentCmd->Para1, bRFRegOffsetMask, (CurrentCmd->Para2));
@@ -2647,45 +2642,10 @@ phy_FinishSwChnlNow(
 	{
 		if(delay>0)
 			mdelay(delay);
-#ifdef _RTL8192_EXT_PATCH_
-		if((!priv->up) && (!priv->mesh_up))
-#else
-		if(!priv->up)
-#endif
+		if(IS_NIC_DOWN(priv))
 			break;
 	}
 }
-
-#ifdef TO_DO_LIST
-extern	VOID
-PHY_SetMonitorMode8192S(
-	IN	PADAPTER			pAdapter,
-	IN	BOOLEAN				bEnableMonitorMode
-	)
-{
-	HAL_DATA_TYPE		*pHalData	= GET_HAL_DATA(pAdapter);
-	BOOLEAN				bFilterOutNonAssociatedBSSID = false;
-
-	if(bEnableMonitorMode)
-	{
-		bFilterOutNonAssociatedBSSID = false;
-		RT_TRACE(COMP_RM, DBG_LOUD, ("PHY_SetMonitorMode8192S(): enable monitor mode\n"));
-
-		pHalData->bInMonitorMode = true;
-		pAdapter->HalFunc.AllowAllDestAddrHandler(pAdapter, true, true);
-		pAdapter->HalFunc.SetHwRegHandler(pAdapter, HW_VAR_CECHK_BSSID, (pu1Byte)&bFilterOutNonAssociatedBSSID);
-	}
-	else
-	{
-		bFilterOutNonAssociatedBSSID = true;
-		RT_TRACE(COMP_RM, DBG_LOUD, ("PHY_SetMonitorMode8192S(): disable monitor mode\n"));
-
-		pAdapter->HalFunc.AllowAllDestAddrHandler(pAdapter, false, true);
-		pHalData->bInMonitorMode = false;
-		pAdapter->HalFunc.SetHwRegHandler(pAdapter, HW_VAR_CECHK_BSSID, (pu1Byte)&bFilterOutNonAssociatedBSSID);
-	}
-}
-#endif
 
 
 u8 rtl8192_phy_CheckIsLegalRFPath(struct net_device* dev, u32 eRFPath)
@@ -3215,8 +3175,8 @@ bool rtl8192se_set_fw_cmd(struct net_device* dev, FW_CMD_IO_TYPE		FwCmdIO)
 
 	if(bPostProcessing && !priv->SetFwCmdInProgress)
 	{
-	priv->SetFwCmdInProgress = true;
-	priv->CurrentFwCmdIO = FwCmdIO; 
+		priv->SetFwCmdInProgress = true;
+		priv->CurrentFwCmdIO = FwCmdIO; 
 	}
 	else
 	{
@@ -3265,12 +3225,7 @@ void rtl8192_SetFwCmdIOCallback(struct net_device* dev)
 	struct r8192_priv *priv = rtllib_priv(dev);
 	u32		input,CurrentAID = 0;
 	
-#ifdef _RTL8192_EXT_PATCH_
-	if((!priv->up) && (!priv->mesh_up))
-#else
-	if(!priv->up)
-#endif
-	{
+	if(IS_NIC_DOWN(priv)){
 		RT_TRACE(COMP_CMD, "SetFwCmdIOTimerCallback(): driver is going to unload\n");
 		return;
 	}
@@ -3366,7 +3321,7 @@ void rtl8192_SetFwCmdIOCallback(struct net_device* dev)
 
 		case FW_CMD_RESUME_DM_BY_SCAN:		
 			RT_TRACE(COMP_CMD, "[FW CMD] Resume DM by Scan!!\n");
-			rtl8192_setBBreg(dev, rCCK0_CCA, bMaskByte2, 0x83);	
+			rtl8192_setBBreg(dev, rCCK0_CCA, bMaskByte2, 0xcd);	
 			rtl8192_phy_setTxPower(dev, priv->rtllib->current_network.channel);
 			break;
 		
@@ -3384,7 +3339,7 @@ void rtl8192_SetFwCmdIOCallback(struct net_device* dev)
 			if((priv->DMFlag & HAL_DM_HIPWR_DISABLE) ||
 				(priv->rtllib->bdynamic_txpower_enable == true))
 				break;
-			rtl8192_setBBreg(dev, rCCK0_CCA, bMaskByte2, 0x83);				
+			rtl8192_setBBreg(dev, rCCK0_CCA, bMaskByte2, 0xcd);				
 			break;
 
 		case FW_CMD_LPS_ENTER:
@@ -3413,12 +3368,14 @@ void rtl8192_SetFwCmdIOCallback(struct net_device* dev)
 			write_nic_dword(dev, WFM5, FW_CTRL_DM_BY_DRIVER);
 	                ChkFwCmdIoDone(dev);		
 			break;
+#ifdef CONFIG_FW_SETCHAN
 		case FW_CMD_CHAN_SET:
 			input = FW_CHAN_SET | (((priv->chan)&0xff) << 8);
 			RT_TRACE(COMP_CMD, "[FW CMD] Inform fw to set channel to %x!!, input(%#x):\n", priv->chan,input);
 			write_nic_dword(dev, WFM5, input);
 	                ChkFwCmdIoDone(dev);		
 			break;
+#endif
 			
 		default:
 			break;

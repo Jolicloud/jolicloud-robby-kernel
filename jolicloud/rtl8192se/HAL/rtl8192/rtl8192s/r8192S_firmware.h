@@ -19,7 +19,7 @@
 #ifndef __INC_FIRMWARE_H
 #define __INC_FIRMWARE_H
 
-#include "r8192SE_def.h"
+#include "r8192S_def.h"
 
 #define 	RTL8190_MAX_FIRMWARE_CODE_SIZE	64000	
 #define 	RTL8190_CPU_START_OFFSET			0x80

@@ -23,22 +23,6 @@
  * wlanfae <wlanfae@realtek.com>
 ******************************************************************************/
 #include "rtl_core.h"
-#if defined RTL8192CE
-#include "rtl8192c/r8192C_phy.h"
-#include "rtl8192c/r8192C_phyreg.h"
-#include "rtl8192c/r8192C_rtl6052.h"
-#include "rtl8192c/r8192C_Efuse.h"
-#elif defined RTL8192SE  
-#include "rtl8192s/r8192S_phy.h"
-#include "rtl8192s/r8192S_phyreg.h"
-#include "rtl8192s/r8192S_rtl6052.h"
-#include "rtl8192s/r8192S_Efuse.h"
-#else
-#include "rtl8192e/r8192E_phy.h"
-#include "rtl8192e/r8192E_phyreg.h"
-#include "rtl8192e/r8190_rtl8256.h" /* RTL8225 Radio frontend */
-#include "rtl8192e/r8192E_cmdpkt.h"
-#endif
 
 extern int hwwep;
 void CamResetAllEntry(struct net_device *dev)
@@ -69,7 +53,6 @@ void CamRestoreEachIFEntry(struct net_device* dev,u8 is_mesh)
 	for( i = 0 ; i<	TOTAL_CAM_ENTRY; i++) {
 
 		if (is_mesh) {
-#ifdef _RTL8192_EXT_PATCH_	
 			if(ieee->swmeshcamtable[i].bused )
 			{
 				setKey(dev,
@@ -81,7 +64,6 @@ void CamRestoreEachIFEntry(struct net_device* dev,u8 is_mesh)
 						(u32*)(&ieee->swmeshcamtable[i].key_buf[0])					
 				      );
 			}
-#endif
 		} else {
 			if(ieee->swcamtable[i].bused )
 			{
@@ -120,17 +102,17 @@ void EnableHWSecurityConfig8192(struct net_device *dev)
 	if ((((KEY_TYPE_WEP40 == ieee->pairwise_key_type) || (KEY_TYPE_WEP104 == ieee->pairwise_key_type)) && (priv->rtllib->auth_mode != 2)) 
 			&&(ieee->iw_mode != IW_MODE_MESH))
 #else
-		if (((KEY_TYPE_WEP40 == ieee->pairwise_key_type) || (KEY_TYPE_WEP104 == ieee->pairwise_key_type)) && (priv->rtllib->auth_mode != 2))
+	if (((KEY_TYPE_WEP40 == ieee->pairwise_key_type) || (KEY_TYPE_WEP104 == ieee->pairwise_key_type)) && (priv->rtllib->auth_mode != 2))
 #endif
-		{
-			SECR_value |= SCR_RxUseDK;
-			SECR_value |= SCR_TxUseDK;
-		}
-		else if ((ieee->iw_mode == IW_MODE_ADHOC) && (ieee->pairwise_key_type & (KEY_TYPE_CCMP | KEY_TYPE_TKIP)))
-		{
-			SECR_value |= SCR_RxUseDK;
-			SECR_value |= SCR_TxUseDK;
-		}
+	{
+		SECR_value |= SCR_RxUseDK;
+		SECR_value |= SCR_TxUseDK;
+	}
+	else if ((ieee->iw_mode == IW_MODE_ADHOC) && (ieee->pairwise_key_type & (KEY_TYPE_CCMP | KEY_TYPE_TKIP)))
+	{
+		SECR_value |= SCR_RxUseDK;
+		SECR_value |= SCR_TxUseDK;
+	}
 
 
 	ieee->hwsec_active = 1;
@@ -150,14 +132,24 @@ void EnableHWSecurityConfig8192(struct net_device *dev)
 		SECR_value &= ~SCR_RxDecEnable;
 	}
 #endif
+
+#ifdef RTL8192CE
+	if(IS_NORMAL_CHIP(priv->card_8192_version))
+		SECR_value |= (SCR_RXBCUSEDK | SCR_TXBCUSEDK);
+
+	write_nic_byte(dev, REG_CR+1,0x02); 
+
+	RT_TRACE(COMP_SEC,"The SECR-value %x \n",SECR_value)
+	priv->rtllib->SetHwRegHandler(dev, HW_VAR_WPA_CONFIG, &SECR_value);
+#else
 	RT_TRACE(COMP_SEC,"%s:, hwsec:%d, pairwise_key:%d, SECR_value:%x\n", __FUNCTION__, \
 			ieee->hwsec_active, ieee->pairwise_key_type, SECR_value);	
 	{
 		write_nic_byte(dev, SECR,  SECR_value);
 	}
-
+#endif
 }
-#ifdef _RTL8192_EXT_PATCH_	
+
 void set_swcam(struct net_device *dev, 
 		u8 EntryNo,
 		u8 KeyIndex, 
@@ -166,30 +158,21 @@ void set_swcam(struct net_device *dev,
 		u8 DefaultKey, 
 		u32 *KeyContent, 
 		u8 is_mesh)
-#else
-void set_swcam(struct net_device *dev, 
-		u8 EntryNo,
-		u8 KeyIndex, 
-		u16 KeyType, 
-		u8 *MacAddr, 
-		u8 DefaultKey, 
-		u32 *KeyContent)
-#endif
 {
 	struct r8192_priv *priv = rtllib_priv(dev);
 	struct rtllib_device *ieee = priv->rtllib;
-#ifdef _RTL8192_EXT_PATCH_	
 	printk("===========>%s():EntryNo is %d,KeyIndex is %d,KeyType is %d,is_mesh is %d\n",__FUNCTION__,EntryNo,KeyIndex,KeyType,is_mesh);
 	if(is_mesh){
+#ifdef _RTL8192_EXT_PATCH_	
 		ieee->swmeshcamtable[EntryNo].bused=true;
 		ieee->swmeshcamtable[EntryNo].key_index=KeyIndex;
 		ieee->swmeshcamtable[EntryNo].key_type=KeyType;
 		memcpy(ieee->swmeshcamtable[EntryNo].macaddr,MacAddr,6);
 		ieee->swmeshcamtable[EntryNo].useDK=DefaultKey;
 		memcpy(ieee->swmeshcamtable[EntryNo].key_buf,(u8*)KeyContent,16);
+#endif	
 	}
 	else
-#endif	
 	{
 		ieee->swcamtable[EntryNo].bused=true;
 		ieee->swcamtable[EntryNo].key_index=KeyIndex;
@@ -205,9 +188,7 @@ void reset_IFswcam(struct net_device *dev, u8 is_mesh)
 	struct r8192_priv *priv = rtllib_priv(dev);
 	struct rtllib_device *ieee = priv->rtllib;
 	if(is_mesh){
-#ifdef _RTL8192_EXT_PATCH_	
 		memset(ieee->swmeshcamtable,0,sizeof(SW_CAM_TABLE)*32);
-#endif
 	}
 	else{
 		memset(ieee->swcamtable,0,sizeof(SW_CAM_TABLE)*32);
@@ -281,6 +262,9 @@ void setKey(struct net_device *dev,
 			{
 				write_nic_dword(dev, WCAMI, (u32)(*(KeyContent+i-2)) ); 
 				write_nic_dword(dev, RWCAM, TargetCommand);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,31))
+				udelay(100);
+#endif				
 			}
 		}
 	}
@@ -532,7 +516,6 @@ u8 rtl8192_get_free_hwsec_cam_entry(struct rtllib_device *ieee, u8 *sta_addr)
 	/* Get a free CAM entry. */
 	for (entry_idx = 4; entry_idx < TOTAL_CAM_ENTRY - 1; entry_idx++) {
 		if ((bitmap & BIT0) == 0) {
-			printk("-----HwSecCamBitMap: 0x%x entry_idx=%d\n",ieee->HwSecCamBitMap, entry_idx);
 			ieee->HwSecCamBitMap |= BIT0<<entry_idx;
 			memcpy(ieee->HwSecCamStaAddr[entry_idx], sta_addr, ETH_ALEN);
 			return entry_idx;

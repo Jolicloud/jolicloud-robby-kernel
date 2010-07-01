@@ -21,8 +21,8 @@
 
 typedef struct _CHANNEL_LIST
 {
-	        u8      Channel[32];
-		        u8      Len;
+	u8      Channel[32];
+	u8      Len;
 }CHANNEL_LIST, *PCHANNEL_LIST;
 
 static CHANNEL_LIST ChannelPlan[] = {
@@ -44,8 +44,12 @@ static CHANNEL_LIST ChannelPlan[] = {
 void Dot11d_Init(struct rtllib_device *ieee)
 {
 	PRT_DOT11D_INFO pDot11dInfo = GET_DOT11D_INFO(ieee);
-
-	pDot11dInfo->bEnabled = 0;
+#ifdef CONFIG_CRDA 
+	ieee->bGlobalDomain = true;
+	pDot11dInfo->bEnabled = true;
+#else
+	pDot11dInfo->bEnabled = false;
+#endif	
 
 	pDot11dInfo->State = DOT11D_STATE_NONE;
 	pDot11dInfo->CountryIeLen = 0;
@@ -99,12 +103,14 @@ void Dot11d_Channelmap(u8 channel_plan, struct rtllib_device* ieee)
 
 void Dot11d_Reset(struct rtllib_device *ieee)
 {
-	u32 i;
 	PRT_DOT11D_INFO pDot11dInfo = GET_DOT11D_INFO(ieee);
 #if 0
 	if(!pDot11dInfo->bEnabled)
 		return;
 #endif
+
+#ifndef CONFIG_CRDA
+	u32 i;
 	memset(pDot11dInfo->channel_map, 0, MAX_CHANNEL_NUMBER+1);
 	memset(pDot11dInfo->MaxTxPwrDbmList, 0xFF, MAX_CHANNEL_NUMBER+1);
 	for (i=1; i<=11; i++) {
@@ -113,7 +119,7 @@ void Dot11d_Reset(struct rtllib_device *ieee)
 	for (i=12; i<=14; i++) {
 		(pDot11dInfo->channel_map)[i] = 2;
 	}
-
+#endif
 	pDot11dInfo->State = DOT11D_STATE_NONE;
 	pDot11dInfo->CountryIeLen = 0;
 	RESET_CIE_WATCHDOG(ieee);
@@ -124,6 +130,9 @@ void Dot11d_UpdateCountryIe(struct rtllib_device *dev, u8 *pTaddr,
 	                    u16 CoutryIeLen, u8* pCoutryIe)
 {
 	PRT_DOT11D_INFO pDot11dInfo = GET_DOT11D_INFO(dev);
+#ifdef CONFIG_CRDA 
+	
+#else	
 	u8 i, j, NumTriples, MaxChnlNum;
 	PCHNL_TXPOWER_TRIPLE pTriple;
 
@@ -154,19 +163,24 @@ void Dot11d_UpdateCountryIe(struct rtllib_device *dev, u8 *pTaddr,
 
 		pTriple = (PCHNL_TXPOWER_TRIPLE)((u8*)pTriple + 3);
 	}
-#if 1
+#if 0
 	printk("Channel List:");
 	for(i=1; i<= MAX_CHANNEL_NUMBER; i++)
 		if(pDot11dInfo->channel_map[i] > 0)
 			printk(" %d", i);
 	printk("\n");
 #endif
+#endif	
 
 	UPDATE_CIE_SRC(dev, pTaddr);
 
 	pDot11dInfo->CountryIeLen = CoutryIeLen;
 	memcpy(pDot11dInfo->CountryIeBuf, pCoutryIe,CoutryIeLen);
 	pDot11dInfo->State = DOT11D_STATE_LEARNED;
+
+#ifdef CONFIG_CRDA 
+   	queue_delayed_work_rsl(dev->wq, &dev->softmac_hint11d_wq, 0);
+#endif	
 }
 
 u8 DOT11D_GetMaxTxPwrInDbm( struct rtllib_device *dev, u8 Channel)
@@ -198,7 +212,6 @@ void DOT11D_ScanComplete( struct rtllib_device * dev)
 		break;
 
 	case DOT11D_STATE_DONE:
-		if( GET_CIE_WATCHDOG(dev) == 0 )
 		{ 
 			Dot11d_Reset(dev); 
 		}
@@ -206,20 +219,6 @@ void DOT11D_ScanComplete( struct rtllib_device * dev)
 	case DOT11D_STATE_NONE:
 		break;
 	}
-}
-
-int IsLegalChannel( struct rtllib_device * dev, u8 channel)
-{
-	PRT_DOT11D_INFO pDot11dInfo = GET_DOT11D_INFO(dev);
-
-	if(MAX_CHANNEL_NUMBER < channel)
-	{ 
-		printk("IsLegalChannel(): Invalid Channel\n");
-		return 0; 
-	}
-	if(pDot11dInfo->channel_map[channel] > 0)
-		return 1;
-	return 0;
 }
 
 int ToLegalChannel( struct rtllib_device * dev, u8 channel)
@@ -239,7 +238,7 @@ int ToLegalChannel( struct rtllib_device * dev, u8 channel)
 
 	if(MAX_CHANNEL_NUMBER < channel)
 	{ 
-		printk("IsLegalChannel(): Invalid Channel\n");
+		printk("%s(): Invalid Channel\n", __FUNCTION__);
 		return default_chn; 
 	}
 	
@@ -256,7 +255,6 @@ EXPORT_SYMBOL_RSL(Dot11d_Reset);
 EXPORT_SYMBOL_RSL(Dot11d_UpdateCountryIe);
 EXPORT_SYMBOL_RSL(DOT11D_GetMaxTxPwrInDbm);
 EXPORT_SYMBOL_RSL(DOT11D_ScanComplete);
-EXPORT_SYMBOL_RSL(IsLegalChannel);
 EXPORT_SYMBOL_RSL(ToLegalChannel);
 #endif
 

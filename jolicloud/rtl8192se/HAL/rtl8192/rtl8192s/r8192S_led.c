@@ -1280,18 +1280,34 @@ SwLedControlMode9(struct net_device *dev, LED_CTL_MODE LedAction)
 		
 }
 
+void
+SwLedControlMode10(struct net_device *dev, LED_CTL_MODE LedAction)
+{
+	struct r8192_priv *priv = rtllib_priv(dev);
+	PLED_8190 pLed0 = &(priv->SwLed0);	
 
+	switch(LedAction)
+	{
+		case LED_CTL_LINK:
+			SwLedOn(dev, pLed0);
+			break;
+			
+		case LED_CTL_POWER_ON:	
+		case LED_CTL_NO_LINK:			
+		case LED_CTL_POWER_OFF:
+			SwLedOff(dev, pLed0);
+			break;
+
+		default:
+			break;			
+	}
+}
 
 void LedControl8192SE(struct net_device *dev, LED_CTL_MODE LedAction)
 {
 	struct r8192_priv *priv = rtllib_priv(dev);
 
-	
-#ifdef _RTL8192_EXT_PATCH_
-	if((!priv->up)&& (!priv->mesh_up))
-#else
-	if(!priv->up)
-#endif
+	if(IS_NIC_DOWN(priv))
 		return;
 
 #ifdef TO_DO_LIST
@@ -1340,6 +1356,9 @@ void LedControl8192SE(struct net_device *dev, LED_CTL_MODE LedAction)
 	case SW_LED_MODE9:
 		SwLedControlMode9(dev, LedAction);
 		break;
+	case SW_LED_MODE10:		
+		SwLedControlMode10(dev, LedAction);
+		break;	
 
 	default:
 		break;

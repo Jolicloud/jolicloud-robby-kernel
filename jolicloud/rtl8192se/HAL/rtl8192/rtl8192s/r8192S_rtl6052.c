@@ -20,9 +20,6 @@
 #ifdef RTL8192SE
 #include "../rtl_core.h"
 #include "../rtl_dm.h"
-#include "r8192S_phyreg.h"
-#include "r8192S_phy.h"
-#include "r8192S_rtl6052.h"
 
 /*---------------------------Define Local Constant---------------------------*/
 typedef struct RF_Shadow_Compare_Map {
@@ -582,7 +579,7 @@ void writeOFDMPowerReg(
 			rfa_lower_bound = 0x10-rf_pwr_diff;
 			RT_TRACE(COMP_POWER,"rfa_lower_bound= %d\n", rfa_lower_bound);
 		}
-		else if (rf_pwr_diff >= 0)	
+		else
 		{
 			rfa_upper_bound = RF6052_MAX_TX_PWR-rf_pwr_diff;
 			RT_TRACE(COMP_POWER,"rfa_upper_bound= %d\n", rfa_upper_bound);

@@ -1,19 +1,12 @@
 #ifndef __INC_ENDIANFREE_H
 #define __INC_ENDIANFREE_H
 
-#include "../../../rtllib/EndianFree.h"
-
 /*
  *	Call endian free function when
  *		1. Read/write packet content.
  *		2. Before write integer to IO.
  *		3. After read integer from IO.
  */
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20))
-#ifndef bool
-typedef enum{false = 0, true} bool;
-#endif
-#endif
 
 #define __MACHINE_LITTLE_ENDIAN 1234    /* LSB first: i386, vax */
 #define __MACHINE_BIG_ENDIAN    4321    /* MSB first: 68000, ibm, net, ppc */
@@ -160,5 +153,4 @@ typedef enum{false = 0, true} bool;
        );
 
 #define	N_BYTE_ALIGMENT(__Value, __Aligment) ((__Aligment == 1) ? (__Value) : (((__Value + __Aligment - 1) / __Aligment) * __Aligment))
-
 #endif 
