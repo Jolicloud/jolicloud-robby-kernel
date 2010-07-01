@@ -155,7 +155,7 @@ static inline int au_rdu_len(int nlen)
 
 union au_rdu_ent_ul {
 	struct au_rdu_ent __user	*e;
-	unsigned long			ul;
+	__u64				ul;
 };
 
 enum {
