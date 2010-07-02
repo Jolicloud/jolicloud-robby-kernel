@@ -1,3 +1,12 @@
+linux (2.6.32.9-1.20.1) robby; urgency=low
+
+  [ Adam McDaniel ]
+
+  * Imported rtl8192se (2.6.0017.0507.2010)
+  * JAMBON: Added support for the Cando dual touch panellogin
+
+ -- Adam McDaniel <adam@jolicloud.org>  Fri, 02 Jul 2010 00:19:43 -0600
+
 linux (2.6.32.9-1.20) robby; urgency=low
 
   [ Adam McDaniel ]
