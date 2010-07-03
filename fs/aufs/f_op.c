@@ -631,7 +631,7 @@ static int aufs_mmap(struct file *file, struct vm_area_struct *vma)
 		.errp		= &err
 	};
 
-	wkq_err = au_wkq_wait(au_call_mmap_pre, &args);
+	wkq_err = au_wkq_wait_pre(au_call_mmap_pre, &args);
 	if (unlikely(wkq_err))
 		err = wkq_err;
 	if (unlikely(err))
@@ -877,6 +877,9 @@ const struct file_operations aufs_file_fop = {
 	.poll		= aufs_poll,
 #endif
 	.unlocked_ioctl	= aufs_ioctl_nondir,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl	= aufs_ioctl_nondir, /* same */
+#endif
 	.mmap		= aufs_mmap,
 	.open		= aufs_open_nondir,
 	.flush		= aufs_flush_nondir,
