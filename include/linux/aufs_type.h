@@ -76,6 +76,7 @@ typedef __s16 aufs_bindex_t;
 #define AUFS_RDBLK_DEF		512 /* bytes */
 #define AUFS_RDHASH_DEF		32
 #define AUFS_WKQ_NAME		AUFS_NAME "d"
+#define AUFS_WKQ_PRE_NAME	AUFS_WKQ_NAME "_pre"
 #define AUFS_MFS_SECOND_DEF	30 /* seconds */
 #define AUFS_PLINK_WARN		100 /* number of plinks */
 
@@ -154,12 +155,11 @@ static inline int au_rdu_len(int nlen)
 
 union au_rdu_ent_ul {
 	struct au_rdu_ent __user	*e;
-	unsigned long			ul;
+	__u64				ul;
 };
 
 enum {
 	AufsCtlRduV_SZ,
-	AufsCtlRduV_SZ_PTR,
 	AufsCtlRduV_End
 };
 
