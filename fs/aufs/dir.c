@@ -628,6 +628,9 @@ const struct file_operations aufs_dir_fop = {
 	.read		= generic_read_dir,
 	.readdir	= aufs_readdir,
 	.unlocked_ioctl	= aufs_ioctl_dir,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl	= aufs_compat_ioctl_dir,
+#endif
 	.open		= aufs_open_dir,
 	.release	= aufs_release_dir,
 	.flush		= aufs_flush_dir,
