@@ -1,3 +1,17 @@
+linux (2.6.35-7.11) maverick; urgency=low
+
+  [ Tim Gardner ]
+
+  * [Config] CONFIG_X86_MRST=n
+
+  [ Upstream Kernel Changes ]
+
+  * (drop after 2.6.35-rc5) writeback: remove writeback_inodes_wbc
+  * (drop after 2.6.35-rc5) writeback: split writeback_inodes_wb
+  * (drop after 2.6.35-rc5) writeback: simplify the write back thread queue
+
+ --  Tim Gardner <tim.gardner@canonical.com>  Tue, 06 Jul 2010 18:39:08 -0600
+
 linux (2.6.35-7.10) maverick; urgency=low
 
   [ Kees Cook ]
