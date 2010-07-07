@@ -1,4 +1,4 @@
-Release Date: 2010-0507, ver 0017 
+Release Date: 2010-0702, ver 0017 
 RTL8192SE Linux driver
    --This driver supports RealTek rtl8192SE PCI Wireless LAN NIC
      for
