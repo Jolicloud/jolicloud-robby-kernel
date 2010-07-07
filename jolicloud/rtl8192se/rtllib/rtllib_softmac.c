@@ -1033,6 +1033,9 @@ bool rtllib_act_scanning(struct rtllib_device *ieee, bool sync_scan)
 /* called with ieee->lock held */
 void rtllib_start_scan(struct rtllib_device *ieee)
 {
+	if(ieee->RfOffReason > RF_CHANGE_BY_PS || ieee->RfOffReason == RF_CHANGE_BY_INIT)
+		return;
+
 	printk("===>%s()\n",__FUNCTION__);
 #ifdef ENABLE_IPS
 	if(ieee->rtllib_ips_leave_wq != NULL)

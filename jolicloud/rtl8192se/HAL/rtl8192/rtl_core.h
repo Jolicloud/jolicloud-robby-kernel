@@ -85,7 +85,7 @@
 
 #define DRV_COPYRIGHT  "Copyright(c) 2008 - 2010 Realsil Semiconductor Corporation"
 #define DRV_AUTHOR  "<wlanfae@realtek.com>"
-#define DRV_VERSION  "0017.0507.2010"
+#define DRV_VERSION  "0017.0702.2010"
 
 #ifdef RTL8190P
 #define DRV_NAME "rtl819xP"

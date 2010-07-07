@@ -2761,6 +2761,7 @@ u16 rtl8192_11n_user_show_rates(struct net_device* dev)
 	} else {
 		Sgstrength = priv->undecorated_smoothed_pwdb;
 	}
+	Sgstrength = 100;
 
 	if (priv->rtllib->mode == WIRELESS_MODE_A ||
 			priv->rtllib->mode == WIRELESS_MODE_G ||

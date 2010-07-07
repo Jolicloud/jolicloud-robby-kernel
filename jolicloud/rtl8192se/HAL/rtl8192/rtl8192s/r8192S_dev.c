@@ -104,11 +104,12 @@ void rtl8192se_update_msr(struct net_device *dev)
 	
 	switch (priv->rtllib->iw_mode) {
 	case IW_MODE_INFRA:
-		if (priv->rtllib->state == RTLLIB_LINKED)
+		if (priv->rtllib->state == RTLLIB_LINKED){
+			LedAction = LED_CTL_LINK;
 			msr |= (MSR_LINK_MANAGED << MSR_LINK_SHIFT);
-		else
+		}else
 			msr |= (MSR_LINK_NONE << MSR_LINK_SHIFT);
-		LedAction = LED_CTL_LINK;
+
 		break;
 	case IW_MODE_ADHOC:
 		if (priv->rtllib->state == RTLLIB_LINKED)
@@ -1280,7 +1281,7 @@ void gen_RefreshLedState(struct net_device *dev)
 		return;
 	}
 
-	if(priv->rtllib->RfOffReason == RF_CHANGE_BY_IPS )
+	if(priv->rtllib->RfOffReason == RF_CHANGE_BY_IPS)
 	{
 		SwLedOn(dev, pLed0);
 	}
@@ -1497,7 +1498,18 @@ void MacConfigBeforeFwDownload(struct net_device *dev)
 		write_nic_byte(dev, CMDR, tmpU1b|TXDMA_EN);
 	}
 
-	gen_RefreshLedState(dev);
+	//gen_RefreshLedState(dev);
+	if((priv->rtllib->RfOffReason == RF_CHANGE_BY_IPS) || 
+	   (priv->rtllib->RfOffReason == 0))
+	{
+		PLED_8190 pLed0 = &(priv->SwLed0);	
+		RT_RF_POWER_STATE eRfPowerStateToSet;
+		eRfPowerStateToSet = RfOnOffDetect(dev);
+		if(eRfPowerStateToSet == eRfOn){
+			//printk("+++++++++++++++++>%s() set LED ON\n", __func__);
+			SwLedOn(dev, pLed0);
+		}
+	}
 
 	RT_TRACE(COMP_INIT, "<---MacConfigBeforeFwDownload()\n");
 
@@ -1919,9 +1931,9 @@ start:
 		else
 		{
 #if 0 
-			u8				u1Tmp;
+			u8			u1Tmp;
 			RT_RF_POWER_STATE	eRfPowerStateToSet;
-			
+
 			write_nic_byte(dev, MAC_PINMUX_CFG, (GPIOMUX_EN | GPIOSEL_GPIO));
 			u1Tmp = read_nic_byte(dev, MAC_PINMUX_CFG);
 			u1Tmp = read_nic_byte(dev, GPIO_IO_SEL);
@@ -1936,23 +1948,23 @@ start:
 			RT_TRACE(COMP_INIT, "==++==> InitializeAdapter8190(): RF=%d \n", eRfPowerStateToSet);
 			if (eRfPowerStateToSet == eRfOff)
 			{				
-				MgntActSet_RF_State(dev, eRfOff, RF_CHANGE_BY_HW, TRUE);
-				
-		}
-		else
-		{
+				MgntActSet_RF_State(dev, eRfOff, RF_CHANGE_BY_HW, true);
+
+			}
+			else
+			{
 				priv->rtllib->RfOffReason = 0; 
 			}	
 #else					
-	            if(priv->bHwRadioOff == false){
-			priv->rtllib->eRFPowerState = eRfOn;
-			priv->rtllib->RfOffReason = 0; 
-			if(priv->rtllib->LedControlHandler)
-				priv->rtllib->LedControlHandler(dev, LED_CTL_POWER_ON);
-			}		
+			if(priv->bHwRadioOff == false){// && !(priv->bfirst_init)){
+			    priv->rtllib->eRFPowerState = eRfOn;
+			    priv->rtllib->RfOffReason = 0; 
+			    if(priv->rtllib->LedControlHandler)
+				    ;//priv->rtllib->LedControlHandler(dev, LED_CTL_POWER_ON);
+		    }		
 #endif
 		}	
-		}	
+	}	
 
 #if 1
 #if (HAL_RF_ENABLE == 1)		
@@ -2053,7 +2065,7 @@ start:
 	
 	
 
-		PHY_SwitchEphyParameter(dev);
+	PHY_SwitchEphyParameter(dev);
 	RF_RECOVERY(dev, 0x25, 0x29);
 
 	if(priv->ResetProgress == RESET_TYPE_NORESET)
