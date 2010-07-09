@@ -1297,6 +1297,12 @@ early_param("memmap", parse_memmap_opt);
 
 void __init finish_e820_parsing(void)
 {
+	if (!userdef) {
+		unsigned long long mem_size = 2147483648; /* 2 gigabytes */
+		userdef = 1;
+		printk(KERN_INFO "Setting maximum mem_size to %ld\n", mem_size);
+		e820_remove_range(mem_size, ULLONG_MAX - mem_size, E820_RAM, 1);
+	}
 	if (userdef) {
 		u32 nr = e820.nr_map;
 
