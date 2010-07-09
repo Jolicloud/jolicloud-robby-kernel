@@ -629,6 +629,13 @@ static const struct dmi_system_id bad_lid_status[] = {
 			DMI_MATCH(DMI_PRODUCT_NAME, "PC-81005"),
 		},
 	},
+	{
+		.ident = "Clevo M5x0N",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "CLEVO Co."),
+			DMI_MATCH(DMI_BOARD_NAME, "M5x0N"),
+		},
+	},
 	{ }
 };
 
@@ -641,7 +648,11 @@ static const struct dmi_system_id bad_lid_status[] = {
  */
 static enum drm_connector_status intel_lvds_detect(struct drm_connector *connector)
 {
+	struct drm_device *dev = connector->dev;
 	enum drm_connector_status status = connector_status_connected;
+
+	if (IS_I8XX(dev))
+		return connector_status_connected;
 
 	if (!acpi_lid_open() && !dmi_check_system(bad_lid_status))
 		status = connector_status_disconnected;
@@ -876,6 +887,14 @@ static const struct dmi_system_id intel_no_lvds[] = {
 		.ident = "Aopen i945GTt-VFA",
 		.matches = {
 			DMI_MATCH(DMI_PRODUCT_VERSION, "AO00001JW"),
+		},
+	},
+	{
+		.callback = intel_no_lvds_dmi_callback,
+		.ident = "Clientron U800",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "Clientron"),
+			DMI_MATCH(DMI_PRODUCT_NAME, "U800"),
 		},
 	},
 
