@@ -1015,6 +1015,7 @@ ssize_t aa_replace_profiles(void *udata, size_t size, bool noreplace)
 	new_profile = aa_unpack(udata, size, &ns_name);
 	if (IS_ERR(new_profile)) {
 		error = PTR_ERR(new_profile);
+		new_profile = NULL;
 		goto fail;
 	}
 
