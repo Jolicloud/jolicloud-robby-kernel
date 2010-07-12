@@ -409,8 +409,7 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 		goto audit;
 
 	/* test to see if target can be paired with link */
-	state = aa_dfa_null_transition(profile->file.dfa, state,
-				       profile->flags & PFLAG_OLD_NULL_TRANS);
+	state = aa_dfa_null_transition(profile->file.dfa, state);
 	aa_str_perms(profile->file.dfa, state, tname, &cond, &perms);
 
 	/* force audit/quiet masks for link are stored in the second entry

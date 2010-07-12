@@ -407,7 +407,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 		 * onexec permission is linked to exec with a standard pairing
 		 * exec\0change_profile
 		 */
-		state = aa_dfa_null_transition(profile->file.dfa, state, 0);
+		state = aa_dfa_null_transition(profile->file.dfa, state);
 		cp = change_profile_perms(profile, cxt->onexec->ns, name,
 					  AA_MAY_ONEXEC, state);
 
