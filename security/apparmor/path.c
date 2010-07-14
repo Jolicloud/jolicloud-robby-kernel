@@ -118,7 +118,7 @@ static int d_namespace_path(struct path *path, char *buf, int buflen,
 	 *     of chroot) and specifically directed to connect paths to
 	 *     namespace root.
 	 */
-	if (!connected && 
+	if (!connected &&
 	    !(flags & PATH_CONNECT_PATH) &&
 	    !((flags & PATH_CHROOT_REL) && (flags & PATH_CHROOT_NSCONNECT) &&
 	      (tmp.mnt == current->nsproxy->mnt_ns->root &&

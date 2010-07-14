@@ -104,7 +104,7 @@ struct common_audit_data {
 			const char *info;
 			union {
 				void *target;
-                                struct {
+				struct {
 					long pos;
 					void *target;
 				} iface;

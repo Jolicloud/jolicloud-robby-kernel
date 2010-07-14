@@ -424,7 +424,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 			if (perms.xindex & AA_X_INHERIT) {
 				/* (p|c|n)ix - don't change profile but do
 				 * use the newest version, which was picked
-				 * up above when getting profile 
+				 * up above when getting profile
 				 */
 				info = "ix fallback";
 				new_profile = aa_get_profile(profile);

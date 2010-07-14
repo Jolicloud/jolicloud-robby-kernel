@@ -130,7 +130,7 @@ static bool policy_init(struct aa_policy *policy, const char *prefix,
 {
 	/* freed by policy_free */
 	if (prefix) {
-		policy->hname = kmalloc(strlen(prefix) + strlen(name) +3,
+		policy->hname = kmalloc(strlen(prefix) + strlen(name) + 3,
 					GFP_KERNEL);
 		if (policy->hname)
 			sprintf(policy->hname, "%s//%s", prefix, name);
@@ -559,7 +559,7 @@ static void destroy_namespace(struct aa_namespace *ns)
 /**
  * __remove_namespace - remove a namespace and all its children
  * @ns: namespace to be removed  (NOT NULL)
- * 
+ *
  * Requires: ns->parent->lock be held and ns removed from parent.
  */
 static void __remove_namespace(struct aa_namespace *ns)
@@ -623,7 +623,7 @@ void aa_free_root_ns(void)
  {
 	 struct aa_namespace *ns = root_ns;
 	 root_ns = NULL;
- 
+
 	 destroy_namespace(ns);
 	 aa_put_namespace(ns);
 }
@@ -1098,7 +1098,7 @@ out:
 	return size;
 
 fail:
-	error = audit_policy(op, GFP_KERNEL, name, info, error); 
+	error = audit_policy(op, GFP_KERNEL, name, info, error);
 	goto out;
 }
 
