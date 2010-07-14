@@ -114,8 +114,8 @@ struct common_audit_data {
 				} rlim;
 				struct {
 					const char *target;
-					u16 request;
-					u16 denied;
+					u32 request;
+					u32 denied;
 					uid_t ouid;
 				} fs;
 				struct {

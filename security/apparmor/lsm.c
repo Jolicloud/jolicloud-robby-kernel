@@ -195,7 +195,7 @@ out:
  *
  * Returns: %0 else error code if error or permission denied
  */
-static int common_perm(int op, struct path *path, u16 mask,
+static int common_perm(int op, struct path *path, u32 mask,
 		       struct path_cond *cond)
 {
 	struct aa_profile *profile;
@@ -219,7 +219,7 @@ static int common_perm(int op, struct path *path, u16 mask,
  * Returns: %0 else error code if error or permission denied
  */
 static int common_perm_dir_dentry(int op, struct path *dir,
-				  struct dentry *dentry, u16 mask,
+				  struct dentry *dentry, u32 mask,
 				  struct path_cond *cond)
 {
 	struct path path = { dir->mnt, dentry };
@@ -237,7 +237,7 @@ static int common_perm_dir_dentry(int op, struct path *dir,
  * Returns: %0 else error code if error or permission denied
  */
 static int common_perm_mnt_dentry(int op, struct vfsmount *mnt,
-				  struct dentry *dentry, u16 mask)
+				  struct dentry *dentry, u32 mask)
 {
 	struct path path = { mnt, dentry };
 	struct path_cond cond = { dentry->d_inode->i_uid,
@@ -257,7 +257,7 @@ static int common_perm_mnt_dentry(int op, struct vfsmount *mnt,
  * Returns: %0 else error code if error or permission denied
  */
 static int common_perm_rm(int op, struct path *dir,
-			  struct dentry *dentry, u16 mask)
+			  struct dentry *dentry, u32 mask)
 {
 	struct inode *inode = dentry->d_inode;
 	struct path_cond cond = { };
@@ -282,7 +282,7 @@ static int common_perm_rm(int op, struct path *dir,
  * Returns: %0 else error code if error or permission denied
  */
 static int common_perm_create(int op, struct path *dir, struct dentry *dentry,
-			      u16 mask, umode_t mode)
+			      u32 mask, umode_t mode)
 {
 	struct path_cond cond = { current_fsuid(), mode };
 
@@ -461,7 +461,7 @@ static void apparmor_file_free_security(struct file *file)
 	aa_free_file_context(cxt);
 }
 
-static int common_file_perm(int op, struct file *file, u16 mask)
+static int common_file_perm(int op, struct file *file, u32 mask)
 {
 	struct aa_file_cxt *fcxt = file->f_security;
 	struct aa_profile *profile, *fprofile = aa_cred_profile(file->f_cred);
@@ -496,7 +496,7 @@ static int apparmor_file_permission(struct file *file, int mask)
 
 static int apparmor_file_lock(struct file *file, unsigned int cmd)
 {
-	u16 mask = AA_MAY_LOCK;
+	u32 mask = AA_MAY_LOCK;
 
 	if (cmd == F_WRLCK)
 		mask |= MAY_WRITE;

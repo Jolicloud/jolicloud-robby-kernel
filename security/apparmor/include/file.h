@@ -88,10 +88,10 @@ struct path_cond {
  * The @audit and @queit mask should be mutually exclusive.
  */
 struct file_perms {
-	u16 allow;
-	u16 audit;
-	u16 quiet;
-	u16 kill;
+	u32 allow;
+	u32 audit;
+	u32 quiet;
+	u32 kill;
 	u16 xindex;
 	u16 xdelegate;
 	u16 dindex;
@@ -150,7 +150,7 @@ static inline u16 dfa_map_xindex(u16 mask)
 	dfa_map_xindex((ACCEPT_TABLE(dfa)[state] >> 14) & 0x3fff)
 
 int aa_audit_file(struct aa_profile *profile, struct file_perms *perms,
-		  gfp_t gfp, int op, u16 request, const char *name,
+		  gfp_t gfp, int op, u32 request, const char *name,
 		  const char *target, uid_t ouid, const char *info, int error);
 
 /**
@@ -177,16 +177,16 @@ unsigned int aa_str_perms(struct aa_dfa *dfa, unsigned int start,
 			  struct file_perms *perms);
 
 int aa_pathstr_perm(int op, struct aa_profile *profile, const char *name,
-		    u16 request, struct path_cond *cond);
+		    u32 request, struct path_cond *cond);
 
 int aa_path_perm(int op, struct aa_profile *profile, struct path *path,
-		 int flags, u16 request, struct path_cond *cond);
+		 int flags, u32 request, struct path_cond *cond);
 
 int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 		 struct path *new_dir, struct dentry *new_dentry);
 
 int aa_file_perm(int op, struct aa_profile *profile, struct file *file,
-		 u16 request);
+		 u32 request);
 
 static inline void aa_free_file_rules(struct aa_file_rules *rules)
 {
@@ -205,10 +205,10 @@ static inline void aa_free_file_rules(struct aa_file_rules *rules)
  *
  * Returns: apparmor permission set for the file
  */
-static inline u16 aa_map_file_to_perms(struct file *file)
+static inline u32 aa_map_file_to_perms(struct file *file)
 {
 	int flags = MAP_OPEN_FLAGS(file->f_flags);
-	u16 perms = ACC_FMODE(file->f_mode);
+	u32 perms = ACC_FMODE(file->f_mode);
 
 	if ((flags & O_APPEND) && (perms & MAY_WRITE))
 		perms = (perms & ~MAY_WRITE) | MAY_APPEND;

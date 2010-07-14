@@ -28,7 +28,7 @@ struct file_perms nullperms;
  * @mask: permission mask to convert
  * @owner: if the mask is for owner or other
  */
-static void audit_file_mask(struct audit_buffer *ab, u16 mask)
+static void audit_file_mask(struct audit_buffer *ab, u32 mask)
 {
 	char str[10];
 
@@ -102,7 +102,7 @@ static void file_audit_cb(struct audit_buffer *ab, void *va)
  * Returns: %0 or error on failure
  */
 int aa_audit_file(struct aa_profile *profile, struct file_perms *perms,
-		  gfp_t gfp, int op, u16 request, const char *name,
+		  gfp_t gfp, int op, u32 request, const char *name,
 		  const char *target, uid_t ouid, const char *info, int error)
 {
 	int type = AUDIT_APPARMOR_AUTO;
@@ -117,7 +117,7 @@ int aa_audit_file(struct aa_profile *profile, struct file_perms *perms,
 	sa.aad.error = error;
 
 	if (likely(!sa.aad.error)) {
-		u16 mask = perms->audit;
+		u32 mask = perms->audit;
 
 		if (unlikely(AUDIT_MODE(profile) == AUDIT_ALL))
 			mask = 0xffff;
@@ -155,9 +155,9 @@ int aa_audit_file(struct aa_profile *profile, struct file_perms *perms,
  *
  * Returns: new permission mapping
  */
-static u16 map_old_perms(u32 old)
+static u32 map_old_perms(u32 old)
 {
-	u16 new = old & 0xf;
+	u32 new = old & 0xf;
 	if (old & MAY_READ)
 		new |= AA_MAY_META_READ;
 	if (old & MAY_WRITE)
@@ -259,7 +259,7 @@ unsigned int aa_str_perms(struct aa_dfa *dfa, unsigned int start,
  * Returns: %0 else error if access denied or other error
  */
 int aa_pathstr_perm(int op, struct aa_profile *profile, const char *name,
-		    u16 request, struct path_cond *cond)
+		    u32 request, struct path_cond *cond)
 {
 	struct file_perms perms = { };
 	int error = 0;
@@ -297,7 +297,7 @@ static inline bool is_deleted(struct dentry *dentry)
  * Returns: %0 else error if access denied or other error
  */
 int aa_path_perm(int op, struct aa_profile *profile, struct path *path,
-		 int flags, u16 request, struct path_cond *cond)
+		 int flags, u32 request, struct path_cond *cond)
 {
 	char *buffer = NULL;
 	struct file_perms perms = {};
@@ -345,7 +345,7 @@ int aa_path_perm(int op, struct aa_profile *profile, struct path *path,
  *
  * Returns: %1 if subset else %0
  */
-static inline bool xindex_is_subset(u16 link, u16 target)
+static inline bool xindex_is_subset(u32 link, u32 target)
 {
 	if (((link & ~AA_X_UNSAFE) != (target & ~AA_X_UNSAFE)) ||
 	    ((link & AA_X_UNSAFE) && !(target & AA_X_UNSAFE)))
@@ -384,7 +384,7 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 	char *buffer = NULL, *buffer2 = NULL;
 	const char *lname, *tname = NULL, *info = NULL;
 	struct file_perms lperms, perms;
-	u16 request = AA_MAY_LINK;
+	u32 request = AA_MAY_LINK;
 	unsigned int state;
 	int error;
 
@@ -472,7 +472,7 @@ audit:
  * Returns: %0 if access allowed else error
  */
 int aa_file_perm(int op, struct aa_profile *profile, struct file *file,
-		 u16 request)
+		 u32 request)
 {
 	struct path_cond cond = {
 		.uid = file->f_path.dentry->d_inode->i_uid,

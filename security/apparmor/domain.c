@@ -100,7 +100,7 @@ out:
  */
 static struct file_perms change_profile_perms(struct aa_profile *profile,
 					      struct aa_namespace *ns,
-					      const char *name, u16 request,
+					      const char *name, u32 request,
 					      unsigned int start)
 {
 	struct file_perms perms;
@@ -155,7 +155,7 @@ static struct aa_profile *__attach_match(const char *name,
 		if (profile->xmatch && profile->xmatch_len > len) {
 			unsigned int state = aa_dfa_match(profile->xmatch,
 							  DFA_START, name);
-			u16 perm = dfa_user_allow(profile->xmatch, state);
+			u32 perm = dfa_user_allow(profile->xmatch, state);
 			/* any accepting state means a valid match. */
 			if (perm & MAY_EXEC) {
 				candidate = profile;
@@ -239,11 +239,11 @@ static const char *next_name(int xtype, const char *name)
  *
  * Returns: refcounted profile, or NULL on failure
  */
-static struct aa_profile *x_table_lookup(struct aa_profile *profile, u16 xindex)
+static struct aa_profile *x_table_lookup(struct aa_profile *profile, u32 xindex)
 {
 	struct aa_profile *new_profile = NULL;
 	struct aa_namespace *ns = profile->ns;
-	u16 xtype = xindex & AA_X_TYPE_MASK;
+	u32 xtype = xindex & AA_X_TYPE_MASK;
 	int index = xindex & AA_X_INDEX_MASK;
 	const char *name;
 
@@ -301,11 +301,11 @@ static struct aa_profile *x_table_lookup(struct aa_profile *profile, u16 xindex)
  * Returns: refcounted profile or NULL if not found available
  */
 static struct aa_profile *x_to_profile(struct aa_profile *profile,
-				       const char *name, u16 xindex)
+				       const char *name, u32 xindex)
 {
 	struct aa_profile *new_profile = NULL;
 	struct aa_namespace *ns = profile->ns;
-	u16 xtype = xindex & AA_X_TYPE_MASK;
+	u32 xtype = xindex & AA_X_TYPE_MASK;
 
 	switch (xtype) {
 	case AA_X_NONE:
@@ -729,7 +729,7 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 	struct file_perms perms = {};
 	const char *name = NULL, *info = NULL;
 	int op, error = 0;
-	u16 request;
+	u32 request;
 
 	if (!hname && !ns_name)
 		return -EINVAL;
