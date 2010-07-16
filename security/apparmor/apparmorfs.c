@@ -36,12 +36,14 @@
  */
 static void *kvmalloc(size_t size)
 {
-	void *buffer;
+	void *buffer = NULL;
 
 	if (size == 0)
 		return NULL;
 
-	buffer = kmalloc(size, GFP_KERNEL | __GFP_NOWARN);
+	/* do not attempt kmalloc if we need more than 16 pages at once */
+	if (size <= (16*PAGE_SIZE))
+		buffer = kmalloc(size, GFP_NOIO | __GFP_NOWARN);
 	if (!buffer)
 		buffer = vmalloc(size);
 	return buffer;

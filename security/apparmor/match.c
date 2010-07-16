@@ -91,7 +91,9 @@ static struct table_header *unpack_table(char *blob, size_t bsize)
 		goto out;
 
 	/* freed by free_table */
-	table = kmalloc(table_alloc_size(tsize), GFP_KERNEL | __GFP_NOWARN);
+	if (tsize <= (16*PAGE_SIZE))
+		table = kmalloc(table_alloc_size(tsize),
+				GFP_NOIO | __GFP_NOWARN);
 	if (!table) {
 		table = vmalloc(tsize);
 		if (table)
