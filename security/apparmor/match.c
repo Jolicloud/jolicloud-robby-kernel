@@ -92,7 +92,7 @@ static struct table_header *unpack_table(char *blob, size_t bsize)
 		table = kmalloc(table_alloc_size(tsize),
 				GFP_NOIO | __GFP_NOWARN);
 	if (!table) {
-		table = vmalloc(tsize);
+		table = vmalloc(table_alloc_size(tsize));
 		if (table)
 			unmap_alias = 1;
 	}
