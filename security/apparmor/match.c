@@ -41,9 +41,6 @@ static void do_vfree(struct work_struct *work)
  */
 static void free_table(struct table_header *table)
 {
-	if (!table)
-		return;
-
 	if (is_vmalloc_addr(table)) {
 		/* Data is no longer valid so just use the allocated space
 		 * as the work_struct

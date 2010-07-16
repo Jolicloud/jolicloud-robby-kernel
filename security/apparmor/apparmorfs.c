@@ -57,9 +57,6 @@ static void *kvmalloc(size_t size)
  */
 static void kvfree(void *buffer)
 {
-	if (!buffer)
-		return;
-
 	if (is_vmalloc_addr(buffer))
 		vfree(buffer);
 	else
