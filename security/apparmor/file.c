@@ -53,7 +53,7 @@ static void audit_file_mask(struct audit_buffer *ab, u32 mask)
 		*m++ = 'k';
 	if (mask & MAY_EXEC)
 		*m++ = 'x';
-	*m++ = '\0';
+	*m = '\0';
 
 	audit_log_string(ab, str);
 }
