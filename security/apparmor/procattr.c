@@ -128,7 +128,10 @@ int aa_setprocattr_changehat(char *args, size_t size, int test)
 
 	if (hat) {
 		/* set up hat name vector, args guarenteed null terminated
-		 * at args[size]
+		 * at args[size] by setprocattr.
+		 *
+		 * If there are multiple hat names in the buffer each is
+		 * separated by a \0.  Ie. userspace writes them pre tokenized
 		 */
 		char *end = args + size;
 		for (count = 0; (hat < end) && count < 16; ++count) {
