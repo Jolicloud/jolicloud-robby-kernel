@@ -52,8 +52,21 @@ void apparmor_disable(void);
 
 /* fn's in lib */
 char *aa_split_fqname(char *args, char **ns_name);
-bool aa_strneq(const char *str, const char *sub, int len);
 void aa_info_message(const char *str);
+
+
+/**
+ * aa_strneq - compare null terminated @str to a non null terminated substring
+ * @str: a null terminated string
+ * @sub: a substring, not necessarily null terminated
+ * @len: length of @sub to compare
+ *
+ * The @str string must be full consumed for this to be considered a match
+ */
+static inline bool aa_strneq(const char *str, const char *sub, int len)
+{
+	return !strncmp(str, sub, len) && !str[len];
+}
 
 /**
  * aa_dfa_null_transition - step to next state after null character

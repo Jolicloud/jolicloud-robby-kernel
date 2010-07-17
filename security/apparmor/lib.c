@@ -54,24 +54,6 @@ char *aa_split_fqname(char *fqname, char **ns_name)
 	return name;
 }
 
-/**
- * aa_strneq - compare null terminated @str to a non null terminated substring
- * @str: a null terminated string
- * @sub: a substring, not necessarily null terminated
- * @len: length of @sub to compare
- *
- * The @str string must be full consumed for this to be considered a match
- */
-bool aa_strneq(const char *str, const char *sub, int len)
-{
-	int res = strncmp(str, sub, len);
-	if (res)
-		return 0;
-	if (str[len] == 0)
-		return 1;
-	return 0;
-}
-
 void aa_info_message(const char *str)
 {
 	struct common_audit_data sa;
