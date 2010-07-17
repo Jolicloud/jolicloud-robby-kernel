@@ -209,8 +209,8 @@ static void dfa_free(struct aa_dfa *dfa)
 			free_table(dfa->tables[i]);
 			dfa->tables[i] = NULL;
 		}
+		kfree(dfa);
 	}
-	kfree(dfa);
 }
 
 /**
