@@ -178,8 +178,6 @@ static const struct file_operations aa_fs_profile_remove = {
 /** Base file system setup **/
 
 static struct dentry *aa_fs_dentry;
-struct dentry *aa_fs_null;
-struct vfsmount *aa_fs_mnt;
 
 static void aafs_remove(const char *name)
 {
