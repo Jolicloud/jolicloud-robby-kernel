@@ -629,7 +629,6 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 			hat = aa_find_child(root, hats[i]);
 		if (!hat) {
 			if (!COMPLAIN_MODE(root) || permtest) {
-				info = "hat not found";
 				if (list_empty(&root->base.profiles))
 					error = -ECHILD;
 				else
