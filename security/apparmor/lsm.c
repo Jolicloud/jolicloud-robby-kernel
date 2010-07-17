@@ -582,19 +582,27 @@ static int apparmor_getprocattr(struct task_struct *task, char *name,
 static int apparmor_setprocattr(struct task_struct *task, char *name,
 				void *value, size_t size)
 {
-	char *command, *args;
+	char *command, *args = value;
 	size_t arg_size;
 	int error;
 
-	if (size == 0 || size >= PAGE_SIZE)
+	if (size == 0)
 		return -EINVAL;
+	/* args points to a PAGE_SIZE buffer, AppArmor requires that
+	 * the buffer must be null terminated or have size <= PAGE_SIZE -1
+	 * so that AppArmor can null terminate them
+	 */
+	if (args[size - 1] != '\0') {
+		if (size == PAGE_SIZE)
+			return -EINVAL;
+		args[size] = '\0';
+	}
 
 	/* task can only write its own attributes */
 	if (current != task)
 		return -EACCES;
 
 	args = value;
-	args[size] = '\0';
 	args = strim(args);
 	command = strsep(&args, " ");
 	if (!args)
