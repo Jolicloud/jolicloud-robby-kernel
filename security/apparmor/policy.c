@@ -619,7 +619,7 @@ int __init aa_alloc_root_ns(void)
  /**
   * aa_free_root_ns - free the root profile namespace
   */
-void aa_free_root_ns(void)
+void __init aa_free_root_ns(void)
  {
 	 struct aa_namespace *ns = root_ns;
 	 root_ns = NULL;
