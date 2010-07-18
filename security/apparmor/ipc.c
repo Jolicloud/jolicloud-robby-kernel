@@ -40,7 +40,7 @@ static int aa_audit_ptrace(struct aa_profile *profile,
 			   struct aa_profile *target, int error)
 {
 	struct common_audit_data sa;
-	COMMON_AUDIT_DATA_INIT_NONE(&sa);
+	COMMON_AUDIT_DATA_INIT(&sa, NONE);
 	sa.aad.op = OP_PTRACE;
 	sa.aad.target = target;
 	sa.aad.error = error;

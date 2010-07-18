@@ -107,7 +107,7 @@ int aa_audit_file(struct aa_profile *profile, struct file_perms *perms,
 {
 	int type = AUDIT_APPARMOR_AUTO;
 	struct common_audit_data sa;
-	COMMON_AUDIT_DATA_INIT_NONE(&sa);
+	COMMON_AUDIT_DATA_INIT(&sa, NONE);
 	sa.aad.op = op,
 	sa.aad.fs.request = request;
 	sa.aad.name = name;

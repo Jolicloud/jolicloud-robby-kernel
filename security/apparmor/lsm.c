@@ -617,7 +617,7 @@ static int apparmor_setprocattr(struct task_struct *task, char *name,
 			error = aa_setprocattr_permipc(args);
 		} else {
 			struct common_audit_data sa;
-			COMMON_AUDIT_DATA_INIT_NONE(&sa);
+			COMMON_AUDIT_DATA_INIT(&sa, NONE);
 			sa.aad.op = OP_SETPROCATTR;
 			sa.aad.info = name;
 			sa.aad.error = -EINVAL;

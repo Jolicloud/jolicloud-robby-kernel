@@ -44,7 +44,7 @@ static int audit_resource(struct aa_profile *profile, unsigned int resource,
 {
 	struct common_audit_data sa;
 
-	COMMON_AUDIT_DATA_INIT_NONE(&sa);
+	COMMON_AUDIT_DATA_INIT(&sa, NONE);
 	sa.aad.op = OP_SETRLIMIT,
 	sa.aad.rlim.rlim = resource;
 	sa.aad.rlim.max = value;

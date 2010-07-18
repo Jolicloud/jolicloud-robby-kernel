@@ -118,10 +118,4 @@ static inline int complain_error(int error)
 	return error;
 }
 
-#define COMMON_AUDIT_DATA_INIT_NONE(_d) \
-	do { \
-		memset((_d), 0, sizeof(struct common_audit_data)); \
-		(_d)->type = LSM_AUDIT_DATA_NONE; \
-	} while (0)
-
 #endif /* __AA_AUDIT_H */
