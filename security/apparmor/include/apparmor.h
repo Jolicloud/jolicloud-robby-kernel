@@ -80,7 +80,8 @@ static inline bool aa_strneq(const char *str, const char *sub, int len)
 static inline unsigned int aa_dfa_null_transition(struct aa_dfa *dfa,
 						  unsigned int start)
 {
-	return aa_dfa_match_len(dfa, start, "\0", 1);
+	/* the null transition only needs a single null byte of the string */
+	return aa_dfa_match_len(dfa, start, "", 1);
 }
 
 static inline bool mediated_filesystem(struct inode *inode)
