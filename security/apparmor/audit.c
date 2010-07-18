@@ -95,7 +95,6 @@ static char *aa_audit_type[] = {
  * Currently AppArmor auditing is fed straight into the audit framework.
  *
  * TODO:
- * convert to LSM audit
  * netlink interface for complain mode
  * user auditing, - send user auditing to netlink interface
  * system control of whether user audit messages go to system log
