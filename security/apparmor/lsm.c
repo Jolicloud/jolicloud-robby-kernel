@@ -95,17 +95,19 @@ static void apparmor_cred_transfer(struct cred *new, const struct cred *old)
 static int apparmor_ptrace_access_check(struct task_struct *child,
 					unsigned int mode)
 {
-	int rc;
-
-	rc = cap_ptrace_access_check(child, mode);
-	if (rc)
-		return rc;
+	int error = cap_ptrace_access_check(child, mode);
+	if (error)
+		return error;
 
 	return aa_ptrace(current, child, mode);
 }
 
 static int apparmor_ptrace_traceme(struct task_struct *parent)
 {
+	int error = cap_ptrace_traceme(parent);
+	if (error)
+		return error;
+
 	return aa_ptrace(parent, current, PTRACE_MODE_ATTACH);
 }
 
