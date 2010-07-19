@@ -138,12 +138,11 @@ static void audit_pre(struct audit_buffer *ab, void *ca)
 		pid = tsk->real_parent->pid;
 		rcu_read_unlock();
 		audit_log_format(ab, " parent=%d", pid);
-		audit_log_format(ab, " profile=");
 		if (profile->ns != root_ns) {
-			audit_log_format(ab, ":");
+			audit_log_format(ab, " namespace=");
 			audit_log_untrustedstring(ab, profile->ns->base.hname);
-			audit_log_format(ab, "://");
 		}
+		audit_log_format(ab, " profile=");
 		audit_log_untrustedstring(ab, profile->base.hname);
 	}
 
