@@ -798,7 +798,7 @@ int au_br_del(struct super_block *sb, struct au_opt_del *del, int remount)
 	if (au_opt_test(mnt_flags, PLINK))
 		au_plink_half_refresh(sb, br_id);
 
-	if (au_xino_brid(sb) == br->br_id)
+	if (au_xino_brid(sb) == br_id)
 		au_xino_brid_set(sb, -1);
 	goto out; /* success */
 
