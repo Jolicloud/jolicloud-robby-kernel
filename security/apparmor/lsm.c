@@ -750,7 +750,7 @@ module_param_call(audit, param_set_audit, param_get_audit,
 /* Determines if audit header is included in audited messages.  This
  * provides more context if the audit daemon is not running
  */
-int aa_g_audit_header;
+int aa_g_audit_header = 1;
 module_param_named(audit_header, aa_g_audit_header, aabool,
 		   S_IRUSR | S_IWUSR);
 
