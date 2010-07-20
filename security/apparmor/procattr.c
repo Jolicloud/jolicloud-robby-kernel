@@ -155,7 +155,7 @@ int aa_setprocattr_changehat(char *args, size_t size, int test)
  *
  * Returns: %0 or error code if change_profile fails
  */
-int aa_setprocattr_changeprofile(char *fqname, int onexec, int test)
+int aa_setprocattr_changeprofile(char *fqname, bool onexec, int test)
 {
 	char *name, *ns_name;
 

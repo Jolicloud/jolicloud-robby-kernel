@@ -720,7 +720,7 @@ out:
  *
  * Returns %0 on success, error otherwise.
  */
-int aa_change_profile(const char *ns_name, const char *hname, int onexec,
+int aa_change_profile(const char *ns_name, const char *hname, bool onexec,
 		      bool permtest)
 {
 	const struct cred *cred;
