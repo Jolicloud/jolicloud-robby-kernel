@@ -80,11 +80,9 @@ static char *aa_simple_write_to_buffer(int op, const char __user *userbuf,
 {
 	char *data;
 
-	if (*pos != 0) {
+	if (*pos != 0)
 		/* only writes from pos 0, that is complete writes */
-		data = ERR_PTR(-ESPIPE);
-		goto out;
-	}
+		return ERR_PTR(-ESPIPE);
 
 	/*
 	 * Don't allow profile load/replace/remove from profiles that don't
@@ -100,11 +98,9 @@ static char *aa_simple_write_to_buffer(int op, const char __user *userbuf,
 
 	if (copy_from_user(data, userbuf, copy_size)) {
 		kvfree(data);
-		data = ERR_PTR(-EFAULT);
-		goto out;
+		return ERR_PTR(-EFAULT);
 	}
 
-out:
 	return data;
 }
 
