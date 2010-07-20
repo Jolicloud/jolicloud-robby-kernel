@@ -102,8 +102,8 @@ static char *aa_audit_type[] = {
 
 /**
  * audit_base - core AppArmor function.
- * @ab: audit buffer to fill
- * @sa: audit structure containing data to audit
+ * @ab: audit buffer to fill (NOT NULL)
+ * @ca: audit structure containing data to audit (NOT NULL)
  *
  * Record common AppArmor audit data from @sa
  */
@@ -155,10 +155,10 @@ static void audit_pre(struct audit_buffer *ab, void *ca)
 /**
  * aa_audit - Log an audit event to the audit subsystem
  * @type: audit type for the message
- * @profile: profile to check against
+ * @profile: profile to check against (MAYBE NULL)
  * @gfp: allocation flags to use
- * @sa: audit event
- * @cb: optional callback fn for type specific fields
+ * @sa: audit event (NOT NULL)
+ * @cb: optional callback fn for type specific fields (MAYBE NULL)
  *
  * Handle default message switching based off of audit mode flags
  *

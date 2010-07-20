@@ -14,7 +14,7 @@
  *
  *
  * AppArmor sets confinement on every task, via the the aa_task_cxt and
- * the aa_task_cxt profile, both of which are required and are not allowed
+ * the aa_task_cxt.profile, both of which are required and are not allowed
  * to be NULL.  The aa_task_cxt is not reference counted and is unique
  * to each cred (which is reference count).  The profile pointed to by
  * the task_cxt is reference counted.
@@ -112,7 +112,7 @@ int aa_replace_current_profile(struct aa_profile *profile)
 
 /**
  * aa_set_current_onexec - set the tasks change_profile to happen onexec
- * @profile: system profile to set at exec  (MAYBE NULL)
+ * @profile: system profile to set at exec  (MAYBE NULL to clear value)
  *
  * Returns: 0 or error on failure
  */

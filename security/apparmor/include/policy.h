@@ -191,7 +191,7 @@ extern enum profile_mode aa_g_profile_mode;
 
 void aa_add_profile(struct aa_policy *common, struct aa_profile *profile);
 
-bool aa_ns_visible(struct aa_namespace *parent, struct aa_namespace *child);
+bool aa_ns_visible(struct aa_namespace *curr, struct aa_namespace *view);
 const char *aa_ns_name(struct aa_namespace *parent, struct aa_namespace *child);
 int aa_alloc_root_ns(void);
 void aa_free_root_ns(void);

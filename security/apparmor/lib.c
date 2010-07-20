@@ -20,8 +20,8 @@
 
 /**
  * aa_split_fqname - split a fqname into a profile and namespace name
- * @fqname: a full qualified name in namespace profile format
- * @ns_name: pointer to portion of the string containing the ns name
+ * @fqname: a full qualified name in namespace profile format (NOT NULL)
+ * @ns_name: pointer to portion of the string containing the ns name (NOT NULL)
  *
  * Returns: profile name or NULL if one is not specified
  *
@@ -54,6 +54,10 @@ char *aa_split_fqname(char *fqname, char **ns_name)
 	return name;
 }
 
+/**
+ * aa_info_message - log a none profile related status message
+ * @str: message to log
+ */
 void aa_info_message(const char *str)
 {
 	struct common_audit_data sa;

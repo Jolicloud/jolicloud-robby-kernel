@@ -35,7 +35,9 @@ static void audit_cb(struct audit_buffer *ab, void *va)
 /**
  * audit_resource - audit setting resource limit
  * @profile: profile being enforced  (NOT NULL)
- * @sa: audit data  (NOT NULL)
+ * @resoure: rlimit being auditing
+ * @value: value being set
+ * @error: error value
  *
  * Returns: 0 or sa->error else other error code on failure
  */

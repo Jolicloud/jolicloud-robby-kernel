@@ -26,7 +26,6 @@ struct file_perms nullperms;
  * audit_file_mask - convert mask to owner::other string
  * @buffer: buffer to write string to (NOT NULL)
  * @mask: permission mask to convert
- * @owner: if the mask is for owner or other
  */
 static void audit_file_mask(struct audit_buffer *ab, u32 mask)
 {
@@ -99,6 +98,7 @@ static void file_audit_cb(struct audit_buffer *ab, void *va)
  * @ouid: object uid
  * @info: extra information message (MAYBE NULL)
  * @error: 0 if operation allowed else failure error code
+ *
  * Returns: %0 or error on failure
  */
 int aa_audit_file(struct aa_profile *profile, struct file_perms *perms,
@@ -221,7 +221,7 @@ static struct file_perms compute_perms(struct aa_dfa *dfa, unsigned int state,
 
 /**
  * aa_str_perms - find permission that match @name
- * @dfa: to match against  (NOT NULL)
+ * @dfa: to match against  (MAYBE NULL)
  * @state: state to start matching in
  * @name: string to match against dfa  (NOT NULL)
  * @cond: conditions to consider for permission set computation  (NOT NULL)

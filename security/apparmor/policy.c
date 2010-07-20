@@ -222,38 +222,45 @@ static struct aa_policy *__policy_strn_find(struct list_head *head,
 
 static const char *hidden_ns_name = "---";
 /**
- * aa_ns_visible - test if @child is visible from @parent
- * @parent: namespace to treat as the parent
- * @child:  namespace to test if visible from @parent
+ * aa_ns_visible - test if @view is visible from @curr
+ * @curr: namespace to treat as the parent (NOT NULL)
+ * @view:  namespace to test if visible from @curr (NOT NULL)
  *
- * Returns: true if @child is visible from @parent else false
+ * Returns: true if @view is visible from @curr else false
  */
-bool aa_ns_visible(struct aa_namespace *parent, struct aa_namespace *child)
+bool aa_ns_visible(struct aa_namespace *curr, struct aa_namespace *view)
 {
-	if (parent == child)
+	if (curr == view)
 		return true;
 
-	for ( ; child; child = child->parent) {
-		if (child->parent == parent)
+	for ( ; view; view = view->parent) {
+		if (view->parent == curr)
 			return true;
 	}
 	return false;
 }
 
-const char *aa_ns_name(struct aa_namespace *parent, struct aa_namespace *child)
+/**
+ * aa_na_name - Find the ns name to display for @view from @curr
+ * @curr - current namespace (NOT NULL)
+ * @view - namespace attempting to view (NOT NULL)
+ *
+ * Returns: name of @view visible from @curr
+ */
+const char *aa_ns_name(struct aa_namespace *curr, struct aa_namespace *view)
 {
-	/* if child == parent then the namespace name isn't displayed */
-	if (parent == child)
+	/* if view == curr then the namespace name isn't displayed */
+	if (curr == view)
 		return "";
 
-	if (aa_ns_visible(parent, child)) {
-		/* at this point if a ns is visible it is in a child ns
-		 * thus the parent ns.hname is a prefix of its name.
+	if (aa_ns_visible(curr, view)) {
+		/* at this point if a ns is visible it is in a view ns
+		 * thus the curr ns.hname is a prefix of its name.
 		 * Only output the virtualized portion of the name
-		 * Add + 2 to skip over // seperating parent hname prefix
-		 * from the visible tail of the childs hname
+		 * Add + 2 to skip over // seperating curr hname prefix
+		 * from the visible tail of the views hname
 		 */
-		return child->base.hname + strlen(parent->base.hname) + 2;
+		return view->base.hname + strlen(curr->base.hname) + 2;
 	} else
 		return hidden_ns_name;
 }
@@ -375,7 +382,7 @@ struct aa_namespace *aa_find_namespace(struct aa_namespace *root,
 
 /**
  * aa_prepare_namespace - find an existing or create a new namespace of @name
- * @name: the namespace to find or add  (NOT NULL)
+ * @name: the namespace to find or add  (MAYBE NULL)
  *
  * Returns: refcounted namespace or NULL if failed to create one
  */
@@ -760,7 +767,7 @@ void aa_free_profile_kref(struct kref *kref)
 	free_profile(p);
 }
 
-/* TODO: profile count accounting - setup in remove */
+/* TODO: profile accounting - setup in remove */
 
 /**
  * __find_child - find a profile on @head list with a name matching @name
@@ -882,8 +889,8 @@ static struct aa_profile *__lookup_profile(struct aa_policy *base,
 
 /**
  * aa_lookup_profile - find a profile by its full or partial name
- * @ns: the namespace to start from
- * @hname: name to do lookup on.  Does not contain namespace prefix
+ * @ns: the namespace to start from (NOT NULL)
+ * @hname: name to do lookup on.  Does not contain namespace prefix (NOT NULL)
  *
  * Returns: refcounted profile or NULL if not found
  */
@@ -903,7 +910,7 @@ struct aa_profile *aa_lookup_profile(struct aa_namespace *ns, const char *hname)
  * replacement_allowed - test to see if replacement is allowed
  * @profile: profile to test if it can be replaced  (MAYBE NULL)
  * @noreplace: true if replacement shouldn't be allowed but addition is okay
- * @info: return pointer to info about why replacement failed
+ * @info: Returns - info about why replacement failed (NOT NULL)
  *
  * Returns: %0 if replacement allowed else error code
  */
@@ -946,8 +953,8 @@ static void __add_new_profile(struct aa_namespace *ns, struct aa_policy *policy,
  * aa_audit_policy - Do auditing of policy changes
  * @op: policy operation being performed
  * @gfp: memory allocation flags
- * @name: name of profile being manipulated
- * @info: any extra information to be audited
+ * @name: name of profile being manipulated (NOT NULL)
+ * @info: any extra information to be audited (MAYBE NULL)
  * @error: error code
  *
  * Returns: the error to be returned after audit is done

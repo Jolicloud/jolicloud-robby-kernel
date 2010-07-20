@@ -233,7 +233,7 @@ static int common_perm_dir_dentry(int op, struct path *dir,
 /**
  * common_perm_mnt_dentry - common permission wrapper when mnt, dentry
  * @op: operation being checked
- * @mnt: mount point of dentry
+ * @mnt: mount point of dentry (NOT NULL)
  * @dentry: dentry to check  (NOT NULL)
  * @mask: requested permissions mask
  *

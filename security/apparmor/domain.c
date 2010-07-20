@@ -237,7 +237,7 @@ static const char *next_name(int xtype, const char *name)
  * @profile: current profile (NOT NULL)
  * @xindex: index into x transition table
  *
- * Returns: refcounted profile, or NULL on failure
+ * Returns: refcounted profile, or NULL on failure (MAYBE NULL)
  */
 static struct aa_profile *x_table_lookup(struct aa_profile *profile, u32 xindex)
 {
@@ -293,7 +293,7 @@ static struct aa_profile *x_table_lookup(struct aa_profile *profile, u32 xindex)
 /**
  * x_to_profile - get target profile for a given xindex
  * @profile: current profile  (NOT NULL)
- * @name: to to lookup if specified  (NOT NULL)
+ * @name: to to lookup (NOT NULL)
  * @xindex: index into x transition table
  *
  * find profile for a transition index
@@ -583,7 +583,7 @@ static char *new_compound_name(const char *n1, const char *n2)
 
 /**
  * aa_change_hat - change hat to/from subprofile
- * @hats: vector of hat names to try changing into (unused if @count == 0)
+ * @hats: vector of hat names to try changing into (MAYBE NULL if @count == 0)
  * @count: number of hat names in @hats
  * @token: magic value to validate the hat change
  * @permtest: true if this is just a permission test
@@ -707,13 +707,15 @@ out:
 
 /**
  * aa_change_profile - perform a one-way profile transition
- * @ns_name: name of the profile namespace to change to
- * @hname: name of profile to change to
+ * @ns_name: name of the profile namespace to change to (MAYBE NULL)
+ * @hname: name of profile to change to (MAYBE NULL)
  * @onexec: whether this transition is to take place immediately or at exec
  * @permtest: true if this is just a permission test
  *
  * Change to new profile @name.  Unlike with hats, there is no way
- * to change back.  If @onexec then the transition is delayed until
+ * to change back.  If @name isn't specified the current profile name is
+ * used.
+ * If @onexec then the transition is delayed until
  * the next exec.
  *
  * Returns %0 on success, error otherwise.

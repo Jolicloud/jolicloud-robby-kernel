@@ -48,15 +48,15 @@ static void audit_cb(struct audit_buffer *ab, void *va)
 
 /**
  * audit_caps - audit a capability
- * @profile: profile confining task
- * @task: task capability test was performed against
+ * @profile: profile confining task (NOT NULL)
+ * @task: task capability test was performed against (NOT NULL)
  * @cap: capability tested
  * @error: error code returned by test
  *
  * Do auditing of capability and handle, audit/complain/kill modes switching
  * and duplicate message elimination.
  *
- * returns: 0 or sa->error on succes,  error code on failure
+ * Returns: 0 or sa->error on succes,  error code on failure
  */
 static int audit_caps(struct aa_profile *profile, struct task_struct *task,
 		      int cap, int error)
@@ -117,8 +117,8 @@ static int profile_capable(struct aa_profile *profile, int cap)
 
 /**
  * aa_capable - test permission to use capability
- * @task: task doing capability test against
- * @profile: profile confining @task
+ * @task: task doing capability test against (NOT NULL)
+ * @profile: profile confining @task (NOT NULL)
  * @cap: capability to be tested
  * @audit: whether an audit record should be generated
  *

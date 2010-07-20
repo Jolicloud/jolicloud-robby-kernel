@@ -29,7 +29,7 @@
  * kvmalloc - do allocation prefering kmalloc but falling back to vmalloc
  * @size: size of allocation
  *
- * Return: allocated buffer or NULL if failed
+ * Returns: allocated buffer or NULL if failed
  *
  * It is possible that policy being loaded from the user is larger than
  * what can be allocated by kmalloc, in those cases fall back to vmalloc.
@@ -51,7 +51,7 @@ static void *kvmalloc(size_t size)
 
 /**
  * kvfree - free an allocation do by kvmalloc
- * @buffer: buffer to free
+ * @buffer: buffer to free (MAYBE NULL)
  *
  * Free a buffer allocated by kvmalloc
  */
@@ -69,7 +69,7 @@ static void kvfree(void *buffer)
  * @userbuf: user buffer to copy data from  (NOT NULL)
  * @alloc_size: size of user buffer
  * @copy_size: size of data to copy from user buffer
- * @pos: position write is at in the file
+ * @pos: position write is at in the file (NOT NULL)
  *
  * Returns: kernel buffer containing copy of user buffer data or an
  *          ERR_PTR on failure.
@@ -192,9 +192,9 @@ static void aafs_remove(const char *name)
 
 /**
  * aafs_create - create an entry in the apparmor filesystem
- * @name: name of the entry
+ * @name: name of the entry (NOT NULL)
  * @mask: file permission mask of the file
- * @fops: file operations for the file
+ * @fops: file operations for the file (NOT NULL)
  *
  * Used aafs_remove to remove entries created with this fn.
  */

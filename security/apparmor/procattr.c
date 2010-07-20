@@ -21,7 +21,7 @@
 /**
  * aa_getprocattr - Return the profile information for @profile
  * @profile: the profile to print profile info about  (NOT NULL)
- * @string: the string that will contain the profile and namespace info (!NULL)
+ * @string: Returns - string containing the profile info (NOT NULL)
  *
  * Returns: length of @string on success else error on failure
  *

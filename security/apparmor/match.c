@@ -24,7 +24,7 @@
 
 /**
  * do_vfree - workqueue routine for freeing vmalloced memory
- * @work: data to be freed
+ * @work: data to be freed (NOT NULL)
  *
  * The work_struct is overlayed to the data being freed, as at the point
  * the work is scheduled the data is no longer valid, be its freeing
@@ -54,7 +54,7 @@ static void free_table(struct table_header *table)
 
 /**
  * unpack_table - unpack a dfa table (one of accept, default, base, next check)
- * @blob: data to unpack
+ * @blob: data to unpack (NOT NULL)
  * @bsize: size of blob
  *
  * Returns: pointer to table else NULL on failure
@@ -121,8 +121,7 @@ fail:
 }
 
 /**
- * verify_dfa - verify that all the transitions and states in the dfa tables
- *              are in bounds.
+ * verify_dfa - verify that transitions and states in the tables are in bounds.
  * @dfa: dfa to test  (NOT NULL)
  * @flags: flags controlling what type of accept table are acceptable
  *

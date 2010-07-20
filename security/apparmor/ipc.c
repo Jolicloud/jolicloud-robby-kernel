@@ -74,8 +74,8 @@ int aa_may_ptrace(struct task_struct *tracer_task, struct aa_profile *tracer,
 
 /**
  * aa_ptrace - do ptrace permission check and auditing
- * @tracer: task doing the tracing
- * @tracee: task being traced
+ * @tracer: task doing the tracing (NOT NULL)
+ * @tracee: task being traced (NOT NULL)
  * @mode: ptrace mode either PTRACE_MODE_READ || PTRACE_MODE_ATTACH
  *
  * Returns: %0 else error code if permission denied or error

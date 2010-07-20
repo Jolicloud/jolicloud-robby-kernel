@@ -30,7 +30,7 @@
  * @path: path to lookup  (NOT NULL)
  * @buf:  buffer to store path to  (NOT NULL)
  * @buflen: length of @buf
- * @name: return pointer for start of path name with in @buf  (NOT NULL)
+ * @name: Returns - pointer for start of path name with in @buf (NOT NULL)
  * @flags: flags controling path lookup
  *
  * Handle path name lookup.
@@ -141,7 +141,7 @@ out:
  * @flags: flags controlling path lookup
  * @buffer: buffer to put name in  (NOT NULL)
  * @size: size of buffer
- * @name: on return contains position of path name in @buffer  (NOT NULL)
+ * @name: Returns - contains position of path name in @buffer (NOT NULL)
  *
  * Returns: %0 else error on failure
  */
@@ -166,7 +166,7 @@ static int get_name_to_buffer(struct path *path, int flags, char *buffer,
  * @path: path the file  (NOT NULL)
  * @flags: flags controling path name generation
  * @buffer: buffer that aa_get_name() allocated  (NOT NULL)
- * @name: the generated path name if !error
+ * @name: Returns - the generated path name if !error (NOT NULL)
  *
  * @name is a pointer to the beginning of the pathname (which usually differs
  * from the beginning of the buffer), or NULL.  If there is an error @name
@@ -214,7 +214,7 @@ int aa_get_name(struct path *path, int flags, char **buffer, const char **name)
  * @buffer: buffer to put name in  (NOT NULL)
  * @buflen: length of @buffer
  *
- * Returns: sysctl path name in @buffer or NULL on error
+ * Returns: sysctl path name in @buffer or NULL on error (MAYBE NULL)
  */
 char *sysctl_pathname(struct ctl_table *table, char *buffer, int buflen)
 {

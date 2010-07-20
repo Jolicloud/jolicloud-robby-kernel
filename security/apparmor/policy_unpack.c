@@ -81,10 +81,10 @@ static void audit_cb(struct audit_buffer *ab, void *va)
 
 /**
  * audit_iface - do audit message for policy unpacking/load/replace/remove
- * @new: profile if it has been allocated
- * @name: name of the profile being manipulated
- * @info: any extra info about the failure
- * @e: buffer position info
+ * @new: profile if it has been allocated (MAYBE NULL)
+ * @name: name of the profile being manipulated (MAYBE NULL)
+ * @info: any extra info about the failure (MAYBE NULL)
+ * @e: buffer position info (NOT NULL)
  * @error: error code
  *
  * Returns: %0 or error
@@ -113,8 +113,8 @@ static bool inbounds(struct aa_ext *e, size_t size)
 
 /**
  * aa_u16_chunck - test and do bounds checking for a u16 size based chunk
- * @e: serialized data read head
- * @chunk: start address for chunk of data
+ * @e: serialized data read head (NOT NULL)
+ * @chunk: start address for chunk of data (NOT NULL)
  *
  * Returns: the size of chunk found with the read head at the end of the chunk.
  */
@@ -286,6 +286,13 @@ static int unpack_strdup(struct aa_ext *e, char **string, const char *name)
 	return res;
 }
 
+/**
+ * verify_accept - verify the accept tables of a dfa
+ * @dfa: dfa to verify accept tables of (NOT NULL)
+ * @flags: flags governing dfa
+ *
+ * Returns: 1 if valid accept tables else 0 if error
+ */
 static bool verify_accept(struct aa_dfa *dfa, int flags)
 {
 	int i;
@@ -305,7 +312,7 @@ static bool verify_accept(struct aa_dfa *dfa, int flags)
 
 /**
  * unpack_dfa - unpack a file rule dfa
- * @e: serialized data extent information
+ * @e: serialized data extent information (NOT NULL)
  *
  * returns dfa or ERR_PTR or NULL if no dfa
  */
@@ -346,6 +353,13 @@ fail:
 	return ERR_PTR(-EPROTO);
 }
 
+/**
+ * unpack_trans_table - unpack a profile transition table
+ * @e: serialized data extent information  (NOT NULL)
+ * @profile: profile to add the accept table to (NOT NULL)
+ *
+ * Returns: 1 if table succesfully unpacked
+ */
 static bool unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
 {
 	void *pos = e->pos;
@@ -439,7 +453,7 @@ fail:
 
 /**
  * unpack_profile - unpack a serialized profile
- * @e: serialized data extent information
+ * @e: serialized data extent information (NOT NULL)
  *
  * NOTE: unpack profile sets audit struct if there is a failure
  */
@@ -571,8 +585,8 @@ fail:
 
 /**
  * verify_head - unpack serialized stream header
- * @e: serialized data read head
- * @ns: Returns namespace if one is specified else NULL
+ * @e: serialized data read head (NOT NULL)
+ * @ns: Returns - namespace if one is specified else NULL (NOT NULL)
  *
  * Returns: error or 0 if header is good
  */
@@ -599,12 +613,6 @@ static int verify_header(struct aa_ext *e, const char **ns)
 	return 0;
 }
 
-/**
- * verify_profile - Do post unpack analysis to verify profile consistency
- * @profile: profile to verify
- *
- * Returns: 0 if passes verification else error
- */
 static bool verify_xindex(int xindex, int table_size)
 {
 	int index, xtype;
@@ -628,6 +636,12 @@ static bool verify_dfa_xindex(struct aa_dfa *dfa, int table_size)
 	return 1;
 }
 
+/**
+ * verify_profile - Do post unpack analysis to verify profile consistency
+ * @profile: profile to verify (NOT NULL)
+ *
+ * Returns: 0 if passes verification else error
+ */
 static int verify_profile(struct aa_profile *profile)
 {
 	if (aa_g_paranoid_load) {
@@ -647,7 +661,7 @@ static int verify_profile(struct aa_profile *profile)
  * aa_unpack - unpack packed binary profile data loaded from user space
  * @udata: user data copied to kmem  (NOT NULL)
  * @size: the size of the user data
- * @ns: Returns namespace profile is in if specified else NULL
+ * @ns: Returns namespace profile is in if specified else NULL (NOT NULL)
  *
  * Unpack user data and return refcounted allocated profile or ERR_PTR
  *
