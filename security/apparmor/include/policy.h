@@ -32,16 +32,15 @@
 extern const char *profile_mode_names[];
 #define APPARMOR_NAMES_MAX_INDEX 3
 
-#define COMPLAIN_MODE(_profile)				\
-	((aa_g_profile_mode == APPARMOR_COMPLAIN) || ((_profile) &&	\
-					(_profile)->mode == APPARMOR_COMPLAIN))
+#define COMPLAIN_MODE(_profile)	\
+	((aa_g_profile_mode == APPARMOR_COMPLAIN) || \
+	 ((_profile)->mode == APPARMOR_COMPLAIN))
 
-#define DO_KILL(_profile)					\
-	((aa_g_profile_mode == APPARMOR_KILL) || ((_profile) &&	\
-					(_profile)->mode == APPARMOR_KILL))
+#define KILL_MODE(_profile) \
+	((aa_g_profile_mode == APPARMOR_KILL) || \
+	 ((_profile)->mode == APPARMOR_KILL))
 
-#define PROFILE_IS_HAT(_profile) \
-	((_profile) && (_profile)->flags & PFLAG_HAT)
+#define PROFILE_IS_HAT(_profile) ((_profile)->flags & PFLAG_HAT)
 
 /*
  * FIXME: currently need a clean way to replace and remove profiles as a
