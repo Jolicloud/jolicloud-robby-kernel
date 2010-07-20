@@ -182,6 +182,8 @@ int aa_audit(int type, struct aa_profile *profile, gfp_t gfp,
 	     struct common_audit_data *sa,
 	     void (*cb) (struct audit_buffer *, void *))
 {
+	BUG_ON(!profile);
+
 	if (type == AUDIT_APPARMOR_AUTO) {
 		if (likely(!sa->aad.error)) {
 			if (AUDIT_MODE(profile) != AUDIT_ALL)

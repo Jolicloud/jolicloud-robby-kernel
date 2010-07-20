@@ -299,9 +299,8 @@ static inline int AUDIT_MODE(struct aa_profile *profile)
 {
 	if (aa_g_audit != AUDIT_NORMAL)
 		return aa_g_audit;
-	if (profile)
-		return profile->audit;
-	return AUDIT_NORMAL;
+
+	return profile->audit;
 }
 
 bool aa_may_manage_policy(int op);
