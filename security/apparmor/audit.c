@@ -82,13 +82,13 @@ const char *audit_mode_names[] = {
 };
 
 static char *aa_audit_type[] = {
-	"APPARMOR_AUDIT",
-	"APPARMOR_ALLOWED",
-	"APPARMOR_DENIED",
-	"APPARMOR_HINT",
-	"APPARMOR_STATUS",
-	"APPARMOR_ERROR",
-	"APPARMOR_KILLED"
+	"AUDIT",
+	"ALLOWED",
+	"DENIED",
+	"HINT",
+	"STATUS",
+	"ERROR",
+	"KILLED"
 };
 
 /*
@@ -113,7 +113,7 @@ static void audit_pre(struct audit_buffer *ab, void *ca)
 	struct task_struct *tsk = sa->tsk ? sa->tsk : current;
 
 	if (aa_g_audit_header) {
-		audit_log_format(ab, " type=");
+		audit_log_format(ab, "apparmor=");
 		audit_log_string(ab, aa_audit_type[sa->aad.type]);
 	}
 
