@@ -63,7 +63,6 @@ enum profile_flags {
 	PFLAG_IMMUTABLE = 0x10,		/* don't allow changes/replacement */
 	PFLAG_USER_DEFINED = 0x20,	/* user based profile */
 	PFLAG_NO_LIST_REF = 0x40,	/* list doesn't keep profile ref */
-	PFLAG_MMAP_MIN_ADDR = 0x80,	/* profile controls mmap_min_addr */
 	PFLAG_OLD_NULL_TRANS = 0x100,	/* use // as the null transition */
 
 	/* These flags must coorespond with PATH_flags */
@@ -181,8 +180,6 @@ struct aa_profile {
 	u32 flags;
 	u32 path_flags;
 	int size;
-
-	unsigned long mmap_min_addr;
 
 	struct aa_file_rules file;
 	struct aa_caps caps;

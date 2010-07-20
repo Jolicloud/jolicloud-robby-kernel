@@ -446,11 +446,10 @@ fail:
 static struct aa_profile *unpack_profile(struct aa_ext *e)
 {
 	struct aa_profile *profile = NULL;
-	const char *name = NULL, *info = NULL;
+	const char *name = NULL;
 	int error = -EPROTO;
 	kernel_cap_t tmpcap;
 	u32 tmp;
-	u64 tmp64;
 
 	/* check that we have the right struct being passed */
 	if (!unpack_nameX(e, AA_STRUCT, "profile"))
@@ -504,17 +503,6 @@ static struct aa_profile *unpack_profile(struct aa_ext *e)
 	else
 		/* set a default value if path_flags field is not present */
 		profile->path_flags = PFLAG_MEDIATE_DELETED;
-
-	/* mmap_min_addr is optional */
-	if (unpack_u64(e, &tmp64, "mmap_min_addr")) {
-		profile->mmap_min_addr = (unsigned long)tmp64;
-		if (((u64) profile->mmap_min_addr) == tmp64) {
-			profile->flags |= PFLAG_MMAP_MIN_ADDR;
-		} else {
-			info = "invalid set mmap_min_addr";
-			goto fail;
-		}
-	}
 
 	if (!unpack_u32(e, &(profile->caps.allow.cap[0]), NULL))
 		goto fail;
