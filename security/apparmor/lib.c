@@ -60,11 +60,12 @@ char *aa_split_fqname(char *fqname, char **ns_name)
  */
 void aa_info_message(const char *str)
 {
-	struct common_audit_data sa;
-	COMMON_AUDIT_DATA_INIT(&sa, NONE);
-	sa.aad.info = str;
-	printk(KERN_INFO "AppArmor: %s\n", str);
-	if (audit_enabled)
+	if (audit_enabled) {
+		struct common_audit_data sa;
+		COMMON_AUDIT_DATA_INIT(&sa, NONE);
+		sa.aad.info = str;
+		printk(KERN_INFO "AppArmor: %s\n", str);
 		aa_audit(AUDIT_APPARMOR_STATUS, NULL, GFP_KERNEL, &sa, NULL);
+	}
 }
 
