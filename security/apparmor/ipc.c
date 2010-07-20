@@ -66,7 +66,7 @@ int aa_may_ptrace(struct task_struct *tracer_task, struct aa_profile *tracer,
 	 *       Test mode for PTRACE_MODE_READ || PTRACE_MODE_ATTACH
 	 */
 
-	if (!tracer || tracer == tracee)
+	if (unconfined(tracer) || tracer == tracee)
 		return 0;
 	/* log this capability request */
 	return aa_capable(tracer_task, tracer, CAP_SYS_PTRACE, 1);
