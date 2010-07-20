@@ -52,6 +52,8 @@ extern int apparmor_initialized;
 /* fn's in lib */
 char *aa_split_fqname(char *args, char **ns_name);
 void aa_info_message(const char *str);
+void *kvmalloc(size_t size);
+void kvfree(void *buffer);
 
 
 /**

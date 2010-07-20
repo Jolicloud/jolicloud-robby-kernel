@@ -26,44 +26,6 @@
 #include "include/policy.h"
 
 /**
- * kvmalloc - do allocation prefering kmalloc but falling back to vmalloc
- * @size: size of allocation
- *
- * Returns: allocated buffer or NULL if failed
- *
- * It is possible that policy being loaded from the user is larger than
- * what can be allocated by kmalloc, in those cases fall back to vmalloc.
- */
-static void *kvmalloc(size_t size)
-{
-	void *buffer = NULL;
-
-	if (size == 0)
-		return NULL;
-
-	/* do not attempt kmalloc if we need more than 16 pages at once */
-	if (size <= (16*PAGE_SIZE))
-		buffer = kmalloc(size, GFP_NOIO | __GFP_NOWARN);
-	if (!buffer)
-		buffer = vmalloc(size);
-	return buffer;
-}
-
-/**
- * kvfree - free an allocation do by kvmalloc
- * @buffer: buffer to free (MAYBE NULL)
- *
- * Free a buffer allocated by kvmalloc
- */
-static void kvfree(void *buffer)
-{
-	if (is_vmalloc_addr(buffer))
-		vfree(buffer);
-	else
-		kfree(buffer);
-}
-
-/**
  * aa_simple_write_to_buffer - common routine for getting policy from user
  * @op: operation doing the user buffer copy
  * @userbuf: user buffer to copy data from  (NOT NULL)
