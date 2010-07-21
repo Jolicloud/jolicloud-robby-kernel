@@ -171,6 +171,11 @@ static void __init beagle_display_init(void)
 {
 	int r;
 
+       if (cpu_is_omap3630())
+               beagle_dvi_device.reset_gpio = 129;
+       else
+               beagle_dvi_device.reset_gpio = 170;
+
 	r = gpio_request(beagle_dvi_device.reset_gpio, "DVI reset");
 	if (r < 0) {
 		printk(KERN_ERR "Unable to get DVI reset GPIO\n");
@@ -222,12 +227,22 @@ static int beagle_twl_gpio_setup(struct device *dev,
 	 * power switch and overcurrent detect
 	 */
 
-	gpio_request(gpio + 1, "EHCI_nOC");
-	gpio_direction_input(gpio + 1);
+       if (cpu_is_omap3630()) {
+               gpio_request(gpio + 1, "nDVI_PWR_EN");
+               gpio_direction_output(gpio + 1, 0);
+ 
+               /* TWL4030_GPIO_MAX + 0 == ledA, EHCI nEN_USB_PWR (out, active low) */
+               gpio_request(gpio + TWL4030_GPIO_MAX, "nEN_USB_PWR");
+               gpio_direction_output(gpio + TWL4030_GPIO_MAX, 1);
+       }
+       else {
+               gpio_request(gpio + 1, "EHCI_nOC");
+               gpio_direction_input(gpio + 1);
 
-	/* TWL4030_GPIO_MAX + 0 == ledA, EHCI nEN_USB_PWR (out, active low) */
-	gpio_request(gpio + TWL4030_GPIO_MAX, "nEN_USB_PWR");
-	gpio_direction_output(gpio + TWL4030_GPIO_MAX, 0);
+               /* TWL4030_GPIO_MAX + 0 == ledA, EHCI nEN_USB_PWR (out, active low) */
+               gpio_request(gpio + TWL4030_GPIO_MAX, "nEN_USB_PWR");
+               gpio_direction_output(gpio + TWL4030_GPIO_MAX, 0);
+       }
 
 	/* TWL4030_GPIO_MAX + 1 == ledB, PMU_STAT (out, active low LED) */
 	gpio_leds[2].gpio = gpio + TWL4030_GPIO_MAX + 1;
@@ -491,11 +506,6 @@ static void __init omap3_beagle_init(void)
 	platform_add_devices(omap3_beagle_devices,
 			ARRAY_SIZE(omap3_beagle_devices));
 	omap_serial_init();
-
-	omap_mux_init_gpio(170, OMAP_PIN_INPUT);
-	gpio_request(170, "DVI_nPD");
-	/* REVISIT leave DVI powered down until it's needed ... */
-	gpio_direction_output(170, true);
 
 	usb_musb_init(&musb_board_data);
 	usb_ehci_init(&ehci_pdata);
