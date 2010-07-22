@@ -12,6 +12,7 @@
  * License.
  */
 
+#include <linux/magic.h>
 #include <linux/mnt_namespace.h>
 #include <linux/mount.h>
 #include <linux/namei.h>
@@ -24,6 +25,20 @@
 #include "include/apparmor.h"
 #include "include/path.h"
 #include "include/policy.h"
+
+
+/* modified from dcache.c */
+static int prepend(char **buffer, int buflen, const char *str, int namelen)
+{
+	buflen -= namelen;
+	if (buflen < 0)
+		return -ENAMETOOLONG;
+	*buffer -= namelen;
+	memcpy(*buffer, str, namelen);
+	return 0;
+}
+
+#define CHROOT_NSCONNECT (PATH_CHROOT_REL | PATH_CHROOT_NSCONNECT)
 
 /**
  * d_namespace_path - lookup a name associated with a given path
@@ -108,8 +123,9 @@ static int d_namespace_path(struct path *path, char *buf, int buflen,
 	/* Determine if the path is connected to the expected root */
 	connected = tmp.dentry == root.dentry && tmp.mnt == root.mnt;
 
-	/* If the path is not connected, then remove any leading / that
-	 * __d_path may have returned.
+	/* If the path is not connected,
+	 * check if it is a sysctl and handle specially else remove any
+	 * leading / that __d_path may have returned.
 	 * Unless
 	 *     specifically directed to connect the path,
 	 * OR
@@ -118,15 +134,25 @@ static int d_namespace_path(struct path *path, char *buf, int buflen,
 	 *     of chroot) and specifically directed to connect paths to
 	 *     namespace root.
 	 */
-	if (!connected &&
-	    !(flags & PATH_CONNECT_PATH) &&
-	    !((flags & PATH_CHROOT_REL) && (flags & PATH_CHROOT_NSCONNECT) &&
-	      (tmp.mnt == current->nsproxy->mnt_ns->root &&
-	       tmp.dentry == current->nsproxy->mnt_ns->root->mnt_root))) {
-		/* disconnected path, don't return pathname starting with '/' */
-		error = -ESTALE;
-		if (*res == '/')
-			*name = res + 1;
+	if (!connected) {
+		/* is the disconnect path a sysctl? */
+		if (tmp.dentry->d_sb->s_magic == PROC_SUPER_MAGIC &&
+		    strncmp(*name, "/sys/", 5) == 0) {
+			/* TODO: convert over to using a per namespace
+			 * control instead of hard coded /proc
+			 */
+			error = prepend(name, *name - buf, "/proc", 5);
+		} else if (!(flags & PATH_CONNECT_PATH) &&
+			   !(((flags & CHROOT_NSCONNECT) == CHROOT_NSCONNECT) &&
+			     (tmp.mnt == current->nsproxy->mnt_ns->root &&
+			      tmp.dentry == tmp.mnt->mnt_root))) {
+			/* disconnected path, don't return pathname starting
+			 * with '/'
+			 */
+			error = -ESTALE;
+			if (*res == '/')
+				*name = res + 1;
+		}
 	}
 
 out:
