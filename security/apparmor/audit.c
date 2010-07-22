@@ -153,9 +153,23 @@ static void audit_pre(struct audit_buffer *ab, void *ca)
 }
 
 /**
- * aa_audit - Log an audit event to the audit subsystem
+ * aa_audit_msg - Log a message to the audit subsystem
+ * @sa: audit event structure (NOT NULL)
+ * @cb: optional callback fn for type specific fields (MAYBE NULL)
+ */
+void aa_audit_msg(int type, struct common_audit_data *sa,
+		  void (*cb) (struct audit_buffer *, void *))
+{
+	sa->aad.type = type;
+	sa->lsm_pre_audit = audit_pre;
+	sa->lsm_post_audit = cb;
+	common_lsm_audit(sa);
+}
+
+/**
+ * aa_audit - Log a profile based audit event to the audit subsystem
  * @type: audit type for the message
- * @profile: profile to check against (MAYBE NULL)
+ * @profile: profile to check against (NOT NULL)
  * @gfp: allocation flags to use
  * @sa: audit event (NOT NULL)
  * @cb: optional callback fn for type specific fields (MAYBE NULL)
@@ -185,14 +199,11 @@ int aa_audit(int type, struct aa_profile *profile, gfp_t gfp,
 
 	if (profile && DO_KILL(profile) && type == AUDIT_APPARMOR_DENIED)
 		type = AUDIT_APPARMOR_KILL;
-	sa->aad.type = type;
 
 	if (profile && !unconfined(profile))
 		sa->aad.profile = profile;
 
-	sa->lsm_pre_audit = audit_pre;
-	sa->lsm_post_audit = cb;
-	common_lsm_audit(sa);
+	aa_audit_msg(type, sa, cb);
 
 	if (sa->aad.type == AUDIT_APPARMOR_KILL)
 		(void)send_sig_info(SIGKILL, NULL, sa->tsk ? sa->tsk : current);

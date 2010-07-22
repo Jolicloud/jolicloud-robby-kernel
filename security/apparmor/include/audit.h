@@ -107,6 +107,8 @@ enum aa_ops {
 /* define a short hand for apparmor_audit_data portion of common_audit_data */
 #define aad apparmor_audit_data
 
+void aa_audit_msg(int type, struct common_audit_date *sa,
+		  void (*cb) (struct audit_buffer *, void *));
 int aa_audit(int type, struct aa_profile *profile, gfp_t gfp,
 	     struct common_audit_data *sa,
 	     void (*cb) (struct audit_buffer *, void *));
