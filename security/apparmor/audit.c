@@ -129,8 +129,6 @@ static void audit_pre(struct audit_buffer *ab, void *ca)
 			audit_log_format(ab, " error=%d", sa->aad.error);
 	}
 
-	audit_log_format(ab, " pid=%d", tsk->pid);
-
 	if (sa->aad.profile) {
 		struct aa_profile *profile = sa->aad.profile;
 		pid_t pid;
