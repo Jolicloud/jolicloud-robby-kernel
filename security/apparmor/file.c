@@ -173,6 +173,8 @@ static u32 map_old_perms(u32 old)
 	if (old & 0x40)	/* AA_EXEC_MMAP */
 		new |= AA_EXEC_MMAP;
 
+	new |= AA_MAY_META_READ;
+
 	return new;
 }
 
