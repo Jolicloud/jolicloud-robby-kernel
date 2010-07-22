@@ -233,37 +233,3 @@ int aa_get_name(struct path *path, int flags, char **buffer, const char **name)
 
 	return error;
 }
-
-/**
- * sysctl_pathname - generate a pathname for a sysctl
- * @table: sysctl name table  (NOT NULL)
- * @buffer: buffer to put name in  (NOT NULL)
- * @buflen: length of @buffer
- *
- * Returns: sysctl path name in @buffer or NULL on error (MAYBE NULL)
- */
-char *sysctl_pathname(struct ctl_table *table, char *buffer, int buflen)
-{
-	if (buflen < 1)
-		return NULL;
-	buffer += --buflen;
-	*buffer = '\0';
-
-	while (table) {
-		int namelen = strlen(table->procname);
-
-		if (buflen < namelen + 1)
-			return NULL;
-		buflen -= namelen + 1;
-		buffer -= namelen;
-		memcpy(buffer, table->procname, namelen);
-		*--buffer = '/';
-		table = table->parent;
-	}
-	if (buflen < 4)
-		return NULL;
-	buffer -= 4;
-	memcpy(buffer, "/sys", 4);
-
-	return buffer;
-}

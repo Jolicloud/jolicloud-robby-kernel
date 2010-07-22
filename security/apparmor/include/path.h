@@ -27,6 +27,5 @@ enum path_flags {
 };
 
 int aa_get_name(struct path *path, int flags, char **buffer, const char **name);
-char *sysctl_pathname(struct ctl_table *table, char *buffer, int buflen);
 
 #endif /* __AA_PATH_H */

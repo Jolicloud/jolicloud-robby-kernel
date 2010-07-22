@@ -149,46 +149,6 @@ static int apparmor_capable(struct task_struct *task, const struct cred *cred,
 	return error;
 }
 
-static int apparmor_sysctl(struct ctl_table *table, int sysctl_op)
-{
-	int error = 0;
-	struct aa_profile *profile = aa_current_profile();
-
-	if (!unconfined(profile)) {
-		char *buffer, *name;
-		int mask;
-
-		mask = 0;
-		if (sysctl_op & 4)
-			mask |= MAY_READ;
-		if (sysctl_op & 2)
-			mask |= MAY_WRITE;
-
-		error = -ENOMEM;
-		/* freed below */
-		buffer = (char *)__get_free_page(GFP_KERNEL);
-		if (!buffer)
-			goto out;
-
-		/*
-		 * TODO: convert this over to using a global or per
-		 * namespace control instead of a hard coded /proc
-		 */
-		name = sysctl_pathname(table, buffer, PAGE_SIZE);
-		if (name && name - buffer >= 5) {
-			struct path_cond cond = { 0, S_IFREG };
-			name -= 5;
-			memcpy(name, "/proc", 5);
-			error = aa_pathstr_perm(OP_SYSCTL, profile, name, mask,
-						&cond);
-		}
-		free_page((unsigned long)buffer);
-	}
-
-out:
-	return error;
-}
-
 /**
  * common_perm - basic common permission check wrapper fn for paths
  * @op: operation being checked
@@ -666,7 +626,6 @@ static struct security_operations apparmor_ops = {
 	.ptrace_access_check =		apparmor_ptrace_access_check,
 	.ptrace_traceme =		apparmor_ptrace_traceme,
 	.capget =			apparmor_capget,
-	.sysctl =			apparmor_sysctl,
 	.capable =			apparmor_capable,
 
 	.path_link =			apparmor_path_link,

@@ -248,33 +248,6 @@ unsigned int aa_str_perms(struct aa_dfa *dfa, unsigned int start,
 }
 
 /**
- * aa_pathstr_perm - do permission check & audit for @name
- * @op: operation being checked
- * @profile: profile being enforced  (NOT NULL)
- * @name: path string to check permission for  (NOT NULL)
- * @request: requested permissions
- * @cond: conditional info for this request  (NOT NULL)
- *
- * Do permission check for paths that are predefined.  This fn will
- * be removed once security_sysctl goes away.
- *
- * Returns: %0 else error if access denied or other error
- */
-int aa_pathstr_perm(int op, struct aa_profile *profile, const char *name,
-		    u32 request, struct path_cond *cond)
-{
-	struct file_perms perms = { };
-	int error = 0;
-
-	aa_str_perms(profile->file.dfa, profile->file.start, name, cond,
-		     &perms);
-	if (request & ~perms.allow)
-		error = -EACCES;
-	return aa_audit_file(profile, &perms, GFP_KERNEL, op, request, name,
-			     NULL, cond->uid, NULL, error);
-}
-
-/**
  * is_deleted - test if a file has been completely unlinked
  * @dentry: dentry of file to test for deletion  (NOT NULL)
  *
