@@ -150,7 +150,7 @@ struct dentry *au_whtmp_lkup(struct dentry *h_parent, struct au_branch *br,
 
 	qs.name = name;
 	for (i = 0; i < 3; i++) {
-		sprintf(p, "%.*d", AUFS_WH_TMP_LEN, cnt++);
+		sprintf(p, "%.*x", AUFS_WH_TMP_LEN, cnt++);
 		dentry = au_sio_lkup_one(&qs, h_parent, br);
 		if (IS_ERR(dentry) || !dentry->d_inode)
 			goto out_name;
