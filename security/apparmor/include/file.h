@@ -35,12 +35,12 @@ struct aa_profile;
 #define AA_MAY_CHOWN                   0x0200
 #define AA_MAY_LOCK                    0x0400
 #define AA_EXEC_MMAP                   0x0800
- 
+
 #define AA_MAY_LINK			0x1000
-#define AA_MAY_ONEXEC			0x4000	/* exec allows onexec */
-#define AA_MAY_CHANGE_PROFILE		0x8000
 #define AA_LINK_SUBSET			AA_MAY_LOCK	/* overlayed */
-#define AA_MAY_CHANGEHAT		0x8000	/* ctrl auditing only */
+#define AA_MAY_ONEXEC			0x40000000	/* exec allows onexec */
+#define AA_MAY_CHANGE_PROFILE		0x80000000
+#define AA_MAY_CHANGEHAT		0x80000000	/* ctrl auditing only */
 
 #define AA_AUDIT_FILE_MASK	(MAY_READ | MAY_WRITE | MAY_EXEC | MAY_APPEND |\
 				 AA_MAY_CREATE | AA_MAY_DELETE |	\
@@ -82,19 +82,15 @@ struct path_cond {
  * @quiet: mask of permissions to quiet audit messages for
  * @kill: mask of permissions that when matched will kill the task
  * @xindex: exec transition index if @allow contains MAY_EXEC
- * @xdelegate: used by exec to determine set of delegates allowed
- * @dindex: delegate table index, 0 if no delegation allowed
  *
  * The @audit and @queit mask should be mutually exclusive.
  */
 struct file_perms {
-	u16 allow;
-	u16 audit;
-	u16 quiet;
-	u16 kill;
+	u32 allow;
+	u32 audit;
+	u32 quiet;
+	u32 kill;
 	u16 xindex;
-	u16 xdelegate;
-	u16 dindex;
 };
 
 extern struct file_perms nullperms;
@@ -134,15 +130,15 @@ static inline u16 dfa_map_xindex(u16 mask)
  * map old dfa inline permissions to new format
  */
 #define dfa_user_allow(dfa, state) (((ACCEPT_TABLE(dfa)[state]) & 0x7f) | \
-                                   ((ACCEPT_TABLE(dfa)[state]) & 0x80000000))
+				    ((ACCEPT_TABLE(dfa)[state]) & 0x80000000))
 #define dfa_user_audit(dfa, state) ((ACCEPT_TABLE2(dfa)[state]) & 0x7f)
 #define dfa_user_quiet(dfa, state) (((ACCEPT_TABLE2(dfa)[state]) >> 7) & 0x7f)
 #define dfa_user_xindex(dfa, state) \
 	(dfa_map_xindex(ACCEPT_TABLE(dfa)[state] & 0x3fff))
 
 #define dfa_other_allow(dfa, state) ((((ACCEPT_TABLE(dfa)[state]) >> 14) & \
-                                      0x7f) | \
-                                    ((ACCEPT_TABLE(dfa)[state]) & 0x80000000))
+				      0x7f) |				\
+				     ((ACCEPT_TABLE(dfa)[state]) & 0x80000000))
 #define dfa_other_audit(dfa, state) (((ACCEPT_TABLE2(dfa)[state]) >> 14) & 0x7f)
 #define dfa_other_quiet(dfa, state) \
 	((((ACCEPT_TABLE2(dfa)[state]) >> 7) >> 14) & 0x7f)
@@ -150,7 +146,7 @@ static inline u16 dfa_map_xindex(u16 mask)
 	dfa_map_xindex((ACCEPT_TABLE(dfa)[state] >> 14) & 0x3fff)
 
 int aa_audit_file(struct aa_profile *profile, struct file_perms *perms,
-		  gfp_t gfp, int op, u16 request, const char *name,
+		  gfp_t gfp, int op, u32 request, const char *name,
 		  const char *target, uid_t ouid, const char *info, int error);
 
 /**
@@ -176,17 +172,14 @@ unsigned int aa_str_perms(struct aa_dfa *dfa, unsigned int start,
 			  const char *name, struct path_cond *cond,
 			  struct file_perms *perms);
 
-int aa_pathstr_perm(int op, struct aa_profile *profile, const char *name,
-		    u16 request, struct path_cond *cond);
-
 int aa_path_perm(int op, struct aa_profile *profile, struct path *path,
-		 int flags, u16 request, struct path_cond *cond);
+		 int flags, u32 request, struct path_cond *cond);
 
 int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 		 struct path *new_dir, struct dentry *new_dentry);
 
 int aa_file_perm(int op, struct aa_profile *profile, struct file *file,
-		 u16 request);
+		 u32 request);
 
 static inline void aa_free_file_rules(struct aa_file_rules *rules)
 {
@@ -205,10 +198,10 @@ static inline void aa_free_file_rules(struct aa_file_rules *rules)
  *
  * Returns: apparmor permission set for the file
  */
-static inline u16 aa_map_file_to_perms(struct file *file)
+static inline u32 aa_map_file_to_perms(struct file *file)
 {
 	int flags = MAP_OPEN_FLAGS(file->f_flags);
-	u16 perms = ACC_FMODE(file->f_mode);
+	u32 perms = ACC_FMODE(file->f_mode);
 
 	if ((flags & O_APPEND) && (perms & MAY_WRITE))
 		perms = (perms & ~MAY_WRITE) | MAY_APPEND;

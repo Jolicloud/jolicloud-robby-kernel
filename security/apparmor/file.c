@@ -26,9 +26,8 @@ struct file_perms nullperms;
  * audit_file_mask - convert mask to owner::other string
  * @buffer: buffer to write string to (NOT NULL)
  * @mask: permission mask to convert
- * @owner: if the mask is for owner or other
  */
-static void audit_file_mask(struct audit_buffer *ab, u16 mask)
+static void audit_file_mask(struct audit_buffer *ab, u32 mask)
 {
 	char str[10];
 
@@ -53,7 +52,7 @@ static void audit_file_mask(struct audit_buffer *ab, u16 mask)
 		*m++ = 'k';
 	if (mask & MAY_EXEC)
 		*m++ = 'x';
-	*m++ = '\0';
+	*m = '\0';
 
 	audit_log_string(ab, str);
 }
@@ -99,15 +98,16 @@ static void file_audit_cb(struct audit_buffer *ab, void *va)
  * @ouid: object uid
  * @info: extra information message (MAYBE NULL)
  * @error: 0 if operation allowed else failure error code
+ *
  * Returns: %0 or error on failure
  */
 int aa_audit_file(struct aa_profile *profile, struct file_perms *perms,
-		  gfp_t gfp, int op, u16 request, const char *name,
+		  gfp_t gfp, int op, u32 request, const char *name,
 		  const char *target, uid_t ouid, const char *info, int error)
 {
 	int type = AUDIT_APPARMOR_AUTO;
 	struct common_audit_data sa;
-	COMMON_AUDIT_DATA_INIT_NONE(&sa);
+	COMMON_AUDIT_DATA_INIT(&sa, NONE);
 	sa.aad.op = op,
 	sa.aad.fs.request = request;
 	sa.aad.name = name;
@@ -117,7 +117,7 @@ int aa_audit_file(struct aa_profile *profile, struct file_perms *perms,
 	sa.aad.error = error;
 
 	if (likely(!sa.aad.error)) {
-		u16 mask = perms->audit;
+		u32 mask = perms->audit;
 
 		if (unlikely(AUDIT_MODE(profile) == AUDIT_ALL))
 			mask = 0xffff;
@@ -155,9 +155,9 @@ int aa_audit_file(struct aa_profile *profile, struct file_perms *perms,
  *
  * Returns: new permission mapping
  */
-static u16 map_old_perms(u32 old)
+static u32 map_old_perms(u32 old)
 {
-	u16 new = old & 0xf;
+	u32 new = old & 0xf;
 	if (old & MAY_READ)
 		new |= AA_MAY_META_READ;
 	if (old & MAY_WRITE)
@@ -172,6 +172,8 @@ static u16 map_old_perms(u32 old)
 		new |= AA_MAY_LOCK | AA_LINK_SUBSET;
 	if (old & 0x40)	/* AA_EXEC_MMAP */
 		new |= AA_EXEC_MMAP;
+
+	new |= AA_MAY_META_READ;
 
 	return new;
 }
@@ -198,7 +200,6 @@ static struct file_perms compute_perms(struct aa_dfa *dfa, unsigned int state,
 	 * done at profile load
 	 */
 	perms.kill = 0;
-	perms.dindex = 0;
 
 	if (current_fsuid() == cond->uid) {
 		perms.allow = map_old_perms(dfa_user_allow(dfa, state));
@@ -221,7 +222,7 @@ static struct file_perms compute_perms(struct aa_dfa *dfa, unsigned int state,
 
 /**
  * aa_str_perms - find permission that match @name
- * @dfa: to match against  (NOT NULL)
+ * @dfa: to match against  (MAYBE NULL)
  * @state: state to start matching in
  * @name: string to match against dfa  (NOT NULL)
  * @cond: conditions to consider for permission set computation  (NOT NULL)
@@ -243,33 +244,6 @@ unsigned int aa_str_perms(struct aa_dfa *dfa, unsigned int start,
 	*perms = compute_perms(dfa, state, cond);
 
 	return state;
-}
-
-/**
- * aa_pathstr_perm - do permission check & audit for @name
- * @op: operation being checked
- * @profile: profile being enforced  (NOT NULL)
- * @name: path string to check permission for  (NOT NULL)
- * @request: requested permissions
- * @cond: conditional info for this request  (NOT NULL)
- *
- * Do permission check for paths that are predefined.  This fn will
- * be removed once security_sysctl goes away.
- *
- * Returns: %0 else error if access denied or other error
- */
-int aa_pathstr_perm(int op, struct aa_profile *profile, const char *name,
-		    u16 request, struct path_cond *cond)
-{
-	struct file_perms perms = { };
-	int error = 0;
-
-	aa_str_perms(profile->file.dfa, profile->file.start, name, cond,
-		     &perms);
-	if (request & ~perms.allow)
-		error = -EACCES;
-	return aa_audit_file(profile, &perms, GFP_KERNEL, op, request, name,
-			     NULL, cond->uid, NULL, error);
 }
 
 /**
@@ -297,7 +271,7 @@ static inline bool is_deleted(struct dentry *dentry)
  * Returns: %0 else error if access denied or other error
  */
 int aa_path_perm(int op, struct aa_profile *profile, struct path *path,
-		 int flags, u16 request, struct path_cond *cond)
+		 int flags, u32 request, struct path_cond *cond)
 {
 	char *buffer = NULL;
 	struct file_perms perms = {};
@@ -345,7 +319,7 @@ int aa_path_perm(int op, struct aa_profile *profile, struct path *path,
  *
  * Returns: %1 if subset else %0
  */
-static inline bool xindex_is_subset(u16 link, u16 target)
+static inline bool xindex_is_subset(u32 link, u32 target)
 {
 	if (((link & ~AA_X_UNSAFE) != (target & ~AA_X_UNSAFE)) ||
 	    ((link & AA_X_UNSAFE) && !(target & AA_X_UNSAFE)))
@@ -384,7 +358,7 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 	char *buffer = NULL, *buffer2 = NULL;
 	const char *lname, *tname = NULL, *info = NULL;
 	struct file_perms lperms, perms;
-	u16 request = AA_MAY_LINK;
+	u32 request = AA_MAY_LINK;
 	unsigned int state;
 	int error;
 
@@ -409,8 +383,7 @@ int aa_path_link(struct aa_profile *profile, struct dentry *old_dentry,
 		goto audit;
 
 	/* test to see if target can be paired with link */
-	state = aa_dfa_null_transition(profile->file.dfa, state,
-				       profile->flags & PFLAG_OLD_NULL_TRANS);
+	state = aa_dfa_null_transition(profile->file.dfa, state);
 	aa_str_perms(profile->file.dfa, state, tname, &cond, &perms);
 
 	/* force audit/quiet masks for link are stored in the second entry
@@ -472,7 +445,7 @@ audit:
  * Returns: %0 if access allowed else error
  */
 int aa_file_perm(int op, struct aa_profile *profile, struct file *file,
-		 u16 request)
+		 u32 request)
 {
 	struct path_cond cond = {
 		.uid = file->f_path.dentry->d_inode->i_uid,

@@ -26,51 +26,12 @@
 #include "include/policy.h"
 
 /**
- * kvmalloc - do allocation prefering kmalloc but falling back to vmalloc
- * @size: size of allocation
- *
- * Return: allocated buffer or NULL if failed
- *
- * It is possible that policy being loaded from the user is larger than
- * what can be allocated by kmalloc, in those cases fall back to vmalloc.
- */
-static void *kvmalloc(size_t size)
-{
-	void *buffer;
-
-	if (size == 0)
-		return NULL;
-
-	buffer = kmalloc(size, GFP_KERNEL | __GFP_NOWARN);
-	if (!buffer)
-		buffer = vmalloc(size);
-	return buffer;
-}
-
-/**
- * kvfree - free an allocation do by kvmalloc
- * @buffer: buffer to free
- *
- * Free a buffer allocated by kvmalloc
- */
-static void kvfree(void *buffer)
-{
-	if (!buffer)
-		return;
-
-	if (is_vmalloc_addr(buffer))
-		vfree(buffer);
-	else
-		kfree(buffer);
-}
-
-/**
  * aa_simple_write_to_buffer - common routine for getting policy from user
  * @op: operation doing the user buffer copy
  * @userbuf: user buffer to copy data from  (NOT NULL)
  * @alloc_size: size of user buffer
  * @copy_size: size of data to copy from user buffer
- * @pos: position write is at in the file
+ * @pos: position write is at in the file (NOT NULL)
  *
  * Returns: kernel buffer containing copy of user buffer data or an
  *          ERR_PTR on failure.
@@ -81,11 +42,9 @@ static char *aa_simple_write_to_buffer(int op, const char __user *userbuf,
 {
 	char *data;
 
-	if (*pos != 0) {
+	if (*pos != 0)
 		/* only writes from pos 0, that is complete writes */
-		data = ERR_PTR(-ESPIPE);
-		goto out;
-	}
+		return ERR_PTR(-ESPIPE);
 
 	/*
 	 * Don't allow profile load/replace/remove from profiles that don't
@@ -101,11 +60,9 @@ static char *aa_simple_write_to_buffer(int op, const char __user *userbuf,
 
 	if (copy_from_user(data, userbuf, copy_size)) {
 		kvfree(data);
-		data = ERR_PTR(-EFAULT);
-		goto out;
+		return ERR_PTR(-EFAULT);
 	}
 
-out:
 	return data;
 }
 
@@ -183,8 +140,6 @@ static const struct file_operations aa_fs_profile_remove = {
 /** Base file system setup **/
 
 static struct dentry *aa_fs_dentry;
-struct dentry *aa_fs_null;
-struct vfsmount *aa_fs_mnt;
 
 static void aafs_remove(const char *name)
 {
@@ -199,9 +154,9 @@ static void aafs_remove(const char *name)
 
 /**
  * aafs_create - create an entry in the apparmor filesystem
- * @name: name of the entry
+ * @name: name of the entry (NOT NULL)
  * @mask: file permission mask of the file
- * @fops: file operations for the file
+ * @fops: file operations for the file (NOT NULL)
  *
  * Used aafs_remove to remove entries created with this fn.
  */
@@ -227,11 +182,7 @@ void aa_destroy_aafs(void)
 		aafs_remove(".remove");
 		aafs_remove(".replace");
 		aafs_remove(".load");
-		aafs_remove("profiles");
-#ifdef CONFIG_SECURITY_APPARMOR_COMPAT_24
-		aafs_remove("matching");
-		aafs_remove("features");
-#endif
+
 		securityfs_remove(aa_fs_dentry);
 		aa_fs_dentry = NULL;
 	}
@@ -262,17 +213,7 @@ int aa_create_aafs(void)
 		aa_fs_dentry = NULL;
 		goto error;
 	}
-#ifdef CONFIG_SECURITY_APPARMOR_COMPAT_24
-	error = aafs_create("matching", 0444, &aa_fs_matching_fops);
-	if (error)
-		goto error;
-	error = aafs_create("features", 0444, &aa_fs_features_fops);
-	if (error)
-		goto error;
-#endif
-	error = aafs_create("profiles", 0440, &aa_fs_profiles_fops);
-	if (error)
-		goto error;
+
 	error = aafs_create(".load", 0640, &aa_fs_profile_load);
 	if (error)
 		goto error;

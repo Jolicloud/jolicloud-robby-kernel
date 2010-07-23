@@ -35,7 +35,9 @@ static void audit_cb(struct audit_buffer *ab, void *va)
 /**
  * audit_resource - audit setting resource limit
  * @profile: profile being enforced  (NOT NULL)
- * @sa: audit data  (NOT NULL)
+ * @resoure: rlimit being auditing
+ * @value: value being set
+ * @error: error value
  *
  * Returns: 0 or sa->error else other error code on failure
  */
@@ -44,7 +46,7 @@ static int audit_resource(struct aa_profile *profile, unsigned int resource,
 {
 	struct common_audit_data sa;
 
-	COMMON_AUDIT_DATA_INIT_NONE(&sa);
+	COMMON_AUDIT_DATA_INIT(&sa, NONE);
 	sa.aad.op = OP_SETRLIMIT,
 	sa.aad.rlim.rlim = resource;
 	sa.aad.rlim.max = value;
@@ -93,7 +95,7 @@ int aa_task_setrlimit(struct aa_profile *profile, unsigned int resource,
 
 /**
  * __aa_transition_rlimits - apply new profile rlimits
- * @old: old profile on task  (MAYBE NULL)
+ * @old: old profile on task  (NOT NULL)
  * @new: new profile with rlimits to apply  (NOT NULL)
  */
 void __aa_transition_rlimits(struct aa_profile *old, struct aa_profile *new)
@@ -105,7 +107,7 @@ void __aa_transition_rlimits(struct aa_profile *old, struct aa_profile *new)
 	/* for any rlimits the profile controlled reset the soft limit
 	 * to the less of the tasks hard limit and the init tasks soft limit
 	 */
-	if (old && old->rlimits.mask) {
+	if (old->rlimits.mask) {
 		for (i = 0, mask = 1; i < RLIM_NLIMITS; i++, mask <<= 1) {
 			if (old->rlimits.mask & mask) {
 				rlim = current->signal->rlim + i;
@@ -117,7 +119,7 @@ void __aa_transition_rlimits(struct aa_profile *old, struct aa_profile *new)
 	}
 
 	/* set any new hard limits as dictated by the new profile */
-	if (!(new && new->rlimits.mask))
+	if (!new->rlimits.mask)
 		return;
 	for (i = 0, mask = 1; i < RLIM_NLIMITS; i++, mask <<= 1) {
 		if (!(new->rlimits.mask & mask))

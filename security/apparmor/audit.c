@@ -82,20 +82,19 @@ const char *audit_mode_names[] = {
 };
 
 static char *aa_audit_type[] = {
-	"APPARMOR_AUDIT",
-	"APPARMOR_ALLOWED",
-	"APPARMOR_DENIED",
-	"APPARMOR_HINT",
-	"APPARMOR_STATUS",
-	"APPARMOR_ERROR",
-	"APPARMOR_KILLED"
+	"AUDIT",
+	"ALLOWED",
+	"DENIED",
+	"HINT",
+	"STATUS",
+	"ERROR",
+	"KILLED"
 };
 
 /*
  * Currently AppArmor auditing is fed straight into the audit framework.
  *
  * TODO:
- * convert to LSM audit
  * netlink interface for complain mode
  * user auditing, - send user auditing to netlink interface
  * system control of whether user audit messages go to system log
@@ -103,8 +102,8 @@ static char *aa_audit_type[] = {
 
 /**
  * audit_base - core AppArmor function.
- * @ab: audit buffer to fill
- * @sa: audit structure containing data to audit
+ * @ab: audit buffer to fill (NOT NULL)
+ * @ca: audit structure containing data to audit (NOT NULL)
  *
  * Record common AppArmor audit data from @sa
  */
@@ -114,7 +113,7 @@ static void audit_pre(struct audit_buffer *ab, void *ca)
 	struct task_struct *tsk = sa->tsk ? sa->tsk : current;
 
 	if (aa_g_audit_header) {
-		audit_log_format(ab, " type=");
+		audit_log_format(ab, "apparmor=");
 		audit_log_string(ab, aa_audit_type[sa->aad.type]);
 	}
 
@@ -130,8 +129,6 @@ static void audit_pre(struct audit_buffer *ab, void *ca)
 			audit_log_format(ab, " error=%d", sa->aad.error);
 	}
 
-	audit_log_format(ab, " pid=%d", tsk->pid);
-
 	if (sa->aad.profile) {
 		struct aa_profile *profile = sa->aad.profile;
 		pid_t pid;
@@ -139,12 +136,11 @@ static void audit_pre(struct audit_buffer *ab, void *ca)
 		pid = tsk->real_parent->pid;
 		rcu_read_unlock();
 		audit_log_format(ab, " parent=%d", pid);
-		audit_log_format(ab, " profile=");
 		if (profile->ns != root_ns) {
-			audit_log_format(ab, ":");
+			audit_log_format(ab, " namespace=");
 			audit_log_untrustedstring(ab, profile->ns->base.hname);
-			audit_log_format(ab, "://");
 		}
+		audit_log_format(ab, " profile=");
 		audit_log_untrustedstring(ab, profile->base.hname);
 	}
 
@@ -155,12 +151,26 @@ static void audit_pre(struct audit_buffer *ab, void *ca)
 }
 
 /**
- * aa_audit - Log an audit event to the audit subsystem
+ * aa_audit_msg - Log a message to the audit subsystem
+ * @sa: audit event structure (NOT NULL)
+ * @cb: optional callback fn for type specific fields (MAYBE NULL)
+ */
+void aa_audit_msg(int type, struct common_audit_data *sa,
+		  void (*cb) (struct audit_buffer *, void *))
+{
+	sa->aad.type = type;
+	sa->lsm_pre_audit = audit_pre;
+	sa->lsm_post_audit = cb;
+	common_lsm_audit(sa);
+}
+
+/**
+ * aa_audit - Log a profile based audit event to the audit subsystem
  * @type: audit type for the message
- * @profile: profile to check against
+ * @profile: profile to check against (NOT NULL)
  * @gfp: allocation flags to use
- * @sa: audit event
- * @cb: optional callback fn for type specific fields
+ * @sa: audit event (NOT NULL)
+ * @cb: optional callback fn for type specific fields (MAYBE NULL)
  *
  * Handle default message switching based off of audit mode flags
  *
@@ -170,6 +180,8 @@ int aa_audit(int type, struct aa_profile *profile, gfp_t gfp,
 	     struct common_audit_data *sa,
 	     void (*cb) (struct audit_buffer *, void *))
 {
+	BUG_ON(!profile);
+
 	if (type == AUDIT_APPARMOR_AUTO) {
 		if (likely(!sa->aad.error)) {
 			if (AUDIT_MODE(profile) != AUDIT_ALL)
@@ -185,16 +197,13 @@ int aa_audit(int type, struct aa_profile *profile, gfp_t gfp,
 	     AUDIT_MODE(profile) == AUDIT_QUIET))
 		return sa->aad.error;
 
-	if (profile && DO_KILL(profile) && type == AUDIT_APPARMOR_DENIED)
+	if (profile && KILL_MODE(profile) && type == AUDIT_APPARMOR_DENIED)
 		type = AUDIT_APPARMOR_KILL;
-	sa->aad.type = type;
 
 	if (profile && !unconfined(profile))
 		sa->aad.profile = profile;
 
-	sa->lsm_pre_audit = audit_pre;
-	sa->lsm_post_audit = cb;
-	common_lsm_audit(sa);
+	aa_audit_msg(type, sa, cb);
 
 	if (sa->aad.type == AUDIT_APPARMOR_KILL)
 		(void)send_sig_info(SIGKILL, NULL, sa->tsk ? sa->tsk : current);

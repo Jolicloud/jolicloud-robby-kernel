@@ -27,22 +27,20 @@
 #include "capability.h"
 #include "domain.h"
 #include "file.h"
-#include "net.h"
 #include "resource.h"
 
 extern const char *profile_mode_names[];
 #define APPARMOR_NAMES_MAX_INDEX 3
 
-#define COMPLAIN_MODE(_profile)				\
-	((aa_g_profile_mode == APPARMOR_COMPLAIN) || ((_profile) &&	\
-					(_profile)->mode == APPARMOR_COMPLAIN))
+#define COMPLAIN_MODE(_profile)	\
+	((aa_g_profile_mode == APPARMOR_COMPLAIN) || \
+	 ((_profile)->mode == APPARMOR_COMPLAIN))
 
-#define DO_KILL(_profile)					\
-	((aa_g_profile_mode == APPARMOR_KILL) || ((_profile) &&	\
-					(_profile)->mode == APPARMOR_KILL))
+#define KILL_MODE(_profile) \
+	((aa_g_profile_mode == APPARMOR_KILL) || \
+	 ((_profile)->mode == APPARMOR_KILL))
 
-#define PROFILE_IS_HAT(_profile) \
-	((_profile) && (_profile)->flags & PFLAG_HAT)
+#define PROFILE_IS_HAT(_profile) ((_profile)->flags & PFLAG_HAT)
 
 /*
  * FIXME: currently need a clean way to replace and remove profiles as a
@@ -64,7 +62,6 @@ enum profile_flags {
 	PFLAG_IMMUTABLE = 0x10,		/* don't allow changes/replacement */
 	PFLAG_USER_DEFINED = 0x20,	/* user based profile */
 	PFLAG_NO_LIST_REF = 0x40,	/* list doesn't keep profile ref */
-	PFLAG_MMAP_MIN_ADDR = 0x80,	/* profile controls mmap_min_addr */
 	PFLAG_OLD_NULL_TRANS = 0x100,	/* use // as the null transition */
 
 	/* These flags must coorespond with PATH_flags */
@@ -149,7 +146,6 @@ struct aa_namespace {
  * @size: the memory consumed by this profiles rules
  * @file: The set of rules governing basic file access and domain transitions
  * @caps: capabilities for the profile
- * @net: network controls for the profile
  * @rlimits: rlimits for the profile
  *
  * The AppArmor profile contains the basic confinement data.  Each profile
@@ -184,11 +180,8 @@ struct aa_profile {
 	u32 path_flags;
 	int size;
 
-	unsigned long mmap_min_addr;
-
 	struct aa_file_rules file;
 	struct aa_caps caps;
-	struct aa_net net;
 	struct aa_rlimit rlimits;
 };
 
@@ -197,7 +190,7 @@ extern enum profile_mode aa_g_profile_mode;
 
 void aa_add_profile(struct aa_policy *common, struct aa_profile *profile);
 
-bool aa_ns_visible(struct aa_namespace *parent, struct aa_namespace *child);
+bool aa_ns_visible(struct aa_namespace *curr, struct aa_namespace *view);
 const char *aa_ns_name(struct aa_namespace *parent, struct aa_namespace *child);
 int aa_alloc_root_ns(void);
 void aa_free_root_ns(void);
@@ -270,7 +263,8 @@ ssize_t aa_remove_profiles(char *name, size_t size);
 static inline struct aa_profile *aa_newest_version(struct aa_profile *profile)
 {
 	if (unlikely(profile && profile->replacedby))
-		for (; profile->replacedby; profile = profile->replacedby) ;
+		for (; profile->replacedby; profile = profile->replacedby)
+			;
 
 	return profile;
 }
@@ -304,9 +298,8 @@ static inline int AUDIT_MODE(struct aa_profile *profile)
 {
 	if (aa_g_audit != AUDIT_NORMAL)
 		return aa_g_audit;
-	if (profile)
-		return profile->audit;
-	return AUDIT_NORMAL;
+
+	return profile->audit;
 }
 
 bool aa_may_manage_policy(int op);

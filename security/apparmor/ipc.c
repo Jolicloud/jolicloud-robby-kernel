@@ -40,7 +40,7 @@ static int aa_audit_ptrace(struct aa_profile *profile,
 			   struct aa_profile *target, int error)
 {
 	struct common_audit_data sa;
-	COMMON_AUDIT_DATA_INIT_NONE(&sa);
+	COMMON_AUDIT_DATA_INIT(&sa, NONE);
 	sa.aad.op = OP_PTRACE;
 	sa.aad.target = target;
 	sa.aad.error = error;
@@ -66,7 +66,7 @@ int aa_may_ptrace(struct task_struct *tracer_task, struct aa_profile *tracer,
 	 *       Test mode for PTRACE_MODE_READ || PTRACE_MODE_ATTACH
 	 */
 
-	if (!tracer || tracer == tracee)
+	if (unconfined(tracer) || tracer == tracee)
 		return 0;
 	/* log this capability request */
 	return aa_capable(tracer_task, tracer, CAP_SYS_PTRACE, 1);
@@ -74,8 +74,8 @@ int aa_may_ptrace(struct task_struct *tracer_task, struct aa_profile *tracer,
 
 /**
  * aa_ptrace - do ptrace permission check and auditing
- * @tracer: task doing the tracing
- * @tracee: task being traced
+ * @tracer: task doing the tracing (NOT NULL)
+ * @tracee: task being traced (NOT NULL)
  * @mode: ptrace mode either PTRACE_MODE_READ || PTRACE_MODE_ATTACH
  *
  * Returns: %0 else error code if permission denied or error

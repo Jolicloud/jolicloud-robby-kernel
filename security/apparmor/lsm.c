@@ -31,7 +31,6 @@
 #include "include/context.h"
 #include "include/file.h"
 #include "include/ipc.h"
-#include "include/net.h"
 #include "include/path.h"
 #include "include/policy.h"
 #include "include/procattr.h"
@@ -96,17 +95,19 @@ static void apparmor_cred_transfer(struct cred *new, const struct cred *old)
 static int apparmor_ptrace_access_check(struct task_struct *child,
 					unsigned int mode)
 {
-	int rc;
-
-	rc = cap_ptrace_access_check(child, mode);
-	if (rc)
-		return rc;
+	int error = cap_ptrace_access_check(child, mode);
+	if (error)
+		return error;
 
 	return aa_ptrace(current, child, mode);
 }
 
 static int apparmor_ptrace_traceme(struct task_struct *parent)
 {
+	int error = cap_ptrace_traceme(parent);
+	if (error)
+		return error;
+
 	return aa_ptrace(parent, current, PTRACE_MODE_ATTACH);
 }
 
@@ -125,8 +126,10 @@ static int apparmor_capget(struct task_struct *target, kernel_cap_t *effective,
 	*inheritable = cred->cap_inheritable;
 	*permitted = cred->cap_permitted;
 
-	if (!unconfined(profile))
+	if (!unconfined(profile)) {
 		*effective = cap_intersect(*effective, profile->caps.allow);
+		*permitted = cap_intersect(*permitted, profile->caps.allow);
+	}
 	rcu_read_unlock();
 
 	return 0;
@@ -138,51 +141,11 @@ static int apparmor_capable(struct task_struct *task, const struct cred *cred,
 	struct aa_profile *profile;
 	/* cap_capable returns 0 on success, else -EPERM */
 	int error = cap_capable(task, cred, cap, audit);
-
-	profile = aa_cred_profile(cred);
-	if (!error  && !unconfined(profile))
-		error = aa_capable(task, profile, cap, audit);
-
-	return error;
-}
-
-static int apparmor_sysctl(struct ctl_table *table, int sysctl_op)
-{
-	int error = 0;
-	struct aa_profile *profile = aa_current_profile();
-
-	if (!unconfined(profile)) {
-		char *buffer, *name;
-		int mask;
-
-		mask = 0;
-		if (sysctl_op & 4)
-			mask |= MAY_READ;
-		if (sysctl_op & 2)
-			mask |= MAY_WRITE;
-
-		error = -ENOMEM;
-		/* freed below */
-		buffer = (char *)__get_free_page(GFP_KERNEL);
-		if (!buffer)
-			goto out;
-
-		/*
-		 * TODO: convert this over to using a global or per
-		 * namespace control instead of a hard coded /proc
-		 */
-		name = sysctl_pathname(table, buffer, PAGE_SIZE);
-		if (name && name - buffer >= 5) {
-			struct path_cond cond = { 0, S_IFREG };
-			name -= 5;
-			memcpy(name, "/proc", 5);
-			error = aa_pathstr_perm(OP_SYSCTL, profile, name, mask,
-						&cond);
-		}
-		free_page((unsigned long)buffer);
+	if (!error) {
+		profile = aa_cred_profile(cred);
+		if (!unconfined(profile))
+			error = aa_capable(task, profile, cap, audit);
 	}
-
-out:
 	return error;
 }
 
@@ -195,7 +158,7 @@ out:
  *
  * Returns: %0 else error code if error or permission denied
  */
-static int common_perm(int op, struct path *path, u16 mask,
+static int common_perm(int op, struct path *path, u32 mask,
 		       struct path_cond *cond)
 {
 	struct aa_profile *profile;
@@ -219,7 +182,7 @@ static int common_perm(int op, struct path *path, u16 mask,
  * Returns: %0 else error code if error or permission denied
  */
 static int common_perm_dir_dentry(int op, struct path *dir,
-				  struct dentry *dentry, u16 mask,
+				  struct dentry *dentry, u32 mask,
 				  struct path_cond *cond)
 {
 	struct path path = { dir->mnt, dentry };
@@ -230,14 +193,14 @@ static int common_perm_dir_dentry(int op, struct path *dir,
 /**
  * common_perm_mnt_dentry - common permission wrapper when mnt, dentry
  * @op: operation being checked
- * @mnt: mount point of dentry
+ * @mnt: mount point of dentry (NOT NULL)
  * @dentry: dentry to check  (NOT NULL)
  * @mask: requested permissions mask
  *
  * Returns: %0 else error code if error or permission denied
  */
 static int common_perm_mnt_dentry(int op, struct vfsmount *mnt,
-				  struct dentry *dentry, u16 mask)
+				  struct dentry *dentry, u32 mask)
 {
 	struct path path = { mnt, dentry };
 	struct path_cond cond = { dentry->d_inode->i_uid,
@@ -257,7 +220,7 @@ static int common_perm_mnt_dentry(int op, struct vfsmount *mnt,
  * Returns: %0 else error code if error or permission denied
  */
 static int common_perm_rm(int op, struct path *dir,
-			  struct dentry *dentry, u16 mask)
+			  struct dentry *dentry, u32 mask)
 {
 	struct inode *inode = dentry->d_inode;
 	struct path_cond cond = { };
@@ -282,7 +245,7 @@ static int common_perm_rm(int op, struct path *dir,
  * Returns: %0 else error code if error or permission denied
  */
 static int common_perm_create(int op, struct path *dir, struct dentry *dentry,
-			      u16 mask, umode_t mode)
+			      u32 mask, umode_t mode)
 {
 	struct path_cond cond = { current_fsuid(), mode };
 
@@ -461,7 +424,7 @@ static void apparmor_file_free_security(struct file *file)
 	aa_free_file_context(cxt);
 }
 
-static int common_file_perm(int op, struct file *file, u16 mask)
+static int common_file_perm(int op, struct file *file, u32 mask)
 {
 	struct aa_file_cxt *fcxt = file->f_security;
 	struct aa_profile *profile, *fprofile = aa_cred_profile(file->f_cred);
@@ -496,7 +459,7 @@ static int apparmor_file_permission(struct file *file, int mask)
 
 static int apparmor_file_lock(struct file *file, unsigned int cmd)
 {
-	u16 mask = AA_MAY_LOCK;
+	u32 mask = AA_MAY_LOCK;
 
 	if (cmd == F_WRLCK)
 		mask |= MAY_WRITE;
@@ -579,19 +542,27 @@ static int apparmor_getprocattr(struct task_struct *task, char *name,
 static int apparmor_setprocattr(struct task_struct *task, char *name,
 				void *value, size_t size)
 {
-	char *command, *args;
+	char *command, *args = value;
 	size_t arg_size;
 	int error;
 
-	if (size == 0 || size >= PAGE_SIZE)
+	if (size == 0)
 		return -EINVAL;
+	/* args points to a PAGE_SIZE buffer, AppArmor requires that
+	 * the buffer must be null terminated or have size <= PAGE_SIZE -1
+	 * so that AppArmor can null terminate them
+	 */
+	if (args[size - 1] != '\0') {
+		if (size == PAGE_SIZE)
+			return -EINVAL;
+		args[size] = '\0';
+	}
 
 	/* task can only write its own attributes */
 	if (current != task)
 		return -EACCES;
 
 	args = value;
-	args[size] = '\0';
 	args = strim(args);
 	command = strsep(&args, " ");
 	if (!args)
@@ -618,7 +589,7 @@ static int apparmor_setprocattr(struct task_struct *task, char *name,
 			error = aa_setprocattr_permipc(args);
 		} else {
 			struct common_audit_data sa;
-			COMMON_AUDIT_DATA_INIT_NONE(&sa);
+			COMMON_AUDIT_DATA_INIT(&sa, NONE);
 			sa.aad.op = OP_SETPROCATTR;
 			sa.aad.info = name;
 			sa.aad.error = -EINVAL;
@@ -649,111 +620,12 @@ static int apparmor_task_setrlimit(unsigned int resource,
 	return error;
 }
 
-static int apparmor_socket_create(int family, int type, int protocol, int kern)
-{
-	struct aa_profile *profile;
-	int error = 0;
-
-	if (kern)
-		return 0;
-
-	profile = __aa_current_profile();
-	if (!unconfined(profile))
-		error = aa_net_perm(OP_CREATE, profile, family, type, protocol,
-				    NULL);
-	return error;
-}
-
-static int apparmor_socket_bind(struct socket *sock,
-				struct sockaddr *address, int addrlen)
-{
-	struct sock *sk = sock->sk;
-
-	return aa_revalidate_sk(OP_BIND, sk);
-}
-
-static int apparmor_socket_connect(struct socket *sock,
-				   struct sockaddr *address, int addrlen)
-{
-	struct sock *sk = sock->sk;
-
-	return aa_revalidate_sk(OP_CONNECT, sk);
-}
-
-static int apparmor_socket_listen(struct socket *sock, int backlog)
-{
-	struct sock *sk = sock->sk;
-
-	return aa_revalidate_sk(OP_LISTEN, sk);
-}
-
-static int apparmor_socket_accept(struct socket *sock, struct socket *newsock)
-{
-	struct sock *sk = sock->sk;
-
-	return aa_revalidate_sk(OP_ACCEPT, sk);
-}
-
-static int apparmor_socket_sendmsg(struct socket *sock,
-				   struct msghdr *msg, int size)
-{
-	struct sock *sk = sock->sk;
-
-	return aa_revalidate_sk(OP_SENDMSG, sk);
-}
-
-static int apparmor_socket_recvmsg(struct socket *sock,
-				   struct msghdr *msg, int size, int flags)
-{
-	struct sock *sk = sock->sk;
-
-	return aa_revalidate_sk(OP_RECVMSG, sk);
-}
-
-static int apparmor_socket_getsockname(struct socket *sock)
-{
-	struct sock *sk = sock->sk;
-
-	return aa_revalidate_sk(OP_GETSOCKNAME, sk);
-}
-
-static int apparmor_socket_getpeername(struct socket *sock)
-{
-	struct sock *sk = sock->sk;
-
-	return aa_revalidate_sk(OP_GETPEERNAME, sk);
-}
-
-static int apparmor_socket_getsockopt(struct socket *sock, int level,
-				      int optname)
-{
-	struct sock *sk = sock->sk;
-
-	return aa_revalidate_sk(OP_GETSOCKOPT, sk);
-}
-
-static int apparmor_socket_setsockopt(struct socket *sock, int level,
-				      int optname)
-{
-	struct sock *sk = sock->sk;
-
-	return aa_revalidate_sk(OP_SETSOCKOPT, sk);
-}
-
-static int apparmor_socket_shutdown(struct socket *sock, int how)
-{
-	struct sock *sk = sock->sk;
-
-	return aa_revalidate_sk(OP_SOCK_SHUTDOWN, sk);
-}
-
 static struct security_operations apparmor_ops = {
 	.name =				"apparmor",
 
 	.ptrace_access_check =		apparmor_ptrace_access_check,
 	.ptrace_traceme =		apparmor_ptrace_traceme,
 	.capget =			apparmor_capget,
-	.sysctl =			apparmor_sysctl,
 	.capable =			apparmor_capable,
 
 	.path_link =			apparmor_path_link,
@@ -778,19 +650,6 @@ static struct security_operations apparmor_ops = {
 
 	.getprocattr =			apparmor_getprocattr,
 	.setprocattr =			apparmor_setprocattr,
-
-	.socket_create =		apparmor_socket_create,
-	.socket_bind =			apparmor_socket_bind,
-	.socket_connect =		apparmor_socket_connect,
-	.socket_listen =		apparmor_socket_listen,
-	.socket_accept =		apparmor_socket_accept,
-	.socket_sendmsg =		apparmor_socket_sendmsg,
-	.socket_recvmsg =		apparmor_socket_recvmsg,
-	.socket_getsockname =		apparmor_socket_getsockname,
-	.socket_getpeername =		apparmor_socket_getpeername,
-	.socket_getsockopt =		apparmor_socket_getsockopt,
-	.socket_setsockopt =		apparmor_socket_setsockopt,
-	.socket_shutdown =		apparmor_socket_shutdown,
 
 	.cred_alloc_blank =		apparmor_cred_alloc_blank,
 	.cred_free =			apparmor_cred_free,
@@ -850,7 +709,7 @@ module_param_call(audit, param_set_audit, param_get_audit,
 /* Determines if audit header is included in audited messages.  This
  * provides more context if the audit daemon is not running
  */
-int aa_g_audit_header;
+int aa_g_audit_header = 1;
 module_param_named(audit_header, aa_g_audit_header, aabool,
 		   S_IRUSR | S_IWUSR);
 
@@ -1032,7 +891,7 @@ static int __init apparmor_init(void)
 	int error;
 
 	if (!apparmor_enabled || !security_module_enable(&apparmor_ops)) {
-		aa_info_message("AppArmor disabled by boot time parameter\n");
+		aa_info_message("AppArmor disabled by boot time parameter");
 		apparmor_enabled = 0;
 		return 0;
 	}

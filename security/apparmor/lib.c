@@ -14,14 +14,15 @@
 
 #include <linux/slab.h>
 #include <linux/string.h>
+#include <linux/vmalloc.h>
 
 #include "include/audit.h"
 
 
 /**
  * aa_split_fqname - split a fqname into a profile and namespace name
- * @fqname: a full qualified name in namespace profile format
- * @ns_name: pointer to portion of the string containing the ns name
+ * @fqname: a full qualified name in namespace profile format (NOT NULL)
+ * @ns_name: pointer to portion of the string containing the ns name (NOT NULL)
  *
  * Returns: profile name or NULL if one is not specified
  *
@@ -55,30 +56,75 @@ char *aa_split_fqname(char *fqname, char **ns_name)
 }
 
 /**
- * aa_strneq - compare null terminated @str to a non null terminated substring
- * @str: a null terminated string
- * @sub: a substring, not necessarily null terminated
- * @len: length of @sub to compare
- *
- * The @str string must be full consumed for this to be considered a match
+ * aa_info_message - log a none profile related status message
+ * @str: message to log
  */
-bool aa_strneq(const char *str, const char *sub, int len)
-{
-	int res = strncmp(str, sub, len);
-	if (res)
-		return 0;
-	if (str[len] == 0)
-		return 1;
-	return 0;
-}
-
 void aa_info_message(const char *str)
 {
-	struct common_audit_data sa;
-	COMMON_AUDIT_DATA_INIT_NONE(&sa);
-	sa.aad.info = str,
-	printk(KERN_INFO "AppArmor: %s\n", str);
-	if (audit_enabled)
-		aa_audit(AUDIT_APPARMOR_STATUS, NULL, GFP_KERNEL, &sa, NULL);
+	if (audit_enabled) {
+		struct common_audit_data sa;
+		COMMON_AUDIT_DATA_INIT(&sa, NONE);
+		sa.aad.info = str;
+		printk(KERN_INFO "AppArmor: %s\n", str);
+		aa_audit_msg(AUDIT_APPARMOR_STATUS, &sa, NULL);
+	}
 }
 
+/**
+ * kvmalloc - do allocation prefering kmalloc but falling back to vmalloc
+ * @size: size of allocation
+ *
+ * Return: allocated buffer or NULL if failed
+ *
+ * It is possible that policy being loaded from the user is larger than
+ * what can be allocated by kmalloc, in those cases fall back to vmalloc.
+ */
+void *kvmalloc(size_t size)
+{
+	void *buffer = NULL;
+
+	if (size == 0)
+		return NULL;
+
+	/* do not attempt kmalloc if we need more than 16 pages at once */
+	if (size <= (16*PAGE_SIZE))
+		buffer = kmalloc(size, GFP_NOIO | __GFP_NOWARN);
+	if (!buffer) {
+		if (size < sizeof(struct work_struct))
+			size = sizeof(struct work_struct);
+		buffer = vmalloc(size);
+	}
+	return buffer;
+}
+
+/**
+ * do_vfree - workqueue routine for freeing vmalloced memory
+ * @work: data to be freed
+ *
+ * The work_struct is overlayed to the data being freed, as at the point
+ * the work is scheduled the data is no longer valid, be its freeing
+ * needs to be delayed until safe.
+ */
+static void do_vfree(struct work_struct *work)
+{
+	vfree(work);
+}
+
+/**
+ * kvfree - free an allocation do by kvmalloc
+ * @buffer: buffer to free (MAYBE_NULL)
+ *
+ * Free a buffer allocated by kvmalloc
+ */
+void kvfree(void *buffer)
+{
+	if (is_vmalloc_addr(buffer)) {
+		/* Data is no longer valid so just use the allocated space
+		 * as the work_struct
+		 */
+		struct work_struct *work = (struct work_struct *) buffer;
+		INIT_WORK(work, do_vfree);
+		schedule_work(work);
+	} else
+		kfree(buffer);
+}

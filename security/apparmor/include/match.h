@@ -110,13 +110,6 @@ static inline size_t table_size(size_t len, size_t el_size)
 	return ALIGN(sizeof(struct table_header) + len * el_size, 8);
 }
 
-static inline size_t table_alloc_size(size_t size)
-{
-	if (size > sizeof(struct work_struct))
-		return size;
-	return sizeof(struct work_struct);
-}
-
 struct aa_dfa *aa_dfa_unpack(void *blob, size_t size, int flags);
 unsigned int aa_dfa_match_len(struct aa_dfa *dfa, unsigned int start,
 			      const char *str, int len);

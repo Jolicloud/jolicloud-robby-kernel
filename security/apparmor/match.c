@@ -20,55 +20,22 @@
 #include <linux/err.h>
 #include <linux/kref.h>
 
+#include "include/apparmor.h"
 #include "include/match.h"
 
 /**
- * do_vfree - workqueue routine for freeing vmalloced memory
- * @work: data to be freed
- *
- * The work_struct is overlayed to the data being freed, as at the point
- * the work is scheduled the data is no longer valid, be its freeing
- * needs to be delayed until safe.
- */
-static void do_vfree(struct work_struct *work)
-{
-	vfree(work);
-}
-
-/**
- * free_table - free a table allocated by unpack table
- * @table: table to unpack  (MAYBE NULL)
- */
-static void free_table(struct table_header *table)
-{
-	if (!table)
-		return;
-
-	if (is_vmalloc_addr(table)) {
-		/* Data is no longer valid so just use the allocated space
-		 * as the work_struct
-		 */
-		struct work_struct *work = (struct work_struct *) table;
-		INIT_WORK(work, do_vfree);
-		schedule_work(work);
-	} else
-		kzfree(table);
-}
-
-/**
  * unpack_table - unpack a dfa table (one of accept, default, base, next check)
- * @blob: data to unpack
+ * @blob: data to unpack (NOT NULL)
  * @bsize: size of blob
  *
  * Returns: pointer to table else NULL on failure
  *
- * NOTE: must be freed by free_table (not kmalloc)
+ * NOTE: must be freed by kvfree (not kmalloc)
  */
 static struct table_header *unpack_table(char *blob, size_t bsize)
 {
 	struct table_header *table = NULL;
 	struct table_header th;
-	int unmap_alias = 0;
 	size_t tsize;
 
 	if (bsize < sizeof(struct table_header))
@@ -90,13 +57,7 @@ static struct table_header *unpack_table(char *blob, size_t bsize)
 	if (bsize < tsize)
 		goto out;
 
-	/* freed by free_table */
-	table = kmalloc(table_alloc_size(tsize), GFP_KERNEL | __GFP_NOWARN);
-	if (!table) {
-		table = vmalloc(tsize);
-		if (table)
-			unmap_alias = 1;
-	}
+	table = kvmalloc(tsize);
 	if (table) {
 		*table = th;
 		if (th.td_flags == YYTD_DATA8)
@@ -113,17 +74,19 @@ static struct table_header *unpack_table(char *blob, size_t bsize)
 	}
 
 out:
-	if (unmap_alias)
+	/* if table was vmalloced make sure the page tables are synced
+	 * before it is used, as it goes live to all cpus.
+	 */
+	if (is_vmalloc_addr(table))
 		vm_unmap_aliases();
 	return table;
 fail:
-	free_table(table);
+	kvfree(table);
 	return NULL;
 }
 
 /**
- * verify_dfa - verify that all the transitions and states in the dfa tables
- *              are in bounds.
+ * verify_dfa - verify that transitions and states in the tables are in bounds.
  * @dfa: dfa to test  (NOT NULL)
  * @flags: flags controlling what type of accept table are acceptable
  *
@@ -175,8 +138,11 @@ static int verify_dfa(struct aa_dfa *dfa, int flags)
 			if (DEFAULT_TABLE(dfa)[i] >= state_count)
 				goto out;
 			/* TODO: do check that DEF state recursion terminates */
-			if (BASE_TABLE(dfa)[i] >= trans_count + 256)
+			if (BASE_TABLE(dfa)[i] + 255 >= trans_count) {
+				printk(KERN_ERR "AppArmor DFA next/check upper "
+				       "bounds error\n");
 				goto out;
+			}
 		}
 
 		for (i = 0; i < trans_count; i++) {
@@ -204,11 +170,11 @@ static void dfa_free(struct aa_dfa *dfa)
 		int i;
 
 		for (i = 0; i < ARRAY_SIZE(dfa->tables); i++) {
-			free_table(dfa->tables[i]);
+			kvfree(dfa->tables[i]);
 			dfa->tables[i] = NULL;
 		}
+		kfree(dfa);
 	}
-	kfree(dfa);
 }
 
 /**
@@ -309,7 +275,7 @@ struct aa_dfa *aa_dfa_unpack(void *blob, size_t size, int flags)
 	return dfa;
 
 fail:
-	free_table(table);
+	kvfree(table);
 	dfa_free(dfa);
 	return ERR_PTR(error);
 }

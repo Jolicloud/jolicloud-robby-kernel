@@ -107,6 +107,8 @@ enum aa_ops {
 /* define a short hand for apparmor_audit_data portion of common_audit_data */
 #define aad apparmor_audit_data
 
+void aa_audit_msg(int type, struct common_audit_data *sa,
+		  void (*cb) (struct audit_buffer *, void *));
 int aa_audit(int type, struct aa_profile *profile, gfp_t gfp,
 	     struct common_audit_data *sa,
 	     void (*cb) (struct audit_buffer *, void *));
@@ -117,11 +119,5 @@ static inline int complain_error(int error)
 		return 0;
 	return error;
 }
-
-#define COMMON_AUDIT_DATA_INIT_NONE(_d) \
-	do { \
-		memset((_d), 0, sizeof(struct common_audit_data)); \
-		(_d)->type = LSM_AUDIT_DATA_NONE; \
-	} while (0)
 
 #endif /* __AA_AUDIT_H */

@@ -21,7 +21,7 @@
 /**
  * aa_getprocattr - Return the profile information for @profile
  * @profile: the profile to print profile info about  (NOT NULL)
- * @string: the string that will contain the profile and namespace info (!NULL)
+ * @string: Returns - string containing the profile info (NOT NULL)
  *
  * Returns: length of @string on success else error on failure
  *
@@ -128,7 +128,10 @@ int aa_setprocattr_changehat(char *args, size_t size, int test)
 
 	if (hat) {
 		/* set up hat name vector, args guarenteed null terminated
-		 * at args[size]
+		 * at args[size] by setprocattr.
+		 *
+		 * If there are multiple hat names in the buffer each is
+		 * separated by a \0.  Ie. userspace writes them pre tokenized
 		 */
 		char *end = args + size;
 		for (count = 0; (hat < end) && count < 16; ++count) {
@@ -152,7 +155,7 @@ int aa_setprocattr_changehat(char *args, size_t size, int test)
  *
  * Returns: %0 or error code if change_profile fails
  */
-int aa_setprocattr_changeprofile(char *fqname, int onexec, int test)
+int aa_setprocattr_changeprofile(char *fqname, bool onexec, int test)
 {
 	char *name, *ns_name;
 

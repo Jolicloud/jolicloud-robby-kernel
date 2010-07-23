@@ -12,6 +12,7 @@
  * License.
  */
 
+#include <linux/magic.h>
 #include <linux/mnt_namespace.h>
 #include <linux/mount.h>
 #include <linux/namei.h>
@@ -25,12 +26,26 @@
 #include "include/path.h"
 #include "include/policy.h"
 
+
+/* modified from dcache.c */
+static int prepend(char **buffer, int buflen, const char *str, int namelen)
+{
+	buflen -= namelen;
+	if (buflen < 0)
+		return -ENAMETOOLONG;
+	*buffer -= namelen;
+	memcpy(*buffer, str, namelen);
+	return 0;
+}
+
+#define CHROOT_NSCONNECT (PATH_CHROOT_REL | PATH_CHROOT_NSCONNECT)
+
 /**
  * d_namespace_path - lookup a name associated with a given path
  * @path: path to lookup  (NOT NULL)
  * @buf:  buffer to store path to  (NOT NULL)
  * @buflen: length of @buf
- * @name: return pointer for start of path name with in @buf  (NOT NULL)
+ * @name: Returns - pointer for start of path name with in @buf (NOT NULL)
  * @flags: flags controling path lookup
  *
  * Handle path name lookup.
@@ -108,8 +123,9 @@ static int d_namespace_path(struct path *path, char *buf, int buflen,
 	/* Determine if the path is connected to the expected root */
 	connected = tmp.dentry == root.dentry && tmp.mnt == root.mnt;
 
-	/* If the path is not connected, then remove any leading / that
-	 * __d_path may have returned.
+	/* If the path is not connected,
+	 * check if it is a sysctl and handle specially else remove any
+	 * leading / that __d_path may have returned.
 	 * Unless
 	 *     specifically directed to connect the path,
 	 * OR
@@ -118,15 +134,25 @@ static int d_namespace_path(struct path *path, char *buf, int buflen,
 	 *     of chroot) and specifically directed to connect paths to
 	 *     namespace root.
 	 */
-	if (!connected && 
-	    !(flags & PATH_CONNECT_PATH) &&
-	    !((flags & PATH_CHROOT_REL) && (flags & PATH_CHROOT_NSCONNECT) &&
-	      (tmp.mnt == current->nsproxy->mnt_ns->root &&
-	       tmp.dentry == current->nsproxy->mnt_ns->root->mnt_root))) {
-		/* disconnected path, don't return pathname starting with '/' */
-		error = -ESTALE;
-		if (*res == '/')
-			*name = res + 1;
+	if (!connected) {
+		/* is the disconnect path a sysctl? */
+		if (tmp.dentry->d_sb->s_magic == PROC_SUPER_MAGIC &&
+		    strncmp(*name, "/sys/", 5) == 0) {
+			/* TODO: convert over to using a per namespace
+			 * control instead of hard coded /proc
+			 */
+			error = prepend(name, *name - buf, "/proc", 5);
+		} else if (!(flags & PATH_CONNECT_PATH) &&
+			   !(((flags & CHROOT_NSCONNECT) == CHROOT_NSCONNECT) &&
+			     (tmp.mnt == current->nsproxy->mnt_ns->root &&
+			      tmp.dentry == tmp.mnt->mnt_root))) {
+			/* disconnected path, don't return pathname starting
+			 * with '/'
+			 */
+			error = -ESTALE;
+			if (*res == '/')
+				*name = res + 1;
+		}
 	}
 
 out:
@@ -141,7 +167,7 @@ out:
  * @flags: flags controlling path lookup
  * @buffer: buffer to put name in  (NOT NULL)
  * @size: size of buffer
- * @name: on return contains position of path name in @buffer  (NOT NULL)
+ * @name: Returns - contains position of path name in @buffer (NOT NULL)
  *
  * Returns: %0 else error on failure
  */
@@ -166,7 +192,7 @@ static int get_name_to_buffer(struct path *path, int flags, char *buffer,
  * @path: path the file  (NOT NULL)
  * @flags: flags controling path name generation
  * @buffer: buffer that aa_get_name() allocated  (NOT NULL)
- * @name: the generated path name if !error
+ * @name: Returns - the generated path name if !error (NOT NULL)
  *
  * @name is a pointer to the beginning of the pathname (which usually differs
  * from the beginning of the buffer), or NULL.  If there is an error @name
@@ -206,38 +232,4 @@ int aa_get_name(struct path *path, int flags, char **buffer, const char **name)
 	*name = str;
 
 	return error;
-}
-
-/**
- * sysctl_pathname - generate a pathname for a sysctl
- * @table: sysctl name table  (NOT NULL)
- * @buffer: buffer to put name in  (NOT NULL)
- * @buflen: length of @buffer
- *
- * Returns: sysctl path name in @buffer or NULL on error
- */
-char *sysctl_pathname(struct ctl_table *table, char *buffer, int buflen)
-{
-	if (buflen < 1)
-		return NULL;
-	buffer += --buflen;
-	*buffer = '\0';
-
-	while (table) {
-		int namelen = strlen(table->procname);
-
-		if (buflen < namelen + 1)
-			return NULL;
-		buflen -= namelen + 1;
-		buffer -= namelen;
-		memcpy(buffer, table->procname, namelen);
-		*--buffer = '/';
-		table = table->parent;
-	}
-	if (buflen < 4)
-		return NULL;
-	buffer -= 4;
-	memcpy(buffer, "/sys", 4);
-
-	return buffer;
 }

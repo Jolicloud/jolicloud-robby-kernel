@@ -100,7 +100,7 @@ out:
  */
 static struct file_perms change_profile_perms(struct aa_profile *profile,
 					      struct aa_namespace *ns,
-					      const char *name, u16 request,
+					      const char *name, u32 request,
 					      unsigned int start)
 {
 	struct file_perms perms;
@@ -109,7 +109,6 @@ static struct file_perms change_profile_perms(struct aa_profile *profile,
 
 	if (unconfined(profile)) {
 		perms.allow = AA_MAY_CHANGE_PROFILE | AA_MAY_ONEXEC;
-		perms.xindex = perms.xdelegate = perms.dindex = 0;
 		perms.audit = perms.quiet = perms.kill = 0;
 		return perms;
 	} else if (!profile->file.dfa) {
@@ -155,7 +154,7 @@ static struct aa_profile *__attach_match(const char *name,
 		if (profile->xmatch && profile->xmatch_len > len) {
 			unsigned int state = aa_dfa_match(profile->xmatch,
 							  DFA_START, name);
-			u16 perm = dfa_user_allow(profile->xmatch, state);
+			u32 perm = dfa_user_allow(profile->xmatch, state);
 			/* any accepting state means a valid match. */
 			if (perm & MAY_EXEC) {
 				candidate = profile;
@@ -237,13 +236,13 @@ static const char *next_name(int xtype, const char *name)
  * @profile: current profile (NOT NULL)
  * @xindex: index into x transition table
  *
- * Returns: refcounted profile, or NULL on failure
+ * Returns: refcounted profile, or NULL on failure (MAYBE NULL)
  */
-static struct aa_profile *x_table_lookup(struct aa_profile *profile, u16 xindex)
+static struct aa_profile *x_table_lookup(struct aa_profile *profile, u32 xindex)
 {
 	struct aa_profile *new_profile = NULL;
 	struct aa_namespace *ns = profile->ns;
-	u16 xtype = xindex & AA_X_TYPE_MASK;
+	u32 xtype = xindex & AA_X_TYPE_MASK;
 	int index = xindex & AA_X_INDEX_MASK;
 	const char *name;
 
@@ -293,7 +292,7 @@ static struct aa_profile *x_table_lookup(struct aa_profile *profile, u16 xindex)
 /**
  * x_to_profile - get target profile for a given xindex
  * @profile: current profile  (NOT NULL)
- * @name: to to lookup if specified  (NOT NULL)
+ * @name: to to lookup (NOT NULL)
  * @xindex: index into x transition table
  *
  * find profile for a transition index
@@ -301,11 +300,11 @@ static struct aa_profile *x_table_lookup(struct aa_profile *profile, u16 xindex)
  * Returns: refcounted profile or NULL if not found available
  */
 static struct aa_profile *x_to_profile(struct aa_profile *profile,
-				       const char *name, u16 xindex)
+				       const char *name, u32 xindex)
 {
 	struct aa_profile *new_profile = NULL;
 	struct aa_namespace *ns = profile->ns;
-	u16 xtype = xindex & AA_X_TYPE_MASK;
+	u32 xtype = xindex & AA_X_TYPE_MASK;
 
 	switch (xtype) {
 	case AA_X_NONE:
@@ -407,7 +406,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 		 * onexec permission is linked to exec with a standard pairing
 		 * exec\0change_profile
 		 */
-		state = aa_dfa_null_transition(profile->file.dfa, state, 0);
+		state = aa_dfa_null_transition(profile->file.dfa, state);
 		cp = change_profile_perms(profile, cxt->onexec->ns, name,
 					  AA_MAY_ONEXEC, state);
 
@@ -424,7 +423,7 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 			if (perms.xindex & AA_X_INHERIT) {
 				/* (p|c|n)ix - don't change profile but do
 				 * use the newest version, which was picked
-				 * up above when getting profile 
+				 * up above when getting profile
 				 */
 				info = "ix fallback";
 				new_profile = aa_get_profile(profile);
@@ -583,7 +582,7 @@ static char *new_compound_name(const char *n1, const char *n2)
 
 /**
  * aa_change_hat - change hat to/from subprofile
- * @hats: vector of hat names to try changing into (unused if @count == 0)
+ * @hats: vector of hat names to try changing into (MAYBE NULL if @count == 0)
  * @count: number of hat names in @hats
  * @token: magic value to validate the hat change
  * @permtest: true if this is just a permission test
@@ -629,7 +628,6 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 			hat = aa_find_child(root, hats[i]);
 		if (!hat) {
 			if (!COMPLAIN_MODE(root) || permtest) {
-				info = "hat not found";
 				if (list_empty(&root->base.profiles))
 					error = -ECHILD;
 				else
@@ -708,18 +706,20 @@ out:
 
 /**
  * aa_change_profile - perform a one-way profile transition
- * @ns_name: name of the profile namespace to change to
- * @hname: name of profile to change to
+ * @ns_name: name of the profile namespace to change to (MAYBE NULL)
+ * @hname: name of profile to change to (MAYBE NULL)
  * @onexec: whether this transition is to take place immediately or at exec
  * @permtest: true if this is just a permission test
  *
  * Change to new profile @name.  Unlike with hats, there is no way
- * to change back.  If @onexec then the transition is delayed until
+ * to change back.  If @name isn't specified the current profile name is
+ * used.
+ * If @onexec then the transition is delayed until
  * the next exec.
  *
  * Returns %0 on success, error otherwise.
  */
-int aa_change_profile(const char *ns_name, const char *hname, int onexec,
+int aa_change_profile(const char *ns_name, const char *hname, bool onexec,
 		      bool permtest)
 {
 	const struct cred *cred;
@@ -729,7 +729,7 @@ int aa_change_profile(const char *ns_name, const char *hname, int onexec,
 	struct file_perms perms = {};
 	const char *name = NULL, *info = NULL;
 	int op, error = 0;
-	u16 request;
+	u32 request;
 
 	if (!hname && !ns_name)
 		return -EINVAL;

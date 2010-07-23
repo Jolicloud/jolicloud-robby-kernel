@@ -23,6 +23,7 @@
 #include <linux/skbuff.h>
 #include <asm/system.h>
 
+
 /* Auxiliary data to use in generating the audit record. */
 struct common_audit_data {
 	char type;
@@ -103,7 +104,7 @@ struct common_audit_data {
 			const char *info;
 			union {
 				void *target;
-                                struct {
+				struct {
 					long pos;
 					void *target;
 				} iface;
@@ -112,16 +113,11 @@ struct common_audit_data {
 					unsigned long max;
 				} rlim;
 				struct {
-					const char *path;
 					const char *target;
-					u16 request;
-					u16 denied;
+					u32 request;
+					u32 denied;
 					uid_t ouid;
 				} fs;
-				struct {
-					int type, protocol;
-					struct sock *sk;
-				} net;
 			};
 		} apparmor_audit_data;
 #endif

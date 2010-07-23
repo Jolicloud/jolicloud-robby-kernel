@@ -48,30 +48,41 @@ extern unsigned int aa_g_path_max;
 
 /* Flag indicating whether initialization completed */
 extern int apparmor_initialized;
-void apparmor_disable(void);
 
 /* fn's in lib */
 char *aa_split_fqname(char *args, char **ns_name);
-bool aa_strneq(const char *str, const char *sub, int len);
 void aa_info_message(const char *str);
+void *kvmalloc(size_t size);
+void kvfree(void *buffer);
+
+
+/**
+ * aa_strneq - compare null terminated @str to a non null terminated substring
+ * @str: a null terminated string
+ * @sub: a substring, not necessarily null terminated
+ * @len: length of @sub to compare
+ *
+ * The @str string must be full consumed for this to be considered a match
+ */
+static inline bool aa_strneq(const char *str, const char *sub, int len)
+{
+	return !strncmp(str, sub, len) && !str[len];
+}
 
 /**
  * aa_dfa_null_transition - step to next state after null character
  * @dfa: the dfa to match against
  * @start: the state of the dfa to start matching in
- * @old: true if using // as the null transition
  *
  * aa_dfa_null_transition transitions to the next state after a null
  * character which is not used in standard matching and is only
  * used to seperate pairs.
  */
 static inline unsigned int aa_dfa_null_transition(struct aa_dfa *dfa,
-						  unsigned int start, bool old)
+						  unsigned int start)
 {
-	if (unlikely(old))
-		return aa_dfa_match_len(dfa, start, "//", 2);
-	else
-		return aa_dfa_match_len(dfa, start, "\0", 1);
+	/* the null transition only needs a single null byte of the string */
+	return aa_dfa_match_len(dfa, start, "", 1);
 }
 
 static inline bool mediated_filesystem(struct inode *inode)
