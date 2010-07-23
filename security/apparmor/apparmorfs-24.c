@@ -243,7 +243,7 @@ static void p_stop(struct seq_file *f, void *p)
 }
 
 /**
- * seq_show_profile - 
+ * seq_show_profile - show a profile entry
  * @f: seq_file to file
  * @p: current position (profile)    (NOT NULL)
  *

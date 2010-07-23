@@ -52,6 +52,7 @@ static void audit_cb(struct audit_buffer *ab, void *va)
 	} else {
 		audit_log_format(ab, "\"unknown(%d)\"", sa->aad.net.type);
 	}
+
 	audit_log_format(ab, " protocol=%d", sa->aad.net.protocol);
 }
 
@@ -74,8 +75,9 @@ static int audit_net(struct aa_profile *profile, int op, u16 family, int type,
 	struct common_audit_data sa;
 	if (sk) {
 		COMMON_AUDIT_DATA_INIT(&sa, NET);
-	} else
-		COMMON_AUDIT_DATA_INIT_NONE(&sa);
+	} else {
+		COMMON_AUDIT_DATA_INIT(&sa, NONE);
+	}
 	/* todo fill in socket addr info */
 
 	sa.aad.op = op,
@@ -117,7 +119,7 @@ static int audit_net(struct aa_profile *profile, int op, u16 family, int type,
  *
  * Returns: %0 else error if permission denied
  */
-int aa_net_perm(int op, struct aa_profile *profile,u16 family, int type,
+int aa_net_perm(int op, struct aa_profile *profile, u16 family, int type,
 		int protocol, struct sock *sk)
 {
 	u16 family_mask;
