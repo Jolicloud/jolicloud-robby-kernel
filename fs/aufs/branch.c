@@ -95,15 +95,16 @@ int au_br_index(struct super_block *sb, aufs_bindex_t br_id)
  * add a branch
  */
 
-static int test_overlap(struct super_block *sb, struct dentry *h_d1,
-			struct dentry *h_d2)
+static int test_overlap(struct super_block *sb, struct dentry *h_adding,
+			struct dentry *h_root)
 {
-	if (unlikely(h_d1 == h_d2))
+	if (unlikely(h_adding == h_root
+		     || au_test_loopback_overlap(sb, h_adding)))
 		return 1;
-	return !!au_test_subdir(h_d1, h_d2)
-		|| !!au_test_subdir(h_d2, h_d1)
-		|| au_test_loopback_overlap(sb, h_d1, h_d2)
-		|| au_test_loopback_overlap(sb, h_d2, h_d1);
+	if (h_adding->d_sb != h_root->d_sb)
+		return 0;
+	return au_test_subdir(h_adding, h_root)
+		|| au_test_subdir(h_root, h_adding);
 }
 
 /*
@@ -794,7 +795,7 @@ int au_br_del(struct super_block *sb, struct au_opt_del *del, int remount)
 	if (au_opt_test(mnt_flags, PLINK))
 		au_plink_half_refresh(sb, br_id);
 
-	if (au_xino_brid(sb) == br->br_id)
+	if (au_xino_brid(sb) == br_id)
 		au_xino_brid_set(sb, -1);
 	goto out; /* success */
 
