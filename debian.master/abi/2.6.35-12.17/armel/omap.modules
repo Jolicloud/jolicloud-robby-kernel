@@ -433,7 +433,6 @@ gl620a
 gluebi
 gpio_keys
 gpio_mouse
-gpio_vbus
 grip
 grip_mp
 gspca_benq
@@ -881,7 +880,6 @@ mtdoops
 mtdram
 mtouch
 multipath
-musb_hdrc
 mxl5005s
 mxl5007t
 n_hdlc
@@ -972,7 +970,6 @@ nls_koi8-r
 nls_koi8-ru
 nls_koi8-u
 nls_utf8
-nop-usb-xceiv
 ns558
 ntfs
 nvram
@@ -985,7 +982,6 @@ ocfs2_nodemanager
 ocfs2_stack_o2cb
 ocfs2_stack_user
 ocfs2_stackglue
-ohci-hcd
 old_belkin-sir
 omap
 omap-sham
@@ -1524,7 +1520,6 @@ tvp7002
 tw9910
 twidjoy
 twl4030-pwrbutton
-twl4030-usb
 twl4030-vibra
 twl4030_keypad
 twl4030_wdt
