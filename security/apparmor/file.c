@@ -200,7 +200,6 @@ static struct file_perms compute_perms(struct aa_dfa *dfa, unsigned int state,
 	 * done at profile load
 	 */
 	perms.kill = 0;
-	perms.dindex = 0;
 
 	if (current_fsuid() == cond->uid) {
 		perms.allow = map_old_perms(dfa_user_allow(dfa, state));

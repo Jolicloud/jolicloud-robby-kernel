@@ -82,8 +82,6 @@ struct path_cond {
  * @quiet: mask of permissions to quiet audit messages for
  * @kill: mask of permissions that when matched will kill the task
  * @xindex: exec transition index if @allow contains MAY_EXEC
- * @xdelegate: used by exec to determine set of delegates allowed
- * @dindex: delegate table index, 0 if no delegation allowed
  *
  * The @audit and @queit mask should be mutually exclusive.
  */
@@ -93,8 +91,6 @@ struct file_perms {
 	u32 quiet;
 	u32 kill;
 	u16 xindex;
-	u16 xdelegate;
-	u16 dindex;
 };
 
 extern struct file_perms nullperms;

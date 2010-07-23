@@ -109,7 +109,6 @@ static struct file_perms change_profile_perms(struct aa_profile *profile,
 
 	if (unconfined(profile)) {
 		perms.allow = AA_MAY_CHANGE_PROFILE | AA_MAY_ONEXEC;
-		perms.xindex = perms.xdelegate = perms.dindex = 0;
 		perms.audit = perms.quiet = perms.kill = 0;
 		return perms;
 	} else if (!profile->file.dfa) {
