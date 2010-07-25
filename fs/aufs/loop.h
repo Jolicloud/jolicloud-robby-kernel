@@ -30,12 +30,11 @@ struct super_block;
 
 #ifdef CONFIG_AUFS_BDEV_LOOP
 /* loop.c */
-int au_test_loopback_overlap(struct super_block *sb, struct dentry *h_d1,
-			     struct dentry *h_d2);
+int au_test_loopback_overlap(struct super_block *sb, struct dentry *h_adding);
 int au_test_loopback_kthread(void);
 #else
 AuStubInt0(au_test_loopback_overlap, struct super_block *sb,
-	   struct dentry *h_d1, struct dentry *h_d2)
+	   struct dentry *h_adding)
 AuStubInt0(au_test_loopback_kthread, void)
 #endif /* BLK_DEV_LOOP */
 

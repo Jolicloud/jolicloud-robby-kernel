@@ -238,20 +238,22 @@ static struct au_dykey *dy_get(struct au_dynop *op, struct au_branch *br)
 {
 	struct au_dykey *key, *old;
 	struct au_splhead *spl;
-	static const struct {
+	struct op {
 		unsigned int sz;
-		void (*set_op)(struct au_dykey *key, const void *h_op,
-			       struct super_block *h_sb __maybe_unused);
-	} a[] = {
+		void (*set)(struct au_dykey *key, const void *h_op,
+			    struct super_block *h_sb __maybe_unused);
+	};
+	static const struct op a[] = {
 		[AuDy_AOP] = {
 			.sz	= sizeof(struct au_dyaop),
-			.set_op	= dy_aop
+			.set	= dy_aop
 		},
 		[AuDy_VMOP] = {
 			.sz	= sizeof(struct au_dyvmop),
-			.set_op	= dy_vmop
+			.set	= dy_vmop
 		}
-	}, *p;
+	};
+	const struct op *p;
 
 	spl = dynop + op->dy_type;
 	key = dy_gfind_get(spl, op->dy_hop);
@@ -267,7 +269,7 @@ static struct au_dykey *dy_get(struct au_dynop *op, struct au_branch *br)
 
 	key->dk_op.dy_hop = op->dy_hop;
 	kref_init(&key->dk_kref);
-	p->set_op(key, op->dy_hop, br->br_mnt->mnt_sb);
+	p->set(key, op->dy_hop, br->br_mnt->mnt_sb);
 	old = dy_gadd(spl, key);
 	if (old) {
 		kfree(key);
