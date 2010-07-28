@@ -15,6 +15,6 @@
 #ifndef __AA_APPARMORFS_H
 #define __AA_APPARMORFS_H
 
-extern void aa_destroy_aafs(void);
+extern void __init aa_destroy_aafs(void);
 
 #endif /* __AA_APPARMORFS_H */

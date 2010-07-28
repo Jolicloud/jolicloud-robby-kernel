@@ -36,7 +36,7 @@
 #include "include/procattr.h"
 
 /* Flag indicating whether initialization completed */
-int apparmor_initialized;
+int apparmor_initialized __initdata;
 
 /*
  * LSM hook functions
