@@ -68,8 +68,6 @@ enum profile_flags {
 	PFLAG_MEDIATE_DELETED = 0x10000, /* mediate instead delegate deleted */
 };
 
-#define AA_NEW_SID 0
-
 struct aa_profile;
 
 /* struct aa_policy - common part of both namespaces and profiles
