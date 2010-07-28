@@ -14,6 +14,7 @@
 
 #include <linux/slab.h>
 #include <linux/string.h>
+#include <linux/vmalloc.h>
 
 #include "include/audit.h"
 
