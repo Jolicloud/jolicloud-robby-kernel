@@ -65,9 +65,9 @@ void aa_info_message(const char *str)
 		struct common_audit_data sa;
 		COMMON_AUDIT_DATA_INIT(&sa, NONE);
 		sa.aad.info = str;
-		printk(KERN_INFO "AppArmor: %s\n", str);
 		aa_audit_msg(AUDIT_APPARMOR_STATUS, &sa, NULL);
 	}
+	printk(KERN_INFO "AppArmor: %s\n", str);
 }
 
 /**
