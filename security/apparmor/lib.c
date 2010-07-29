@@ -90,6 +90,9 @@ void *kvmalloc(size_t size)
 	if (size <= (16*PAGE_SIZE))
 		buffer = kmalloc(size, GFP_NOIO | __GFP_NOWARN);
 	if (!buffer) {
+		/* see kvfree for why size must be at least work_struct size
+		 * when allocated via vmalloc
+		 */
 		if (size < sizeof(struct work_struct))
 			size = sizeof(struct work_struct);
 		buffer = vmalloc(size);
