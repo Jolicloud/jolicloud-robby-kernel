@@ -214,6 +214,10 @@ static const char *separate_fqname(const char *fqname, const char **ns_name)
 	const char *name;
 
 	if (fqname[0] == ':') {
+		/* In this case there is guaranteed to be two \0 terminators
+		 * in the string.  They are verified at load time by
+		 * by unpack_trans_table
+		 */
 		*ns_name = fqname + 1;		/* skip : */
 		name = *ns_name + strlen(*ns_name) + 1;
 		if (!*name)

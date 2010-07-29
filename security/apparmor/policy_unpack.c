@@ -382,6 +382,9 @@ static bool unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
 		for (i = 0; i < size; i++) {
 			char *str;
 			int c, j, size = unpack_strdup(e, &str, NULL);
+			/* unpack_strdup verifies that the last character is
+			 * null termination byte.
+			 */
 			if (!size)
 				goto fail;
 			profile->file.trans.table[i] = str;
@@ -395,7 +398,10 @@ static bool unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
 					c++;
 			}
 			if (*str == ':') {
-				/* beginning with : requires an embedded \0 */
+				/* beginning with : requires an embedded \0,
+				 * verify that exactly 1 internal \0 exists
+				 * trailing \0 already verified by unpack_strdup
+				 */
 				if (c != 1)
 					goto fail;
 				/* first character after : must be valid */
