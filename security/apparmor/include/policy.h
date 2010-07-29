@@ -260,9 +260,8 @@ ssize_t aa_remove_profiles(char *name, size_t size);
  */
 static inline struct aa_profile *aa_newest_version(struct aa_profile *profile)
 {
-	if (unlikely(profile && profile->replacedby))
-		for (; profile->replacedby; profile = profile->replacedby)
-			;
+	while (profile->replacedby)
+		profile = profile->replacedby;
 
 	return profile;
 }
