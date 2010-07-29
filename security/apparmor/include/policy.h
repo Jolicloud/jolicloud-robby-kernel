@@ -56,15 +56,15 @@ enum profile_mode {
 
 enum profile_flags {
 	PFLAG_HAT = 1,			/* profile is a hat */
-	PFLAG_UNCONFINED = 2,		/* profile is the unconfined profile */
+	PFLAG_UNCONFINED = 2,		/* profile is an unconfined profile */
 	PFLAG_NULL = 4,			/* profile is null learning profile */
 	PFLAG_IX_ON_NAME_ERROR = 8,	/* fallback to ix on name lookup fail */
 	PFLAG_IMMUTABLE = 0x10,		/* don't allow changes/replacement */
-	PFLAG_USER_DEFINED = 0x20,	/* user based profile */
+	PFLAG_USER_DEFINED = 0x20,	/* user based profile - lower privs */
 	PFLAG_NO_LIST_REF = 0x40,	/* list doesn't keep profile ref */
 	PFLAG_OLD_NULL_TRANS = 0x100,	/* use // as the null transition */
 
-	/* These flags must coorespond with PATH_flags */
+	/* These flags must correspond with PATH_flags */
 	PFLAG_MEDIATE_DELETED = 0x10000, /* mediate instead delegate deleted */
 };
 
@@ -108,8 +108,8 @@ struct aa_ns_acct {
  *
  * An aa_namespace defines the set profiles that are searched to determine
  * which profile to attach to a task.  Profiles can not be shared between
- * aa_namespaces and profile names within a namespace are guarenteed to be
- * unique.  When profiles in seperate namespaces have the same name they
+ * aa_namespaces and profile names within a namespace are guaranteed to be
+ * unique.  When profiles in separate namespaces have the same name they
  * are NOT considered to be equivalent.
  *
  * Namespaces are hierarchical and only namespaces and profiles below the
@@ -117,7 +117,8 @@ struct aa_ns_acct {
  *
  * Namespace names must be unique and can not contain the characters :/\0
  *
- * FIXME TODO: add vserver support so a vserer (can it all be done in userspace)
+ * FIXME TODO: add vserver support of namespaces (can it all be done in
+ *             userspace?)
  */
 struct aa_namespace {
 	struct aa_policy base;
@@ -129,10 +130,10 @@ struct aa_namespace {
 };
 
 /* struct aa_profile - basic confinement data
- * @base - base componets of the profile (name, refcount, lists, lock ...)
+ * @base - base components of the profile (name, refcount, lists, lock ...)
  * @parent: parent of profile
  * @ns: namespace the profile is in
- * @replacedby: is set profile that replaced this profile
+ * @replacedby: is set to the profile that replaced this profile
  * @rename: optional profile name that this profile renamed
  * @xmatch: optional extended matching for unconfined executables names
  * @xmatch_len: xmatch prefix len, used to determine xmatch priority
@@ -154,7 +155,7 @@ struct aa_namespace {
  * The @replacedby field is write protected by the profile lock.  Reads
  * are assumed to be atomic, and are done without locking.
  *
- * Profiles have a hierachy where hats and children profiles keep
+ * Profiles have a hierarchy where hats and children profiles keep
  * a reference to their parent.
  *
  * Profile names can not begin with a : and can not contain the \0
@@ -209,7 +210,7 @@ static inline struct aa_policy *aa_get_common(struct aa_policy *c)
  * aa_get_namespace - increment references count on @ns
  * @ns: namespace to increment reference count of (MAYBE NULL)
  *
- * Returns: pointer to @ns if @ns is NULL returns NULL
+ * Returns: pointer to @ns, if @ns is NULL returns NULL
  * Requires: @ns must be held with valid refcount when called
  */
 static inline struct aa_namespace *aa_get_namespace(struct aa_namespace *ns)
@@ -222,9 +223,9 @@ static inline struct aa_namespace *aa_get_namespace(struct aa_namespace *ns)
 
 /**
  * aa_put_namespace - decrement refcount on @ns
- * @ns: namespace to put reference to
+ * @ns: namespace to put reference of
  *
- * Decrement reference count to @ns and if no longer in use free it
+ * Decrement reference count of @ns and if no longer in use free it
  */
 static inline void aa_put_namespace(struct aa_namespace *ns)
 {

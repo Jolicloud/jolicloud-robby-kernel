@@ -57,13 +57,13 @@ int aa_getprocattr(struct aa_profile *profile, char **string)
 		mode_len = strlen(mode_str) + 3;	/* + 3 for _() */
 
 	name_len = strlen(profile->base.hname);
-	len = mode_len + ns_len + name_len + 1;	    /*+ 1 for \n */
+	len = mode_len + ns_len + name_len + 1;	    /* + 1 for \n */
 	s = str = kmalloc(len + 1, GFP_KERNEL);	    /* + 1 \0 */
 	if (!str)
 		return -ENOMEM;
 
 	if (ns_len) {
-		/* skip over prefix current_ns->base.hname and seperating // */
+		/* skip over prefix current_ns->base.hname and separating // */
 		sprintf(s, ":%s://", ns_name);
 		s += ns_len;
 	}
@@ -127,7 +127,7 @@ int aa_setprocattr_changehat(char *args, size_t size, int test)
 	}
 
 	if (hat) {
-		/* set up hat name vector, args guarenteed null terminated
+		/* set up hat name vector, args guaranteed null terminated
 		 * at args[size] by setprocattr.
 		 *
 		 * If there are multiple hat names in the buffer each is

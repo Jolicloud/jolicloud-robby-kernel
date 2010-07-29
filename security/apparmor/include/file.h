@@ -37,7 +37,7 @@ struct aa_profile;
 #define AA_EXEC_MMAP                   0x0800
 
 #define AA_MAY_LINK			0x1000
-#define AA_LINK_SUBSET			AA_MAY_LOCK	/* overlayed */
+#define AA_LINK_SUBSET			AA_MAY_LOCK	/* overlaid */
 #define AA_MAY_ONEXEC			0x40000000	/* exec allows onexec */
 #define AA_MAY_CHANGE_PROFILE		0x80000000
 #define AA_MAY_CHANGEHAT		0x80000000	/* ctrl auditing only */
@@ -70,13 +70,13 @@ struct aa_profile;
 /* AA_SECURE_X_NEEDED - is passed in the bprm->unsafe field */
 #define AA_SECURE_X_NEEDED	0x8000
 
-/* need to conditionalize which ones are being set */
+/* need to make conditional which ones are being set */
 struct path_cond {
 	uid_t uid;
 	umode_t mode;
 };
 
-/* struct file_perms - file permission fo
+/* struct file_perms - file permission
  * @allow: mask of permissions that are allowed
  * @audit: mask of permissions to force an audit message for
  * @quiet: mask of permissions to quiet audit messages for

@@ -30,7 +30,7 @@
  * description).  If a portion of the name is missing it returns NULL for
  * that portion.
  *
- * NOTE: may modifiy the @fqname string.  The pointers returned point
+ * NOTE: may modify the @fqname string.  The pointers returned point
  *       into the @fqname string.
  */
 char *aa_split_fqname(char *fqname, char **ns_name)
@@ -71,7 +71,7 @@ void aa_info_message(const char *str)
 }
 
 /**
- * kvmalloc - do allocation prefering kmalloc but falling back to vmalloc
+ * kvmalloc - do allocation preferring kmalloc but falling back to vmalloc
  * @size: size of allocation
  *
  * Return: allocated buffer or NULL if failed
@@ -101,7 +101,7 @@ void *kvmalloc(size_t size)
  * do_vfree - workqueue routine for freeing vmalloced memory
  * @work: data to be freed
  *
- * The work_struct is overlayed to the data being freed, as at the point
+ * The work_struct is overlaid to the data being freed, as at the point
  * the work is scheduled the data is no longer valid, be its freeing
  * needs to be delayed until safe.
  */

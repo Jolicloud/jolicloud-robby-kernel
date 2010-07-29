@@ -10,7 +10,7 @@ config SECURITY_APPARMOR
 	  This enables the AppArmor security module.
 	  Required userspace tools (if they are not included in your
 	  distribution) and further information may be found at
-	  <http://forge.novell.com/modules/xfmod/project/?apparmor>
+	  http://apparmor.wiki.kernel.org
 
 	  If you are unsure how to answer this question, answer N.
 
@@ -24,8 +24,8 @@ config SECURITY_APPARMOR_BOOTPARAM_VALUE
 	  'apparmor', which allows AppArmor to be enabled or disabled
           at boot.  If this option is set to 0 (zero), the AppArmor
 	  kernel parameter will default to 0, disabling AppArmor at
-	  bootup.  If this option is set to 1 (one), the AppArmor
+	  boot.  If this option is set to 1 (one), the AppArmor
 	  kernel parameter will default to 1, enabling AppArmor at
-	  bootup.
+	  boot.
 
 	  If you are unsure how to answer this question, answer 1.

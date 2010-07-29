@@ -114,7 +114,7 @@ static struct file_perms change_profile_perms(struct aa_profile *profile,
 	} else if (!profile->file.dfa) {
 		return nullperms;
 	} else if ((ns == profile->ns)) {
-		/* try matching against rules with out namespace prependend */
+		/* try matching against rules with out namespace prepended */
 		aa_str_perms(profile->file.dfa, start, name, &cond, &perms);
 		if (COMBINED_PERM_MASK(perms) & request)
 			return perms;
@@ -134,9 +134,9 @@ static struct file_perms change_profile_perms(struct aa_profile *profile,
  * @head - profile list to walk  (NOT NULL)
  *
  * Do a linear search on the profiles in the list.  There is a matching
- * preference where an exact match is prefered over a name which uses
+ * preference where an exact match is preferred over a name which uses
  * expressions to match, and matching expressions with the greatest
- * xmatch_len are prefered.
+ * xmatch_len are preferred.
  *
  * Requires: @head not be shared or have appropriate locks held
  *
@@ -196,7 +196,7 @@ static struct aa_profile *find_attach(struct aa_namespace *ns,
  * This is the xtable equivalent routine of aa_split_fqname.  It finds the
  * split in an xtable fqname which contains an embedded \0 instead of a :
  * if a namespace is specified.  This is done so the xtable is constant and
- * isn't resplit on every lookup.
+ * isn't re-split on every lookup.
  *
  * Either the profile or namespace name may be optional but if the namespace
  * is specified the profile name termination must be present.  This results
@@ -205,7 +205,7 @@ static struct aa_profile *find_attach(struct aa_namespace *ns,
  * :ns_name\0profile_name\0
  * :ns_name\0\0
  *
- * NOTE: the xtable fqname is prevalidated at load time in unpack_trans_table
+ * NOTE: the xtable fqname is pre-validated at load time in unpack_trans_table
  *
  * Returns: profile name if it is specified else NULL
  */
@@ -246,7 +246,7 @@ static struct aa_profile *x_table_lookup(struct aa_profile *profile, u32 xindex)
 	int index = xindex & AA_X_INDEX_MASK;
 	const char *name;
 
-	/* index is guarenteed to be in range, validated at load time */
+	/* index is guaranteed to be in range, validated at load time */
 	for (name = profile->file.trans.table[index]; !new_profile && name;
 	     name = next_name(xtype, name)) {
 		struct aa_namespace *new_ns;
@@ -292,7 +292,7 @@ static struct aa_profile *x_table_lookup(struct aa_profile *profile, u32 xindex)
 /**
  * x_to_profile - get target profile for a given xindex
  * @profile: current profile  (NOT NULL)
- * @name: to to lookup (NOT NULL)
+ * @name: name to lookup (NOT NULL)
  * @xindex: index into x transition table
  *
  * find profile for a transition index
@@ -673,7 +673,7 @@ int aa_change_hat(const char *hats[], int count, u64 token, bool permtest)
 		if (!permtest) {
 			error = aa_set_current_hat(hat, token);
 			if (error == -EACCES)
-				/* kill task incase of brute force attacks */
+				/* kill task in case of brute force attacks */
 				perms.kill = AA_MAY_CHANGEHAT;
 			else if (name && !error)
 				/* reset error for learning of new hats */
@@ -782,7 +782,7 @@ int aa_change_profile(const char *ns_name, const char *hname, bool onexec,
 		error = -ENOENT;
 		if (permtest || !COMPLAIN_MODE(profile))
 			goto audit;
-		/* release below */
+		/* released below */
 		target = aa_new_null_profile(profile, 0);
 		if (!target) {
 			info = "failed null profile create";

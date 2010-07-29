@@ -1,7 +1,7 @@
 /*
  * AppArmor security module
  *
- * This file contains AppArmor resource limits function defintions.
+ * This file contains AppArmor resource limits function definitions.
  *
  * Copyright (C) 1998-2008 Novell/SUSE
  * Copyright 2009-2010 Canonical Ltd.
@@ -20,7 +20,7 @@
 
 struct aa_profile;
 
-/* struct aa_rlimit - rlimits settings for the profile
+/* struct aa_rlimit - rlimit settings for the profile
  * @mask: which hard limits to set
  * @limits: rlimit values that override task limits
  *

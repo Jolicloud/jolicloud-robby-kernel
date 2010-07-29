@@ -19,8 +19,7 @@
 
 #include "match.h"
 
-/* Control parameters settable thru module/boot flags or
- * via /sys/kernel/security/apparmor/control */
+/* Control parameters settable through module/boot flags */
 extern enum audit_mode aa_g_audit;
 extern int aa_g_audit_header;
 extern int aa_g_debug;
@@ -76,12 +75,12 @@ static inline bool aa_strneq(const char *str, const char *sub, int len)
  *
  * aa_dfa_null_transition transitions to the next state after a null
  * character which is not used in standard matching and is only
- * used to seperate pairs.
+ * used to separate pairs.
  */
 static inline unsigned int aa_dfa_null_transition(struct aa_dfa *dfa,
 						  unsigned int start)
 {
-	/* the null transition only needs a single null byte of the string */
+	/* the null transition only needs the string's null terminator byte */
 	return aa_dfa_match_len(dfa, start, "", 1);
 }
 

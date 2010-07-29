@@ -46,7 +46,7 @@ static int prepend(char **buffer, int buflen, const char *str, int namelen)
  * @buf:  buffer to store path to  (NOT NULL)
  * @buflen: length of @buf
  * @name: Returns - pointer for start of path name with in @buf (NOT NULL)
- * @flags: flags controling path lookup
+ * @flags: flags controlling path lookup
  *
  * Handle path name lookup.
  *
@@ -110,7 +110,7 @@ static int d_namespace_path(struct path *path, char *buf, int buflen,
 		 *
 		 * Remove the appended deleted text and return as string for
 		 * normal mediation, or auditing.  The (deleted) string is
-		 * guarenteed to be added in this case, so just strip it.
+		 * guaranteed to be added in this case, so just strip it.
 		 */
 		buf[buflen - 11] = 0;	/* - (len(" (deleted)") +\0) */
 
@@ -190,7 +190,7 @@ static int get_name_to_buffer(struct path *path, int flags, char *buffer,
 /**
  * aa_get_name - compute the pathname of a file
  * @path: path the file  (NOT NULL)
- * @flags: flags controling path name generation
+ * @flags: flags controlling path name generation
  * @buffer: buffer that aa_get_name() allocated  (NOT NULL)
  * @name: Returns - the generated path name if !error (NOT NULL)
  *
