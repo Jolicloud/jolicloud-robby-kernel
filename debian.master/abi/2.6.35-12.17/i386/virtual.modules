@@ -420,11 +420,9 @@ wanrouter
 wp512
 x25
 xcbc
-xen-blkfront
 xen-fbfront
 xenfs
 xen-kbdfront
-xen-netfront
 xfrm4_mode_beet
 xfrm4_mode_transport
 xfrm4_mode_tunnel
