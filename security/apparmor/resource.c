@@ -61,7 +61,7 @@ static int audit_resource(struct aa_profile *profile, unsigned int resource,
  *
  * Returns: resource # for the current architecture.
  *
- * rlimit resource can vary based on architecture map the compiled policy
+ * rlimit resource can vary based on architecture, map the compiled policy
  * resource # to the internal representation for the architecture.
  */
 int aa_map_resource(int resource)

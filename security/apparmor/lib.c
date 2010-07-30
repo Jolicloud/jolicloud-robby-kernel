@@ -30,7 +30,7 @@
  * description).  If a portion of the name is missing it returns NULL for
  * that portion.
  *
- * NOTE: may modifiy the @fqname string.  The pointers returned point
+ * NOTE: may modify the @fqname string.  The pointers returned point
  *       into the @fqname string.
  */
 char *aa_split_fqname(char *fqname, char **ns_name)
@@ -65,13 +65,13 @@ void aa_info_message(const char *str)
 		struct common_audit_data sa;
 		COMMON_AUDIT_DATA_INIT(&sa, NONE);
 		sa.aad.info = str;
-		printk(KERN_INFO "AppArmor: %s\n", str);
 		aa_audit_msg(AUDIT_APPARMOR_STATUS, &sa, NULL);
 	}
+	printk(KERN_INFO "AppArmor: %s\n", str);
 }
 
 /**
- * kvmalloc - do allocation prefering kmalloc but falling back to vmalloc
+ * kvmalloc - do allocation preferring kmalloc but falling back to vmalloc
  * @size: size of allocation
  *
  * Return: allocated buffer or NULL if failed
@@ -90,6 +90,9 @@ void *kvmalloc(size_t size)
 	if (size <= (16*PAGE_SIZE))
 		buffer = kmalloc(size, GFP_NOIO | __GFP_NOWARN);
 	if (!buffer) {
+		/* see kvfree for why size must be at least work_struct size
+		 * when allocated via vmalloc
+		 */
 		if (size < sizeof(struct work_struct))
 			size = sizeof(struct work_struct);
 		buffer = vmalloc(size);
@@ -101,7 +104,7 @@ void *kvmalloc(size_t size)
  * do_vfree - workqueue routine for freeing vmalloced memory
  * @work: data to be freed
  *
- * The work_struct is overlayed to the data being freed, as at the point
+ * The work_struct is overlaid to the data being freed, as at the point
  * the work is scheduled the data is no longer valid, be its freeing
  * needs to be delayed until safe.
  */

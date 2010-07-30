@@ -13,7 +13,7 @@
  *
  *
  * AppArmor policy is based around profiles, which contain the rules a
- * task is confined by.  Every task in the sytem has a profile attached
+ * task is confined by.  Every task in the system has a profile attached
  * to it determined either by matching "unconfined" tasks against the
  * visible set of profiles or by following a profiles attachment rules.
  *
@@ -31,21 +31,21 @@
  * Reserved profile names
  *	unconfined - special automatically generated unconfined profile
  *	inherit - special name to indicate profile inheritance
- *	null-XXXX-YYYY - special automically generated learning profiles
+ *	null-XXXX-YYYY - special automatically generated learning profiles
  *
  * Namespace names may not start with / or @ and may not contain \0 or :
- * Reserved namespace namespace
+ * Reserved namespace names
  *	user-XXXX - user defined profiles
  *
- * a // in a profile or namespace name indicates a hierarcical name with the
+ * a // in a profile or namespace name indicates a hierarchical name with the
  * name before the // being the parent and the name after the child.
  *
- * Profile and namespace hierachies serve two different but similar purposes.
+ * Profile and namespace hierarchies serve two different but similar purposes.
  * The namespace contains the set of visible profiles that are considered
  * for attachment.  The hierarchy of namespaces allows for virtualizing
  * the namespace so that for example a chroot can have its own set of profiles
  * which may define some local user namespaces.
- * The profile hierachy severs two distinct purposes,
+ * The profile hierarchy severs two distinct purposes,
  * -  it allows for sub profiles or hats, which allows an application to run
  *    subprograms under its own profile with different restriction than it
  *    self, and not have it use the system profile.
@@ -60,8 +60,8 @@
  *   eg. /bin/bash///bin/ls as a name would indicate /bin/ls was started
  *       from /bin/bash
  *
- *   A profile or namespace name that can contain one or more // seperators
- *   is refered to as an hname (hierarchical).
+ *   A profile or namespace name that can contain one or more // separators
+ *   is referred to as an hname (hierarchical).
  *   eg.  /bin/bash//bin/ls
  *
  *   An fqname is a name that may contain both namespace and profile hnames.
@@ -191,7 +191,7 @@ static struct aa_policy *__policy_find(struct list_head *head, const char *name)
 }
 
 /**
- * __policy_strn_find - find a policy thats name matches @len chars of @str
+ * __policy_strn_find - find a policy that's name matches @len chars of @str
  * @head: list to search  (NOT NULL)
  * @str: string to search for  (NOT NULL)
  * @len: length of match required
@@ -257,7 +257,7 @@ const char *aa_ns_name(struct aa_namespace *curr, struct aa_namespace *view)
 		/* at this point if a ns is visible it is in a view ns
 		 * thus the curr ns.hname is a prefix of its name.
 		 * Only output the virtualized portion of the name
-		 * Add + 2 to skip over // seperating curr hname prefix
+		 * Add + 2 to skip over // separating curr hname prefix
 		 * from the visible tail of the views hname
 		 */
 		return view->base.hname + strlen(curr->base.hname) + 2;
@@ -477,7 +477,7 @@ static void __list_remove_profile(struct aa_profile *profile)
  * @old: profile to be replaced  (NOT NULL)
  * @new: profile to replace @old with  (NOT NULL)
  *
- * Will duplicaticate and refcount elements that @new inherits from @old
+ * Will duplicate and refcount elements that @new inherits from @old
  * and will inherit @old children.
  *
  * refcount @new for list, put @old list refcount
@@ -503,7 +503,7 @@ static void __replace_profile(struct aa_profile *old, struct aa_profile *new)
 	list_for_each_entry_safe(child, tmp, &old->base.profiles, base.list) {
 		aa_put_profile(child->parent);
 		child->parent = aa_get_profile(new);
-		/* list refcount transfered to @new*/
+		/* list refcount transferred to @new*/
 		list_move(&child->base.list, &new->base.profiles);
 	}
 

@@ -56,7 +56,7 @@ static void audit_cb(struct audit_buffer *ab, void *va)
  * Do auditing of capability and handle, audit/complain/kill modes switching
  * and duplicate message elimination.
  *
- * Returns: 0 or sa->error on succes,  error code on failure
+ * Returns: 0 or sa->error on success,  error code on failure
  */
 static int audit_caps(struct aa_profile *profile, struct task_struct *task,
 		      int cap, int error)

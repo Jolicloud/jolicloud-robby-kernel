@@ -139,9 +139,9 @@ static const struct file_operations aa_fs_profile_remove = {
 
 /** Base file system setup **/
 
-static struct dentry *aa_fs_dentry;
+static struct dentry *aa_fs_dentry __initdata;
 
-static void aafs_remove(const char *name)
+static void __init aafs_remove(const char *name)
 {
 	struct dentry *dentry;
 
@@ -160,8 +160,8 @@ static void aafs_remove(const char *name)
  *
  * Used aafs_remove to remove entries created with this fn.
  */
-static int aafs_create(const char *name, int mask,
-		       const struct file_operations *fops)
+static int __init aafs_create(const char *name, int mask,
+			      const struct file_operations *fops)
 {
 	struct dentry *dentry;
 
@@ -176,7 +176,7 @@ static int aafs_create(const char *name, int mask,
  *
  * releases dentries allocated by aa_create_aafs
  */
-void aa_destroy_aafs(void)
+void __init aa_destroy_aafs(void)
 {
 	if (aa_fs_dentry) {
 		aafs_remove(".remove");
@@ -195,7 +195,7 @@ void aa_destroy_aafs(void)
  *
  * Returns: error on failure
  */
-int aa_create_aafs(void)
+int __init aa_create_aafs(void)
 {
 	int error;
 

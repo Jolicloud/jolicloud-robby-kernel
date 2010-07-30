@@ -30,7 +30,7 @@
 #include "include/policy.h"
 
 /**
- * aa_alloc_task_context - allocat a new task_cxt
+ * aa_alloc_task_context - allocate a new task_cxt
  * @flags: gfp flags for allocation
  *
  * Returns: allocated buffer or NULL on failure

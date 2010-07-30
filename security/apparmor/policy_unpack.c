@@ -13,7 +13,7 @@
  * License.
  *
  * AppArmor uses a serialized binary format for loading policy.
- * The policy format is documented in Documentation/???
+ * To find policy format documentation look in Documentation/apparmor.txt
  * All policy is validated before it is used.
  */
 
@@ -35,7 +35,7 @@
  * which has a name (AA_NAME typecode followed by name string) followed by
  * the entries typecode and data.  Named types allow for optional
  * elements and extensions to be added and tested for without breaking
- * backwards compatability.
+ * backwards compatibility.
  */
 
 enum aa_code {
@@ -154,10 +154,11 @@ static bool unpack_X(struct aa_ext *e, enum aa_code code)
  * name @name.  If @name is specified then there must be a matching
  * name element in the stream.  If @name is NULL any name element will be
  * skipped and only the typecode will be tested.
- * returns 1 on success (both type code and name tests match) and the read
+ *
+ * Returns 1 on success (both type code and name tests match) and the read
  * head is advanced past the headers
  *
- * Returns: 0 if either match failes, the read head does not move
+ * Returns: 0 if either match fails, the read head does not move
  */
 static bool unpack_nameX(struct aa_ext *e, enum aa_code code, const char *name)
 {
@@ -381,6 +382,9 @@ static bool unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
 		for (i = 0; i < size; i++) {
 			char *str;
 			int c, j, size = unpack_strdup(e, &str, NULL);
+			/* unpack_strdup verifies that the last character is
+			 * null termination byte.
+			 */
 			if (!size)
 				goto fail;
 			profile->file.trans.table[i] = str;
@@ -394,7 +398,10 @@ static bool unpack_trans_table(struct aa_ext *e, struct aa_profile *profile)
 					c++;
 			}
 			if (*str == ':') {
-				/* beginning with : requires an embedded \0 */
+				/* beginning with : requires an embedded \0,
+				 * verify that exactly 1 internal \0 exists
+				 * trailing \0 already verified by unpack_strdup
+				 */
 				if (c != 1)
 					goto fail;
 				/* first character after : must be valid */
