@@ -756,7 +756,8 @@ int au_br_del(struct super_block *sb, struct au_opt_del *del, int remount)
 	i = atomic_read(&br->br_count);
 	if (unlikely(i)) {
 		AuVerbose(verbose, "%d file(s) opened\n", i);
-		goto out;
+		if (!verbose)
+			goto out;
 	}
 
 	wbr = br->br_wbr;
