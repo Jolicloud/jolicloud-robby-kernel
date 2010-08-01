@@ -142,6 +142,8 @@ unit of 512 bytes (by default) and stores the names contiguously (no
 padding). Another block for each entry is handled by kmem_cache too.
 During building dir blocks, aufs creates hash list and judging whether
 the entry is whiteouted by its upper branch or already listed.
+The merged result is cached in the corresponding inode object and
+maintained by a customizable life-time option.
 
 Some people may call it can be a security hole or invite DoS attack
 since the opened and once readdir-ed dir (file object) holds its entry
