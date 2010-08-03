@@ -47,6 +47,7 @@ install-headers:
 
 srcpkg = $(src_pkg_name)-source-$(release)
 srcdir = $(CURDIR)/debian/$(srcpkg)/usr/src/$(srcpkg)
+balldir = $(CURDIR)/debian/$(srcpkg)/usr/src/$(srcpkg)/$(srcpkg)
 install-source:
 	dh_testdir
 	dh_testroot
@@ -56,10 +57,20 @@ install-source:
 ifeq ($(do_source_package_content),true)
 	find . -path './debian' -prune -o -path './$(DEBIAN)' -prune -o \
 		-path './.*' -prune -o -print | \
+		cpio -pd --preserve-modification-time $(balldir)
+	(cd $(srcdir); tar cf - $(srcpkg)) | bzip2 -9c > \
+		$(srcdir)/$(srcpkg).tar.bz2
+	rm -rf $(balldir)
+	find './debian' './$(DEBIAN)' \
+		-path './debian/linux-*' -prune -o \
+		-path './debian/$(src_pkg_name)-*' -prune -o \
+		-path './debian/build' -prune -o \
+		-path './debian/files' -prune -o \
+		-path './debian/stamps' -prune -o \
+		-path './debian/tmp' -prune -o \
+		-print | \
 		cpio -pd --preserve-modification-time $(srcdir)
-	(cd $(srcdir)/..; tar cf - $(srcpkg)) | bzip2 -9c > \
-		$(srcdir).tar.bz2
-	rm -rf $(srcdir)
+	ln -s $(srcpkg)/$(srcpkg).tar.bz2 $(srcdir)/..
 endif
 
 install-tools: toolspkg = $(tools_common_pkg_name)
