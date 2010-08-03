@@ -4055,6 +4055,7 @@ EXPORT_SYMBOL vmlinux 0x37bcfb90	sync_dirty_buffer
 EXPORT_SYMBOL vmlinux 0x37befc70	jiffies_to_msecs
 EXPORT_SYMBOL vmlinux 0x37d8a909	vfs_mkdir
 EXPORT_SYMBOL vmlinux 0x37db8f19	dmi_get_date
+EXPORT_SYMBOL vmlinux 0x37e065ec	processors
 EXPORT_SYMBOL vmlinux 0x37e7c5c5	mb_cache_shrink
 EXPORT_SYMBOL vmlinux 0x37eafd5f	pci_back_from_sleep
 EXPORT_SYMBOL vmlinux 0x3803367f	dev_get_drvdata
@@ -6579,7 +6580,6 @@ EXPORT_SYMBOL vmlinux 0xea10655a	__bitmap_intersects
 EXPORT_SYMBOL vmlinux 0xea147363	printk
 EXPORT_SYMBOL vmlinux 0xea291ff9	posix_lock_file_wait
 EXPORT_SYMBOL vmlinux 0xea4e4e67	xfrm_state_insert
-EXPORT_SYMBOL vmlinux 0xea830e8f	processors
 EXPORT_SYMBOL vmlinux 0xea90bdd3	acpi_attach_data
 EXPORT_SYMBOL vmlinux 0xea9917e7	security_inode_readlink
 EXPORT_SYMBOL vmlinux 0xea9fb1da	udp_flush_pending_frames
@@ -7599,6 +7599,7 @@ EXPORT_SYMBOL_GPL drivers/net/can/sja1000/sja1000 0x705d9ad4	register_sja1000dev
 EXPORT_SYMBOL_GPL drivers/net/can/sja1000/sja1000 0x91392877	alloc_sja1000dev
 EXPORT_SYMBOL_GPL drivers/net/can/sja1000/sja1000 0xc60c65d7	unregister_sja1000dev
 EXPORT_SYMBOL_GPL drivers/net/can/sja1000/sja1000 0xdc9bd500	sja1000_interrupt
+EXPORT_SYMBOL_GPL drivers/net/macvlan 0x4ade930a	macvlan_common_setup
 EXPORT_SYMBOL_GPL drivers/net/macvlan 0x4bbfbca0	macvlan_start_xmit
 EXPORT_SYMBOL_GPL drivers/net/macvlan 0x5f281766	macvlan_dellink
 EXPORT_SYMBOL_GPL drivers/net/macvlan 0x725a7624	macvlan_link_register
@@ -9795,6 +9796,7 @@ EXPORT_SYMBOL_GPL vmlinux 0x507de8c6	add_memory
 EXPORT_SYMBOL_GPL vmlinux 0x5086ac3a	alg_test
 EXPORT_SYMBOL_GPL vmlinux 0x509933bc	devres_release_group
 EXPORT_SYMBOL_GPL vmlinux 0x50b319ce	cpu_bit_bitmap
+EXPORT_SYMBOL_GPL vmlinux 0x50ba3bec	acpi_processor_ffh_cstate_enter
 EXPORT_SYMBOL_GPL vmlinux 0x50c7049a	raw_seq_open
 EXPORT_SYMBOL_GPL vmlinux 0x50d1f870	pgprot_writecombine
 EXPORT_SYMBOL_GPL vmlinux 0x50e7193a	__i2c_first_dynamic_bus_num
@@ -9937,7 +9939,6 @@ EXPORT_SYMBOL_GPL vmlinux 0x5ff3a45b	sdio_writel
 EXPORT_SYMBOL_GPL vmlinux 0x5ff890e9	device_for_each_child
 EXPORT_SYMBOL_GPL vmlinux 0x60a13e90	rcu_barrier
 EXPORT_SYMBOL_GPL vmlinux 0x60cd73ed	pv_apic_ops
-EXPORT_SYMBOL_GPL vmlinux 0x60ebf985	acpi_processor_ffh_cstate_enter
 EXPORT_SYMBOL_GPL vmlinux 0x614c9138	dm_rh_get_region_key
 EXPORT_SYMBOL_GPL vmlinux 0x6194ffea	do_machine_check
 EXPORT_SYMBOL_GPL vmlinux 0x61bf2dfc	put_device
@@ -10273,6 +10274,7 @@ EXPORT_SYMBOL_GPL vmlinux 0x8ea72b5c	ata_bmdma_port_ops
 EXPORT_SYMBOL_GPL vmlinux 0x8ea97c0d	pci_disable_pcie_error_reporting
 EXPORT_SYMBOL_GPL vmlinux 0x8ec4f391	crypto_grab_aead
 EXPORT_SYMBOL_GPL vmlinux 0x8ecd8393	class_compat_remove_link
+EXPORT_SYMBOL_GPL vmlinux 0x8edfc605	acpi_processor_ffh_cstate_probe
 EXPORT_SYMBOL_GPL vmlinux 0x8f33bb80	acpi_ec_add_query_handler
 EXPORT_SYMBOL_GPL vmlinux 0x8f3d398e	pm_generic_freeze
 EXPORT_SYMBOL_GPL vmlinux 0x8f3e91e5	crypto_find_alg
@@ -10855,7 +10857,6 @@ EXPORT_SYMBOL_GPL vmlinux 0xdb08a185	unregister_hw_breakpoint
 EXPORT_SYMBOL_GPL vmlinux 0xdb20bfbe	ip6_dst_blackhole
 EXPORT_SYMBOL_GPL vmlinux 0xdb274e52	monotonic_to_bootbased
 EXPORT_SYMBOL_GPL vmlinux 0xdb2f6d7d	relay_open
-EXPORT_SYMBOL_GPL vmlinux 0xdbb25f5e	acpi_processor_ffh_cstate_probe
 EXPORT_SYMBOL_GPL vmlinux 0xdbccb57a	inotify_init_watch
 EXPORT_SYMBOL_GPL vmlinux 0xdbe58057	usb_autopm_put_interface_no_suspend
 EXPORT_SYMBOL_GPL vmlinux 0xdbf9de81	crypto_mod_put

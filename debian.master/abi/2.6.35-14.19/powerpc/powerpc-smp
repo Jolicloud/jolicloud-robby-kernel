@@ -6907,6 +6907,7 @@ EXPORT_SYMBOL_GPL drivers/net/can/sja1000/sja1000 0xdc9bd500	sja1000_interrupt
 EXPORT_SYMBOL_GPL drivers/net/can/sja1000/sja1000 0xfec4a90d	unregister_sja1000dev
 EXPORT_SYMBOL_GPL drivers/net/macvlan 0x25d580e7	macvlan_link_register
 EXPORT_SYMBOL_GPL drivers/net/macvlan 0x260407e8	macvlan_start_xmit
+EXPORT_SYMBOL_GPL drivers/net/macvlan 0xc0938636	macvlan_common_setup
 EXPORT_SYMBOL_GPL drivers/net/macvlan 0xc5299c2a	macvlan_dellink
 EXPORT_SYMBOL_GPL drivers/net/macvlan 0xf8cdd9df	macvlan_common_newlink
 EXPORT_SYMBOL_GPL drivers/net/mlx4/mlx4_core 0x013a4c0d	mlx4_srq_query

@@ -5414,7 +5414,6 @@ EXPORT_SYMBOL vmlinux 0x87f1eca3	block_write_begin_newtrunc
 EXPORT_SYMBOL vmlinux 0x881039d0	zlib_inflate
 EXPORT_SYMBOL vmlinux 0x8826f0a3	task_tgid_nr_ns
 EXPORT_SYMBOL vmlinux 0x8828f0c5	tcf_register_action
-EXPORT_SYMBOL vmlinux 0x8841790a	processors
 EXPORT_SYMBOL vmlinux 0x8875ed06	dquot_alloc
 EXPORT_SYMBOL vmlinux 0x88941a06	_raw_spin_unlock_irqrestore
 EXPORT_SYMBOL vmlinux 0x88943d3f	blk_queue_make_request
@@ -6325,6 +6324,7 @@ EXPORT_SYMBOL vmlinux 0xca673b59	eth_type_trans
 EXPORT_SYMBOL vmlinux 0xca7f2c6c	boot_cpu_data
 EXPORT_SYMBOL vmlinux 0xca8acc78	acpi_dbg_level
 EXPORT_SYMBOL vmlinux 0xca96602e	key_alloc
+EXPORT_SYMBOL vmlinux 0xcaaa2d12	processors
 EXPORT_SYMBOL vmlinux 0xcabbb30c	_unlock_kernel
 EXPORT_SYMBOL vmlinux 0xcabe8c5f	input_mt_create_slots
 EXPORT_SYMBOL vmlinux 0xcad63d8d	proc_doulongvec_ms_jiffies_minmax
@@ -7748,6 +7748,7 @@ EXPORT_SYMBOL_GPL drivers/net/macvlan 0x0b704861	macvlan_common_newlink
 EXPORT_SYMBOL_GPL drivers/net/macvlan 0x2acc2d0e	macvlan_link_register
 EXPORT_SYMBOL_GPL drivers/net/macvlan 0x97a16ba2	macvlan_start_xmit
 EXPORT_SYMBOL_GPL drivers/net/macvlan 0xd0713fc3	macvlan_dellink
+EXPORT_SYMBOL_GPL drivers/net/macvlan 0xe2c60607	macvlan_common_setup
 EXPORT_SYMBOL_GPL drivers/net/mlx4/mlx4_core 0x01da255a	mlx4_map_phys_fmr
 EXPORT_SYMBOL_GPL drivers/net/mlx4/mlx4_core 0x05ad2acd	mlx4_srq_query
 EXPORT_SYMBOL_GPL drivers/net/mlx4/mlx4_core 0x061f26ed	mlx4_qp_query
@@ -9885,6 +9886,7 @@ EXPORT_SYMBOL_GPL vmlinux 0x4ff1b6d1	gpio_request_array
 EXPORT_SYMBOL_GPL vmlinux 0x50000bb5	mnt_want_write
 EXPORT_SYMBOL_GPL vmlinux 0x5086ac3a	alg_test
 EXPORT_SYMBOL_GPL vmlinux 0x5091645c	blk_rq_check_limits
+EXPORT_SYMBOL_GPL vmlinux 0x50ba3bec	acpi_processor_ffh_cstate_enter
 EXPORT_SYMBOL_GPL vmlinux 0x50c89f23	__alloc_percpu
 EXPORT_SYMBOL_GPL vmlinux 0x50d1f870	pgprot_writecombine
 EXPORT_SYMBOL_GPL vmlinux 0x50e7193a	__i2c_first_dynamic_bus_num
@@ -10012,7 +10014,6 @@ EXPORT_SYMBOL_GPL vmlinux 0x60a13e90	rcu_barrier
 EXPORT_SYMBOL_GPL vmlinux 0x60a51d33	unregister_pernet_device
 EXPORT_SYMBOL_GPL vmlinux 0x60c6f982	sysdev_register
 EXPORT_SYMBOL_GPL vmlinux 0x60cd73ed	pv_apic_ops
-EXPORT_SYMBOL_GPL vmlinux 0x60ebf985	acpi_processor_ffh_cstate_enter
 EXPORT_SYMBOL_GPL vmlinux 0x6117de48	inet_hash
 EXPORT_SYMBOL_GPL vmlinux 0x615363c3	raw_seq_start
 EXPORT_SYMBOL_GPL vmlinux 0x615cce35	ata_pci_device_resume
@@ -10357,6 +10358,7 @@ EXPORT_SYMBOL_GPL vmlinux 0x8dcf92f0	bus_register
 EXPORT_SYMBOL_GPL vmlinux 0x8e1fac29	da903x_clr_bits
 EXPORT_SYMBOL_GPL vmlinux 0x8e6ccb2b	dev_set_name
 EXPORT_SYMBOL_GPL vmlinux 0x8edace30	tcp_done
+EXPORT_SYMBOL_GPL vmlinux 0x8edfc605	acpi_processor_ffh_cstate_probe
 EXPORT_SYMBOL_GPL vmlinux 0x8ee3212a	ata_qc_complete
 EXPORT_SYMBOL_GPL vmlinux 0x8efeb7b9	ata_base_port_ops
 EXPORT_SYMBOL_GPL vmlinux 0x8f08da5f	adp5520_register_notifier
@@ -10947,7 +10949,6 @@ EXPORT_SYMBOL_GPL vmlinux 0xdb274e52	monotonic_to_bootbased
 EXPORT_SYMBOL_GPL vmlinux 0xdb63d1bb	usb_driver_release_interface
 EXPORT_SYMBOL_GPL vmlinux 0xdb72bf4c	rtnl_link_register
 EXPORT_SYMBOL_GPL vmlinux 0xdba1ce66	transport_class_unregister
-EXPORT_SYMBOL_GPL vmlinux 0xdbb25f5e	acpi_processor_ffh_cstate_probe
 EXPORT_SYMBOL_GPL vmlinux 0xdbf2f8d6	__pci_hp_register
 EXPORT_SYMBOL_GPL vmlinux 0xdc192d58	elv_register
 EXPORT_SYMBOL_GPL vmlinux 0xdc1b3834	ata_sff_check_status

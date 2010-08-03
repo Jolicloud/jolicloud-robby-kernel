@@ -15,11 +15,11 @@ EXPORT_SYMBOL drivers/acpi/button 0x48193639	acpi_lid_open
 EXPORT_SYMBOL drivers/acpi/button 0x7b56bd05	acpi_lid_notifier_register
 EXPORT_SYMBOL drivers/acpi/button 0xaaf45875	acpi_lid_notifier_unregister
 EXPORT_SYMBOL drivers/acpi/processor 0x0c06582d	acpi_processor_unregister_performance
+EXPORT_SYMBOL drivers/acpi/processor 0x7faa2d0f	processors
 EXPORT_SYMBOL drivers/acpi/processor 0x96b1bbf9	acpi_processor_preregister_performance
 EXPORT_SYMBOL drivers/acpi/processor 0xa6ba23bc	acpi_processor_register_performance
 EXPORT_SYMBOL drivers/acpi/processor 0xbc2031de	acpi_processor_get_bios_limit
 EXPORT_SYMBOL drivers/acpi/processor 0xc404ff1b	acpi_processor_notify_smm
-EXPORT_SYMBOL drivers/acpi/processor 0xce733ece	processors
 EXPORT_SYMBOL drivers/acpi/processor 0xe8a3605f	acpi_processor_set_thermal_limit
 EXPORT_SYMBOL drivers/atm/suni 0x7e93a5c7	suni_init
 EXPORT_SYMBOL drivers/atm/uPD98402 0xe4d9ee3c	uPD98402_init
