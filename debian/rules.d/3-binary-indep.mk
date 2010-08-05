@@ -97,7 +97,9 @@ install-tools:
 
 install-indep-deps =
 ifeq ($(do_common_headers_indep),true)
+ifeq ($(do_flavour_header_package),true)
 install-indep-deps += install-headers
+endif
 endif
 ifeq ($(do_doc_package),true)
 install-indep-deps += install-doc

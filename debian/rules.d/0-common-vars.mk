@@ -141,6 +141,12 @@ endif
 tools_pkg_name=$(src_pkg_name)-tools-$(abi_release)
 tools_common_pkg_name=$(src_pkg_name)-tools-common
 
+# The general flavour specific image package.
+do_flavour_image_package=true
+
+# The general flavour specific header package.
+do_flavour_header_package=true
+
 # Support parallel=<n> in DEB_BUILD_OPTIONS (see #209008)
 #
 # These 2 environment variables set the -j value of the kernel build. For example,

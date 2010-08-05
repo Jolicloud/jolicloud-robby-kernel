@@ -377,16 +377,24 @@ endif
 
 binary-debs: binary-perarch $(stampdir)/stamp-flavours $(addprefix binary-,$(flavours))
 
-build-arch:  $(addprefix build-,$(flavours))
+build-arch-deps =
+ifeq ($(do_flavour_image_package),true)
+build-arch-deps += $(addprefix build-,$(flavours))
+endif
+build-arch: $(build-arch-deps)
 
+ifeq ($(do_flavour_image_package),true)
 binary-arch-deps = binary-debs
 ifeq ($(AUTOBUILD),)
 binary-arch-deps += binary-udebs
+endif
 endif
 ifeq ($(do_libc_dev_package),true)
 binary-arch-deps += binary-arch-headers
 endif
 ifneq ($(do_common_headers_indep),true)
+ifeq ($(do_flavour_header_package),true)
 binary-arch-deps += binary-headers
+endif
 endif
 binary-arch: $(binary-arch-deps)
