@@ -95,22 +95,13 @@ install-tools:
 	install -m644 $(builddir)/tools/tools/perf/Documentation/*.1 \
 		$(toolsman)/man1
 
-install-indep-deps =
 ifeq ($(do_common_headers_indep),true)
-ifeq ($(do_flavour_header_package),true)
-install-indep-deps += install-headers
+install-indep-deps-$(do_flavour_header_package) += install-headers
 endif
-endif
-ifeq ($(do_doc_package),true)
-install-indep-deps += install-doc
-endif
-ifeq ($(do_source_package),true)
-install-indep-deps += install-source
-endif
-ifeq ($(do_tools),true)
-install-indep-deps += install-tools
-endif
-install-indep: $(install-indep-deps)
+install-indep-deps-$(do_doc_package) += install-doc
+install-indep-deps-$(do_source_package) += install-source
+install-indep-deps-$(do_tools) += install-tools
+install-indep: $(install-indep-deps-true)
 
 # This is just to make it easy to call manually. Normally done in
 # binary-indep target during builds.
