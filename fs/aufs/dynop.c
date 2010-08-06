@@ -353,6 +353,25 @@ out:
 	return err;
 }
 
+/*
+ * Is it safe to replace a_ops during the inode/file is in operation?
+ * Yes, I hope so.
+ */
+int au_dy_irefresh(struct inode *inode)
+{
+	int err;
+	aufs_bindex_t bstart;
+	struct inode *h_inode;
+
+	err = 0;
+	if (S_ISREG(inode->i_mode)) {
+		bstart = au_ibstart(inode);
+		h_inode = au_h_iptr(inode, bstart);
+		err = au_dy_iaop(inode, bstart, h_inode);
+	}
+	return err;
+}
+
 void au_dy_arefresh(int do_dx)
 {
 	struct au_splhead *spl;
