@@ -1,3 +1,12 @@
+linux (2.6.34.1-1.27) UNRELEASED; urgency=low
+
+  [ Adam McDaniel ]
+
+  * Depricated add-on rtl8192u driver in lieu of staging version
+  * Config: Re-enabled RTL8192SE (add-on) & RTL8192U (staging) drivers
+
+ -- Adam McDaniel <adam@jolicloud.org>  Mon, 09 Aug 2010 12:12:16 -0600
+
 linux (2.6.34.1-1.26) robby-dev; urgency=low
 
   [ Adam McDaniel ]
