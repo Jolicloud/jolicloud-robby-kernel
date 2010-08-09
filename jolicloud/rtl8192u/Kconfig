@@ -1,6 +1,0 @@
-config RTL8192U
-	tristate "RealTek RTL8192U Wireless LAN NIC driver"
-	depends on USB && WLAN
-	depends on WIRELESS_EXT
-	default N
-	---help---

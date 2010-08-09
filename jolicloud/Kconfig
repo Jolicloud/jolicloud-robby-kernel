@@ -5,6 +5,5 @@ source "jolicloud/broadcom/Kconfig"
 source "jolicloud/psb/Kconfig"
 source "jolicloud/via_chrome9/Kconfig"
 source "jolicloud/rtl8192se/Kconfig"
-source "jolicloud/rtl8192u/Kconfig"
 
 endmenu
