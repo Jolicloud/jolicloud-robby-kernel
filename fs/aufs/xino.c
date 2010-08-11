@@ -102,7 +102,7 @@ ssize_t xino_fwrite(au_writef_t func, struct file *file, void *buf, size_t size,
 	ssize_t err;
 
 	/* todo: signal block and no wkq? */
-	if (current->signal->rlim[RLIMIT_FSIZE].rlim_cur == RLIM_INFINITY) {
+	if (rlimit(RLIMIT_FSIZE) == RLIM_INFINITY) {
 		lockdep_off();
 		err = do_xino_fwrite(func, file, buf, size, pos);
 		lockdep_on();
