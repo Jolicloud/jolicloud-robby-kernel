@@ -357,8 +357,12 @@ int au_do_pin(struct au_pin *p)
 	if (p->hdir)
 		h_dir = p->hdir->hi_inode;
 
-	/* udba case */
-	if (unlikely(!p->hdir || !h_dir)) {
+	/*
+	 * udba case, or
+	 * if DI_LOCKED is not set, then p->parent may be different
+	 * and h_parent can be NULL.
+	 */
+	if (unlikely(!p->hdir || !h_dir || !h_parent)) {
 		if (!au_ftest_pin(p->flags, DI_LOCKED))
 			di_read_unlock(p->parent, AuLock_IR);
 		dput(p->parent);
