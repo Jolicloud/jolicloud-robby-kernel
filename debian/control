@@ -58,7 +58,7 @@ Description: Header files related to Linux kernel version 2.6.34.1
  that want the latest kernel headers. Please read
  /usr/share/doc/linux-headers-2.6.34.1-1/debian.README.gz for details
 
-Package: linux-libc-dev
+Package: linux-libc-2.6.34.1-1-dev
 Architecture: i386 amd64 armel lpia
 Conflicts: libc6-dev (<< 2.3.2.ds1-6), libc6.1-dev (<< 2.3.2.ds1-6), dvb-dev (<< 1.0.1-6), amd64-libs-dev (<= 1.1), linux-kernel-headers
 Replaces: libc6-dev (<< 2.3.2.ds1-6), libc6.1-dev (<< 2.3.2.ds1-6), dvb-dev (<< 1.0.1-6), linux-kernel-headers, libdrm-dev
