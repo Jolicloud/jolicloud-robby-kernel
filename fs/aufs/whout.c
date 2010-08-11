@@ -214,7 +214,7 @@ static int do_unlink_wh(struct inode *h_dir, struct path *h_path)
 	 * this may be a violation of unix fs semantics.
 	 */
 	force = (h_dir->i_mode & S_ISVTX)
-		&& h_path->dentry->d_inode->i_uid != current->fsuid;
+		&& h_path->dentry->d_inode->i_uid != current_fsuid();
 	return vfsub_unlink(h_dir, h_path, force);
 }
 
