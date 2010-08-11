@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 Junjiro R. Okajima
+ * Copyright (C) 2005-2010 Junjiro R. Okajima
  *
  * This program, aufs is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,6 @@
 
 static unsigned int calc_size(int nlen)
 {
-	BUILD_BUG_ON(sizeof(ino_t) != sizeof(long));
 	return ALIGN(sizeof(struct au_vdir_de) + nlen, sizeof(ino_t));
 }
 
@@ -123,7 +122,7 @@ static void au_nhash_de_do_free(struct hlist_head *head)
 
 	hlist_for_each_entry_safe(tpos, pos, node, head, hash) {
 		/* hlist_del(pos); */
-		au_cache_free_dehstr(tpos);
+		au_cache_free_vdir_dehstr(tpos);
 	}
 }
 
@@ -333,7 +332,7 @@ static int append_de(struct au_vdir *vdir, char *name, int nlen, ino_t ino,
 	}
 
 	err = -ENOMEM;
-	dehstr = au_cache_alloc_dehstr();
+	dehstr = au_cache_alloc_vdir_dehstr();
 	if (unlikely(!dehstr))
 		goto out;
 
@@ -475,9 +474,12 @@ static int fillvdir(void *__arg, const char *__name, int nlen,
 
 		sb = arg->file->f_dentry->d_sb;
 		arg->err = au_ino(sb, arg->bindex, h_ino, d_type, &ino);
-		if (!arg->err)
+		if (!arg->err) {
+			if (unlikely(nlen > AUFS_MAX_NAMELEN))
+				d_type = DT_UNKNOWN;
 			arg->err = append_de(arg->vdir, name, nlen, ino,
 					     d_type, &arg->delist);
+		}
 	} else if (au_ftest_fillvdir(arg->flags, WHABLE)) {
 		name += AUFS_WH_PFX_LEN;
 		nlen -= AUFS_WH_PFX_LEN;
@@ -487,10 +489,13 @@ static int fillvdir(void *__arg, const char *__name, int nlen,
 		if (shwh)
 			arg->err = au_wh_ino(sb, arg->bindex, h_ino, d_type,
 					     &ino);
-		if (!arg->err)
+		if (!arg->err) {
+			if (nlen <= AUFS_MAX_NAMELEN + AUFS_WH_PFX_LEN)
+				d_type = DT_UNKNOWN;
 			arg->err = au_nhash_append_wh
 				(&arg->whlist, name, nlen, ino, d_type,
 				 arg->bindex, shwh);
+		}
 	}
 
  out:
@@ -516,7 +521,7 @@ static int au_handle_shwh(struct super_block *sb, struct au_vdir *vdir,
 	AuDebugOn(!au_opt_test(au_mntflags(sb), SHWH));
 
 	err = -ENOMEM;
-	o = p = __getname();
+	o = p = __getname_gfp(GFP_NOFS);
 	if (unlikely(!p))
 		goto out;
 
@@ -578,9 +583,9 @@ static int au_do_read_vdir(struct fillvdir_arg *arg)
 		au_fset_fillvdir(arg->flags, SHWH);
 	}
 	bstart = au_fbstart(file);
-	bend = au_fbend(file);
+	bend = au_fbend_dir(file);
 	for (bindex = bstart; !err && bindex <= bend; bindex++) {
-		hf = au_h_fptr(file, bindex);
+		hf = au_hf_dir(file, bindex);
 		if (!hf)
 			continue;
 

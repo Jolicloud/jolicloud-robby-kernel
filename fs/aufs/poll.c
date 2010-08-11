@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 Junjiro R. Okajima
+ * Copyright (C) 2005-2010 Junjiro R. Okajima
  *
  * This program, aufs is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,7 +42,7 @@ unsigned int aufs_poll(struct file *file, poll_table *wait)
 
 	/* it is not an error if h_file has no operation */
 	mask = DEFAULT_POLLMASK;
-	h_file = au_h_fptr(file, au_fbstart(file));
+	h_file = au_hf_top(file);
 	if (h_file->f_op && h_file->f_op->poll)
 		mask = h_file->f_op->poll(h_file, wait);
 

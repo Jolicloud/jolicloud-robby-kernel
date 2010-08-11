@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 Junjiro R. Okajima
+ * Copyright (C) 2005-2010 Junjiro R. Okajima
  *
  * This program, aufs is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -105,13 +105,12 @@ static void au_ren_rev_diropq(int err, struct au_ren_args *a)
 {
 	int rerr;
 
-	au_hin_imtx_lock_nested(a->src_hinode, AuLsc_I_CHILD);
+	au_hn_imtx_lock_nested(a->src_hinode, AuLsc_I_CHILD);
 	rerr = au_diropq_remove(a->src_dentry, a->btgt);
-	au_hin_imtx_unlock(a->src_hinode);
+	au_hn_imtx_unlock(a->src_hinode);
 	if (rerr)
 		RevertFailure("remove diropq %.*s", AuDLNPair(a->src_dentry));
 }
-
 
 static void au_ren_rev_rename(int err, struct au_ren_args *a)
 {
@@ -147,7 +146,6 @@ static void au_ren_rev_cpup(int err, struct au_ren_args *a)
 		RevertFailure("unlink %.*s", AuDLNPair(a->dst_h_dentry));
 }
 
-
 static void au_ren_rev_whtmp(int err, struct au_ren_args *a)
 {
 	int rerr;
@@ -168,10 +166,9 @@ static void au_ren_rev_whtmp(int err, struct au_ren_args *a)
 	rerr = vfsub_rename(a->dst_h_dir, a->h_dst, a->dst_h_dir, &a->h_path);
 	d_drop(a->h_path.dentry);
 	dput(a->h_path.dentry);
-	if (!rerr) {
-		au_set_h_dptr(a->dst_dentry, a->btgt, NULL);
+	if (!rerr)
 		au_set_h_dptr(a->dst_dentry, a->btgt, dget(a->h_dst));
-	} else
+	else
 		RevertFailure("rename %.*s", AuDLNPair(a->h_dst));
 }
 
@@ -231,18 +228,29 @@ static int au_ren_or_cpup(struct au_ren_args *a)
 				   a->dst_h_dir, &a->h_path);
 	} else {
 		struct mutex *h_mtx = &a->src_h_dentry->d_inode->i_mutex;
+		struct file *h_file;
 
 		au_fset_ren(a->flags, CPUP);
 		mutex_lock_nested(h_mtx, AuLsc_I_CHILD);
 		au_set_dbstart(d, a->btgt);
 		au_set_h_dptr(d, a->btgt, dget(a->dst_h_dentry));
-		err = au_sio_cpup_single(d, a->btgt, a->src_bstart, -1,
-					 !AuCpup_DTIME, a->dst_parent);
-		if (unlikely(err)) {
+		h_file = au_h_open_pre(d, a->src_bstart);
+		if (IS_ERR(h_file)) {
+			err = PTR_ERR(h_file);
+			h_file = NULL;
+		} else
+			err = au_sio_cpup_single(d, a->btgt, a->src_bstart, -1,
+						 !AuCpup_DTIME, a->dst_parent);
+		mutex_unlock(h_mtx);
+		au_h_open_post(d, a->src_bstart, h_file);
+		if (!err) {
+			d = a->dst_dentry;
+			au_set_h_dptr(d, a->btgt, NULL);
+			au_update_dbstart(d);
+		} else {
 			au_set_h_dptr(d, a->btgt, NULL);
 			au_set_dbstart(d, a->src_bstart);
 		}
-		mutex_unlock(h_mtx);
 	}
 
 	return err;
@@ -283,9 +291,9 @@ static int au_ren_diropq(struct au_ren_args *a)
 
 	err = 0;
 	a->src_hinode = au_hi(a->src_inode, a->btgt);
-	au_hin_imtx_lock_nested(a->src_hinode, AuLsc_I_CHILD);
+	au_hn_imtx_lock_nested(a->src_hinode, AuLsc_I_CHILD);
 	diropq = au_diropq_create(a->src_dentry, a->btgt);
-	au_hin_imtx_unlock(a->src_hinode);
+	au_hn_imtx_unlock(a->src_hinode);
 	if (IS_ERR(diropq))
 		err = PTR_ERR(diropq);
 	dput(diropq);
@@ -347,11 +355,19 @@ static int do_rename(struct au_ren_args *a)
 	/* cpup src */
 	if (a->dst_h_dentry->d_inode && a->src_bstart != a->btgt) {
 		struct mutex *h_mtx = &a->src_h_dentry->d_inode->i_mutex;
+		struct file *h_file;
 
 		mutex_lock_nested(h_mtx, AuLsc_I_CHILD);
-		err = au_sio_cpup_simple(a->src_dentry, a->btgt, -1,
-					 !AuCpup_DTIME);
+		AuDebugOn(au_dbstart(a->src_dentry) != a->src_bstart);
+		h_file = au_h_open_pre(a->src_dentry, a->src_bstart);
+		if (IS_ERR(h_file)) {
+			err = PTR_ERR(h_file);
+			h_file = NULL;
+		} else
+			err = au_sio_cpup_simple(a->src_dentry, a->btgt, -1,
+						 !AuCpup_DTIME);
 		mutex_unlock(h_mtx);
+		au_h_open_post(a->src_dentry, a->src_bstart, h_file);
 		if (unlikely(err))
 			goto out_whtmp;
 	}
@@ -575,6 +591,7 @@ static int au_may_ren(struct au_ren_args *a)
  out:
 	if (unlikely(err == -ENOENT || err == -EEXIST))
 		err = -EIO;
+	AuTraceErr(err);
 	return err;
 }
 
@@ -823,6 +840,7 @@ int aufs_rename(struct inode *_src_dir, struct dentry *_src_dentry,
 	/* reduce stack space */
 	struct au_ren_args *a;
 
+	AuDbg("%.*s, %.*s\n", AuDLNPair(_src_dentry), AuDLNPair(_dst_dentry));
 	IMustLock(_src_dir);
 	IMustLock(_dst_dir);
 
@@ -907,11 +925,12 @@ int aufs_rename(struct inode *_src_dir, struct dentry *_src_dentry,
 	if (unlikely(err))
 		goto out_children;
 
-	if (!au_opt_test(au_mntflags(a->dst_dir->i_sb), UDBA_NONE)) {
+	if (!au_opt_test(au_mntflags(a->dst_dir->i_sb), UDBA_NONE))
 		err = au_may_ren(a);
-		if (unlikely(err))
-			goto out_hdir;
-	}
+	else if (unlikely(a->dst_dentry->d_name.len > AUFS_MAX_NAMELEN))
+		err = -ENAMETOOLONG;
+	if (unlikely(err))
+		goto out_hdir;
 
 	/* store timestamps to be revertible */
 	au_ren_dt(a);
@@ -953,5 +972,6 @@ int aufs_rename(struct inode *_src_dir, struct dentry *_src_dentry,
 		au_whtmp_rmdir_free(a->thargs);
 	kfree(a);
  out:
+	AuTraceErr(err);
 	return err;
 }

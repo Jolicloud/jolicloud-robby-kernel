@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 Junjiro R. Okajima
+ * Copyright (C) 2005-2010 Junjiro R. Okajima
  *
  * This program, aufs is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,7 +40,7 @@ struct attribute *sysaufs_si_attrs[] = {
 	NULL,
 };
 
-static struct sysfs_ops au_sbi_ops = {
+static const struct sysfs_ops au_sbi_ops = {
 	.show   = sysaufs_si_show
 };
 
@@ -86,7 +86,10 @@ int __init sysaufs_init(void)
 		get_random_bytes(&sysaufs_si_mask, sizeof(sysaufs_si_mask));
 	} while (!sysaufs_si_mask);
 
+	err = -EINVAL;
 	sysaufs_ket = kset_create_and_add(AUFS_NAME, NULL, fs_kobj);
+	if (unlikely(!sysaufs_ket))
+		goto out;
 	err = PTR_ERR(sysaufs_ket);
 	if (IS_ERR(sysaufs_ket))
 		goto out;

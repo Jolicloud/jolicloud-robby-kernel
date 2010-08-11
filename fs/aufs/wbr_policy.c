@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 Junjiro R. Okajima
+ * Copyright (C) 2005-2010 Junjiro R. Okajima
  *
  * This program, aufs is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -109,8 +109,7 @@ static int au_cpdown_dir(struct dentry *dentry, aufs_bindex_t bdst,
 			 struct dentry *h_parent, void *arg)
 {
 	int err, rerr;
-	aufs_bindex_t bend, bopq, bstart;
-	unsigned char parent_opq;
+	aufs_bindex_t bopq, bstart;
 	struct path h_path;
 	struct dentry *parent;
 	struct inode *h_dir, *h_inode, *inode, *dir;
@@ -135,7 +134,6 @@ static int au_cpdown_dir(struct dentry *dentry, aufs_bindex_t bdst,
 		goto out_put;
 	au_fset_cpdown(args->flags, MADE_DIR);
 
-	bend = au_dbend(dentry);
 	bopq = au_dbdiropq(dentry);
 	au_fclr_cpdown(args->flags, WHED);
 	au_fclr_cpdown(args->flags, DIROPQ);
@@ -143,8 +141,6 @@ static int au_cpdown_dir(struct dentry *dentry, aufs_bindex_t bdst,
 		au_fset_cpdown(args->flags, WHED);
 	if (!au_ftest_cpdown(args->flags, PARENT_OPQ) && bopq <= bdst)
 		au_fset_cpdown(args->flags, PARENT_OPQ);
-	parent_opq = (au_ftest_cpdown(args->flags, PARENT_OPQ)
-		      && args->parent == dentry);
 	h_inode = h_path.dentry->d_inode;
 	mutex_lock_nested(&h_inode->i_mutex, AuLsc_I_CHILD);
 	if (au_ftest_cpdown(args->flags, WHED)) {
@@ -222,6 +218,45 @@ int au_cpdown_dirs(struct dentry *dentry, aufs_bindex_t bdst)
 
 /* policies for create */
 
+static int au_wbr_nonopq(struct dentry *dentry, aufs_bindex_t bindex)
+{
+	int err, i, j, ndentry;
+	aufs_bindex_t bopq;
+	struct au_dcsub_pages dpages;
+	struct au_dpage *dpage;
+	struct dentry **dentries, *parent, *d;
+
+	err = au_dpages_init(&dpages, GFP_NOFS);
+	if (unlikely(err))
+		goto out;
+	parent = dget_parent(dentry);
+	err = au_dcsub_pages_rev(&dpages, parent, /*do_include*/0, /*test*/NULL,
+				 /*arg*/NULL);
+	if (unlikely(err))
+		goto out_free;
+
+	err = bindex;
+	for (i = 0; i < dpages.ndpage; i++) {
+		dpage = dpages.dpages + i;
+		dentries = dpage->dentries;
+		ndentry = dpage->ndentry;
+		for (j = 0; j < ndentry; j++) {
+			d = dentries[j];
+			di_read_lock_parent2(d, !AuLock_IR);
+			bopq = au_dbdiropq(d);
+			di_read_unlock(d, !AuLock_IR);
+			if (bopq >= 0 && bopq < err)
+				err = bopq;
+		}
+	}
+
+out_free:
+	dput(parent);
+	au_dpages_free(&dpages);
+out:
+	return err;
+}
+
 static int au_wbr_bu(struct super_block *sb, aufs_bindex_t bindex)
 {
 	for (; bindex >= 0; bindex--)
@@ -259,8 +294,11 @@ static int au_wbr_create_tdp(struct dentry *dentry, int isdir __maybe_unused)
 	dput(parent);
 
 	/* bottom up here */
-	if (unlikely(err < 0))
+	if (unlikely(err < 0)) {
 		err = au_wbr_bu(sb, bstart - 1);
+		if (err >= 0)
+			err = au_wbr_nonopq(dentry, err);
+	}
 
  out:
 	AuDbg("b%d\n", err);
@@ -291,6 +329,9 @@ static int au_wbr_create_exp(struct dentry *dentry)
 		AuDbg("%d\n", err);
 	}
 	dput(parent);
+
+	if (err >= 0)
+		err = au_wbr_nonopq(dentry, err);
 
 	if (err >= 0 && au_br_rdonly(au_sbr(dentry->d_sb, err)))
 		err = -1;
@@ -346,6 +387,9 @@ static int au_wbr_create_rr(struct dentry *dentry, int isdir)
 			break;
 		err = -EROFS;
 	}
+
+	if (err >= 0)
+		err = au_wbr_nonopq(dentry, err);
 
  out:
 	AuDbg("%d\n", err);
@@ -427,6 +471,9 @@ static int au_wbr_create_mfs(struct dentry *dentry, int isdir __maybe_unused)
 		au_mfs(dentry);
 	mutex_unlock(&mfs->mfs_lock);
 	err = mfs->mfs_bindex;
+
+	if (err >= 0)
+		err = au_wbr_nonopq(dentry, err);
 
  out:
 	AuDbg("b%d\n", err);
@@ -526,6 +573,9 @@ static int au_wbr_create_pmfs(struct dentry *dentry, int isdir)
 		}
 	}
 
+	if (err >= 0)
+		err = au_wbr_nonopq(dentry, err);
+
  out_parent:
 	dput(parent);
  out:
@@ -579,8 +629,13 @@ static int au_wbr_copyup_bup(struct dentry *dentry)
 static int au_wbr_copyup_bu(struct dentry *dentry)
 {
 	int err;
+	aufs_bindex_t bstart;
 
-	err = au_wbr_bu(dentry->d_sb, au_dbstart(dentry));
+	bstart = au_dbstart(dentry);
+	err = au_wbr_bu(dentry->d_sb, bstart);
+	AuDbg("b%d\n", err);
+	if (err > bstart)
+		err = au_wbr_nonopq(dentry, err);
 
 	AuDbg("b%d\n", err);
 	return err;

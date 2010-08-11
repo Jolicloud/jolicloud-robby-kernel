@@ -71,6 +71,7 @@ Also there are many enhancements in aufs1, such as:
 - pseudo hardlink (hardlink over branches)
 - allow a direct access manually to a file on branch, e.g. bypassing aufs.
   including NFS or remote filesystem branch.
+- userspace wrapper for pathconf(3)/fpathconf(3) with _PC_LINK_MAX.
 - and more...
 
 Currently these features are dropped temporary from this version, aufs2.
@@ -106,6 +107,7 @@ Features or just an idea in the future (see also design/*.txt),
 Kindly one of aufs user, the Center for Scientific Computing and Free
 Software (C3SL), Federal University of Parana offered me a public GIT
 tree space.
+And there are several GIT servers. See http://aufs.sf.net in detail.
 
 There are three GIT trees, aufs2-2.6, aufs2-standalone and aufs2-util.
 While the aufs2-util is always necessary, you need either of aufs2-2.6
@@ -126,9 +128,10 @@ words, the aufs2-standalone tree is generated from aufs2-2.6 tree by,
 - generate a ChangeLog file from git-log.
 - commit the files newly and no log messages. this is not git-pull.
 
-Both of aufs2-2.6 and aufs2-standalone trees have a branch whose name is
-in form of "aufs2-xx" where "xx" represents the linux kernel version,
-"linux-2.6.xx".
+Both of aufs2-2.6 and aufs2-standalone trees have branches whose name is
+in form of "aufs2" or "aufs2-xx" where "xx" represents the linux kernel
+version, "linux-2.6.xx". For instance, "aufs2" (no -xx) for the latest
+-rc version, and "aufs2-27" for linux-2.6.27,
 
 o aufs2-2.6 tree
 $ git clone --reference /your/linux-2.6/git/tree \
@@ -136,15 +139,13 @@ $ git clone --reference /your/linux-2.6/git/tree \
 	aufs2-2.6.git
 - if you don't have linux-2.6 GIT tree, then remove "--reference ..."
 $ cd aufs2-2.6.git
-$ git checkout origin/aufs2-xx	# for instance, aufs2-27 for linux-2.6.27
-				# aufs2 (no -xx) for the latest -rc version.
+$ git checkout origin/aufs2-27
 
 o aufs2-standalone tree
 $ git clone http://git.c3sl.ufpr.br/pub/scm/aufs/aufs2-standalone.git \
 	aufs2-standalone.git
 $ cd aufs2-standalone.git
-$ git checkout origin/aufs2-xx	# for instance, aufs2-27 for linux-2.6.27
-				# aufs2 (no -xx) for the latest -rc version.
+$ git checkout origin/aufs2-27
 
 o aufs2-util tree
 $ git clone http://git.c3sl.ufpr.br/pub/scm/aufs/aufs2-util.git \
@@ -206,6 +207,8 @@ $ git diff v2.6.27.1..aufs2-27.1 |
 
 3. Configuration and Compilation
 ----------------------------------------
+Make sure you have git-checkout'ed the correct branch.
+
 For aufs2-2.6 tree,
 - enable CONFIG_EXPERIMENTAL and CONFIG_AUFS_FS.
 - set other aufs configurations if necessary.
@@ -248,8 +251,9 @@ If you don't like aufs2-standalone.patch, then try aufs2-2.6 tree.
 
 And then,
 - read README in aufs2-util, build and install it
-- if you want to use readdir(3) in userspace, then run
-  "make install_ulib" too. And refer to the aufs manual in detail.
+- if you want to use readdir(3) in userspace or pathconf(3) wrapper,
+  then run "make install_ulib" too. And refer to the aufs manual in
+  detail.
 
 
 4. Usage
@@ -275,6 +279,9 @@ not affected, instead the same named file will be newly created under
 the one under /tmp/rw. This is called the file based Copy on Write
 (COW) method.
 Aufs mount options are described in aufs.5.
+If you run chroot or something and make your aufs as a root directory,
+then you need to customize the shutdown script. See the aufs manual in
+detail.
 
 Additionally, there are some sample usages of aufs which are a
 diskless system with network booting, and LiveCD over NFS.
@@ -309,8 +316,15 @@ aufs-users ML.
 ----------------------------------------
 Thanks to everyone who have tried and are using aufs, whoever
 have reported a bug or any feedback.
+Since Apr 2010, Tomas M (the author of Slax and Linux Live scripts) is
+making "doubling" donations.
+Unfortunately I cannot list all of the donators, but I really appriciate. See
+<http://sourceforge.net/mailarchive/message.php?msg_name=4BC70596.4000507%40slax.org>
+and
+<http://www.slax.org/aufs.php>
+in detail.
 
-Especially donors:
+Especially donators:
 Tomas Matejicek(slax.org) made a donation (much more than once).
 Dai Itasaka made a donation (2007/8).
 Chuck Smith made a donation (2008/4, 10 and 12).
@@ -322,7 +336,8 @@ aufs2 GIT tree (2009/2).
 William Grant made a donation (2009/3).
 Patrick Lane made a donation (2009/4).
 The Mail Archive (mail-archive.com) made donations (2009/5).
-Nippy Networks (Ed Wildgoose) a donation (2009/7).
+Nippy Networks (Ed Wildgoose) made a donation (2009/7).
+New Dream Network, LLC (www.dreamhost.com) made a donation (2009/11).
 
 Thank you very much.
 Donations are always, including future donations, very important and

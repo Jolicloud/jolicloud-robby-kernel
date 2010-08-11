@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 Junjiro R. Okajima
+ * Copyright (C) 2005-2010 Junjiro R. Okajima
  *
  * This program, aufs is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@
 #ifdef __KERNEL__
 
 #include <linux/rwsem.h>
+#include "debug.h"
 
 struct au_rwsem {
 	struct rw_semaphore	rwsem;

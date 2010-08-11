@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 Junjiro R. Okajima
+ * Copyright (C) 2005-2010 Junjiro R. Okajima
  *
  * This program, aufs is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -195,9 +195,11 @@ lock_hdir_create_wh(struct dentry *dentry, int isdir, aufs_bindex_t *rbcpup,
 		goto out; /* success, no need to create whiteout */
 
 	wh_dentry = au_wh_create(dentry, bcpup, h_path.dentry);
-	if (!IS_ERR(wh_dentry))
-		goto out; /* success */
+	if (IS_ERR(wh_dentry))
+		goto out_unpin;
+
 	/* returns with the parent is locked and wh_dentry is dget-ed */
+	goto out; /* success */
 
  out_unpin:
 	au_unpin(pin);
@@ -229,7 +231,7 @@ static int renwh_and_rmdir(struct dentry *dentry, aufs_bindex_t bindex,
 		goto out;
 
 	/* stop monitoring */
-	au_hin_free(au_hi(dentry->d_inode, bindex));
+	au_hn_free(au_hi(dentry->d_inode, bindex));
 
 	if (!au_test_fs_remote(h_dentry->d_sb)) {
 		dirwh = au_sbi(sb)->si_dirwh;
@@ -249,6 +251,7 @@ static int renwh_and_rmdir(struct dentry *dentry, aufs_bindex_t bindex,
 	}
 
  out:
+	AuTraceErr(err);
 	return err;
 }
 
@@ -423,7 +426,7 @@ int aufs_rmdir(struct inode *dir, struct dentry *dentry)
 		}
 	} else {
 		/* stop monitoring */
-		au_hin_free(au_hi(inode, bstart));
+		au_hn_free(au_hi(inode, bstart));
 
 		/* dir inode is locked */
 		IMustLock(wh_dentry->d_parent->d_inode);
@@ -464,5 +467,6 @@ int aufs_rmdir(struct inode *dir, struct dentry *dentry)
  out_unlock:
 	aufs_read_unlock(dentry, AuLock_DW);
  out:
+	AuTraceErr(err);
 	return err;
 }

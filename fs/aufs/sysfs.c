@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 Junjiro R. Okajima
+ * Copyright (C) 2005-2010 Junjiro R. Okajima
  *
  * This program, aufs is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -175,9 +175,12 @@ ssize_t sysaufs_si_show(struct kobject *kobj, struct attribute *attr,
 
 void sysaufs_br_init(struct au_branch *br)
 {
-	br->br_attr.name = br->br_name;
-	br->br_attr.mode = S_IRUGO;
-	br->br_attr.owner = THIS_MODULE;
+	struct attribute *attr = &br->br_attr;
+
+	sysfs_attr_init(attr);
+	attr->name = br->br_name;
+	attr->mode = S_IRUGO;
+	attr->owner = THIS_MODULE;
 }
 
 void sysaufs_brs_del(struct super_block *sb, aufs_bindex_t bindex)

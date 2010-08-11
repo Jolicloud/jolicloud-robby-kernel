@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 Junjiro R. Okajima
+ * Copyright (C) 2005-2010 Junjiro R. Okajima
  *
  * This program, aufs is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,9 +20,11 @@
 #define __AUFS_TYPE_H__
 
 #include <linux/ioctl.h>
+#include <linux/kernel.h>
+#include <linux/limits.h>
 #include <linux/types.h>
 
-#define AUFS_VERSION	"2-31"
+#define AUFS_VERSION	"2-34"
 
 /* todo? move this to linux-2.6.19/include/magic.h */
 #define AUFS_SUPER_MAGIC	('a' << 24 | 'u' << 16 | 'f' << 8 | 's')
@@ -59,6 +61,12 @@ typedef __s16 aufs_bindex_t;
 
 #define AUFS_WH_PFX		".wh."
 #define AUFS_WH_PFX_LEN		((int)sizeof(AUFS_WH_PFX) - 1)
+#define AUFS_WH_TMP_LEN		4
+/* a limit for rmdir/rename a dir */
+#define AUFS_MAX_NAMELEN	(NAME_MAX \
+				- AUFS_WH_PFX_LEN * 2	/* doubly whiteouted */\
+				- 1			/* dot */\
+				- AUFS_WH_TMP_LEN)	/* hex */
 #define AUFS_XINO_FNAME		"." AUFS_NAME ".xino"
 #define AUFS_XINO_DEFPATH	"/tmp/" AUFS_XINO_FNAME
 #define AUFS_XINO_TRUNC_INIT	64 /* blocks */
@@ -68,7 +76,7 @@ typedef __s16 aufs_bindex_t;
 #define AUFS_RDBLK_DEF		512 /* bytes */
 #define AUFS_RDHASH_DEF		32
 #define AUFS_WKQ_NAME		AUFS_NAME "d"
-#define AUFS_NWKQ_DEF		4
+#define AUFS_WKQ_PRE_NAME	AUFS_WKQ_NAME "_pre"
 #define AUFS_MFS_SECOND_DEF	30 /* seconds */
 #define AUFS_PLINK_WARN		100 /* number of plinks */
 
@@ -103,7 +111,10 @@ enum {
 
 	/* readdir in userspace */
 	AuCtl_RDU,
-	AuCtl_RDU_INO
+	AuCtl_RDU_INO,
+
+	/* pathconf wrapper */
+	AuCtl_WBR_FD
 };
 
 /* borrowed from linux/include/linux/kernel.h */
@@ -144,12 +155,11 @@ static inline int au_rdu_len(int nlen)
 
 union au_rdu_ent_ul {
 	struct au_rdu_ent __user	*e;
-	unsigned long			ul;
+	__u64				ul;
 };
 
 enum {
 	AufsCtlRduV_SZ,
-	AufsCtlRduV_SZ_PTR,
 	AufsCtlRduV_End
 };
 
@@ -180,5 +190,6 @@ struct aufs_rdu {
 #define AUFS_CTL_PLINK_CLEAN	_IO(AuCtlType, AuCtl_PLINK_CLEAN)
 #define AUFS_CTL_RDU		_IOWR(AuCtlType, AuCtl_RDU, struct aufs_rdu)
 #define AUFS_CTL_RDU_INO	_IOWR(AuCtlType, AuCtl_RDU_INO, struct aufs_rdu)
+#define AUFS_CTL_WBR_FD		_IO(AuCtlType, AuCtl_WBR_FD)
 
 #endif /* __AUFS_TYPE_H__ */

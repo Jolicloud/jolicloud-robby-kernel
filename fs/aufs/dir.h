@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 Junjiro R. Okajima
+ * Copyright (C) 2005-2010 Junjiro R. Okajima
  *
  * This program, aufs is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,7 +45,7 @@ struct au_vdir_destr {
 struct au_vdir_dehstr {
 	struct hlist_node	hash;
 	struct au_vdir_destr	*str;
-};
+} ____cacheline_aligned_in_smp;
 
 struct au_vdir_de {
 	ino_t			de_ino;
@@ -83,7 +83,7 @@ struct au_vdir {
 	unsigned long	vd_version;
 	unsigned int	vd_deblk_sz;
 	unsigned long	vd_jiffy;
-};
+} ____cacheline_aligned_in_smp;
 
 /* ---------------------------------------------------------------------- */
 
@@ -115,12 +115,23 @@ long aufs_ioctl_dir(struct file *file, unsigned int cmd, unsigned long arg);
 #ifdef CONFIG_AUFS_RDU
 /* rdu.c */
 long au_rdu_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
+#ifdef CONFIG_COMPAT
+long au_rdu_compat_ioctl(struct file *file, unsigned int cmd,
+			 unsigned long arg);
+#endif
 #else
 static inline long au_rdu_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
 	return -EINVAL;
 }
+#ifdef CONFIG_COMPAT
+static inline long au_rdu_compat_ioctl(struct file *file, unsigned int cmd,
+				       unsigned long arg)
+{
+	return -EINVAL;
+}
+#endif
 #endif
 
 #endif /* __KERNEL__ */

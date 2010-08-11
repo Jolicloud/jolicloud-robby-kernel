@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 Junjiro R. Okajima
+ * Copyright (C) 2005-2010 Junjiro R. Okajima
  *
  * This program, aufs is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,30 +26,37 @@
 /*
  * test if two lower dentries have overlapping branches.
  */
-int au_test_loopback_overlap(struct super_block *sb, struct dentry *h_d1,
-			     struct dentry *h_d2)
+int au_test_loopback_overlap(struct super_block *sb, struct dentry *h_adding)
 {
-	struct inode *h_inode;
+	struct super_block *h_sb;
 	struct loop_device *l;
 
-	h_inode = h_d1->d_inode;
-	if (MAJOR(h_inode->i_sb->s_dev) != LOOP_MAJOR)
+	h_sb = h_adding->d_sb;
+	if (MAJOR(h_sb->s_dev) != LOOP_MAJOR)
 		return 0;
 
-	l = h_inode->i_sb->s_bdev->bd_disk->private_data;
-	h_d1 = l->lo_backing_file->f_dentry;
-	/* h_d1 can be local NFS. in this case aufs cannot detect the loop */
-	if (unlikely(h_d1->d_sb == sb))
+	l = h_sb->s_bdev->bd_disk->private_data;
+	h_adding = l->lo_backing_file->f_dentry;
+	/*
+	 * h_adding can be local NFS.
+	 * in this case aufs cannot detect the loop.
+	 */
+	if (unlikely(h_adding->d_sb == sb))
 		return 1;
-	return !!au_test_subdir(h_d1, h_d2);
+	return !!au_test_subdir(h_adding, sb->s_root);
 }
 
 /* true if a kernel thread named 'loop[0-9].*' accesses a file */
 int au_test_loopback_kthread(void)
 {
-	const char c = current->comm[4];
+	int ret;
 
-	return current->mm == NULL
-	       && '0' <= c && c <= '9'
-	       && strncmp(current->comm, "loop", 4) == 0;
+	ret = 0;
+	if (current->flags & PF_KTHREAD) {
+		const char c = current->comm[4];
+		ret = ('0' <= c && c <= '9'
+		       && !strncmp(current->comm, "loop", 4));
+	}
+
+	return ret;
 }

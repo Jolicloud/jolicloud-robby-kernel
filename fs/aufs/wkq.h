@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 Junjiro R. Okajima
+ * Copyright (C) 2005-2010 Junjiro R. Okajima
  *
  * This program, aufs is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,12 +48,13 @@ typedef void (*au_wkq_func_t)(void *args);
 
 /* wkq flags */
 #define AuWkq_WAIT	1
+#define AuWkq_PRE	(1 << 1)
 #define au_ftest_wkq(flags, name)	((flags) & AuWkq_##name)
 #define au_fset_wkq(flags, name)	{ (flags) |= AuWkq_##name; }
 #define au_fclr_wkq(flags, name)	{ (flags) &= ~AuWkq_##name; }
 
 /* wkq.c */
-int au_wkq_wait(au_wkq_func_t func, void *args);
+int au_wkq_do_wait(unsigned int flags, au_wkq_func_t func, void *args);
 int au_wkq_nowait(au_wkq_func_t func, void *args, struct super_block *sb);
 void au_nwt_init(struct au_nowait_tasks *nwt);
 int __init au_wkq_init(void);
@@ -61,9 +62,21 @@ void au_wkq_fin(void);
 
 /* ---------------------------------------------------------------------- */
 
+static inline int au_wkq_wait_pre(au_wkq_func_t func, void *args)
+{
+	return au_wkq_do_wait(AuWkq_WAIT | AuWkq_PRE, func, args);
+}
+
+static inline int au_wkq_wait(au_wkq_func_t func, void *args)
+{
+	return au_wkq_do_wait(AuWkq_WAIT, func, args);
+}
+
 static inline int au_test_wkq(struct task_struct *tsk)
 {
-	return !tsk->mm && !strcmp(tsk->comm, AUFS_WKQ_NAME);
+	return (current->flags & PF_KTHREAD)
+		&& !strncmp(tsk->comm, AUFS_WKQ_NAME "/",
+			    sizeof(AUFS_WKQ_NAME));
 }
 
 static inline void au_nwt_done(struct au_nowait_tasks *nwt)

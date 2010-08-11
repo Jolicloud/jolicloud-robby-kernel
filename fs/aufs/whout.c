@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 Junjiro R. Okajima
+ * Copyright (C) 2005-2010 Junjiro R. Okajima
  *
  * This program, aufs is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,9 +72,7 @@ int au_wh_test(struct dentry *h_parent, struct qstr *wh_name,
 {
 	int err;
 	struct dentry *wh_dentry;
-	struct inode *h_dir;
 
-	h_dir = h_parent->d_inode;
 	if (!try_sio)
 		wh_dentry = au_lkup_one(wh_name, h_parent, br, /*nd*/NULL);
 	else
@@ -121,19 +119,20 @@ int au_diropq_test(struct dentry *h_dentry, struct au_branch *br)
 struct dentry *au_whtmp_lkup(struct dentry *h_parent, struct au_branch *br,
 			     struct qstr *prefix)
 {
-#define HEX_LEN	4
 	struct dentry *dentry;
 	int i;
-	char defname[AUFS_WH_PFX_LEN * 2 + DNAME_INLINE_LEN_MIN + 1
-		     + HEX_LEN + 1], *name, *p;
+	char defname[NAME_MAX - AUFS_MAX_NAMELEN + DNAME_INLINE_LEN_MIN + 1],
+		*name, *p;
 	static unsigned short cnt;
 	struct qstr qs;
+
+	BUILD_BUG_ON(sizeof(cnt) * 2 > AUFS_WH_TMP_LEN);
 
 	name = defname;
 	qs.len = sizeof(defname) - DNAME_INLINE_LEN_MIN + prefix->len - 1;
 	if (unlikely(prefix->len > DNAME_INLINE_LEN_MIN)) {
 		dentry = ERR_PTR(-ENAMETOOLONG);
-		if (unlikely(qs.len >= PATH_MAX))
+		if (unlikely(qs.len > NAME_MAX))
 			goto out;
 		dentry = ERR_PTR(-ENOMEM);
 		name = kmalloc(qs.len + 1, GFP_NOFS);
@@ -147,11 +146,11 @@ struct dentry *au_whtmp_lkup(struct dentry *h_parent, struct au_branch *br,
 	memcpy(p, prefix->name, prefix->len);
 	p += prefix->len;
 	*p++ = '.';
-	AuDebugOn(name + qs.len + 1 - p <= HEX_LEN);
+	AuDebugOn(name + qs.len + 1 - p <= AUFS_WH_TMP_LEN);
 
 	qs.name = name;
 	for (i = 0; i < 3; i++) {
-		sprintf(p, "%.*d", HEX_LEN, cnt++);
+		sprintf(p, "%.*x", AUFS_WH_TMP_LEN, cnt++);
 		dentry = au_sio_lkup_one(&qs, h_parent, br);
 		if (IS_ERR(dentry) || !dentry->d_inode)
 			goto out_name;
@@ -166,8 +165,8 @@ struct dentry *au_whtmp_lkup(struct dentry *h_parent, struct au_branch *br,
 	if (name != defname)
 		kfree(name);
  out:
+	AuTraceErrPtr(dentry);
 	return dentry;
-#undef HEX_LEN
 }
 
 /*
@@ -197,6 +196,7 @@ int au_whtmp_ren(struct dentry *h_dentry, struct au_branch *br)
 	dput(h_path.dentry);
 
  out:
+	AuTraceErr(err);
 	return err;
 }
 
@@ -479,7 +479,6 @@ int au_wh_init(struct dentry *h_root, struct au_branch *br,
 	if (wbr)
 		WbrWhMustWriteLock(wbr);
 
-	h_dir = h_root->d_inode;
 	for (i = 0; i < AuBrWh_Last; i++) {
 		/* doubly whiteouted */
 		struct dentry *d;
@@ -502,12 +501,12 @@ int au_wh_init(struct dentry *h_root, struct au_branch *br,
 		}
 
 	err = 0;
-
 	switch (br->br_perm) {
 	case AuBrPerm_RO:
 	case AuBrPerm_ROWH:
 	case AuBrPerm_RR:
 	case AuBrPerm_RRWH:
+		h_dir = h_root->d_inode;
 		au_wh_init_ro(h_dir, base, &path);
 		break;
 
@@ -579,7 +578,7 @@ static void reinit_br_wh(void *arg)
 	hdir = au_hi(dir, bindex);
 	h_root = au_h_dptr(a->sb->s_root, bindex);
 
-	au_hin_imtx_lock_nested(hdir, AuLsc_I_PARENT);
+	au_hn_imtx_lock_nested(hdir, AuLsc_I_PARENT);
 	wbr_wh_write_lock(wbr);
 	err = au_h_verify(wbr->wbr_whbase, au_opt_udba(a->sb), hdir->hi_inode,
 			  h_root, a->br);
@@ -601,7 +600,7 @@ static void reinit_br_wh(void *arg)
 	if (!err)
 		err = au_wh_init(h_root, a->br, a->sb);
 	wbr_wh_write_unlock(wbr);
-	au_hin_imtx_unlock(hdir);
+	au_hn_imtx_unlock(hdir);
 	di_read_unlock(a->sb->s_root, AuLock_IR);
 
  out:
@@ -835,7 +834,7 @@ static int del_wh_children(struct dentry *h_dentry, struct au_nhash *whlist,
 	struct au_vdir_destr *str;
 
 	err = -ENOMEM;
-	p = __getname();
+	p = __getname_gfp(GFP_NOFS);
 	wh_name.name = p;
 	if (unlikely(!wh_name.name))
 		goto out;
@@ -1010,7 +1009,7 @@ static void call_rmdir_whtmp(void *args)
 	h_parent = dget_parent(a->wh_dentry);
 	h_dir = h_parent->d_inode;
 	hdir = au_hi(a->dir, a->bindex);
-	au_hin_imtx_lock_nested(hdir, AuLsc_I_PARENT);
+	au_hn_imtx_lock_nested(hdir, AuLsc_I_PARENT);
 	err = au_h_verify(a->wh_dentry, au_opt_udba(sb), h_dir, h_parent, br);
 	if (!err) {
 		err = mnt_want_write(br->br_mnt);
@@ -1020,7 +1019,7 @@ static void call_rmdir_whtmp(void *args)
 			mnt_drop_write(br->br_mnt);
 		}
 	}
-	au_hin_imtx_unlock(hdir);
+	au_hn_imtx_unlock(hdir);
 	dput(h_parent);
 	ii_write_unlock(a->dir);
 

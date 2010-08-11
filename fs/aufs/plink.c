@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 Junjiro R. Okajima
+ * Copyright (C) 2005-2010 Junjiro R. Okajima
  *
  * This program, aufs is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,20 +26,62 @@
  * during a user process maintains the pseudo-links,
  * prohibit adding a new plink and branch manipulation.
  */
-void au_plink_block_maintain(struct super_block *sb)
+void au_plink_maint_block(struct super_block *sb)
 {
 	struct au_sbinfo *sbi = au_sbi(sb);
 
 	SiMustAnyLock(sb);
 
 	/* gave up wake_up_bit() */
-	wait_event(sbi->si_plink_wq, !au_ftest_si(sbi, MAINTAIN_PLINK));
+	wait_event(sbi->si_plink_wq, !sbi->si_plink_maint);
+}
+
+void au_plink_maint_leave(struct file *file)
+{
+	struct au_sbinfo *sbinfo;
+	int iam;
+
+	AuDebugOn(atomic_long_read(&file->f_count));
+
+	sbinfo = au_sbi(file->f_dentry->d_sb);
+	spin_lock(&sbinfo->si_plink_maint_lock);
+	iam = (sbinfo->si_plink_maint == file);
+	if (iam)
+		sbinfo->si_plink_maint = NULL;
+	spin_unlock(&sbinfo->si_plink_maint_lock);
+	if (iam)
+		wake_up_all(&sbinfo->si_plink_wq);
+}
+
+static int au_plink_maint_enter(struct file *file)
+{
+	int err;
+	struct super_block *sb;
+	struct au_sbinfo *sbinfo;
+
+	err = 0;
+	sb = file->f_dentry->d_sb;
+	sbinfo = au_sbi(sb);
+	/* make sure i am the only one in this fs */
+	si_write_lock(sb);
+	/* spin_lock(&sbinfo->si_plink_maint_lock); */
+	if (!sbinfo->si_plink_maint)
+		sbinfo->si_plink_maint = file;
+	else
+		err = -EBUSY;
+	/* spin_unlock(&sbinfo->si_plink_maint_lock); */
+	si_write_unlock(sb);
+
+	return err;
 }
 
 /* ---------------------------------------------------------------------- */
 
 struct pseudo_link {
-	struct list_head list;
+	union {
+		struct list_head list;
+		struct rcu_head rcu;
+	};
 	struct inode *inode;
 };
 
@@ -56,10 +98,10 @@ void au_plink_list(struct super_block *sb)
 	AuDebugOn(!au_opt_test(au_mntflags(sb), PLINK));
 
 	plink_list = &sbinfo->si_plink.head;
-	spin_lock(&sbinfo->si_plink.spin);
-	list_for_each_entry(plink, plink_list, list)
+	rcu_read_lock();
+	list_for_each_entry_rcu(plink, plink_list, list)
 		AuDbg("%lu\n", plink->inode->i_ino);
-	spin_unlock(&sbinfo->si_plink.spin);
+	rcu_read_unlock();
 }
 #endif
 
@@ -77,13 +119,13 @@ int au_plink_test(struct inode *inode)
 
 	found = 0;
 	plink_list = &sbinfo->si_plink.head;
-	spin_lock(&sbinfo->si_plink.spin);
-	list_for_each_entry(plink, plink_list, list)
+	rcu_read_lock();
+	list_for_each_entry_rcu(plink, plink_list, list)
 		if (plink->inode == inode) {
 			found = 1;
 			break;
 		}
-	spin_unlock(&sbinfo->si_plink.spin);
+	rcu_read_unlock();
 	return found;
 }
 
@@ -219,9 +261,18 @@ static int whplink(struct dentry *h_dentry, struct inode *inode,
 /* free a single plink */
 static void do_put_plink(struct pseudo_link *plink, int do_del)
 {
-	iput(plink->inode);
 	if (do_del)
 		list_del(&plink->list);
+	iput(plink->inode);
+	kfree(plink);
+}
+
+static void do_put_plink_rcu(struct rcu_head *rcu)
+{
+	struct pseudo_link *plink;
+
+	plink = container_of(rcu, struct pseudo_link, rcu);
+	iput(plink->inode);
 	kfree(plink);
 }
 
@@ -235,53 +286,64 @@ void au_plink_append(struct inode *inode, aufs_bindex_t bindex,
 	struct super_block *sb;
 	struct au_sbinfo *sbinfo;
 	struct list_head *plink_list;
-	struct pseudo_link *plink;
+	struct pseudo_link *plink, *tmp;
 	int found, err, cnt;
 
 	sb = inode->i_sb;
 	sbinfo = au_sbi(sb);
 	AuDebugOn(!au_opt_test(au_mntflags(sb), PLINK));
 
-	err = 0;
 	cnt = 0;
 	found = 0;
 	plink_list = &sbinfo->si_plink.head;
-	spin_lock(&sbinfo->si_plink.spin);
-	list_for_each_entry(plink, plink_list, list) {
+	rcu_read_lock();
+	list_for_each_entry_rcu(plink, plink_list, list) {
 		cnt++;
 		if (plink->inode == inode) {
 			found = 1;
 			break;
 		}
 	}
-	if (found) {
-		spin_unlock(&sbinfo->si_plink.spin);
+	rcu_read_unlock();
+	if (found)
+		return;
+
+	tmp = kmalloc(sizeof(*plink), GFP_NOFS);
+	if (tmp)
+		tmp->inode = au_igrab(inode);
+	else {
+		err = -ENOMEM;
+		goto out;
+	}
+
+	spin_lock(&sbinfo->si_plink.spin);
+	list_for_each_entry(plink, plink_list, list) {
+		if (plink->inode == inode) {
+			found = 1;
+			break;
+		}
+	}
+	if (!found)
+		list_add_rcu(&tmp->list, plink_list);
+	spin_unlock(&sbinfo->si_plink.spin);
+	if (!found) {
+		cnt++;
+		WARN_ONCE(cnt > AUFS_PLINK_WARN,
+			  "unexpectedly many pseudo links, %d\n", cnt);
+		au_plink_maint_block(sb);
+		err = whplink(h_dentry, inode, bindex, au_sbr(sb, bindex));
+	} else {
+		do_put_plink(tmp, 0);
 		return;
 	}
 
-	plink = NULL;
-	if (!found) {
-		plink = kmalloc(sizeof(*plink), GFP_ATOMIC);
-		if (plink) {
-			plink->inode = au_igrab(inode);
-			list_add(&plink->list, plink_list);
-			cnt++;
-		} else
-			err = -ENOMEM;
-	}
-	spin_unlock(&sbinfo->si_plink.spin);
-
-	if (!err) {
-		au_plink_block_maintain(sb);
-		err = whplink(h_dentry, inode, bindex, au_sbr(sb, bindex));
-	}
-
-	if (unlikely(cnt > AUFS_PLINK_WARN))
-		AuWarn1("unexpectedly many pseudo links, %d\n", cnt);
+out:
 	if (unlikely(err)) {
 		pr_warning("err %d, damaged pseudo link.\n", err);
-		if (!found && plink)
-			do_put_plink(plink, /*do_del*/1);
+		if (tmp) {
+			au_spl_del_rcu(&tmp->list, &sbinfo->si_plink);
+			call_rcu(&tmp->rcu, do_put_plink_rcu);
+		}
 	}
 }
 
@@ -359,7 +421,6 @@ long au_plink_ioctl(struct file *file, unsigned int cmd)
 {
 	long err;
 	struct super_block *sb;
-	struct au_sbinfo *sbinfo;
 
 	err = -EACCES;
 	if (!capable(CAP_SYS_ADMIN))
@@ -367,28 +428,22 @@ long au_plink_ioctl(struct file *file, unsigned int cmd)
 
 	err = 0;
 	sb = file->f_dentry->d_sb;
-	sbinfo = au_sbi(sb);
 	switch (cmd) {
 	case AUFS_CTL_PLINK_MAINT:
 		/*
 		 * pseudo-link maintenance mode,
 		 * cleared by aufs_release_dir()
 		 */
-		si_write_lock(sb);
-		if (!au_ftest_si(sbinfo, MAINTAIN_PLINK)) {
-			au_fset_si(sbinfo, MAINTAIN_PLINK);
-			au_fi(file)->fi_maintain_plink = 1;
-		} else
-			err = -EBUSY;
-		si_write_unlock(sb);
+		err = au_plink_maint_enter(file);
 		break;
 	case AUFS_CTL_PLINK_CLEAN:
 		aufs_write_lock(sb->s_root);
-		if (au_opt_test(sbinfo->si_mntflags, PLINK))
+		if (au_opt_test(au_mntflags(sb), PLINK))
 			au_plink_put(sb);
 		aufs_write_unlock(sb->s_root);
 		break;
 	default:
+		/* err = -ENOTTY; */
 		err = -EINVAL;
 	}
  out:

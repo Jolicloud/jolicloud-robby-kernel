@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 Junjiro R. Okajima
+ * Copyright (C) 2005-2010 Junjiro R. Okajima
  *
  * This program, aufs is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,7 +35,6 @@ static struct inode *aufs_alloc_inode(struct super_block *sb __maybe_unused)
 
 	c = au_cache_alloc_icntnr();
 	if (c) {
-		inode_init_once(&c->vfs_inode);
 		c->vfs_inode.i_version = 1; /* sigen(sb); */
 		c->iinfo.ii_hinode = NULL;
 		return &c->vfs_inode;
@@ -85,16 +84,16 @@ static int au_show_brs(struct seq_file *seq, struct super_block *sb)
 	int err;
 	aufs_bindex_t bindex, bend;
 	struct path path;
-	struct au_hdentry *hd;
+	struct au_hdentry *hdp;
 	struct au_branch *br;
 
 	err = 0;
 	bend = au_sbend(sb);
-	hd = au_di(sb->s_root)->di_hdentry;
+	hdp = au_di(sb->s_root)->di_hdentry;
 	for (bindex = 0; !err && bindex <= bend; bindex++) {
 		br = au_sbr(sb, bindex);
 		path.mnt = br->br_mnt;
-		path.dentry = hd[bindex].hd_dentry;
+		path.dentry = hdp[bindex].hd_dentry;
 		err = au_seq_path(seq, &path);
 		if (err > 0)
 			err = seq_printf(seq, "=%s",
@@ -154,6 +153,7 @@ static int au_show_xino(struct seq_file *seq, struct vfsmount *mnt)
 	struct qstr *name;
 	struct file *f;
 	struct dentry *d, *h_root;
+	struct au_hdentry *hdp;
 
 	AuRwMustAnyLock(&sbinfo->si_rwsem);
 
@@ -168,7 +168,8 @@ static int au_show_xino(struct seq_file *seq, struct vfsmount *mnt)
 	brid = au_xino_brid(sb);
 	if (brid >= 0) {
 		bindex = au_br_index(sb, brid);
-		h_root = au_di(sb->s_root)->di_hdentry[0 + bindex].hd_dentry;
+		hdp = au_di(sb->s_root)->di_hdentry;
+		h_root = hdp[0 + bindex].hd_dentry;
 	}
 	d = f->f_dentry;
 	name = &d->d_name;
@@ -229,6 +230,7 @@ static int aufs_show_options(struct seq_file *m, struct vfsmount *mnt)
 	AuStr(UDBA, udba);
 	AuBool(SHWH, shwh);
 	AuBool(PLINK, plink);
+	AuBool(DIO, dio);
 	/* AuBool(DIRPERM1, dirperm1); */
 	/* AuBool(REFROF, refrof); */
 
@@ -266,9 +268,9 @@ static int aufs_show_options(struct seq_file *m, struct vfsmount *mnt)
 	si_read_unlock(sb);
 	return 0;
 
-#undef Deleted
 #undef AuBool
 #undef AuStr
+#undef AuUInt
 }
 
 /* ---------------------------------------------------------------------- */
@@ -351,7 +353,7 @@ static int aufs_statfs(struct dentry *dentry, struct kstatfs *buf)
 
 	if (!err) {
 		buf->f_type = AUFS_SUPER_MAGIC;
-		buf->f_namelen -= AUFS_WH_PFX_LEN;
+		buf->f_namelen = AUFS_MAX_NAMELEN;
 		memset(&buf->f_fsid, 0, sizeof(buf->f_fsid));
 	}
 	/* buf->f_bsize = buf->f_blocks = buf->f_bfree = buf->f_bavail = -1; */
@@ -360,34 +362,6 @@ static int aufs_statfs(struct dentry *dentry, struct kstatfs *buf)
 }
 
 /* ---------------------------------------------------------------------- */
-
-/* try flushing the lower fs at aufs remount/unmount time */
-
-static void au_fsync_br(struct super_block *sb)
-{
-	aufs_bindex_t bend, bindex;
-	int brperm;
-	struct au_branch *br;
-	struct super_block *h_sb;
-
-	bend = au_sbend(sb);
-	for (bindex = 0; bindex < bend; bindex++) {
-		br = au_sbr(sb, bindex);
-		brperm = br->br_perm;
-		if (brperm == AuBrPerm_RR || brperm == AuBrPerm_RRWH)
-			continue;
-		h_sb = br->br_mnt->mnt_sb;
-		if (bdev_read_only(h_sb->s_bdev))
-			continue;
-
-		/* lockdep_off(); */
-		down_write(&h_sb->s_umount);
-		shrink_dcache_sb(h_sb);
-		sync_filesystem(h_sb);
-		up_write(&h_sb->s_umount);
-		/* lockdep_on(); */
-	}
-}
 
 /*
  * this IS NOT for super_operations.
@@ -402,7 +376,6 @@ static void aufs_umount_begin(struct super_block *sb)
 		return;
 
 	si_write_lock(sb);
-	au_fsync_br(sb);
 	if (au_opt_test(au_mntflags(sb), PLINK))
 		au_plink_put(sb);
 	if (sbinfo->si_wbr_create_ops->fin)
@@ -445,7 +418,7 @@ static int do_refresh(struct dentry *dentry, mode_t type,
 		struct inode *inode = dentry->d_inode;
 		err = au_refresh_hinode(inode, dentry);
 		if (!err && type == S_IFDIR)
-			au_reset_hinotify(inode, dir_flags);
+			au_hn_reset(inode, dir_flags);
 	}
 	if (unlikely(err))
 		pr_err("unrecoverable error %d, %.*s\n",
@@ -611,7 +584,7 @@ static void au_remount_refresh(struct super_block *sb, unsigned int flags)
 	DiMustNoWaiters(root);
 	inode = root->d_inode;
 	IiMustNoWaiters(inode);
-	au_reset_hinotify(inode, au_hi_flags(inode, /*isdir*/1));
+	au_hn_reset(inode, au_hi_flags(inode, /*isdir*/1));
 	di_write_unlock(root);
 
 	err = refresh_dir(root, sigen);
@@ -650,7 +623,8 @@ static int cvt_err(int err)
 
 static int aufs_remount_fs(struct super_block *sb, int *flags, char *data)
 {
-	int err;
+	int err, do_dx;
+	unsigned int mntflags;
 	struct au_opts opts;
 	struct dentry *root;
 	struct inode *inode;
@@ -661,8 +635,6 @@ static int aufs_remount_fs(struct super_block *sb, int *flags, char *data)
 	if (!data || !*data) {
 		aufs_write_lock(root);
 		err = au_opts_verify(sb, *flags, /*pending*/0);
-		if (!err)
-			au_fsync_br(sb);
 		aufs_write_unlock(root);
 		goto out;
 	}
@@ -685,7 +657,6 @@ static int aufs_remount_fs(struct super_block *sb, int *flags, char *data)
 	inode = root->d_inode;
 	mutex_lock(&inode->i_mutex);
 	aufs_write_lock(root);
-	au_fsync_br(sb);
 
 	/* au_opts_remount() may return an error */
 	err = au_opts_remount(sb, &opts);
@@ -694,6 +665,12 @@ static int aufs_remount_fs(struct super_block *sb, int *flags, char *data)
 	if (au_ftest_opts(opts.flags, REFRESH_DIR)
 	    || au_ftest_opts(opts.flags, REFRESH_NONDIR))
 		au_remount_refresh(sb, opts.flags);
+
+	if (au_ftest_opts(opts.flags, REFRESH_DYAOP)) {
+		mntflags = au_mntflags(sb);
+		do_dx = !!au_opt_test(mntflags, DIO);
+		au_dy_arefresh(do_dx);
+	}
 
 	aufs_write_unlock(root);
 	mutex_unlock(&inode->i_mutex);
@@ -709,6 +686,7 @@ static int aufs_remount_fs(struct super_block *sb, int *flags, char *data)
 static const struct super_operations aufs_sop = {
 	.alloc_inode	= aufs_alloc_inode,
 	.destroy_inode	= aufs_destroy_inode,
+	/* always deleting, no clearing */
 	.drop_inode	= generic_delete_inode,
 	.show_options	= aufs_show_options,
 	.statfs		= aufs_statfs,
@@ -743,7 +721,7 @@ static int alloc_root(struct super_block *sb)
 	if (IS_ERR(root))
 		goto out_iput;
 
-	err = au_alloc_dinfo(root);
+	err = au_di_init(root);
 	if (!err) {
 		sb->s_root = root;
 		return 0; /* success */
@@ -814,20 +792,14 @@ static int aufs_fill_super(struct super_block *sb, void *raw_data,
 
 	/* lock vfs_inode first, then aufs. */
 	mutex_lock(&inode->i_mutex);
-	inode->i_op = &aufs_dir_iop;
-	inode->i_fop = &aufs_dir_fop;
 	aufs_write_lock(root);
 	err = au_opts_mount(sb, &opts);
 	au_opts_free(&opts);
-	if (unlikely(err))
-		goto out_unlock;
 	aufs_write_unlock(root);
 	mutex_unlock(&inode->i_mutex);
-	goto out_opts; /* success */
+	if (!err)
+		goto out_opts; /* success */
 
- out_unlock:
-	aufs_write_unlock(root);
-	mutex_unlock(&inode->i_mutex);
  out_root:
 	dput(root);
 	sb->s_root = NULL;
