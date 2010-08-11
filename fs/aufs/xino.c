@@ -798,9 +798,10 @@ int au_xino_br(struct super_block *sb, struct au_branch *br, ino_t h_ino,
 	ino = AUFS_ROOT_INO;
 	err = au_xino_do_write(au_sbi(sb)->si_xwrite, br->br_xino.xi_file,
 			       h_ino, ino);
-	if (!err)
-		return 0; /* success */
-
+	if (unlikely(err)) {
+		fput(br->br_xino.xi_file);
+		br->br_xino.xi_file = NULL;
+	}
 
  out:
 	return err;
