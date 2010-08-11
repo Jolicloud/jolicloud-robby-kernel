@@ -240,7 +240,7 @@ static int whplink(struct dentry *h_dentry, struct inode *inode,
 
 	/* always superio. */
 	mutex_lock_nested(&h_dir->i_mutex, AuLsc_I_CHILD2);
-	if (!au_test_wkq(current)) {
+	if (current_fsuid()) {
 		struct do_whplink_args args = {
 			.errp		= &err,
 			.tgt		= &tgtname,
