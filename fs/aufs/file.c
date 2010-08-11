@@ -49,10 +49,10 @@ struct file *au_h_open(struct dentry *dentry, aufs_bindex_t bindex, int flags,
 	/* a race condition can happen between open and unlink/rmdir */
 	h_file = ERR_PTR(-ENOENT);
 	h_dentry = au_h_dptr(dentry, bindex);
-	if (au_test_nfsd(current) && !h_dentry)
+	if (au_test_nfsd() && !h_dentry)
 		goto out;
 	h_inode = h_dentry->d_inode;
-	if (au_test_nfsd(current) && !h_inode)
+	if (au_test_nfsd() && !h_inode)
 		goto out;
 	if (unlikely((!d_unhashed(dentry) && d_unhashed(h_dentry))
 		     || !h_inode))
