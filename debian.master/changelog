@@ -4,6 +4,10 @@ linux (2.6.35-15.21) UNRELEASED; urgency=low
   CHANGELOG: Use the printchanges target to see the curent changes.
   CHANGELOG: Use the insertchanges target to create the final log.
 
+  [ Leann Ogasawara ]
+
+  * rebase to v2.6.35.1
+
  -- Leann Ogasawara <leann.ogasawara@canonical.com>  Mon, 09 Aug 2010 09:24:04 -0700
 
 linux (2.6.35-14.20) maverick; urgency=low
