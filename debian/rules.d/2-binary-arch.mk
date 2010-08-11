@@ -165,7 +165,7 @@ endif
 		$(pkgdir)/lib/modules/$(abi_release)-$*/modules.order
 
 headers_tmp := $(CURDIR)/debian/tmp-headers
-headers_dir := $(CURDIR)/debian/linux-libc-dev
+headers_dir := $(CURDIR)/debian/linux-libc-$(abi_release)-dev
 
 hmake := $(MAKE) -C $(CURDIR) O=$(headers_tmp) SUBLEVEL=$(SUBLEVEL) \
 	EXTRAVERSION=$(EXTRASUBLEVEL)-$(abinum) INSTALL_HDR_PATH=$(headers_tmp)/install \
@@ -174,7 +174,7 @@ hmake := $(MAKE) -C $(CURDIR) O=$(headers_tmp) SUBLEVEL=$(SUBLEVEL) \
 install-arch-headers:
 	dh_testdir
 	dh_testroot
-	dh_clean -k -plinux-libc-dev
+	dh_clean -k -plinux-libc-$(abi_release)-dev
 
 	rm -rf $(headers_tmp)
 	install -d $(headers_tmp) $(headers_dir)/usr/include/
@@ -198,14 +198,14 @@ binary-arch-headers: install-arch-headers
 	dh_testdir
 	dh_testroot
 
-	dh_installchangelogs -plinux-libc-dev
-	dh_installdocs -plinux-libc-dev
-	dh_compress -plinux-libc-dev
-	dh_fixperms -plinux-libc-dev
-	dh_installdeb -plinux-libc-dev
-	dh_gencontrol -plinux-libc-dev
-	dh_md5sums -plinux-libc-dev
-	dh_builddeb -plinux-libc-dev
+	dh_installchangelogs -plinux-libc-$(abi_release)-dev
+	dh_installdocs -plinux-libc-$(abi_release)-dev
+	dh_compress -plinux-libc-$(abi_release)-dev
+	dh_fixperms -plinux-libc-$(abi_release)-dev
+	dh_installdeb -plinux-libc-$(abi_release)-dev
+	dh_gencontrol -plinux-libc-$(abi_release)-dev
+	dh_md5sums -plinux-libc-$(abi_release)-dev
+	dh_builddeb -plinux-libc-$(abi_release)-dev
 
 binary-%: pkgimg = linux-image-$(abi_release)-$*
 binary-%: pkghdr = linux-headers-$(abi_release)-$*
