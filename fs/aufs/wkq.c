@@ -211,7 +211,9 @@ int __init au_wkq_init(void)
 		if (unlikely(err))
 			au_wkq[i].wkq = NULL;
 	}
-	if (unlikely(err))
+	if (!err)
+		au_dbg_verify_wkq();
+	else
 		au_wkq_fin();
 
 	return err;

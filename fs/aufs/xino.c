@@ -104,12 +104,13 @@ ssize_t xino_fwrite(au_writef_t func, struct file *file, void *buf, size_t size,
 	ssize_t err;
 
 	/* todo: signal block and no wkq? */
-	/* todo: new credential scheme */
-	/*
-	 * it breaks RLIMIT_FSIZE and normal user's limit,
-	 * users should care about quota and real 'filesystem full.'
-	 */
-	if (!au_test_wkq(current)) {
+	if (current->signal->rlim[RLIMIT_FSIZE].rlim_cur == RLIM_INFINITY)
+		err = do_xino_fwrite(func, file, buf, size, pos);
+	else {
+		/*
+		 * it breaks RLIMIT_FSIZE and normal user's limit,
+		 * users should care about quota and real 'filesystem full.'
+		 */
 		int wkq_err;
 		struct do_xino_fwrite_args args = {
 			.errp	= &err,
@@ -123,8 +124,7 @@ ssize_t xino_fwrite(au_writef_t func, struct file *file, void *buf, size_t size,
 		wkq_err = au_wkq_wait(call_do_xino_fwrite, &args);
 		if (unlikely(wkq_err))
 			err = wkq_err;
-	} else
-		err = do_xino_fwrite(func, file, buf, size, pos);
+	}
 
 	return err;
 }

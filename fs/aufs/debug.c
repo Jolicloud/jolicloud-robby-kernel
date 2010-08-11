@@ -375,10 +375,26 @@ void au_dbg_verify_gen(struct dentry *parent, unsigned int sigen)
 
 void au_dbg_verify_kthread(void)
 {
-	if (au_test_wkq(current)) {
+	struct task_struct *tsk = current;
+
+	if ((tsk->flags & PF_KTHREAD)
+	    && !strncmp(tsk->comm, AUFS_WKQ_NAME "/", sizeof(AUFS_WKQ_NAME))) {
 		au_dbg_blocked();
 		BUG();
 	}
+}
+
+static void au_dbg_do_verify_wkq(void *args)
+{
+	struct task_struct *tsk = current;
+
+	BUG_ON(tsk->fsuid);
+	BUG_ON(tsk->signal->rlim[RLIMIT_FSIZE].rlim_cur != RLIM_INFINITY);
+}
+
+void au_dbg_verify_wkq(void)
+{
+	au_wkq_wait(au_dbg_do_verify_wkq, NULL);
 }
 
 /* ---------------------------------------------------------------------- */

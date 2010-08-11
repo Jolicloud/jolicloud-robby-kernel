@@ -139,6 +139,7 @@ void au_dbg_verify_dir_parent(struct dentry *dentry, unsigned int sigen);
 void au_dbg_verify_nondir_parent(struct dentry *dentry, unsigned int sigen);
 void au_dbg_verify_gen(struct dentry *parent, unsigned int sigen);
 void au_dbg_verify_kthread(void);
+void au_dbg_verify_wkq(void);
 
 int __init au_debug_init(void);
 void au_debug_sbinfo_init(struct au_sbinfo *sbinfo);
@@ -204,6 +205,7 @@ AuStubVoid(au_dbg_verify_nondir_parent, struct dentry *dentry,
 	   unsigned int sigen)
 AuStubVoid(au_dbg_verify_gen, struct dentry *parent, unsigned int sigen)
 AuStubVoid(au_dbg_verify_kthread, void)
+AuStubVoid(au_dbg_verify_wkq, void)
 AuStubInt0(__init au_debug_init, void)
 AuStubVoid(au_debug_sbinfo_init, struct au_sbinfo *sbinfo)
 

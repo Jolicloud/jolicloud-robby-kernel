@@ -72,13 +72,6 @@ static inline int au_wkq_wait(au_wkq_func_t func, void *args)
 	return au_wkq_do_wait(AuWkq_WAIT, func, args);
 }
 
-static inline int au_test_wkq(struct task_struct *tsk)
-{
-	return (current->flags & PF_KTHREAD)
-		&& !strncmp(tsk->comm, AUFS_WKQ_NAME "/",
-			    sizeof(AUFS_WKQ_NAME));
-}
-
 static inline void au_nwt_done(struct au_nowait_tasks *nwt)
 {
 	if (!atomic_dec_return(&nwt->nw_len))
