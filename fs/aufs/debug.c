@@ -375,12 +375,9 @@ void au_dbg_verify_gen(struct dentry *parent, unsigned int sigen)
 
 void au_dbg_verify_kthread(void)
 {
-	struct task_struct *tsk = current;
-
-	if ((tsk->flags & PF_KTHREAD)
-	    && !strncmp(tsk->comm, AUFS_WKQ_NAME "/", sizeof(AUFS_WKQ_NAME))) {
+	if (current->flags & PF_WQ_WORKER) {
 		au_dbg_blocked();
-		BUG();
+		WARN_ON(1);
 	}
 }
 

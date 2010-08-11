@@ -180,7 +180,6 @@ void sysaufs_br_init(struct au_branch *br)
 	sysfs_attr_init(attr);
 	attr->name = br->br_name;
 	attr->mode = S_IRUGO;
-	attr->owner = THIS_MODULE;
 }
 
 void sysaufs_brs_del(struct super_block *sb, aufs_bindex_t bindex)

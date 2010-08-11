@@ -62,10 +62,8 @@ static int h_permission(struct inode *h_inode, int mask,
 
 	if (!err)
 		err = devcgroup_inode_permission(h_inode, mask);
-	if (!err) {
-		mask &= (MAY_READ | MAY_WRITE | MAY_EXEC | MAY_APPEND);
+	if (!err)
 		err = security_inode_permission(h_inode, mask);
-	}
 
 #if 0
 	if (!err) {

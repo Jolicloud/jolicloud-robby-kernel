@@ -206,7 +206,9 @@ int __init au_wkq_init(void)
 
 	err = 0;
 	for (i = 0; !err && i < ARRAY_SIZE(au_wkq); i++) {
-		au_wkq[i].wkq = create_workqueue(au_wkq[i].name);
+		BUILD_BUG_ON(!WQ_RESCUER);
+		au_wkq[i].wkq = alloc_workqueue(au_wkq[i].name, !WQ_RESCUER,
+						WQ_DFL_ACTIVE);
 		if (IS_ERR(au_wkq[i].wkq))
 			err = PTR_ERR(au_wkq[i].wkq);
 		else if (!au_wkq[i].wkq)
