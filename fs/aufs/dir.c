@@ -391,7 +391,7 @@ static int aufs_readdir(struct file *file, void *dirent, filldir_t filldir)
 	if (unlikely(err))
 		goto out_unlock;
 
-	if (!au_test_nfsd(current)) {
+	if (!au_test_nfsd()) {
 		err = au_vdir_fill_de(file, dirent, filldir);
 		fsstack_copy_attr_atime(inode,
 					au_h_iptr(inode, au_ibstart(inode)));
