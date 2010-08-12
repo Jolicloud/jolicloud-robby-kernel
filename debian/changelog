@@ -1,3 +1,12 @@
+linux (2.6.34.1-1.29) robby-upgrade-oem; urgency=low
+
+  [ Adam McDaniel ]
+
+  * JAMBON: ALSA: via - Corrected microphone labels on VT1812
+  * CONFIG: Disabled CONFIG_NOUVEAU in leiu of proprietary driver
+
+ -- Adam McDaniel <adam@jolicloud.org>  Wed, 11 Aug 2010 21:25:14 -0600
+
 linux (2.6.34.1-1.28) robby-upgrade-oem; urgency=low
 
   [ Adam McDaniel ]
