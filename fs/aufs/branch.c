@@ -358,7 +358,7 @@ static int au_br_init(struct au_branch *br, struct super_block *sb,
 	if (au_br_writable(add->perm)) {
 		err = au_wbr_init(br, sb, add->perm, &add->path);
 		if (unlikely(err))
-			goto out;
+			goto out_err;
 	}
 
 	if (au_opt_test(au_mntflags(sb), XINO)) {
@@ -366,13 +366,16 @@ static int au_br_init(struct au_branch *br, struct super_block *sb,
 				 au_sbr(sb, 0)->br_xino.xi_file, /*do_test*/1);
 		if (unlikely(err)) {
 			AuDebugOn(br->br_xino.xi_file);
-			goto out;
+			goto out_err;
 		}
 	}
 
 	sysaufs_br_init(br);
 	mntget(add->path.mnt);
+	goto out; /* success */
 
+ out_err:
+	br->br_mnt = NULL;
  out:
 	return err;
 }
