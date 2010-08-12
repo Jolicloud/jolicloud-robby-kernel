@@ -38,6 +38,7 @@ CONFIG_DRM_I810=y
 # CONFIG_FB_ASILIANT is not set
 # CONFIG_FB_ATY is not set
 # CONFIG_FB_ATY128 is not set
+# CONFIG_FB_BACKLIGHT is not set
 # CONFIG_FB_BOOT_VESA_SUPPORT is not set
 # CONFIG_FB_BROADSHEET is not set
 # CONFIG_FB_CARMINE is not set
