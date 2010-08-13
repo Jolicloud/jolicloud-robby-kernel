@@ -11,5 +11,4 @@ getall i386 generic generic-pae virtual
 
 # Ports arches and flavours.
 getall powerpc powerpc powerpc-smp powerpc64-smp
-getall ia64 ia64
 getall sparc sparc64 sparc64-smp
