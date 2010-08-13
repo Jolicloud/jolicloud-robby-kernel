@@ -1,5 +1,5 @@
 if [ "$variant" = "ports" ]; then
-	archs="sparc powerpc"
+	archs="powerpc"
 	family='ports'
 else
 	archs="amd64 i386 armel"
