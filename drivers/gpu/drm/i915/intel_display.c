@@ -29,6 +29,7 @@
 #include <linux/i2c.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
+#include <linux/vgaarb.h>
 #include "drmP.h"
 #include "intel_drv.h"
 #include "i915_drm.h"
@@ -1458,29 +1459,6 @@ intel_pipe_set_base(struct drm_crtc *crtc, int x, int y,
 	return 0;
 }
 
-/* Disable the VGA plane that we never use */
-static void i915_disable_vga (struct drm_device *dev)
-{
-	struct drm_i915_private *dev_priv = dev->dev_private;
-	u8 sr1;
-	u32 vga_reg;
-
-	if (HAS_PCH_SPLIT(dev))
-		vga_reg = CPU_VGACNTRL;
-	else
-		vga_reg = VGACNTRL;
-
-	if (I915_READ(vga_reg) & VGA_DISP_DISABLE)
-		return;
-
-	I915_WRITE8(VGA_SR_INDEX, 1);
-	sr1 = I915_READ8(VGA_SR_DATA);
-	I915_WRITE8(VGA_SR_DATA, sr1 | (1 << 5));
-	udelay(100);
-
-	I915_WRITE(vga_reg, VGA_DISP_DISABLE);
-}
-
 static void ironlake_disable_pll_edp (struct drm_crtc *crtc)
 {
 	struct drm_device *dev = crtc->dev;
@@ -1996,8 +1974,6 @@ static void ironlake_crtc_dpms(struct drm_crtc *crtc, int mode)
 			I915_READ(dspbase_reg);
 		}
 
-		i915_disable_vga(dev);
-
 		/* disable cpu pipe, disable after all planes disabled */
 		temp = I915_READ(pipeconf_reg);
 		if ((temp & PIPEACONF_ENABLE) != 0) {
@@ -2254,9 +2230,6 @@ static void i9xx_crtc_dpms(struct drm_crtc *crtc, int mode)
 		if (dev_priv->cfb_plane == plane &&
 		    dev_priv->display.disable_fbc)
 			dev_priv->display.disable_fbc(dev);
-
-		/* Disable the VGA plane that we never use */
-		i915_disable_vga(dev);
 
 		/* Disable display plane */
 		temp = I915_READ(dspcntr_reg);
@@ -5642,6 +5615,29 @@ static void intel_init_quirks(struct drm_device *dev)
 	}
 }
 
+/* Disable the VGA plane that we never use */
+static void i915_disable_vga(struct drm_device *dev)
+{
+	struct drm_i915_private *dev_priv = dev->dev_private;
+	u8 sr1;
+	u32 vga_reg;
+
+	if (HAS_PCH_SPLIT(dev))
+		vga_reg = CPU_VGACNTRL;
+	else
+		vga_reg = VGACNTRL;
+
+	vga_get_uninterruptible(dev->pdev, VGA_RSRC_LEGACY_IO);
+	outb(1, VGA_SR_INDEX);
+	sr1 = inb(VGA_SR_DATA);
+	outb(sr1 | 1<<5, VGA_SR_DATA);
+	vga_put(dev->pdev, VGA_RSRC_LEGACY_IO);
+	udelay(300);
+
+	I915_WRITE(vga_reg, VGA_DISP_DISABLE);
+	POSTING_READ(vga_reg);
+}
+
 void intel_modeset_init(struct drm_device *dev)
 {
 	struct drm_i915_private *dev_priv = dev->dev_private;
@@ -5689,6 +5685,9 @@ void intel_modeset_init(struct drm_device *dev)
 	intel_setup_outputs(dev);
 
 	intel_init_clock_gating(dev);
+
+	/* Just disable it once at startup */
+	i915_disable_vga(dev);
 
 	if (IS_IRONLAKE_M(dev)) {
 		ironlake_enable_drps(dev);
