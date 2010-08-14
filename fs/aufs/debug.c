@@ -386,10 +386,8 @@ void au_dbg_verify_kthread(void)
 
 static void au_dbg_do_verify_wkq(void *args)
 {
-	struct task_struct *tsk = current;
-
-	BUG_ON(tsk->fsuid);
-	BUG_ON(tsk->signal->rlim[RLIMIT_FSIZE].rlim_cur != RLIM_INFINITY);
+	BUG_ON(current_fsuid());
+	BUG_ON(current->signal->rlim[RLIMIT_FSIZE].rlim_cur != RLIM_INFINITY);
 }
 
 void au_dbg_verify_wkq(void)
