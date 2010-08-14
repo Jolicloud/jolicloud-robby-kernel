@@ -143,7 +143,7 @@ static struct dentry *aufs_lookup(struct inode *dir, struct dentry *dentry,
 	int err, npositive;
 
 	/* temporary workaround for a bug in NFSD readdir */
-	if (!au_test_nfsd(current))
+	if (!au_test_nfsd())
 		IMustLock(dir);
 	else
 		WARN_ONCE(!mutex_is_locked(&dir->i_mutex),
