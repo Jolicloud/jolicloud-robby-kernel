@@ -201,6 +201,8 @@ endif
 	#
 	# Remove files which are generated at installation by postinst,
 	# except for modules.order and modules.builtin
+	# 
+	# NOTE: need to keep this list in sync with postrm
 	#
 	mkdir $(pkgdir)/lib/modules/$(abi_release)-$*/_
 	mv $(pkgdir)/lib/modules/$(abi_release)-$*/modules.order \
