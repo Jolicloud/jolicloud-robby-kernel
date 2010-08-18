@@ -93,6 +93,11 @@ static ssize_t show_protocols(struct device *d,
 	else if (allowed & IR_TYPE_SONY)
 		tmp += sprintf(tmp, "sony ");
 
+	if (allowed & enabled & IR_TYPE_RC5_SZ)
+		tmp += sprintf(tmp, "[rc5sz] ");
+	else if (allowed & IR_TYPE_RC5_SZ)
+		tmp += sprintf(tmp, "rc5sz ");
+
 	if (allowed & enabled & IR_TYPE_LIRC)
 		tmp += sprintf(tmp, "[lirc] ");
 	else if (allowed & IR_TYPE_LIRC)
@@ -165,6 +170,9 @@ static ssize_t store_protocols(struct device *d,
 	} else if (!strncasecmp(tmp, "sony", 4)) {
 		tmp += 4;
 		mask = IR_TYPE_SONY;
+	} else if (!strncasecmp(tmp, "rc5sz", 5)) {
+		tmp += 5;
+		mask = IR_TYPE_RC5_SZ;
 	} else if (!strncasecmp(tmp, "lirc", 4)) {
 		tmp += 4;
 		mask = IR_TYPE_LIRC;

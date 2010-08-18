@@ -69,6 +69,16 @@ config IR_SONY_DECODER
 	   Enable this option if you have an infrared remote control which
 	   uses the Sony protocol, and you need software decoding support.
 
+config IR_RC5_SZ_DECODER
+	tristate "Enable IR raw decoder for the RC-5 (streamzap) protocol"
+	depends on IR_CORE
+	select BITREVERSE
+	default y
+
+	---help---
+	   Enable this option if you have IR with RC-5 (streamzap) protocol,
+	   and if the IR is decoded in software.
+
 config IR_LIRC_CODEC
 	tristate "Enable IR to LIRC bridge"
 	depends on IR_CORE
@@ -102,3 +112,15 @@ config IR_MCEUSB
 
 	   To compile this driver as a module, choose M here: the
 	   module will be called mceusb.
+
+config IR_STREAMZAP
+	tristate "Streamzap PC Remote IR Receiver"
+	depends on USB_ARCH_HAS_HCD
+	depends on IR_CORE
+	select USB
+	---help---
+	   Say Y here if you want to use a Streamzap PC Remote
+	   Infrared Receiver.
+
+	   To compile this driver as a module, choose M here: the
+	   module will be called streamzap.
