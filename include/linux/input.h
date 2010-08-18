@@ -34,7 +34,7 @@ struct input_event {
  * Protocol version.
  */
 
-#define EV_VERSION		0x010000
+#define EV_VERSION		0x010001
 
 /*
  * IOCTLs (0x00 - 0x7f)
@@ -56,12 +56,22 @@ struct input_absinfo {
 	__s32 resolution;
 };
 
+struct keycode_table_entry {
+	__u32 keycode;		/* e.g. KEY_A */
+	__u32 index;            /* Index for the given scan/key table, on EVIOCGKEYCODEBIG */
+	__u32 len;		/* Length of the scancode */
+	__u32 reserved[2];	/* Reserved for future usage */
+	char *scancode;		/* scancode, in machine-endian */
+};
+
 #define EVIOCGVERSION		_IOR('E', 0x01, int)			/* get driver version */
 #define EVIOCGID		_IOR('E', 0x02, struct input_id)	/* get device ID */
 #define EVIOCGREP		_IOR('E', 0x03, unsigned int[2])	/* get repeat settings */
 #define EVIOCSREP		_IOW('E', 0x03, unsigned int[2])	/* set repeat settings */
 #define EVIOCGKEYCODE		_IOR('E', 0x04, unsigned int[2])	/* get keycode */
 #define EVIOCSKEYCODE		_IOW('E', 0x04, unsigned int[2])	/* set keycode */
+#define EVIOCGKEYCODEBIG	_IOR('E', 0x04, struct keycode_table_entry) /* get keycode */
+#define EVIOCSKEYCODEBIG	_IOW('E', 0x04, struct keycode_table_entry) /* set keycode */
 
 #define EVIOCGNAME(len)		_IOC(_IOC_READ, 'E', 0x06, len)		/* get device name */
 #define EVIOCGPHYS(len)		_IOC(_IOC_READ, 'E', 0x07, len)		/* get physical location */
@@ -1087,13 +1097,22 @@ struct input_mt_slot {
  * @keycodemax: size of keycode table
  * @keycodesize: size of elements in keycode table
  * @keycode: map of scancodes to keycodes for this device
- * @setkeycode: optional method to alter current keymap, used to implement
+ * @setkeycode: optional legacy method to alter current keymap, used to
+ *	implement sparse keymaps. Shouldn't be used on new drivers
+ * @getkeycode: optional legacy method to retrieve current keymap.
+ *	Shouldn't be used on new drivers.
+ * @setkeycodebig: optional method to alter current keymap, used to implement
  *	sparse keymaps. If not supplied default mechanism will be used.
  *	The method is being called while holding event_lock and thus must
  *	not sleep
- * @getkeycode: optional method to retrieve current keymap. If not supplied
- *	default mechanism will be used. The method is being called while
- *	holding event_lock and thus must not sleep
+ * @getkeycodebig_from_index: optional method to retrieve current keymap from
+ *      an array index. If not supplied default mechanism will be used.
+ *	The method is being called while holding event_lock and thus must
+ *      not sleep
+ * @getkeycodebig_from_scancode: optional method to retrieve current keymap
+ *	from an scancode. If not supplied default mechanism will be used.
+ *	The method is being called while holding event_lock and thus must
+ *      not sleep
  * @ff: force feedback structure associated with the device if device
  *	supports force feedback effects
  * @repeat_key: stores key code of the last key pressed; used to implement
@@ -1174,6 +1193,12 @@ struct input_dev {
 			  unsigned int scancode, unsigned int keycode);
 	int (*getkeycode)(struct input_dev *dev,
 			  unsigned int scancode, unsigned int *keycode);
+	int (*setkeycodebig)(struct input_dev *dev,
+			     struct keycode_table_entry *kt_entry);
+	int (*getkeycodebig_from_index)(struct input_dev *dev,
+			     struct keycode_table_entry *kt_entry);
+	int (*getkeycodebig_from_scancode)(struct input_dev *dev,
+			     struct keycode_table_entry *kt_entry);
 
 	struct ff_device *ff;
 
@@ -1473,6 +1498,10 @@ int input_get_keycode(struct input_dev *dev,
 		      unsigned int scancode, unsigned int *keycode);
 int input_set_keycode(struct input_dev *dev,
 		      unsigned int scancode, unsigned int keycode);
+int input_get_keycode_big(struct input_dev *dev,
+			  struct keycode_table_entry *kt_entry);
+int input_set_keycode_big(struct input_dev *dev,
+			  struct keycode_table_entry *kt_entry);
 
 extern struct class input_class;
 
