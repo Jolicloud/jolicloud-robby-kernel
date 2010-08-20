@@ -629,8 +629,9 @@ static int h_d_revalidate(struct dentry *dentry, struct inode *inode,
 	name = &dentry->d_name;
 
 	/*
-	 * Theoretically, REVAL test should be unnecessary in case of INOTIFY.
-	 * But inotify doesn't fire some necessary events,
+	 * Theoretically, REVAL test should be unnecessary in case of
+	 * {FS,I}NOTIFY.
+	 * But {fs,i}notify doesn't fire some necessary events,
 	 *	IN_ATTRIB for atime/nlink/pageio
 	 *	IN_DELETE for NFS dentry
 	 * Let's do REVAL test too.

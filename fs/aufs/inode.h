@@ -38,8 +38,6 @@ struct au_hnotify {
 	/* never use fsnotify_add_vfsmount_mark() */
 	struct fsnotify_mark		hn_mark;
 	int				hn_mark_dead;
-#else
-	struct inotify_watch		hn_watch;
 #endif
 	struct inode			*hn_aufs_inode;	/* no get/put */
 #endif
@@ -439,7 +437,7 @@ int au_hnotify(struct inode *h_dir, struct au_hnotify *hnotify, u32 mask,
 int __init au_hnotify_init(void);
 void au_hnotify_fin(void);
 
-/* hinotify.c */
+/* hfsnotify.c */
 extern const struct au_hnotify_op au_hnotify_op;
 
 static inline
