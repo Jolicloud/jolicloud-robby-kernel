@@ -35,7 +35,9 @@ struct vfsmount;
 struct au_hnotify {
 #ifdef CONFIG_AUFS_HNOTIFY
 #ifdef CONFIG_AUFS_HFSNOTIFY
-	struct fsnotify_mark_entry	hn_entry;
+	/* never use fsnotify_add_vfsmount_mark() */
+	struct fsnotify_mark		hn_mark;
+	int				hn_mark_dead;
 #else
 	struct inotify_watch		hn_watch;
 #endif
