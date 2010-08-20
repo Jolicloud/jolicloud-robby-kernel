@@ -294,7 +294,7 @@ static int au_statfs_sum(struct super_block *sb, struct kstatfs *buf)
 	u64 blocks, bfree, bavail, files, ffree;
 	aufs_bindex_t bend, bindex, i;
 	unsigned char shared;
-	struct vfsmount *h_mnt;
+	struct path h_path;
 	struct super_block *h_sb;
 
 	blocks = 0;
@@ -306,8 +306,8 @@ static int au_statfs_sum(struct super_block *sb, struct kstatfs *buf)
 	err = 0;
 	bend = au_sbend(sb);
 	for (bindex = bend; bindex >= 0; bindex--) {
-		h_mnt = au_sbr_mnt(sb, bindex);
-		h_sb = h_mnt->mnt_sb;
+		h_path.mnt = au_sbr_mnt(sb, bindex);
+		h_sb = h_path.mnt->mnt_sb;
 		shared = 0;
 		for (i = bindex + 1; !shared && i <= bend; i++)
 			shared = (au_sbr_sb(sb, i) == h_sb);
@@ -315,7 +315,8 @@ static int au_statfs_sum(struct super_block *sb, struct kstatfs *buf)
 			continue;
 
 		/* sb->s_root for NFS is unreliable */
-		err = vfs_statfs(h_mnt->mnt_root, buf);
+		h_path.dentry = h_path.mnt->mnt_root;
+		err = vfs_statfs(&h_path, buf);
 		if (unlikely(err))
 			goto out;
 
@@ -339,15 +340,18 @@ static int au_statfs_sum(struct super_block *sb, struct kstatfs *buf)
 static int aufs_statfs(struct dentry *dentry, struct kstatfs *buf)
 {
 	int err;
+	struct path h_path;
 	struct super_block *sb;
 
 	/* lock free root dinfo */
 	sb = dentry->d_sb;
 	si_noflush_read_lock(sb);
-	if (!au_opt_test(au_mntflags(sb), SUM))
+	if (!au_opt_test(au_mntflags(sb), SUM)) {
 		/* sb->s_root for NFS is unreliable */
-		err = vfs_statfs(au_sbr_mnt(sb, 0)->mnt_root, buf);
-	else
+		h_path.mnt = au_sbr_mnt(sb, 0);
+		h_path.dentry = h_path.mnt->mnt_root;
+		err = vfs_statfs(&h_path, buf);
+	} else
 		err = au_statfs_sum(sb, buf);
 	si_read_unlock(sb);
 

@@ -407,6 +407,7 @@ static void au_mfs(struct dentry *dentry)
 	aufs_bindex_t bindex, bend;
 	int err;
 	unsigned long long b, bavail;
+	struct path h_path;
 	/* reduce the stack usage */
 	struct kstatfs *st;
 
@@ -429,7 +430,9 @@ static void au_mfs(struct dentry *dentry)
 			continue;
 
 		/* sb->s_root for NFS is unreliable */
-		err = vfs_statfs(br->br_mnt->mnt_root, st);
+		h_path.mnt = br->br_mnt;
+		h_path.dentry = h_path.mnt->mnt_root;
+		err = vfs_statfs(&h_path, st);
 		if (unlikely(err)) {
 			AuWarn1("failed statfs, b%d, %d\n", bindex, err);
 			continue;
