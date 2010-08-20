@@ -8604,6 +8604,7 @@ EXPORT_SYMBOL_GPL vmlinux 0x19744faf	pmac_backlight
 EXPORT_SYMBOL_GPL vmlinux 0x199232b0	module_mutex
 EXPORT_SYMBOL_GPL vmlinux 0x19a304ba	usb_disabled
 EXPORT_SYMBOL_GPL vmlinux 0x19dee805	disk_part_iter_next
+EXPORT_SYMBOL_GPL vmlinux 0x1a1ff95e	setup_deferrable_timer_on_stack_key
 EXPORT_SYMBOL_GPL vmlinux 0x1a323362	__ftrace_vbprintk
 EXPORT_SYMBOL_GPL vmlinux 0x1a9965aa	ring_buffer_unlock_commit
 EXPORT_SYMBOL_GPL vmlinux 0x1a9e6f3a	regulator_register_notifier

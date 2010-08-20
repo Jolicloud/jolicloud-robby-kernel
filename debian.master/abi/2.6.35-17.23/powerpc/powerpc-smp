@@ -8604,6 +8604,7 @@ EXPORT_SYMBOL_GPL vmlinux 0x13f64b70	ring_buffer_resize
 EXPORT_SYMBOL_GPL vmlinux 0x13f9259b	tty_perform_flush
 EXPORT_SYMBOL_GPL vmlinux 0x14344146	ata_bmdma_qc_issue
 EXPORT_SYMBOL_GPL vmlinux 0x1457d21d	wm8350_reg_read
+EXPORT_SYMBOL_GPL vmlinux 0x146b90c4	setup_deferrable_timer_on_stack_key
 EXPORT_SYMBOL_GPL vmlinux 0x147ce98d	ata_sff_wait_after_reset
 EXPORT_SYMBOL_GPL vmlinux 0x1485d56f	pm_qos_update_request
 EXPORT_SYMBOL_GPL vmlinux 0x149db923	selinux_string_to_sid

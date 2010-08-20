@@ -8781,6 +8781,7 @@ EXPORT_SYMBOL_GPL vmlinux 0x13e5ea13	__wake_up_sync
 EXPORT_SYMBOL_GPL vmlinux 0x13f0a631	inet_csk_reqsk_queue_prune
 EXPORT_SYMBOL_GPL vmlinux 0x141c5115	crypto_register_instance
 EXPORT_SYMBOL_GPL vmlinux 0x143f9adc	ata_base_port_ops
+EXPORT_SYMBOL_GPL vmlinux 0x146b90c4	setup_deferrable_timer_on_stack_key
 EXPORT_SYMBOL_GPL vmlinux 0x14765fca	ata_host_resume
 EXPORT_SYMBOL_GPL vmlinux 0x1485d56f	pm_qos_update_request
 EXPORT_SYMBOL_GPL vmlinux 0x14982992	smp_call_function_any

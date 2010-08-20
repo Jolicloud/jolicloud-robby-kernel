@@ -9791,6 +9791,7 @@ EXPORT_SYMBOL_GPL vmlinux 0x40a0d827	init_pid_ns
 EXPORT_SYMBOL_GPL vmlinux 0x40af0dec	ata_xfer_mode2mask
 EXPORT_SYMBOL_GPL vmlinux 0x41b083a0	ring_buffer_read_page
 EXPORT_SYMBOL_GPL vmlinux 0x41de7864	securityfs_remove
+EXPORT_SYMBOL_GPL vmlinux 0x41df32bc	setup_deferrable_timer_on_stack_key
 EXPORT_SYMBOL_GPL vmlinux 0x4201fb03	kobject_get_path
 EXPORT_SYMBOL_GPL vmlinux 0x424acc6d	scatterwalk_done
 EXPORT_SYMBOL_GPL vmlinux 0x426f13b9	e820_all_mapped

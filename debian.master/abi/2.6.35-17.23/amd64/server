@@ -9677,6 +9677,7 @@ EXPORT_SYMBOL_GPL vmlinux 0x41631eea	cpufreq_cpu_get
 EXPORT_SYMBOL_GPL vmlinux 0x418530de	__css_put
 EXPORT_SYMBOL_GPL vmlinux 0x41d6a125	vma_kernel_pagesize
 EXPORT_SYMBOL_GPL vmlinux 0x41da160e	tcp_slow_start
+EXPORT_SYMBOL_GPL vmlinux 0x41df32bc	setup_deferrable_timer_on_stack_key
 EXPORT_SYMBOL_GPL vmlinux 0x41e40bbd	sata_link_resume
 EXPORT_SYMBOL_GPL vmlinux 0x4234f014	regulator_bulk_free
 EXPORT_SYMBOL_GPL vmlinux 0x424acc6d	scatterwalk_done

@@ -9787,6 +9787,7 @@ EXPORT_SYMBOL_GPL vmlinux 0x411619a1	ata_dev_next
 EXPORT_SYMBOL_GPL vmlinux 0x4117be47	inet_diag_unregister
 EXPORT_SYMBOL_GPL vmlinux 0x4123eb7e	__scsi_get_command
 EXPORT_SYMBOL_GPL vmlinux 0x417f2faa	da903x_unregister_notifier
+EXPORT_SYMBOL_GPL vmlinux 0x41df32bc	setup_deferrable_timer_on_stack_key
 EXPORT_SYMBOL_GPL vmlinux 0x41e374b8	nf_unregister_afinfo
 EXPORT_SYMBOL_GPL vmlinux 0x4201fb03	kobject_get_path
 EXPORT_SYMBOL_GPL vmlinux 0x423d02fd	scsi_schedule_eh
