@@ -55,3 +55,6 @@ value CONFIG_FRAMEBUFFER_CONSOLE y
 # UbuntuSpec:foundations-m-grub2-boot-framebuffer
 (( arch i386 | arch amd64 ) & value CONFIG_FB_VESA y) | \
 	value CONFIG_FB_VESA m | !exists CONFIG_FB_VESA
+
+# Build in uinput module so that it's always available (LP: 584812)
+value CONFIG_INPUT_UINPUT y
