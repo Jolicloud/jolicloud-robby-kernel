@@ -1,3 +1,17 @@
+linux (2.6.32.16-1.20.4) robby-test; urgency=low
+
+  [ Adam McDaniel ]
+
+  * CONFIG: Enabled CONFIG_HID_EGALAX
+
+  [ Upstream Kernel Changes ]
+
+  * HID: add support for the eGalax dual-touch panel
+  * Input: add the ABS_MT_PRESSURE event
+  * ACPI: Add Asus EeePC T101MT to OSI(Linux) white-list
+
+ -- Adam McDaniel <adam@jolicloud.org>  Sat, 21 Aug 2010 00:06:12 -0600
+
 linux (2.6.32.16-1.20.3) robby-dev; urgency=low
 
   [ Adam McDaniel ]
