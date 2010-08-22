@@ -271,7 +271,7 @@ int au_nhash_append_wh(struct au_nhash *whlist, char *name, int nlen, ino_t ino,
 	hlist_add_head(&wh->wh_hash, au_name_hash(whlist, name, nlen));
 	/* smp_mb(); */
 
- out:
+out:
 	return err;
 }
 
@@ -300,7 +300,7 @@ static int append_deblk(struct au_vdir *vdir)
 		err = set_deblk_end(&p, &deblk_end);
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -349,7 +349,7 @@ static int append_de(struct au_vdir *vdir, char *name, int nlen, ino_t ino,
 		err = append_deblk(vdir);
 	/* smp_mb(); */
 
- out:
+out:
 	return err;
 }
 
@@ -399,9 +399,9 @@ static struct au_vdir *alloc_vdir(struct file *file)
 
 	kfree(vdir->vd_deblk);
 
- out_free:
+out_free:
 	au_cache_free_vdir(vdir);
- out:
+out:
 	vdir = ERR_PTR(err);
 	return vdir;
 }
@@ -498,7 +498,7 @@ static int fillvdir(void *__arg, const char *__name, int nlen,
 		}
 	}
 
- out:
+out:
 	if (!arg->err)
 		arg->vdir->vd_jiffy = jiffies;
 	/* smp_mb(); */
@@ -543,7 +543,7 @@ static int au_handle_shwh(struct super_block *sb, struct au_vdir *vdir,
 
 	__putname(o);
 
- out:
+out:
 	AuTraceErr(err);
 	return err;
 #else
@@ -615,9 +615,9 @@ static int au_do_read_vdir(struct fillvdir_arg *arg)
 
 	au_nhash_wh_free(&arg->whlist);
 
- out_delist:
+out_delist:
 	au_nhash_de_free(&arg->delist);
- out:
+out:
 	return err;
 }
 
@@ -672,7 +672,7 @@ static int read_vdir(struct file *file, int may_read)
 	} else if (allocated)
 		au_vdir_free(allocated);
 
- out:
+out:
 	return err;
 }
 
@@ -724,7 +724,7 @@ static int copy_vdir(struct au_vdir *tgt, struct au_vdir *src)
 	/* smp_mb(); */
 	return 0; /* success */
 
- out:
+out:
 	rerr = reinit_vdir(tgt);
 	BUG_ON(rerr);
 	return err;
@@ -764,7 +764,7 @@ int au_vdir_init(struct file *file)
 	} else if (allocated)
 		au_vdir_free(allocated);
 
- out:
+out:
 	return err;
 }
 
@@ -829,7 +829,7 @@ static int seek_vdir(struct file *file)
 		}
 	}
 
- out:
+out:
 	/* smp_mb(); */
 	AuTraceErr(!valid);
 	return valid;
