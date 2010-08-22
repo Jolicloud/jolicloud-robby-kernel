@@ -312,7 +312,7 @@ int au_copy_file(struct file *dst, struct file *src, loff_t len)
 	else
 		free_page((unsigned long)buf);
 
- out:
+out:
 	return err;
 }
 
@@ -367,13 +367,13 @@ static int au_cp_regular(struct dentry *dentry, aufs_bindex_t bdst,
 	IMustLock(file[SRC].dentry->d_inode);
 	err = au_copy_file(file[DST].file, file[SRC].file, len);
 
- out_dst:
+out_dst:
 	fput(file[DST].file);
 	au_sbr_put(sb, file[DST].bindex);
- out_src:
+out_src:
 	fput(file[SRC].file);
 	au_sbr_put(sb, file[SRC].bindex);
- out:
+out:
 	return err;
 }
 
@@ -400,7 +400,7 @@ static int au_do_cpup_regular(struct dentry *dentry, aufs_bindex_t bdst,
 		err = -EIO;
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -435,7 +435,7 @@ static int au_do_cpup_symlink(struct path *h_path, struct dentry *h_src,
 	}
 	__putname(sym.k);
 
- out:
+out:
 	return err;
 }
 
@@ -656,7 +656,7 @@ out_rev:
 		err = -EIO;
 	}
 
- out:
+out:
 	dput(dst_parent);
 	return err;
 }
@@ -869,9 +869,9 @@ static int au_cpup_wh(struct dentry *dentry, aufs_bindex_t bdst, loff_t len,
 	au_dtime_revert(&dt);
 	au_set_hi_wh(dentry->d_inode, bdst, wh_dentry);
 
- out_wh:
+out_wh:
 	dput(wh_dentry);
- out:
+out:
 	dput(parent);
 	return err;
 }
@@ -1017,7 +1017,7 @@ int au_cp_dirs(struct dentry *dentry, aufs_bindex_t bdst,
 			break;
 	}
 
- out:
+out:
 	dput(parent);
 	return err;
 }
@@ -1053,7 +1053,7 @@ int au_test_and_cpup_dirs(struct dentry *dentry, aufs_bindex_t bdst)
 		err = au_cpup_dirs(dentry, bdst);
 	di_downgrade_lock(parent, AuLock_IR);
 
- out:
+out:
 	dput(parent);
 	return err;
 }

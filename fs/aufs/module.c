@@ -141,18 +141,18 @@ static int __init aufs_init(void)
 	printk(KERN_INFO AUFS_NAME " " AUFS_VERSION "\n");
 	goto out; /* success */
 
- out_cache:
+out_cache:
 	au_cache_fin();
- out_sysrq:
+out_sysrq:
 	au_sysrq_fin();
- out_hin:
+out_hin:
 	au_hnotify_fin();
- out_wkq:
+out_wkq:
 	au_wkq_fin();
- out_sysaufs:
+out_sysaufs:
 	sysaufs_fin();
 	au_dy_fin();
- out:
+out:
 	return err;
 }
 

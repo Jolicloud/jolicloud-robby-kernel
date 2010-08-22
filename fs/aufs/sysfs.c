@@ -157,7 +157,7 @@ ssize_t sysaufs_si_show(struct kobject *kobj, struct attribute *attr,
 	}
 	BUG();
 
- out_seq:
+out_seq:
 	if (!err) {
 		err = seq->count;
 		/* sysfs limit */
@@ -165,9 +165,9 @@ ssize_t sysaufs_si_show(struct kobject *kobj, struct attribute *attr,
 			err = -EFBIG;
 	}
 	kfree(seq);
- out_unlock:
+out_unlock:
 	si_read_unlock(sb);
- out:
+out:
 	return err;
 }
 

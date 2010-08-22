@@ -143,9 +143,9 @@ static struct au_branch *au_br_alloc(struct super_block *sb, int new_nbranch,
 
 	kfree(add_branch->br_wbr);
 
- out_br:
+out_br:
 	kfree(add_branch);
- out:
+out:
 	return ERR_PTR(err);
 }
 
@@ -163,7 +163,7 @@ static int test_br(struct inode *inode, int brperm, char *path)
 	err = -EINVAL;
 	pr_err("write permission for readonly mount or inode, %s\n", path);
 
- out:
+out:
 	return err;
 }
 
@@ -253,7 +253,7 @@ static int test_add(struct super_block *sb, struct au_opt_add *add, int remount)
 				   (h_inode->i_mode & S_IALLUGO));
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -333,7 +333,7 @@ static int au_wbr_init(struct au_branch *br, struct super_block *sb,
 		       AuDLNPair(h_dentry), au_sbtype(h_dentry->d_sb),
 		       kst.f_namelen);
 
- out:
+out:
 	return err;
 }
 
@@ -374,9 +374,9 @@ static int au_br_init(struct au_branch *br, struct super_block *sb,
 	mntget(add->path.mnt);
 	goto out; /* success */
 
- out_err:
+out_err:
 	br->br_mnt = NULL;
- out:
+out:
 	return err;
 }
 
@@ -506,7 +506,7 @@ int au_br_add(struct super_block *sb, struct au_opt_add *add, int remount)
 	    && add_branch->br_xino.xi_file->f_dentry->d_parent == h_dentry)
 		au_xino_brid_set(sb, add_branch->br_id);
 
- out:
+out:
 	return err;
 }
 
@@ -575,9 +575,9 @@ static int test_dentry_busy(struct dentry *root, aufs_bindex_t bindex,
 		}
 	}
 
- out_dpages:
+out_dpages:
 	au_dpages_free(&dpages);
- out:
+out:
 	return err;
 }
 
@@ -803,13 +803,13 @@ int au_br_del(struct super_block *sb, struct au_opt_del *del, int remount)
 		au_xino_brid_set(sb, -1);
 	goto out; /* success */
 
- out_wh:
+out_wh:
 	/* revert */
 	rerr = au_br_init_wh(sb, br, br->br_perm, del->h_path.dentry);
 	if (rerr)
 		pr_warning("failed re-creating base whiteout, %s. (%d)\n",
 			   del->pathname, rerr);
- out:
+out:
 	return err;
 }
 
@@ -913,9 +913,9 @@ static int au_br_mod_files_ro(struct super_block *sb, aufs_bindex_t bindex)
 		}
 	}
 
- out_free:
+out_free:
 	kfree(a);
- out:
+out:
 	return err;
 }
 
@@ -1000,6 +1000,6 @@ int au_br_mod(struct super_block *sb, struct au_opt_mod *mod, int remount,
 		br->br_perm = mod->perm;
 	}
 
- out:
+out:
 	return err;
 }
