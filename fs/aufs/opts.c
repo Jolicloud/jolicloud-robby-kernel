@@ -625,7 +625,7 @@ static int opt_add(struct au_opt *opt, char *opt_str, unsigned long sb_flags,
 	pr_err("lookup failed %s (%d)\n", add->pathname, err);
 	err = -EINVAL;
 
- out:
+out:
 	return err;
 }
 
@@ -662,7 +662,7 @@ static int au_opts_parse_idel(struct super_block *sb, aufs_bindex_t bindex,
 	del->h_path.dentry = dget(au_h_dptr(root, bindex));
 	del->h_path.mnt = mntget(au_sbr_mnt(sb, bindex));
 
- out:
+out:
 	aufs_read_unlock(root, !AuLock_IR);
 	return err;
 }
@@ -694,7 +694,7 @@ static int au_opts_parse_mod(struct au_opt_mod *mod, substring_t args[])
 	mod->h_root = dget(path.dentry);
 	path_put(&path);
 
- out:
+out:
 	return err;
 }
 
@@ -719,7 +719,7 @@ static int au_opts_parse_imod(struct super_block *sb, aufs_bindex_t bindex,
 	      mod->path, mod->perm, args[1].from);
 	mod->h_root = dget(au_h_dptr(root, bindex));
 
- out:
+out:
 	aufs_read_unlock(root, !AuLock_IR);
 	return err;
 }
@@ -747,7 +747,7 @@ static int au_opts_parse_xino(struct super_block *sb, struct au_opt_xino *xino,
 	xino->file = file;
 	xino->path = args[0].from;
 
- out:
+out:
 	return err;
 }
 
@@ -785,7 +785,7 @@ int au_opts_parse_xino_itrunc_path(struct super_block *sb,
 		err = -EINVAL;
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -1052,7 +1052,7 @@ int au_opts_parse(struct super_block *sb, char *str, struct au_opts *opts)
 	if (unlikely(err))
 		au_opts_free(opts);
 
- out:
+out:
 	return err;
 }
 
@@ -1523,7 +1523,7 @@ int au_opts_mount(struct super_block *sb, struct au_opts *opts)
 		au_hn_reset(dir, au_hi_flags(dir, /*isdir*/1) & ~AuHi_XINO);
 	}
 
- out:
+out:
 	return err;
 }
 
