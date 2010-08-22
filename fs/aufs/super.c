@@ -71,7 +71,7 @@ struct inode *au_iget_locked(struct super_block *sb, ino_t ino)
 		inode = ERR_PTR(err);
 	}
 
- out:
+out:
 	/* never return NULL */
 	AuDebugOn(!inode);
 	AuTraceErrPtr(inode);
@@ -182,7 +182,7 @@ static int au_show_xino(struct seq_file *seq, struct vfsmount *mnt)
 	seq_puts(seq, ",xino=");
 	err = au_xino_path(seq, f);
 
- out:
+out:
 	return err;
 #endif
 }
@@ -259,7 +259,7 @@ static int aufs_show_options(struct seq_file *m, struct vfsmount *mnt)
 	AuBool(WARN_PERM, warn_perm);
 	AuBool(VERBOSE, verbose);
 
- out:
+out:
 	/* be sure to print "br:" last */
 	if (!sysaufs_brs) {
 		seq_puts(m, ",br:");
@@ -332,7 +332,7 @@ static int au_statfs_sum(struct super_block *sb, struct kstatfs *buf)
 	buf->f_files = files;
 	buf->f_ffree = ffree;
 
- out:
+out:
 	return err;
 }
 
@@ -491,9 +491,9 @@ static int refresh_dir(struct dentry *root, unsigned int sigen)
 		}
 	}
 
- out_dpages:
+out_dpages:
 	au_dpages_free(&dpages);
- out:
+out:
 	return err;
 }
 
@@ -561,9 +561,9 @@ static int refresh_nondir(struct dentry *root, unsigned int sigen,
 		}
 	}
 
- out_dpages:
+out_dpages:
 	au_dpages_free(&dpages);
- out:
+out:
 	return err;
 }
 
@@ -675,9 +675,9 @@ static int aufs_remount_fs(struct super_block *sb, int *flags, char *data)
 	aufs_write_unlock(root);
 	mutex_unlock(&inode->i_mutex);
 
- out_opts:
+out_opts:
 	free_page((unsigned long)opts.opt);
- out:
+out:
 	err = cvt_err(err);
 	AuTraceErr(err);
 	return err;
@@ -729,10 +729,10 @@ static int alloc_root(struct super_block *sb)
 	dput(root);
 	goto out; /* do not iput */
 
- out_iput:
+out_iput:
 	iget_failed(inode);
 	iput(inode);
- out:
+out:
 	return err;
 
 }
@@ -800,15 +800,15 @@ static int aufs_fill_super(struct super_block *sb, void *raw_data,
 	if (!err)
 		goto out_opts; /* success */
 
- out_root:
+out_root:
 	dput(root);
 	sb->s_root = NULL;
- out_info:
+out_info:
 	kobject_put(&au_sbi(sb)->si_kobj);
 	sb->s_fs_info = NULL;
- out_opts:
+out_opts:
 	free_page((unsigned long)opts.opt);
- out:
+out:
 	AuTraceErr(err);
 	err = cvt_err(err);
 	AuTraceErr(err);

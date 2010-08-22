@@ -252,7 +252,7 @@ static int do_pri_br(aufs_bindex_t bindex, struct au_branch *br)
 	     atomic_read(&sb->s_active), !!br->br_xino.xi_file);
 	return 0;
 
- out:
+out:
 	dpri("s%d: err %ld\n", bindex, PTR_ERR(br));
 	return -1;
 }

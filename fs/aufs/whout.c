@@ -93,9 +93,9 @@ int au_wh_test(struct dentry *h_parent, struct qstr *wh_name,
 	AuIOErr("%.*s Invalid whiteout entry type 0%o.\n",
 		AuDLNPair(wh_dentry), wh_dentry->d_inode->i_mode);
 
- out_wh:
+out_wh:
 	dput(wh_dentry);
- out:
+out:
 	return err;
 }
 
@@ -161,10 +161,10 @@ struct dentry *au_whtmp_lkup(struct dentry *h_parent, struct au_branch *br,
 	AuDbg("%.*s\n", AuLNPair(&qs));
 	BUG();
 
- out_name:
+out_name:
 	if (name != defname)
 		kfree(name);
- out:
+out:
 	AuTraceErrPtr(dentry);
 	return dentry;
 }
@@ -195,7 +195,7 @@ int au_whtmp_ren(struct dentry *h_dentry, struct au_branch *br)
 	AuTraceErr(err);
 	dput(h_path.dentry);
 
- out:
+out:
 	AuTraceErr(err);
 	return err;
 }
@@ -366,7 +366,7 @@ static int au_wh_init_rw_nolink(struct dentry *h_root, struct au_wbr *wbr,
 		goto out;
 	wbr->wbr_orph = dget(base[AuBrWh_ORPH].dentry);
 
- out:
+out:
 	return err;
 }
 
@@ -429,7 +429,7 @@ static int au_wh_init_rw(struct dentry *h_root, struct au_wbr *wbr,
 		goto out;
 	wbr->wbr_orph = dget(base[AuBrWh_ORPH].dentry);
 
- out:
+out:
 	return err;
 }
 
@@ -531,10 +531,10 @@ int au_wh_init(struct dentry *h_root, struct au_branch *br,
 	}
 	goto out; /* success */
 
- out_err:
+out_err:
 	pr_err("an error(%d) on the writable branch %.*s(%s)\n",
 	       err, AuDLNPair(h_root), au_sbtype(h_root->d_sb));
- out:
+out:
 	for (i = 0; i < AuBrWh_Last; i++)
 		dput(base[i].dentry);
 	return err;
@@ -603,7 +603,7 @@ static void reinit_br_wh(void *arg)
 	au_hn_imtx_unlock(hdir);
 	di_read_unlock(a->sb->s_root, AuLock_IR);
 
- out:
+out:
 	if (wbr)
 		atomic_dec(&wbr->wbr_wh_running);
 	atomic_dec(&a->br->br_count);
@@ -642,7 +642,7 @@ static void kick_reinit_br_wh(struct super_block *sb, struct au_branch *br)
 		do_dec = 0;
 	}
 
- out:
+out:
 	if (do_dec)
 		atomic_dec(&br->br_wbr->wbr_wh_running);
 }
@@ -684,7 +684,7 @@ static int link_or_create_wh(struct super_block *sb, aufs_bindex_t bindex,
 	/* return this error in this context */
 	err = vfsub_create(h_dir, &h_path, WH_MASK);
 
- out:
+out:
 	wbr_wh_read_unlock(wbr);
 	return err;
 }
@@ -727,7 +727,7 @@ static struct dentry *do_diropq(struct dentry *dentry, aufs_bindex_t bindex,
 	dput(opq_dentry);
 	opq_dentry = ERR_PTR(err);
 
- out:
+out:
 	return opq_dentry;
 }
 
@@ -866,7 +866,7 @@ static int del_wh_children(struct dentry *h_dentry, struct au_nhash *whlist,
 	}
 	__putname(wh_name.name);
 
- out:
+out:
 	return err;
 }
 
@@ -912,7 +912,7 @@ struct au_whtmp_rmdir *au_whtmp_rmdir_alloc(struct super_block *sb, gfp_t gfp)
 		whtmp = ERR_PTR(err);
 	}
 
- out:
+out:
 	return whtmp;
 }
 
@@ -1023,7 +1023,7 @@ static void call_rmdir_whtmp(void *args)
 	dput(h_parent);
 	ii_write_unlock(a->dir);
 
- out:
+out:
 	/* mutex_unlock(&a->dir->i_mutex); */
 	au_nwt_done(&au_sbi(sb)->si_nowait);
 	si_read_unlock(sb);

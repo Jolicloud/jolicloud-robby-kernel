@@ -52,9 +52,9 @@ int au_dpages_init(struct au_dcsub_pages *dpages, gfp_t gfp)
 	dpages->ndpage = 1;
 	return 0; /* success */
 
- out_dpages:
+out_dpages:
 	kfree(dpages->dpages);
- out:
+out:
 	return err;
 }
 
@@ -101,7 +101,7 @@ static int au_dpages_append(struct au_dcsub_pages *dpages,
 	dpage->dentries[dpage->ndentry++] = dget(dentry);
 	return 0; /* success */
 
- out:
+out:
 	return err;
 }
 
@@ -115,9 +115,9 @@ int au_dcsub_pages(struct au_dcsub_pages *dpages, struct dentry *root,
 
 	err = 0;
 	spin_lock(&dcache_lock);
- repeat:
+repeat:
 	next = this_parent->d_subdirs.next;
- resume:
+resume:
 	if (this_parent->d_sb == sb
 	    && !IS_ROOT(this_parent)
 	    && atomic_read(&this_parent->d_count)
@@ -153,7 +153,7 @@ int au_dcsub_pages(struct au_dcsub_pages *dpages, struct dentry *root,
 		this_parent = this_parent->d_parent; /* dcache_lock is locked */
 		goto resume;
 	}
- out:
+out:
 	spin_unlock(&dcache_lock);
 	return err;
 }
@@ -179,7 +179,7 @@ int au_dcsub_pages_rev(struct au_dcsub_pages *dpages, struct dentry *dentry,
 		}
 	}
 
- out:
+out:
 	spin_unlock(&dcache_lock);
 
 	return err;
@@ -216,8 +216,8 @@ struct dentry *au_test_subdir(struct dentry *d1, struct dentry *d2)
 	if (!err)
 		trap = NULL;
 
- out_dpages:
+out_dpages:
 	au_dpages_free(&dpages);
- out:
+out:
 	return trap;
 }

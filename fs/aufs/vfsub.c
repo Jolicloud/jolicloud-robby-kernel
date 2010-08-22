@@ -63,7 +63,7 @@ struct file *vfsub_filp_open(const char *path, int oflags, int mode)
 		goto out;
 	vfsub_update_h_iattr(&file->f_path, /*did*/NULL); /*ignore*/
 
- out:
+out:
 	return file;
 }
 
@@ -94,7 +94,7 @@ struct dentry *vfsub_lookup_one_len(const char *name, struct dentry *parent,
 	if (path.dentry->d_inode)
 		vfsub_update_h_iattr(&path, /*did*/NULL); /*ignore*/
 
- out:
+out:
 	AuTraceErrPtr(path.dentry);
 	return path.dentry;
 }
@@ -113,7 +113,7 @@ struct dentry *vfsub_lookup_hash(struct nameidata *nd)
 	if (path.dentry->d_inode)
 		vfsub_update_h_iattr(&path, /*did*/NULL); /*ignore*/
 
- out:
+out:
 	AuTraceErrPtr(path.dentry);
 	return path.dentry;
 }
@@ -191,7 +191,7 @@ int vfsub_create(struct inode *dir, struct path *path, int mode)
 		/*ignore*/
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -222,7 +222,7 @@ int vfsub_symlink(struct inode *dir, struct path *path, const char *symname)
 		/*ignore*/
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -253,7 +253,7 @@ int vfsub_mknod(struct inode *dir, struct path *path, int mode, dev_t dev)
 		/*ignore*/
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -303,7 +303,7 @@ int vfsub_link(struct dentry *src_dentry, struct inode *dir, struct path *path)
 		/*ignore*/
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -344,7 +344,7 @@ int vfsub_rename(struct inode *src_dir, struct dentry *src_dentry,
 		/*ignore*/
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -375,7 +375,7 @@ int vfsub_mkdir(struct inode *dir, struct path *path, int mode)
 		/*ignore*/
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -405,7 +405,7 @@ int vfsub_rmdir(struct inode *dir, struct path *path)
 		vfsub_update_h_iattr(&tmp, /*did*/NULL); /*ignore*/
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -557,13 +557,13 @@ int vfsub_trunc(struct path *h_path, loff_t length, unsigned int attr,
 		lockdep_on();
 	}
 
- out_inode:
+out_inode:
 	if (!h_file)
 		put_write_access(h_inode);
- out_mnt:
+out_mnt:
 	if (!h_file)
 		mnt_drop_write(h_path->mnt);
- out:
+out:
 	return err;
 }
 

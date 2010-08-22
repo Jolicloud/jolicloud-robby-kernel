@@ -46,8 +46,8 @@ struct au_fidir {
 
 static inline int au_fidir_sz(int nent)
 {
-       AuDebugOn(nent < 0);
-       return sizeof(struct au_fidir) + sizeof(struct au_hfile) * nent;
+	AuDebugOn(nent < 0);
+	return sizeof(struct au_fidir) + sizeof(struct au_hfile) * nent;
 }
 
 struct au_finfo {

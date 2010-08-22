@@ -115,13 +115,13 @@ int au_si_alloc(struct super_block *sb)
 	au_debug_sbinfo_init(sbinfo);
 	return 0; /* success */
 
- out_br:
+out_br:
 	kfree(sbinfo->si_branch);
- out_pidmap:
+out_pidmap:
 	kfree(sbinfo->au_si_pid.bitmap);
- out_sbinfo:
+out_sbinfo:
 	kfree(sbinfo);
- out:
+out:
 	return err;
 }
 
