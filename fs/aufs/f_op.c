@@ -131,7 +131,7 @@ static ssize_t aufs_read(struct file *file, char __user *buf, size_t count,
 
 	di_read_unlock(dentry, AuLock_IR);
 	fi_read_unlock(file);
- out:
+out:
 	si_read_unlock(sb);
 	return err;
 }
@@ -168,10 +168,10 @@ static ssize_t aufs_write(struct file *file, const char __user *ubuf,
 	au_cpup_attr_timesizes(inode);
 	inode->i_mode = h_file->f_dentry->d_inode->i_mode;
 
- out_unlock:
+out_unlock:
 	di_read_unlock(dentry, AuLock_IR);
 	fi_write_unlock(file);
- out:
+out:
 	si_read_unlock(sb);
 	mutex_unlock(&inode->i_mutex);
 	return err;
@@ -204,7 +204,7 @@ static ssize_t au_do_aio(struct file *h_file, int rw, struct kiocb *kio,
 		/* currently there is no such fs */
 		WARN_ON_ONCE(1);
 
- out:
+out:
 	return err;
 }
 
@@ -232,7 +232,7 @@ static ssize_t aufs_aio_read(struct kiocb *kio, const struct iovec *iov,
 	di_read_unlock(dentry, AuLock_IR);
 	fi_read_unlock(file);
 
- out:
+out:
 	si_read_unlock(sb);
 	return err;
 }
@@ -268,10 +268,10 @@ static ssize_t aufs_aio_write(struct kiocb *kio, const struct iovec *iov,
 	au_cpup_attr_timesizes(inode);
 	inode->i_mode = h_file->f_dentry->d_inode->i_mode;
 
- out_unlock:
+out_unlock:
 	di_read_unlock(dentry, AuLock_IR);
 	fi_write_unlock(file);
- out:
+out:
 	si_read_unlock(sb);
 	mutex_unlock(&inode->i_mutex);
 	return err;
@@ -307,7 +307,7 @@ static ssize_t aufs_splice_read(struct file *file, loff_t *ppos,
 	di_read_unlock(dentry, AuLock_IR);
 	fi_read_unlock(file);
 
- out:
+out:
 	si_read_unlock(sb);
 	return err;
 }
@@ -344,10 +344,10 @@ aufs_splice_write(struct pipe_inode_info *pipe, struct file *file, loff_t *ppos,
 	au_cpup_attr_timesizes(inode);
 	inode->i_mode = h_file->f_dentry->d_inode->i_mode;
 
- out_unlock:
+out_unlock:
 	di_read_unlock(dentry, AuLock_IR);
 	fi_write_unlock(file);
- out:
+out:
 	si_read_unlock(sb);
 	mutex_unlock(&inode->i_mutex);
 	return err;
@@ -525,7 +525,7 @@ au_hvmop(struct file *h_file, struct vm_area_struct *vma, unsigned long *flags)
 		h_vmop = ERR_PTR(-EIO);
 	}
 
- out:
+out:
 	return h_vmop;
 }
 
@@ -676,10 +676,10 @@ static int aufs_mmap(struct file *file, struct vm_area_struct *vma)
 	/* update without lock, I don't think it a problem */
 	fsstack_copy_attr_atime(file->f_dentry->d_inode, h_dentry->d_inode);
 
- out_unlock:
+out_unlock:
 	au_fi_mmap_unlock(file);
 	fput(args.h_file);
- out:
+out:
 	return err;
 }
 
@@ -739,10 +739,10 @@ static int aufs_fsync_nondir(struct file *file, struct dentry *dentry,
 		mutex_unlock(h_mtx);
 	}
 
- out_unlock:
+out_unlock:
 	di_read_unlock(dentry, AuLock_IR);
 	fi_write_unlock(file);
- out:
+out:
 	si_read_unlock(sb);
 	if (inode != file->f_mapping->host) {
 		mutex_unlock(&inode->i_mutex);
@@ -805,10 +805,10 @@ static int aufs_aio_fsync_nondir(struct kiocb *kio, int datasync)
 		mutex_unlock(h_mtx);
 	}
 
- out_unlock:
+out_unlock:
 	di_read_unlock(dentry, AuLock_IR);
 	fi_write_unlock(file);
- out:
+out:
 	si_read_unlock(sb);
 	mutex_unlock(&inode->i_mutex);
 	return err;
@@ -836,7 +836,7 @@ static int aufs_fasync(int fd, struct file *file, int flag)
 	di_read_unlock(dentry, AuLock_IR);
 	fi_read_unlock(file);
 
- out:
+out:
 	si_read_unlock(sb);
 	return err;
 }

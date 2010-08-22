@@ -100,9 +100,11 @@ static int aufs_release_sp(struct inode *inode, struct file *file)
 /* ---------------------------------------------------------------------- */
 
 /* currently, support only FIFO */
-enum {AuSp_FIFO, AuSp_FIFO_R, AuSp_FIFO_W, AuSp_FIFO_RW,
-      /* AuSp_SOCK, AuSp_CHR, AuSp_BLK, */
-      AuSp_Last};
+enum {
+	AuSp_FIFO, AuSp_FIFO_R, AuSp_FIFO_W, AuSp_FIFO_RW,
+	/* AuSp_SOCK, AuSp_CHR, AuSp_BLK, */
+	AuSp_Last
+};
 static int aufs_open_sp(struct inode *inode, struct file *file);
 static struct au_sp_fop {
 	int			done;
@@ -202,7 +204,7 @@ static int au_cpup_sp(struct dentry *dentry)
 		au_unpin(&pin);
 	}
 
- out:
+out:
 	di_downgrade_lock(dentry, AuLock_IR);
 	return err;
 }
@@ -245,7 +247,7 @@ static int au_do_open_sp(struct file *file, int flags)
 	else
 		au_finfo_fin(file);
 
- out:
+out:
 	return err;
 }
 
