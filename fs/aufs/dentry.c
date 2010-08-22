@@ -124,7 +124,7 @@ au_do_lookup(struct dentry *h_parent, struct dentry *dentry,
 	if (!allow_neg)
 		return NULL; /* success */
 
- real_lookup:
+real_lookup:
 	h_dentry = au_lkup_one(&dentry->d_name, h_parent, br, args->nd);
 	if (IS_ERR(h_dentry))
 		goto out;
@@ -159,10 +159,10 @@ au_do_lookup(struct dentry *h_parent, struct dentry *dentry,
 	}
 	goto out;
 
- out_neg:
+out_neg:
 	dput(h_dentry);
 	h_dentry = NULL;
- out:
+out:
 	return h_dentry;
 }
 
@@ -269,10 +269,10 @@ int au_lkup_dentry(struct dentry *dentry, aufs_bindex_t bstart, mode_t type,
 		/* both of real entry and whiteout found */
 		err = -EIO;
 
- out_parent:
+out_parent:
 	dput(parent);
 	kfree(whname.name);
- out:
+out:
 	return err;
 }
 
@@ -331,7 +331,7 @@ int au_lkup_neg(struct dentry *dentry, aufs_bindex_t bindex)
 		au_set_dbend(dentry, bindex);
 	au_set_h_dptr(dentry, bindex, h_dentry);
 
- out:
+out:
 	dput(parent);
 	return err;
 }
@@ -413,7 +413,7 @@ static int au_h_verify_dentry(struct dentry *h_dentry, struct dentry *h_parent,
 		err = au_busy_or_stale();
 	dput(h_d);
 
- out:
+out:
 	AuTraceErr(err);
 	return err;
 }
@@ -550,9 +550,9 @@ int au_refresh_hdentry(struct dentry *dentry, mode_t type)
 	if (dinfo->di_bwh >= 0 && dinfo->di_bwh <= dinfo->di_bstart)
 		d_drop(dentry);
 
- out_dgen:
+out_dgen:
 	au_update_digen(dentry);
- out:
+out:
 	dput(parent);
 	AuTraceErr(npositive);
 	return npositive;
@@ -602,7 +602,7 @@ int au_do_h_d_reval(struct dentry *h_dentry, struct nameidata *nd,
 	else if (!valid)
 		err = -EINVAL;
 
- out:
+out:
 	AuTraceErr(err);
 	return err;
 }
@@ -826,9 +826,9 @@ static int aufs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 		err = -EIO;
 	goto out;
 
- out_dgrade:
+out_dgrade:
 	di_downgrade_lock(dentry, AuLock_IR);
- out:
+out:
 	aufs_read_unlock(dentry, AuLock_IR);
 	AuTraceErr(err);
 	valid = !err;

@@ -98,9 +98,9 @@ struct file *au_h_open(struct dentry *dentry, aufs_bindex_t bindex, int flags,
 	fsnotify_open(h_file);
 	goto out; /* success */
 
- out_br:
+out_br:
 	atomic_dec(&br->br_count);
- out:
+out:
 	return h_file;
 }
 
@@ -125,7 +125,7 @@ int au_do_open(struct file *file, int (*open)(struct file *file, int flags),
 		au_finfo_fin(file);
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -164,7 +164,7 @@ int au_reopen_nondir(struct file *file)
 	/* todo: necessary? */
 	/* file->f_ra = h_file->f_ra; */
 
- out:
+out:
 	if (h_file_tmp)
 		fput(h_file_tmp);
 	return err;
@@ -293,13 +293,13 @@ int au_ready_to_write(struct file *file, loff_t len, struct au_pin *pin)
 	au_unpin(pin);
 	goto out_unlock;
 
- out_dgrade:
+out_dgrade:
 	di_downgrade_lock(parent, AuLock_IR);
- out_unlock:
+out_unlock:
 	di_read_unlock(parent, AuLock_IR);
- out_dput:
+out_dput:
 	dput(parent);
- out:
+out:
 	return err;
 }
 
@@ -385,11 +385,11 @@ static int au_file_refresh_by_inode(struct file *file, int *need_reopen)
 		*need_reopen = 0;
 	}
 
- out_unlock:
+out_unlock:
 	di_read_unlock(parent, AuLock_IR);
- out_parent:
+out_parent:
 	dput(parent);
- out:
+out:
 	return err;
 }
 
@@ -512,7 +512,7 @@ static int refresh_file(struct file *file, int (*reopen)(struct file *file))
 			au_set_h_fptr(file, bindex, NULL);
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -566,7 +566,7 @@ int au_reval_and_lock_fdi(struct file *file, int (*reopen)(struct file *file),
 		fi_write_unlock(file);
 	}
 
- out:
+out:
 	return err;
 }
 

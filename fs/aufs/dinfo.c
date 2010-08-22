@@ -59,9 +59,9 @@ int au_di_init(struct dentry *dentry)
 	dentry->d_op = &aufs_dop;
 	return 0; /* success */
 
- out_dinfo:
+out_dinfo:
 	au_cache_free_dinfo(dinfo);
- out:
+out:
 	return -ENOMEM;
 }
 
