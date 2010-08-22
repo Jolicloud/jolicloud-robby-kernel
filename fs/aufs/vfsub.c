@@ -187,7 +187,7 @@ int vfsub_create(struct inode *dir, struct path *path, int mode)
 		/*ignore*/
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -218,7 +218,7 @@ int vfsub_symlink(struct inode *dir, struct path *path, const char *symname)
 		/*ignore*/
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -249,7 +249,7 @@ int vfsub_mknod(struct inode *dir, struct path *path, int mode, dev_t dev)
 		/*ignore*/
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -299,7 +299,7 @@ int vfsub_link(struct dentry *src_dentry, struct inode *dir, struct path *path)
 		/*ignore*/
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -340,7 +340,7 @@ int vfsub_rename(struct inode *src_dir, struct dentry *src_dentry,
 		/*ignore*/
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -371,7 +371,7 @@ int vfsub_mkdir(struct inode *dir, struct path *path, int mode)
 		/*ignore*/
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -401,7 +401,7 @@ int vfsub_rmdir(struct inode *dir, struct path *path)
 		vfsub_update_h_iattr(&tmp, /*did*/NULL); /*ignore*/
 	}
 
- out:
+out:
 	return err;
 }
 
