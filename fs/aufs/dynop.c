@@ -140,7 +140,7 @@ void au_dy_put(struct au_dykey *key)
 
 #ifdef CONFIG_AUFS_DEBUG
 #define DyDbgDeclare(cnt)	unsigned int cnt = 0
-#define DyDbgInc(cnt)		cnt++
+#define DyDbgInc(cnt)		do { cnt++; } while (0)
 #else
 #define DyDbgDeclare(cnt)	do {} while (0)
 #define DyDbgInc(cnt)		do {} while (0)

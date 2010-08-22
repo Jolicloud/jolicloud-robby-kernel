@@ -140,7 +140,7 @@ static int hn_xino(struct inode *inode, struct inode *h_inode)
 
 	/* children inode number will be broken */
 
- out:
+out:
 	AuTraceErr(err);
 	return err;
 }
@@ -179,13 +179,13 @@ static int hn_gen_tree(struct dentry *dentry)
 		}
 	}
 
- out_dpages:
+out_dpages:
 	au_dpages_free(&dpages);
 
 	/* discard children */
 	dentry_unhash(dentry);
 	dput(dentry);
- out:
+out:
 	return err;
 }
 
@@ -237,7 +237,7 @@ static int hn_gen_by_inode(char *name, unsigned int nlen, struct inode *inode,
 		dput(d);
 	}
 
- out:
+out:
 	AuTraceErr(err);
 	return err;
 }
@@ -416,7 +416,7 @@ static struct inode *lookup_wlock_by_ino(struct super_block *sb,
 
 	ii_write_lock_child(inode);
 
- out:
+out:
 	return inode;
 }
 
@@ -518,7 +518,7 @@ static void au_hn_bh(void *_args)
 	err = hn_job(&args);
 	ii_write_unlock(a->dir);
 
- out:
+out:
 	au_nwt_done(&sbinfo->si_nowait);
 	si_write_unlock(sb);
 

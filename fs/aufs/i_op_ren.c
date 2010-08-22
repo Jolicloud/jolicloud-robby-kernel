@@ -415,34 +415,34 @@ static int do_rename(struct au_ren_args *a)
 	err = 0;
 	goto out_success;
 
- out_diropq:
+out_diropq:
 	if (au_ftest_ren(a->flags, DIROPQ))
 		au_ren_rev_diropq(err, a);
- out_rename:
+out_rename:
 	if (!au_ftest_ren(a->flags, CPUP))
 		au_ren_rev_rename(err, a);
 	else
 		au_ren_rev_cpup(err, a);
- out_whtmp:
+out_whtmp:
 	if (a->thargs)
 		au_ren_rev_whtmp(err, a);
- out_whdst:
+out_whdst:
 	dput(a->dst_wh_dentry);
 	a->dst_wh_dentry = NULL;
- out_whsrc:
+out_whsrc:
 	if (a->src_wh_dentry)
 		au_ren_rev_whsrc(err, a);
 	au_ren_rev_drop(a);
- out_success:
+out_success:
 	dput(a->src_wh_dentry);
 	dput(a->dst_wh_dentry);
- out_thargs:
+out_thargs:
 	if (a->thargs) {
 		dput(a->h_dst);
 		au_whtmp_rmdir_free(a->thargs);
 		a->thargs = NULL;
 	}
- out:
+out:
 	return err;
 }
 
@@ -493,7 +493,7 @@ static int may_rename_srcdir(struct dentry *dentry, aufs_bindex_t btgt)
 
 	err = au_test_empty_lower(dentry);
 
- out:
+out:
 	if (err == -ENOTEMPTY) {
 		AuWarn1("renaming dir who has child(ren) on multiple branches,"
 			" is not supported\n");
@@ -538,7 +538,7 @@ static int au_ren_may_dir(struct au_ren_args *a)
 			a->whlist.nh_num = 0;
 		}
 	}
- out:
+out:
 	return err;
 }
 
@@ -588,7 +588,7 @@ static int au_may_ren(struct au_ren_args *a)
 		err = 0;
 	}
 
- out:
+out:
 	if (unlikely(err == -ENOENT || err == -EEXIST))
 		err = -EIO;
 	AuTraceErr(err);
@@ -665,9 +665,9 @@ static int au_ren_lock(struct au_ren_args *a)
 
 	err = au_busy_or_stale();
 
- out_unlock:
+out_unlock:
 	au_ren_unlock(a);
- out:
+out:
 	return err;
 }
 
@@ -948,13 +948,13 @@ int aufs_rename(struct inode *_src_dir, struct dentry *_src_dentry,
 
 	goto out_hdir; /* success */
 
- out_dt:
+out_dt:
 	au_ren_rev_dt(err, a);
- out_hdir:
+out_hdir:
 	au_ren_unlock(a);
- out_children:
+out_children:
 	au_nhash_wh_free(&a->whlist);
- out_unlock:
+out_unlock:
 	if (unlikely(err && au_ftest_ren(a->flags, ISDIR))) {
 		au_update_dbstart(a->dst_dentry);
 		d_drop(a->dst_dentry);
@@ -966,12 +966,12 @@ int aufs_rename(struct inode *_src_dir, struct dentry *_src_dentry,
 	else
 		di_write_unlock2(a->src_parent, a->dst_parent);
 	aufs_read_and_write_unlock2(a->dst_dentry, a->src_dentry);
- out_free:
+out_free:
 	iput(a->dst_inode);
 	if (a->thargs)
 		au_whtmp_rmdir_free(a->thargs);
 	kfree(a);
- out:
+out:
 	AuTraceErr(err);
 	return err;
 }

@@ -183,7 +183,7 @@ static int do_whplink(struct qstr *tgt, struct dentry *h_parent,
 	struct inode *h_dir;
 
 	h_dir = h_parent->d_inode;
- again:
+again:
 	h_path.dentry = au_lkup_one(tgt, h_parent, br, /*nd*/NULL);
 	err = PTR_ERR(h_path.dentry);
 	if (IS_ERR(h_path.dentry))
@@ -203,7 +203,7 @@ static int do_whplink(struct qstr *tgt, struct dentry *h_parent,
 		err = vfsub_link(h_dentry, h_dir, &h_path);
 	dput(h_path.dentry);
 
- out:
+out:
 	return err;
 }
 
@@ -446,6 +446,6 @@ long au_plink_ioctl(struct file *file, unsigned int cmd)
 		/* err = -ENOTTY; */
 		err = -EINVAL;
 	}
- out:
+out:
 	return err;
 }
