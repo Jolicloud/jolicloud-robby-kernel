@@ -49,7 +49,7 @@ unsigned int aufs_poll(struct file *file, poll_table *wait)
 	di_read_unlock(dentry, AuLock_IR);
 	fi_read_unlock(file);
 
- out:
+out:
 	si_read_unlock(sb);
 	AuTraceErr((int)mask);
 	return mask;
