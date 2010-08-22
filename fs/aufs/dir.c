@@ -132,7 +132,7 @@ static int reopen_dir(struct file *file)
 	/* file->f_ra = h_file->f_ra; */
 	err = 0;
 
- out:
+out:
 	return err;
 }
 
@@ -334,7 +334,7 @@ static int au_do_fsync_dir(struct file *file, int datasync)
 		}
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -412,10 +412,10 @@ static int aufs_readdir(struct file *file, void *dirent, filldir_t filldir)
 		return err;
 	}
 
- out_unlock:
+out_unlock:
 	di_read_unlock(dentry, AuLock_IR);
 	fi_write_unlock(file);
- out:
+out:
 	si_read_unlock(sb);
 	return err;
 }
@@ -470,7 +470,7 @@ static int test_empty_cb(void *__arg, const char *__name, int namelen,
 			(arg->whlist, name, namelen, ino, d_type, arg->bindex,
 			 au_ftest_testempty(arg->flags, SHWH));
 
- out:
+out:
 	/* smp_mb(); */
 	AuTraceErr(arg->err);
 	return arg->err;
@@ -502,10 +502,10 @@ static int do_test_empty(struct dentry *dentry, struct test_empty_arg *arg)
 			err = arg->err;
 	} while (!err && au_ftest_testempty(arg->flags, CALLED));
 
- out_put:
+out_put:
 	fput(h_file);
 	au_sbr_put(dentry->d_sb, arg->bindex);
- out:
+out:
 	return err;
 }
 
@@ -590,9 +590,9 @@ int au_test_empty_lower(struct dentry *dentry)
 		}
 	}
 
- out_whlist:
+out_whlist:
 	au_nhash_wh_free(&whlist);
- out:
+out:
 	return err;
 }
 
