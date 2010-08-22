@@ -126,7 +126,9 @@ static u32 au_hin_conv_mask(u32 mask)
 	u32 conv;
 
 	conv = 0;
-#define do_conv(flag)	conv |= (mask & IN_ ## flag) ? FS_ ## flag : 0
+#define do_conv(flag)	do {					\
+		conv |= (mask & IN_ ## flag) ? FS_ ## flag : 0; \
+	} while (0)
 	do_conv(ACCESS);
 	do_conv(MODIFY);
 	do_conv(ATTRIB);
@@ -142,7 +144,9 @@ static u32 au_hin_conv_mask(u32 mask)
 	do_conv(UNMOUNT);
 	do_conv(Q_OVERFLOW);
 #undef do_conv
-#define do_conv(flag)	conv |= (mask & IN_ ## flag) ? FS_IN_ ## flag : 0
+#define do_conv(flag)	do {						\
+		conv |= (mask & IN_ ## flag) ? FS_IN_ ## flag : 0;	\
+	} while (0)
 	do_conv(IGNORED);
 	/* do_conv(ISDIR); */
 	/* do_conv(ONESHOT); */

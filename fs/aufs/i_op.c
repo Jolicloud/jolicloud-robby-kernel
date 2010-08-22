@@ -80,7 +80,7 @@ static int h_permission(struct inode *h_inode, int mask,
 	}
 #endif
 
- out:
+out:
 	return err;
 }
 
@@ -140,7 +140,7 @@ static int aufs_permission(struct inode *inode, int mask)
 		}
 	}
 
- out:
+out:
 	ii_read_unlock(inode);
 	si_read_unlock(sb);
 	return err;
@@ -189,9 +189,9 @@ static struct dentry *aufs_lookup(struct inode *dir, struct dentry *dentry,
 	if (unlikely(IS_ERR(ret) && inode))
 		ii_write_unlock(inode);
 
- out_unlock:
+out_unlock:
 	di_write_unlock(dentry);
- out:
+out:
 	si_read_unlock(sb);
 	return ret;
 }
@@ -301,7 +301,7 @@ int au_wr_dir(struct dentry *dentry, struct dentry *src_dentry,
 	/* copyup the new parent into the branch we process */
 	err = au_wr_dir_cpup(dentry, parent, add_entry, bcpup, bstart);
 
- out:
+out:
 	dput(parent);
 	return err;
 }
@@ -407,12 +407,12 @@ int au_do_pin(struct au_pin *p)
 	}
 	goto out; /* success */
 
- out_unpin:
+out_unpin:
 	au_unpin(p);
- out_err:
+out_err:
 	pr_err("err %d\n", err);
 	err = au_busy_or_stale();
- out:
+out:
 	return err;
 }
 
@@ -572,7 +572,7 @@ static int au_pin_and_icpup(struct dentry *dentry, struct iattr *ia,
 	else
 		a->h_path.dentry = hi_wh; /* do not dget here */
 
- out_unlock:
+out_unlock:
 	mutex_unlock(&a->h_inode->i_mutex);
 	au_h_open_post(dentry, bstart, h_file);
 	a->h_inode = a->h_path.dentry->d_inode;
@@ -582,12 +582,12 @@ static int au_pin_and_icpup(struct dentry *dentry, struct iattr *ia,
 	}
 
 	au_unpin(&a->pin);
- out_parent:
+out_parent:
 	if (parent) {
 		di_write_unlock(parent);
 		dput(parent);
 	}
- out:
+out:
 	return err;
 }
 
@@ -679,20 +679,20 @@ static int aufs_setattr(struct dentry *dentry, struct iattr *ia)
 	if (!err)
 		au_cpup_attr_changeable(inode);
 
- out_unlock:
+out_unlock:
 	mutex_unlock(&a->h_inode->i_mutex);
 	au_unpin(&a->pin);
- out_dentry:
+out_dentry:
 	di_write_unlock(dentry);
 	if (file) {
 		fi_write_unlock(file);
 		ia->ia_file = file;
 		ia->ia_valid |= ATTR_FILE;
 	}
- out_si:
+out_si:
 	si_read_unlock(sb);
 	kfree(a);
- out:
+out:
 	AuTraceErr(err);
 	return err;
 }
@@ -783,9 +783,9 @@ static int aufs_getattr(struct vfsmount *mnt __maybe_unused,
 	}
 	goto out;
 
- out_fill:
+out_fill:
 	generic_fillattr(inode, st);
- out:
+out:
 	di_read_unlock(dentry, AuLock_IR);
 	si_read_unlock(sb);
 	return err;
@@ -816,7 +816,7 @@ static int h_readlink(struct dentry *dentry, int bindex, char __user *buf,
 	}
 	err = h_dentry->d_inode->i_op->readlink(h_dentry, buf, bufsiz);
 
- out:
+out:
 	return err;
 }
 
@@ -860,7 +860,7 @@ static void *aufs_follow_link(struct dentry *dentry, struct nameidata *nd)
 	}
 	__putname(buf.k);
 
- out:
+out:
 	path_put(&nd->path);
 	AuTraceErr(err);
 	return ERR_PTR(err);

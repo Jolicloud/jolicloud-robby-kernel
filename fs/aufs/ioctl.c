@@ -69,9 +69,9 @@ static int au_wbr_fd(struct path *path)
 	err = fd;
 	goto out; /* success */
 
- out_fd:
+out_fd:
 	put_unused_fd(fd);
- out:
+out:
 	return err;
 }
 
