@@ -94,6 +94,7 @@ enum {
 	STAC_92HD83XXX_PWR_REF,
 	STAC_DELL_S14,
 	STAC_92HD83XXX_HP,
+	STAC_DELL_M6500,
 	STAC_92HD83XXX_MODELS
 };
 
@@ -1631,10 +1632,18 @@ static unsigned int dell_s14_pin_configs[10] = {
 	0x40f000f0, 0x40f000f0,
 };
 
+/* Dell Precision M6500, make sure 0x0e is silenced */
+static unsigned int dell_m6500_pin_configs[10] = {
+	0x03a11030, 0x0321101f, 0x400000f0, 0x90170110,
+	0x400000f0, 0x23011050, 0x400000f0, 0x90a10120,
+	0x014613b0, 0x400000f0,
+};
+
 static unsigned int *stac92hd83xxx_brd_tbl[STAC_92HD83XXX_MODELS] = {
 	[STAC_92HD83XXX_REF] = ref92hd83xxx_pin_configs,
 	[STAC_92HD83XXX_PWR_REF] = ref92hd83xxx_pin_configs,
 	[STAC_DELL_S14] = dell_s14_pin_configs,
+	[STAC_DELL_M6500] = dell_m6500_pin_configs,
 };
 
 static const char *stac92hd83xxx_models[STAC_92HD83XXX_MODELS] = {
@@ -1642,6 +1651,7 @@ static const char *stac92hd83xxx_models[STAC_92HD83XXX_MODELS] = {
 	[STAC_92HD83XXX_REF] = "ref",
 	[STAC_92HD83XXX_PWR_REF] = "mic-ref",
 	[STAC_DELL_S14] = "dell-s14",
+	[STAC_DELL_M6500] = "dell-m6500",
 	[STAC_92HD83XXX_HP] = "hp",
 };
 
@@ -1653,6 +1663,8 @@ static struct snd_pci_quirk stac92hd83xxx_cfg_tbl[] = {
 		      "DFI LanParty", STAC_92HD83XXX_REF),
 	SND_PCI_QUIRK(PCI_VENDOR_ID_DELL, 0x02ba,
 		      "unknown Dell", STAC_DELL_S14),
+	SND_PCI_QUIRK(PCI_VENDOR_ID_DELL, 0x02ef,
+		      "Dell M6500", STAC_DELL_M6500),
 	SND_PCI_QUIRK_MASK(PCI_VENDOR_ID_HP, 0xff00, 0x3600,
 		      "HP", STAC_92HD83XXX_HP),
 	{} /* terminator */
