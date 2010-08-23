@@ -78,12 +78,12 @@ static void au_sysrq(int key __maybe_unused,
 	struct kobject *kobj;
 	struct au_sbinfo *sbinfo;
 
-	/* spin_lock(&sysaufs_ket->list_lock); */
-	list_for_each_entry(kobj, &sysaufs_ket->list, entry) {
+	/* spin_lock(&sysaufs_kset->list_lock); */
+	list_for_each_entry(kobj, &sysaufs_kset->list, entry) {
 		sbinfo = container_of(kobj, struct au_sbinfo, si_kobj);
 		sysrq_sb(sbinfo->si_sb);
 	}
-	/* spin_unlock(&sysaufs_ket->list_lock); */
+	/* spin_unlock(&sysaufs_kset->list_lock); */
 }
 
 static struct sysrq_key_op au_sysrq_op = {
