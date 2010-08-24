@@ -1750,8 +1750,9 @@ EXPORT_SYMBOL(input_free_device);
  * @dev: input device supporting MT events and finger tracking
  * @num_slots: number of slots used by the device
  *
- * This function allocates all necessary memory for MT slot handling
- * in the input device, and adds ABS_MT_SLOT to the device capabilities.
+ * This function allocates all necessary memory for MT slot handling in the
+ * input device, and adds ABS_MT_SLOT to the device capabilities. All slots
+ * are initially unused with ABS_MT_TRACKING_ID == -1.
  */
 int input_mt_create_slots(struct input_dev *dev, unsigned int num_slots)
 {
@@ -1764,6 +1765,9 @@ int input_mt_create_slots(struct input_dev *dev, unsigned int num_slots)
 
 	dev->mtsize = num_slots;
 	input_set_abs_params(dev, ABS_MT_SLOT, 0, num_slots - 1, 0, 0);
+	/* the slot abs array starts at ABS_MT_FIRST to save memory */
+	while (num_slots--)
+		dev->mt[num_slots].abs[ABS_MT_TRACKING_ID - ABS_MT_FIRST] = -1;
 
 	return 0;
 }
