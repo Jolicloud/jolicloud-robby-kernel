@@ -647,9 +647,11 @@ irda-usb
 ir-jvc-decoder
 ir-kbd-i2c
 irlan
+ir-lirc-codec
 ir-nec-decoder
 irnet
 ir-rc5-decoder
+ir-rc5-sz-decoder
 ir-rc6-decoder
 ir-sony-decoder
 irtty-sir
@@ -753,6 +755,15 @@ libsas
 lightning
 line6usb
 linear
+lirc_dev
+lirc_i2c
+lirc_igorplugusb
+lirc_imon
+lirc_sasem
+lirc_serial
+lirc_sir
+lirc_ttusbir
+lirc_zilog
 lis3l02dq
 lis3lv02d
 lis3lv02d_i2c
@@ -829,6 +840,7 @@ mc13783-regulator
 mc13783_ts
 mc33880
 mc44s803
+mceusb
 mcp2120-sir
 mcp23s08
 mcp251x
@@ -1126,6 +1138,7 @@ rc-iodata-bctv7e
 rc-kaiomy
 rc-kworld-315u
 rc-kworld-plus-tv-analog
+rc-lirc
 rc-manli
 rc-msi-tvanywhere
 rc-msi-tvanywhere-plus
@@ -1146,7 +1159,9 @@ rc-purpletv
 rc-pv951
 rc-rc5-hauppauge-new
 rc-rc5-tv
+rc-rc6-mce
 rc-real-audio-220-32-keys
+rc-streamzap
 rc-tbs-nec
 rc-terratec-cinergy-xs
 rc-tevii-nec
@@ -1425,6 +1440,7 @@ stir4200
 stkwebcam
 stowaway
 stp
+streamzap
 stv0288
 stv0297
 stv0299
