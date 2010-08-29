@@ -211,6 +211,9 @@ static int cando_probe(struct hid_device *hdev, const struct hid_device_id *id)
 		return -ENOMEM;
 	}
 	hid_set_drvdata(hdev, td);
+	td->first = false;
+	td->oldest = -1;
+	td->valid = false;
 
 	ret = hid_parse(hdev);
 	if (!ret)
@@ -232,6 +235,8 @@ static void cando_remove(struct hid_device *hdev)
 static const struct hid_device_id cando_devices[] = {
 	{ HID_USB_DEVICE(USB_VENDOR_ID_CANDO,
 			USB_DEVICE_ID_CANDO_MULTI_TOUCH) },
+	{ HID_USB_DEVICE(USB_VENDOR_ID_CANDO,
+			USB_DEVICE_ID_CANDO_MULTI_TOUCH_11_6) },
 	{ }
 };
 MODULE_DEVICE_TABLE(hid, cando_devices);
