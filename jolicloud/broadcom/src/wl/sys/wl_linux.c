@@ -1416,8 +1416,12 @@ static void
 _wl_set_multicast_list(struct net_device *dev)
 {
 	wl_info_t *wl;
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,34)
 	struct dev_mc_list *mclist;
-	int i;
+#else
+	struct netdev_hw_addr *ha;
+#endif
+	int i = 0;
 
 	if (!dev)
 		return;
@@ -1430,14 +1434,23 @@ _wl_set_multicast_list(struct net_device *dev)
 	if (wl->pub->up) {
 		wl->pub->allmulti = (dev->flags & IFF_ALLMULTI)? TRUE: FALSE;
 
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,34)
 		for (i = 0, mclist = dev->mc_list; mclist && (i < dev->mc_count);
 			i++, mclist = mclist->next) {
+#else
+		netdev_for_each_mc_addr(ha, dev ) {
+#endif
 			if (i >= MAXMULTILIST) {
 				wl->pub->allmulti = TRUE;
 				i = 0;
 				break;
 			}
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,34)
 			wl->pub->multicast[i] = *((struct ether_addr*) mclist->dmi_addr);
+#else
+			wl->pub->multicast[i] = *((struct ether_addr*) ha->addr);
+			i++;
+#endif
 		}
 		wl->pub->nmulticast = i;
 		wlc_set(wl->wlc, WLC_SET_PROMISC, (dev->flags & IFF_PROMISC));
