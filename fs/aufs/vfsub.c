@@ -105,7 +105,7 @@ struct file *vfsub_filp_open(const char *path, int oflags, int mode)
 		goto out;
 	vfsub_update_h_iattr(&file->f_path, /*did*/NULL); /*ignore*/
 
- out:
+out:
 	return file;
 }
 
@@ -135,7 +135,7 @@ struct dentry *vfsub_lookup_one_len(const char *name, struct dentry *parent,
 	if (path.dentry->d_inode)
 		vfsub_update_h_iattr(&path, /*did*/NULL); /*ignore*/
 
- out:
+out:
 	AuTraceErrPtr(path.dentry);
 	return path.dentry;
 }
@@ -154,7 +154,7 @@ struct dentry *vfsub_lookup_hash(struct nameidata *nd)
 	if (path.dentry->d_inode)
 		vfsub_update_h_iattr(&path, /*did*/NULL); /*ignore*/
 
- out:
+out:
 	AuTraceErrPtr(path.dentry);
 	return path.dentry;
 }
@@ -166,9 +166,7 @@ struct dentry *vfsub_lock_rename(struct dentry *d1, struct au_hinode *hdir1,
 {
 	struct dentry *d;
 
-	lockdep_off();
 	d = lock_rename(d1, d2);
-	lockdep_on();
 	au_hn_suspend(hdir1);
 	if (hdir1 != hdir2)
 		au_hn_suspend(hdir2);
@@ -182,9 +180,7 @@ void vfsub_unlock_rename(struct dentry *d1, struct au_hinode *hdir1,
 	au_hn_resume(hdir1);
 	if (hdir1 != hdir2)
 		au_hn_resume(hdir2);
-	lockdep_off();
 	unlock_rename(d1, d2);
-	lockdep_on();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -232,7 +228,7 @@ int vfsub_create(struct inode *dir, struct path *path, int mode)
 		/*ignore*/
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -263,7 +259,7 @@ int vfsub_symlink(struct inode *dir, struct path *path, const char *symname)
 		/*ignore*/
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -294,7 +290,7 @@ int vfsub_mknod(struct inode *dir, struct path *path, int mode, dev_t dev)
 		/*ignore*/
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -342,7 +338,7 @@ int vfsub_link(struct dentry *src_dentry, struct inode *dir, struct path *path)
 		/*ignore*/
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -381,7 +377,7 @@ int vfsub_rename(struct inode *src_dir, struct dentry *src_dentry,
 		/*ignore*/
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -412,7 +408,7 @@ int vfsub_mkdir(struct inode *dir, struct path *path, int mode)
 		/*ignore*/
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -440,7 +436,7 @@ int vfsub_rmdir(struct inode *dir, struct path *path)
 		vfsub_update_h_iattr(&tmp, /*did*/NULL); /*ignore*/
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -581,13 +577,13 @@ int vfsub_trunc(struct path *h_path, loff_t length, unsigned int attr,
 	if (!err)
 		err = do_truncate(h_path->dentry, length, attr, h_file);
 
- out_inode:
+out_inode:
 	if (!h_file)
 		put_write_access(h_inode);
- out_mnt:
+out_mnt:
 	if (!h_file)
 		mnt_drop_write(h_path->mnt);
- out:
+out:
 	return err;
 }
 

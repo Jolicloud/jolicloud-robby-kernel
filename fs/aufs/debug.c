@@ -244,15 +244,15 @@ static int do_pri_br(aufs_bindex_t bindex, struct au_branch *br)
 		goto out;
 
 	dpri("s%d: {perm 0x%x, cnt %d, wbr %p}, "
-	     "%s, dev 0x%02x%02x, flags 0x%lx, cnt(BIAS) %d, active %d, "
+	     "%s, dev 0x%02x%02x, flags 0x%lx, cnt %d, active %d, "
 	     "xino %d\n",
 	     bindex, br->br_perm, atomic_read(&br->br_count), br->br_wbr,
 	     au_sbtype(sb), MAJOR(sb->s_dev), MINOR(sb->s_dev),
-	     sb->s_flags, sb->s_count - S_BIAS,
+	     sb->s_flags, sb->s_count,
 	     atomic_read(&sb->s_active), !!br->br_xino.xi_file);
 	return 0;
 
- out:
+out:
 	dpri("s%d: err %ld\n", bindex, PTR_ERR(br));
 	return -1;
 }
@@ -375,10 +375,24 @@ void au_dbg_verify_gen(struct dentry *parent, unsigned int sigen)
 
 void au_dbg_verify_kthread(void)
 {
-	if (au_test_wkq(current)) {
+	struct task_struct *tsk = current;
+
+	if ((tsk->flags & PF_KTHREAD)
+	    && !strncmp(tsk->comm, AUFS_WKQ_NAME "/", sizeof(AUFS_WKQ_NAME))) {
 		au_dbg_blocked();
 		BUG();
 	}
+}
+
+static void au_dbg_do_verify_wkq(void *args)
+{
+	BUG_ON(current_fsuid());
+	BUG_ON(rlimit(RLIMIT_FSIZE) != RLIM_INFINITY);
+}
+
+void au_dbg_verify_wkq(void)
+{
+	au_wkq_wait(au_dbg_do_verify_wkq, NULL);
 }
 
 /* ---------------------------------------------------------------------- */

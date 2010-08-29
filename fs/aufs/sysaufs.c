@@ -102,6 +102,6 @@ int __init sysaufs_init(void)
 	err = dbgaufs_init();
 	if (unlikely(err))
 		sysaufs_fin();
- out:
+out:
 	return err;
 }

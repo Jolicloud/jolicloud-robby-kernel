@@ -132,7 +132,7 @@ static int reopen_dir(struct file *file)
 	/* file->f_ra = h_file->f_ra; */
 	err = 0;
 
- out:
+out:
 	return err;
 }
 
@@ -292,8 +292,7 @@ static int au_do_fsync_dir_no_file(struct dentry *dentry, int datasync)
 		err = filemap_fdatawrite(h_inode->i_mapping);
 		AuDebugOn(!h_inode->i_fop);
 		if (!err && h_inode->i_fop->fsync)
-			err = h_inode->i_fop->fsync(NULL, h_path.dentry,
-						    datasync);
+			err = h_inode->i_fop->fsync(NULL, datasync);
 		if (!err)
 			err = filemap_fdatawrite(h_inode->i_mapping);
 		if (!err)
@@ -325,7 +324,7 @@ static int au_do_fsync_dir(struct file *file, int datasync)
 		if (!h_file || au_test_ro(sb, bindex, inode))
 			continue;
 
-		err = vfs_fsync(h_file, h_file->f_dentry, datasync);
+		err = vfs_fsync(h_file, datasync);
 		if (!err) {
 			h_mtx = &h_file->f_dentry->d_inode->i_mutex;
 			mutex_lock(h_mtx);
@@ -335,19 +334,20 @@ static int au_do_fsync_dir(struct file *file, int datasync)
 		}
 	}
 
- out:
+out:
 	return err;
 }
 
 /*
  * @file may be NULL
  */
-static int aufs_fsync_dir(struct file *file, struct dentry *dentry,
-			  int datasync)
+static int aufs_fsync_dir(struct file *file, int datasync)
 {
 	int err;
+	struct dentry *dentry;
 	struct super_block *sb;
 
+	dentry = file->f_dentry;
 	IMustLock(dentry->d_inode);
 
 	err = 0;
@@ -391,7 +391,7 @@ static int aufs_readdir(struct file *file, void *dirent, filldir_t filldir)
 	if (unlikely(err))
 		goto out_unlock;
 
-	if (!au_test_nfsd(current)) {
+	if (!au_test_nfsd()) {
 		err = au_vdir_fill_de(file, dirent, filldir);
 		fsstack_copy_attr_atime(inode,
 					au_h_iptr(inode, au_ibstart(inode)));
@@ -412,10 +412,10 @@ static int aufs_readdir(struct file *file, void *dirent, filldir_t filldir)
 		return err;
 	}
 
- out_unlock:
+out_unlock:
 	di_read_unlock(dentry, AuLock_IR);
 	fi_write_unlock(file);
- out:
+out:
 	si_read_unlock(sb);
 	return err;
 }
@@ -470,7 +470,7 @@ static int test_empty_cb(void *__arg, const char *__name, int namelen,
 			(arg->whlist, name, namelen, ino, d_type, arg->bindex,
 			 au_ftest_testempty(arg->flags, SHWH));
 
- out:
+out:
 	/* smp_mb(); */
 	AuTraceErr(arg->err);
 	return arg->err;
@@ -502,10 +502,10 @@ static int do_test_empty(struct dentry *dentry, struct test_empty_arg *arg)
 			err = arg->err;
 	} while (!err && au_ftest_testempty(arg->flags, CALLED));
 
- out_put:
+out_put:
 	fput(h_file);
 	au_sbr_put(dentry->d_sb, arg->bindex);
- out:
+out:
 	return err;
 }
 
@@ -590,9 +590,9 @@ int au_test_empty_lower(struct dentry *dentry)
 		}
 	}
 
- out_whlist:
+out_whlist:
 	au_nhash_wh_free(&whlist);
- out:
+out:
 	return err;
 }
 
