@@ -66,9 +66,8 @@ static int fixed_bar_cap(struct pci_bus *bus, unsigned int devfn)
 					  devfn, pos, 4, &pcie_cap))
 			return 0;
 
-		if (PCI_EXT_CAP_ID(pcie_cap) == 0x0000 ||
-			PCI_EXT_CAP_ID(pcie_cap) == 0xffff)
-			break;
+		if (pcie_cap == 0xffffffff)
+			return 0;
 
 		if (PCI_EXT_CAP_ID(pcie_cap) == PCI_EXT_CAP_ID_VNDR) {
 			raw_pci_ext_ops->read(pci_domain_nr(bus), bus->number,
@@ -77,7 +76,7 @@ static int fixed_bar_cap(struct pci_bus *bus, unsigned int devfn)
 				return pos;
 		}
 
-		pos = PCI_EXT_CAP_NEXT(pcie_cap);
+		pos = pcie_cap >> 20;
 	}
 
 	return 0;

@@ -920,7 +920,7 @@ void disable_local_APIC(void)
 	unsigned int value;
 
 	/* APIC hasn't been mapped yet */
-	if (!x2apic_mode && !apic_phys)
+	if (!apic_phys)
 		return;
 
 	clear_local_APIC();

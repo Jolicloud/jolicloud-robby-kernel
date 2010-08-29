@@ -417,7 +417,7 @@ static int add_recvbuf_mergeable(struct virtnet_info *vi, gfp_t gfp)
 static bool try_fill_recv(struct virtnet_info *vi, gfp_t gfp)
 {
 	int err;
-	bool oom;
+	bool oom = false;
 
 	do {
 		if (vi->mergeable_rx_bufs)
@@ -427,9 +427,10 @@ static bool try_fill_recv(struct virtnet_info *vi, gfp_t gfp)
 		else
 			err = add_recvbuf_small(vi, gfp);
 
-		oom = err == -ENOMEM;
-		if (err < 0)
+		if (err < 0) {
+			oom = true;
 			break;
+		}
 		++vi->num;
 	} while (err > 0);
 	if (unlikely(vi->num > vi->max))
@@ -566,6 +567,7 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
 	struct virtnet_info *vi = netdev_priv(dev);
 	int capacity;
 
+again:
 	/* Free up any pending old buffers before queueing new ones. */
 	free_old_xmit_skbs(vi);
 
@@ -574,20 +576,14 @@ static netdev_tx_t start_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	/* This can happen with OOM and indirect buffers. */
 	if (unlikely(capacity < 0)) {
-		if (net_ratelimit()) {
-			if (likely(capacity == -ENOMEM)) {
-				dev_warn(&dev->dev,
-					 "TX queue failure: out of memory\n");
-			} else {
-				dev->stats.tx_fifo_errors++;
-				dev_warn(&dev->dev,
-					 "Unexpected TX queue failure: %d\n",
-					 capacity);
-			}
+		netif_stop_queue(dev);
+		dev_warn(&dev->dev, "Unexpected full queue\n");
+		if (unlikely(!vi->svq->vq_ops->enable_cb(vi->svq))) {
+			vi->svq->vq_ops->disable_cb(vi->svq);
+			netif_start_queue(dev);
+			goto again;
 		}
-		dev->stats.tx_dropped++;
-		kfree_skb(skb);
-		return NETDEV_TX_OK;
+		return NETDEV_TX_BUSY;
 	}
 	vi->svq->vq_ops->kick(vi->svq);
 

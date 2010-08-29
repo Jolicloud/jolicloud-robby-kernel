@@ -118,7 +118,7 @@ static int vring_add_indirect(struct vring_virtqueue *vq,
 
 	desc = kmalloc((out + in) * sizeof(struct vring_desc), GFP_ATOMIC);
 	if (!desc)
-		return -ENOMEM;
+		return vq->vring.num;
 
 	/* Transfer entries from the sg list into the indirect page */
 	for (i = 0; i < out; i++) {
@@ -162,8 +162,7 @@ static int vring_add_buf(struct virtqueue *_vq,
 			 void *data)
 {
 	struct vring_virtqueue *vq = to_vvq(_vq);
-	unsigned int i, avail, uninitialized_var(prev);
-	int head;
+	unsigned int i, avail, head, uninitialized_var(prev);
 
 	START_USE(vq);
 
@@ -173,7 +172,7 @@ static int vring_add_buf(struct virtqueue *_vq,
 	 * buffers, then go indirect. FIXME: tune this threshold */
 	if (vq->indirect && (out + in) > 1 && vq->num_free) {
 		head = vring_add_indirect(vq, sg, out, in);
-		if (likely(head >= 0))
+		if (head != vq->vring.num)
 			goto add_head;
 	}
 

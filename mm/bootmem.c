@@ -833,24 +833,15 @@ static void * __init ___alloc_bootmem_node(bootmem_data_t *bdata,
 void * __init __alloc_bootmem_node(pg_data_t *pgdat, unsigned long size,
 				   unsigned long align, unsigned long goal)
 {
-	void *ptr;
-
 	if (WARN_ON_ONCE(slab_is_available()))
 		return kzalloc_node(size, GFP_NOWAIT, pgdat->node_id);
 
 #ifdef CONFIG_NO_BOOTMEM
-	ptr = __alloc_memory_core_early(pgdat->node_id, size, align,
-					 goal, -1ULL);
-	if (ptr)
-		return ptr;
-
-	ptr = __alloc_memory_core_early(MAX_NUMNODES, size, align,
+	return __alloc_memory_core_early(pgdat->node_id, size, align,
 					 goal, -1ULL);
 #else
-	ptr = ___alloc_bootmem_node(pgdat->bdata, size, align, goal, 0);
+	return ___alloc_bootmem_node(pgdat->bdata, size, align, goal, 0);
 #endif
-
-	return ptr;
 }
 
 void * __init __alloc_bootmem_node_high(pg_data_t *pgdat, unsigned long size,
@@ -986,21 +977,14 @@ void * __init __alloc_bootmem_low(unsigned long size, unsigned long align,
 void * __init __alloc_bootmem_low_node(pg_data_t *pgdat, unsigned long size,
 				       unsigned long align, unsigned long goal)
 {
-	void *ptr;
-
 	if (WARN_ON_ONCE(slab_is_available()))
 		return kzalloc_node(size, GFP_NOWAIT, pgdat->node_id);
 
 #ifdef CONFIG_NO_BOOTMEM
-	ptr = __alloc_memory_core_early(pgdat->node_id, size, align,
-				goal, ARCH_LOW_ADDRESS_LIMIT);
-	if (ptr)
-		return ptr;
-	ptr = __alloc_memory_core_early(MAX_NUMNODES, size, align,
+	return __alloc_memory_core_early(pgdat->node_id, size, align,
 				goal, ARCH_LOW_ADDRESS_LIMIT);
 #else
-	ptr = ___alloc_bootmem_node(pgdat->bdata, size, align,
+	return ___alloc_bootmem_node(pgdat->bdata, size, align,
 				goal, ARCH_LOW_ADDRESS_LIMIT);
 #endif
-	return ptr;
 }

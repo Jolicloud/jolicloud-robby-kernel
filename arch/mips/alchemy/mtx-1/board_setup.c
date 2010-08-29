@@ -67,6 +67,8 @@ static void mtx1_power_off(void)
 
 void __init board_setup(void)
 {
+	alchemy_gpio2_enable();
+
 #if defined(CONFIG_USB_OHCI_HCD) || defined(CONFIG_USB_OHCI_HCD_MODULE)
 	/* Enable USB power switch */
 	alchemy_gpio_direction_output(204, 0);
@@ -115,11 +117,11 @@ mtx1_pci_idsel(unsigned int devsel, int assert)
 
 	if (assert && devsel != 0)
 		/* Suppress signal to Cardbus */
-		alchemy_gpio_set_value(1, 0);	/* set EXT_IO3 OFF */
+		gpio_set_value(1, 0);	/* set EXT_IO3 OFF */
 	else
-		alchemy_gpio_set_value(1, 1);	/* set EXT_IO3 ON */
+		gpio_set_value(1, 1);	/* set EXT_IO3 ON */
 
-	udelay(1);
+	au_sync_udelay(1);
 	return 1;
 }
 

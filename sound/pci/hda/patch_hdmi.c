@@ -52,10 +52,6 @@ struct hdmi_spec {
 	 */
 	struct hda_multi_out multiout;
 	unsigned int codec_type;
-
-	/* misc flags */
-	/* PD bit indicates only the update, not the current state */
-	unsigned int old_pin_detect:1;
 };
 
 
@@ -620,9 +616,6 @@ static void hdmi_setup_audio_infoframe(struct hda_codec *codec, hda_nid_t nid,
  * Unsolicited events
  */
 
-static void hdmi_present_sense(struct hda_codec *codec, hda_nid_t pin_nid,
-			       struct hdmi_eld *eld);
-
 static void hdmi_intrinsic_event(struct hda_codec *codec, unsigned int res)
 {
 	struct hdmi_spec *spec = codec->spec;
@@ -638,12 +631,6 @@ static void hdmi_intrinsic_event(struct hda_codec *codec, unsigned int res)
 	index = hda_node_index(spec->pin, tag);
 	if (index < 0)
 		return;
-
-	if (spec->old_pin_detect) {
-		if (pind)
-			hdmi_present_sense(codec, tag, &spec->sink_eld[index]);
-		pind = spec->sink_eld[index].monitor_present;
-	}
 
 	spec->sink_eld[index].monitor_present = pind;
 	spec->sink_eld[index].eld_valid = eldv;
