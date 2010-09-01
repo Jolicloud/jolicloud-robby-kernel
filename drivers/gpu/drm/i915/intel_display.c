@@ -4635,15 +4635,6 @@ static void intel_crtc_destroy(struct drm_crtc *crtc)
 	kfree(intel_crtc);
 }
 
-struct intel_unpin_work {
-	struct work_struct work;
-	struct drm_device *dev;
-	struct drm_gem_object *old_fb_obj;
-	struct drm_gem_object *pending_flip_obj;
-	struct drm_pending_vblank_event *event;
-	int pending;
-};
-
 static void intel_unpin_work_fn(struct work_struct *__work)
 {
 	struct intel_unpin_work *work =
@@ -4729,7 +4720,8 @@ void intel_prepare_page_flip(struct drm_device *dev, int plane)
 
 	spin_lock_irqsave(&dev->event_lock, flags);
 	if (intel_crtc->unpin_work) {
-		intel_crtc->unpin_work->pending = 1;
+		if ((++intel_crtc->unpin_work->pending) > 1)
+			DRM_ERROR("Prepared flip multiple times\n");
 	} else {
 		DRM_DEBUG_DRIVER("preparing flip with no unpin work?\n");
 	}
@@ -4815,6 +4807,8 @@ static int intel_crtc_page_flip(struct drm_crtc *crtc,
 		OUT_RING(0);
 		ADVANCE_LP_RING();
 	}
+
+	work->enable_stall_check = true;
 
 	/* Offset into the new buffer for cases of shared fbs between CRTCs */
 	offset = obj_priv->gtt_offset;
