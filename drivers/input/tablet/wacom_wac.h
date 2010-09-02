@@ -21,7 +21,6 @@
 #define WACOM_PKGLEN_INTUOS	10
 #define WACOM_PKGLEN_TPC1FG	 5
 #define WACOM_PKGLEN_TPC2FG	14
-#define WACOM_PKGLEN_BBTOUCH	20
 
 /* device IDs */
 #define STYLUS_DEVICE_ID	0x02
@@ -37,9 +36,6 @@
 #define WACOM_REPORT_INTUOSPAD		12
 #define WACOM_REPORT_TPC1FG		6
 #define WACOM_REPORT_TPC2FG		13
-
-/* largest reported tracking id */
-#define MAX_TRACKING_ID			0xfff
 
 enum {
 	PENPARTNER = 0,
@@ -60,8 +56,6 @@ enum {
 	WACOM_MO,
 	TABLETPC,
 	TABLETPC2FG,
-	BAMBOO_TOUCH,
-	BAMBOO_BOOT,
 	MAX_TYPE
 };
 
