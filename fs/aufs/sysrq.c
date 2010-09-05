@@ -36,7 +36,6 @@ static void sysrq_sb(struct super_block *sb)
 
 	plevel = au_plevel;
 	au_plevel = KERN_WARNING;
-	au_debug(1);
 
 	sbinfo = au_sbi(sb);
 	pr_warning("si=%lx\n", sysaufs_si_id(sbinfo));
@@ -60,9 +59,9 @@ static void sysrq_sb(struct super_block *sb)
 		if (!special_file(mode) || au_special_file(mode))
 			au_dpri_file(file);
 	}
+	pr_warning(AUFS_NAME ": done\n");
 
 	au_plevel = plevel;
-	au_debug(0);
 }
 
 /* ---------------------------------------------------------------------- */
