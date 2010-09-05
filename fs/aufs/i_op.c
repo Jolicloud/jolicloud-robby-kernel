@@ -316,7 +316,7 @@ struct dentry *au_pinned_h_parent(struct au_pin *pin)
 
 void au_unpin(struct au_pin *p)
 {
-	if (au_ftest_pin(p->flags, MNT_WRITE))
+	if (p->h_mnt && au_ftest_pin(p->flags, MNT_WRITE))
 		mnt_drop_write(p->h_mnt);
 	if (!p->hdir)
 		return;

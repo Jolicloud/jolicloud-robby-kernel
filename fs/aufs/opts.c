@@ -21,6 +21,7 @@
  */
 
 #include <linux/file.h>
+#include <linux/jiffies.h>
 #include <linux/namei.h>
 #include <linux/types.h> /* a distribution requires */
 #include <linux/parser.h>
@@ -305,7 +306,7 @@ static int au_wbr_mfs_sec(substring_t *arg, char *str,
 	int n, err;
 
 	err = 0;
-	if (!match_int(arg, &n) && 0 <= n)
+	if (!match_int(arg, &n) && 0 <= n && n <= MAX_SEC_IN_JIFFIES)
 		create->mfs_second = n;
 	else {
 		pr_err("bad integer in %s\n", str);
@@ -933,7 +934,8 @@ int au_opts_parse(struct super_block *sb, char *str, struct au_opts *opts)
 			break;
 
 		case Opt_rdcache:
-			if (unlikely(match_int(&a->args[0], &opt->rdcache)))
+			if (unlikely(match_int(&a->args[0], &opt->rdcache)
+				     || opt->rdcache > MAX_SEC_IN_JIFFIES))
 				break;
 			err = 0;
 			opt->type = token;
@@ -1083,7 +1085,8 @@ static int au_opt_wbr_create(struct super_block *sb,
 	case AuWbrCreate_MFSV:
 	case AuWbrCreate_PMFS:
 	case AuWbrCreate_PMFSV:
-		sbinfo->si_wbr_mfs.mfs_expire = create->mfs_second * HZ;
+		sbinfo->si_wbr_mfs.mfs_expire
+			= msecs_to_jiffies(create->mfs_second * MSEC_PER_SEC);
 		break;
 	}
 
@@ -1189,7 +1192,8 @@ static int au_opt_simple(struct super_block *sb, struct au_opt *opt,
 		break;
 
 	case Opt_rdcache:
-		sbinfo->si_rdcache = opt->rdcache * HZ;
+		sbinfo->si_rdcache
+			= msecs_to_jiffies(opt->rdcache * MSEC_PER_SEC);
 		break;
 	case Opt_rdblk:
 		sbinfo->si_rdblk = opt->rdblk;
