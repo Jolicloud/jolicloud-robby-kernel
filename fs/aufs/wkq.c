@@ -173,7 +173,7 @@ int au_wkq_nowait(au_wkq_func_t func, void *args, struct super_block *sb)
 		au_wkq_run(wkinfo, !AuWkq_WAIT);
 	} else {
 		err = -ENOMEM;
-		atomic_dec(&au_sbi(sb)->si_nowait.nw_len);
+		au_nwt_done(&au_sbi(sb)->si_nowait);
 	}
 
 	return err;
