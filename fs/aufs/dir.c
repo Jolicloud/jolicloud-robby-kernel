@@ -189,7 +189,7 @@ static int aufs_open_dir(struct inode *inode __maybe_unused,
 	err = -ENOMEM;
 	sb = file->f_dentry->d_sb;
 	si_read_lock(sb, AuLock_FLUSH);
-	fidir = au_fidir_alloc(inode->i_sb);
+	fidir = au_fidir_alloc(sb);
 	if (fidir) {
 		err = au_do_open(file, do_open_dir, fidir);
 		if (unlikely(err))
