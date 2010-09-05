@@ -231,7 +231,9 @@ If you don't like aufs2-standalone.patch, then try aufs2-2.6 tree.
 - enable CONFIG_EXPERIMENTAL and CONFIG_AUFS_FS, you can select either
   =m or =y.
 - and build your kernel as usual.
-- install it and reboot your system.
+- install the built kernel.
+- install the header files too by "make headers_install".
+- and reboot your system.
 
 2.
 - module only (CONFIG_AUFS_FS=m).
@@ -244,10 +246,19 @@ If you don't like aufs2-standalone.patch, then try aufs2-2.6 tree.
 - build the module by simple "make".
 - you can specify ${KDIR} make variable which points to your kernel
   source tree.
-- copy the build ./aufs.ko to /lib/modules/..., and run depmod -a (or
+- copy the built ./usr/include/linux/aufs_type.h to
+  /usr/include/linux or wherever you like.
+- copy the built ./aufs.ko to /lib/modules/..., and run depmod -a (or
   reboot simply).
 - no need to apply aufs2-kbuild.patch, nor copying source files to your
   kernel source tree.
+
+Note: The haeder file aufs_type.h is necessary to build aufs2-util
+      as well as "make headers_install" in the kernel source tree.
+      headers_install is buject to be forgotten, but it is essentially
+      necessary, not only for building aufs2-util.
+      You may not meet problems without headers_install in some older
+      version though.
 
 And then,
 - read README in aufs2-util, build and install it

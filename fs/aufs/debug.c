@@ -29,9 +29,11 @@ MODULE_PARM_DESC(debug, "debug print");
 module_param_named(debug, aufs_debug, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 char *au_plevel = KERN_DEBUG;
-#define dpri(fmt, ...) do { \
-	if (au_debug_test()) \
-		printk("%s" fmt, au_plevel, ##__VA_ARGS__); \
+#define dpri(fmt, ...) do {					\
+	if ((au_plevel						\
+	     && strcmp(au_plevel, KERN_DEBUG))			\
+	    || au_debug_test())					\
+		printk("%s" fmt, au_plevel, ##__VA_ARGS__);	\
 } while (0)
 
 /* ---------------------------------------------------------------------- */

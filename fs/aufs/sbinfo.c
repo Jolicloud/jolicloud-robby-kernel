@@ -58,6 +58,7 @@ int au_si_alloc(struct super_block *sb)
 {
 	int err;
 	struct au_sbinfo *sbinfo;
+	static struct lock_class_key aufs_si;
 
 	err = -ENOMEM;
 	sbinfo = kzalloc(sizeof(*sbinfo), GFP_NOFS);
@@ -83,6 +84,7 @@ int au_si_alloc(struct super_block *sb)
 
 	au_nwt_init(&sbinfo->si_nowait);
 	au_rw_init_wlock(&sbinfo->si_rwsem);
+	au_rw_class(&sbinfo->si_rwsem, &aufs_si);
 	spin_lock_init(&sbinfo->au_si_pid.tree_lock);
 	INIT_RADIX_TREE(&sbinfo->au_si_pid.tree, GFP_ATOMIC | __GFP_NOFAIL);
 
