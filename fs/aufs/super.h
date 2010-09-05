@@ -119,7 +119,7 @@ struct au_sbinfo {
 #endif
 
 	/* vdir parameters */
-	unsigned long		si_rdcache;	/* max cache time in HZ */
+	unsigned long		si_rdcache;	/* max cache time in jiffies */
 	unsigned int		si_rdblk;	/* deblk size */
 	unsigned int		si_rdhash;	/* hash size */
 
