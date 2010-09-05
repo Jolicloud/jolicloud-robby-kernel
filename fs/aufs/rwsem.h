@@ -65,6 +65,8 @@ struct au_rwsem {
 #define AuRwDestroy(rw)		AuDebugOn(atomic_read(&(rw)->rcnt) \
 					|| atomic_read(&(rw)->wcnt))
 
+#define au_rw_class(rw, key)	lockdep_set_class(&(rw)->rwsem, key)
+
 static inline void au_rw_init(struct au_rwsem *rw)
 {
 	AuDbgCntInit(rw);
