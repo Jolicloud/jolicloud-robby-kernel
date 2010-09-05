@@ -729,7 +729,6 @@ static int alloc_root(struct super_block *sb)
 
 out_iput:
 	iget_failed(inode);
-	iput(inode);
 out:
 	return err;
 
