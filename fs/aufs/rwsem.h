@@ -43,9 +43,9 @@ struct au_rwsem {
 	smp_mb(); /* atomic set */ \
 } while (0)
 
-#define AuDbgRcntInc(rw)	atomic_inc_return(&(rw)->rcnt)
+#define AuDbgRcntInc(rw)	atomic_inc(&(rw)->rcnt)
 #define AuDbgRcntDec(rw)	WARN_ON(atomic_dec_return(&(rw)->rcnt) < 0)
-#define AuDbgWcntInc(rw)	WARN_ON(atomic_inc_return(&(rw)->wcnt) > 1)
+#define AuDbgWcntInc(rw)	atomic_inc(&(rw)->wcnt)
 #define AuDbgWcntDec(rw)	WARN_ON(atomic_dec_return(&(rw)->wcnt) < 0)
 #else
 #define AuDbgCntInit(rw)	do {} while (0)
