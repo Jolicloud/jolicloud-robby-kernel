@@ -60,7 +60,7 @@ static void sysrq_sb(struct super_block *sb)
 		if (!special_file(mode) || au_special_file(mode))
 			au_dpri_file(file);
 	}
-	pr_warning(AUFS_NAME ": done\n");
+	printk(KERN_WARNING AUFS_NAME ": done\n");
 
 	au_plevel = plevel;
 }
