@@ -65,7 +65,6 @@ CONFIG_FB_CFB_IMAGEBLIT=m
 # CONFIG_FB_PM2 is not set
 # CONFIG_FB_PM3 is not set
 # CONFIG_FB_RADEON is not set
-# CONFIG_FB_RIVA is not set
 # CONFIG_FB_S1D13XXX is not set
 # CONFIG_FB_S3 is not set
 # CONFIG_FB_SAVAGE is not set
