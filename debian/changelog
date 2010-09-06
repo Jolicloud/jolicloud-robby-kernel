@@ -1,3 +1,11 @@
+linux (2.6.32.16-1.20.5) robby-test; urgency=low
+
+  [ Adam McDaniel ]
+
+  * Imported rtl8192se (2.6.0017.0705.2010)
+
+ -- Adam McDaniel <adam@jolicloud.org>  Mon, 06 Sep 2010 09:34:44 -0600
+
 linux (2.6.32.16-1.20.4) robby-test; urgency=low
 
   [ Adam McDaniel ]
