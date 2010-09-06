@@ -244,11 +244,13 @@ typedef struct
 	unsigned char WirelessMode;
 	unsigned char bCurTxBW40MHz;		
 } adhoc_peer_entry_t, *p_adhoc_peer_entry_t;
+
 typedef struct 
 {
 	adhoc_peer_entry_t Entry[MAX_ADHOC_PEER_NUM];
 	unsigned char num;
 } adhoc_peers_info_t, *p_adhoc_peers_info_t;
+
 int r8192_wx_get_adhoc_peers(struct net_device *dev, 
 			       struct iw_request_info *info, 
 			       union iwreq_data *wrqu, char *extra)
@@ -264,7 +266,8 @@ int r8192_wx_get_adhoc_peers(struct net_device *dev,
 	int k=0;
 
 
-	memset(extra, 0, 2047);
+	//bigger than 1024 will crash here.
+	memset(extra, 0, 1024);
 	padhoc_peers_info->num = 0;
 
 	down(&priv->wx_sem);
@@ -274,6 +277,11 @@ int r8192_wx_get_adhoc_peers(struct net_device *dev,
 		psta = priv->rtllib->peer_assoc_list[k];
 		if(NULL != psta)
 		{
+			if(1024 - strlen(extra) < 100){
+				printk("====> we can not show so many peers\n");
+				break;
+			}
+
 			padhoc_peer_entry = &padhoc_peers_info->Entry[padhoc_peers_info->num];
 			memset(padhoc_peer_entry,0, sizeof(adhoc_peer_entry_t));
 			memcpy(padhoc_peer_entry->MacAddr, psta->macaddr, ETH_ALEN);
@@ -2535,16 +2543,16 @@ static const struct iw_priv_args r8192_private_args[] = {
 		IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED|1, IW_PRIV_TYPE_NONE, 
 		"lps_interv"
 	}
-        ,
-	{
-		SIOCIWFIRSTPRIV + 0xb,
-		IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED|1, IW_PRIV_TYPE_NONE, 
-		"lps_force"
-	}
 	,
 	{
+		SIOCIWFIRSTPRIV + 0xb,
+		0, IW_PRIV_TYPE_CHAR|1024, "adhoc_peer_list" //just < 1024 can set.
+	}
+        ,
+	{
 		SIOCIWFIRSTPRIV + 0xc,
-		0, IW_PRIV_TYPE_CHAR|2047, "adhoc_peer_list"
+		IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED|1, IW_PRIV_TYPE_NONE, 
+		"lps_force"
 	}
 #ifdef _RTL8192_EXT_PATCH_
 	,
@@ -2637,8 +2645,8 @@ static iw_handler r8192_private_handler[] = {
 #endif
 	(iw_handler)r8192se_wx_set_radio,
 	(iw_handler)r8192se_wx_set_lps_awake_interval,
-	(iw_handler)r8192se_wx_set_force_lps,
 	(iw_handler)r8192_wx_get_adhoc_peers,
+	(iw_handler)r8192se_wx_set_force_lps,
 #ifdef _RTL8192_EXT_PATCH_
 	(iw_handler)r8192_wx_get_drv_version,
 #else
@@ -2761,7 +2769,6 @@ u16 rtl8192_11n_user_show_rates(struct net_device* dev)
 	} else {
 		Sgstrength = priv->undecorated_smoothed_pwdb;
 	}
-	Sgstrength = 100;
 
 	if (priv->rtllib->mode == WIRELESS_MODE_A ||
 			priv->rtllib->mode == WIRELESS_MODE_G ||
