@@ -29,9 +29,11 @@ MODULE_PARM_DESC(debug, "debug print");
 module_param_named(debug, aufs_debug, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 char *au_plevel = KERN_DEBUG;
-#define dpri(fmt, ...) do { \
-	if (au_debug_test()) \
-		printk("%s" fmt, au_plevel, ##__VA_ARGS__); \
+#define dpri(fmt, ...) do {					\
+	if ((au_plevel						\
+	     && strcmp(au_plevel, KERN_DEBUG))			\
+	    || au_debug_test())					\
+		printk("%s" fmt, au_plevel, ##__VA_ARGS__);	\
 } while (0)
 
 /* ---------------------------------------------------------------------- */
@@ -191,8 +193,8 @@ static int do_pri_file(aufs_bindex_t bindex, struct file *file)
 	    && file->f_dentry
 	    && au_test_aufs(file->f_dentry->d_sb)
 	    && au_fi(file))
-		snprintf(a, sizeof(a), ", mmapped %d",
-			 !!au_fi(file)->fi_hvmop);
+		snprintf(a, sizeof(a), ", gen %d, mmapped %d",
+			 au_figen(file), !!au_fi(file)->fi_hvmop);
 	dpri("f%d: mode 0x%x, flags 0%o, cnt %ld, v %llu, pos %llu%s\n",
 	     bindex, file->f_mode, file->f_flags, (long)file_count(file),
 	     file->f_version, file->f_pos, a);
@@ -222,7 +224,8 @@ void au_dpri_file(struct file *file)
 	if (!fidir)
 		do_pri_file(finfo->fi_btop, finfo->fi_htop.hf_file);
 	else
-		for (bindex = finfo->fi_btop; bindex <= fidir->fd_bbot;
+		for (bindex = finfo->fi_btop;
+		     bindex >= 0 && bindex <= fidir->fd_bbot;
 		     bindex++) {
 			hfile = fidir->fd_hfile + bindex;
 			do_pri_file(bindex, hfile ? hfile->hf_file : NULL);
