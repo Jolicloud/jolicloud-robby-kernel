@@ -823,7 +823,7 @@ static void au_warn_ima(void)
 {
 #ifdef CONFIG_IMA
 	/* since it doesn't support mark_files_ro() */
-	pr_warning("RW -> RO makes IMA to produce wrong message");
+	AuWarn1("RW -> RO makes IMA to produce wrong message");
 #endif
 }
 
@@ -842,8 +842,11 @@ static int au_br_mod_files_ro(struct super_block *sb, aufs_bindex_t bindex)
 {
 	int err;
 	unsigned long n, ul, bytes, files;
-	aufs_bindex_t bstart;
+	aufs_bindex_t br_id;
 	struct file *file, *hf, **a;
+	struct dentry *dentry;
+	struct inode *inode;
+	struct au_hfile *hfile;
 	const int step_bytes = 1024, /* memory allocation unit */
 		step_files = step_bytes / sizeof(*a);
 
@@ -856,9 +859,12 @@ static int au_br_mod_files_ro(struct super_block *sb, aufs_bindex_t bindex)
 		goto out;
 
 	/* no need file_list_lock() since sbinfo is locked? defered? */
+	br_id = au_sbr_id(sb, bindex);
 	list_for_each_entry(file, &sb->s_files, f_u.fu_list) {
 		if (special_file(file->f_dentry->d_inode->i_mode))
 			continue;
+		dentry = file->f_dentry;
+		inode = dentry->d_inode;
 
 		AuDbg("%.*s\n", AuDLNPair(file->f_dentry));
 		fi_read_lock(file);
@@ -869,16 +875,17 @@ static int au_br_mod_files_ro(struct super_block *sb, aufs_bindex_t bindex)
 			goto out_free;
 		}
 
-		bstart = au_fbstart(file);
-		if (!S_ISREG(file->f_dentry->d_inode->i_mode)
+		hfile = &au_fi(file)->fi_htop;
+		hf = hfile->hf_file;
+		if (!S_ISREG(inode->i_mode)
 		    || !(file->f_mode & FMODE_WRITE)
-		    || bstart != bindex) {
+		    || hfile->hf_br->br_id != br_id
+		    || !(hf->f_mode & FMODE_WRITE)) {
 			FiMustNoWaiters(file);
 			fi_read_unlock(file);
 			continue;
 		}
 
-		hf = au_hf_top(file);
 		FiMustNoWaiters(file);
 		fi_read_unlock(file);
 

@@ -303,7 +303,7 @@ static inline int au_test_higen(struct inode *inode, struct inode *h_inode)
 static inline void au_iigen_dec(struct inode *inode)
 {
 #ifdef CONFIG_AUFS_HNOTIFY
-	atomic_dec_return(&au_ii(inode)->ii_generation);
+	atomic_dec(&au_ii(inode)->ii_generation);
 #endif
 }
 
