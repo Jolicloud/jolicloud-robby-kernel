@@ -3,6 +3,9 @@ Aufs2 -- advanced multi layered unification filesystem version 2
 http://aufs.sf.net
 Junjiro R. Okajima
 
+========================================
+Aufs2 is obsoleted since Sep 2010. Please try aufs2.1 instead.
+========================================
 
 0. Introduction
 ----------------------------------------
@@ -327,16 +330,15 @@ aufs-users ML.
 ----------------------------------------
 Thanks to everyone who have tried and are using aufs, whoever
 have reported a bug or any feedback.
-Since Apr 2010, Tomas M (the author of Slax and Linux Live scripts) is
-making "doubling" donations.
-Unfortunately I cannot list all of the donators, but I really appriciate. See
-<http://sourceforge.net/mailarchive/message.php?msg_name=4BC70596.4000507%40slax.org>
-and
-<http://www.slax.org/aufs.php>
-in detail.
 
 Especially donators:
 Tomas Matejicek(slax.org) made a donation (much more than once).
+	Since Apr 2010, Tomas M (the author of Slax and Linux Live
+	scripts) is making "doubling" donations.
+	Unfortunately I cannot list all of the donators, but I really
+	appriciate.
+	It ends Aug 2010, but the ordinary donation URL is still available.
+	<http://sourceforge.net/donate/index.php?group_id=167503>
 Dai Itasaka made a donation (2007/8).
 Chuck Smith made a donation (2008/4, 10 and 12).
 Henk Schoneveld made a donation (2008/9).
