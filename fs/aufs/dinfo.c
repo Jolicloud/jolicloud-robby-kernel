@@ -22,11 +22,13 @@
 
 #include "aufs.h"
 
-void au_di_init_once(void *_di)
+void au_di_init_once(void *_dinfo)
 {
-	struct au_dinfo *di = _di;
+	struct au_dinfo *dinfo = _dinfo;
+	static struct lock_class_key aufs_di;
 
-	au_rw_init(&di->di_rwsem);
+	au_rw_init(&dinfo->di_rwsem);
+	au_rw_class(&dinfo->di_rwsem, &aufs_di);
 }
 
 int au_di_init(struct dentry *dentry)

@@ -34,7 +34,7 @@
 /* #include <linux/kernel.h> */
 #include <linux/delay.h>
 /* #include <linux/kd.h> */
-/* #include <linux/vt_kern.h> */
+#include <linux/vt_kern.h>
 #include <linux/sysrq.h>
 #include <linux/aufs_type.h>
 

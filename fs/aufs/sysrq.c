@@ -36,7 +36,6 @@ static void sysrq_sb(struct super_block *sb)
 
 	plevel = au_plevel;
 	au_plevel = KERN_WARNING;
-	au_debug(1);
 
 	sbinfo = au_sbi(sb);
 	/* since we define pr_fmt, call printk directly */
@@ -61,9 +60,9 @@ static void sysrq_sb(struct super_block *sb)
 		if (!special_file(mode) || au_special_file(mode))
 			au_dpri_file(file);
 	}
+	printk(KERN_WARNING AUFS_NAME ": done\n");
 
 	au_plevel = plevel;
-	au_debug(0);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -79,12 +78,12 @@ static void au_sysrq(int key __maybe_unused,
 	struct kobject *kobj;
 	struct au_sbinfo *sbinfo;
 
-	/* spin_lock(&sysaufs_ket->list_lock); */
-	list_for_each_entry(kobj, &sysaufs_ket->list, entry) {
+	/* spin_lock(&sysaufs_kset->list_lock); */
+	list_for_each_entry(kobj, &sysaufs_kset->list, entry) {
 		sbinfo = container_of(kobj, struct au_sbinfo, si_kobj);
 		sysrq_sb(sbinfo->si_sb);
 	}
-	/* spin_unlock(&sysaufs_ket->list_lock); */
+	/* spin_unlock(&sysaufs_kset->list_lock); */
 }
 
 static struct sysrq_key_op au_sysrq_op = {
