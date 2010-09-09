@@ -74,7 +74,7 @@ static inline int au_wkq_wait(au_wkq_func_t func, void *args)
 
 static inline void au_nwt_done(struct au_nowait_tasks *nwt)
 {
-	if (!atomic_dec_return(&nwt->nw_len))
+	if (atomic_dec_and_test(&nwt->nw_len))
 		wake_up_all(&nwt->nw_wq);
 }
 

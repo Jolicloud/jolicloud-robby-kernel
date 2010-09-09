@@ -21,6 +21,7 @@
  */
 
 #include <linux/buffer_head.h>
+#include <linux/jiffies.h>
 #include <linux/module.h>
 #include <linux/seq_file.h>
 #include <linux/statfs.h>
@@ -123,11 +124,13 @@ static void au_show_wbr_create(struct seq_file *m, int v,
 		break;
 	case AuWbrCreate_MFSV:
 		seq_printf(m, /*pat*/"mfs:%lu",
-			   sbinfo->si_wbr_mfs.mfs_expire / HZ);
+			   jiffies_to_msecs(sbinfo->si_wbr_mfs.mfs_expire)
+			   / MSEC_PER_SEC);
 		break;
 	case AuWbrCreate_PMFSV:
 		seq_printf(m, /*pat*/"pmfs:%lu",
-			   sbinfo->si_wbr_mfs.mfs_expire / HZ);
+			   jiffies_to_msecs(sbinfo->si_wbr_mfs.mfs_expire)
+			   / MSEC_PER_SEC);
 		break;
 	case AuWbrCreate_MFSRR:
 		seq_printf(m, /*pat*/"mfsrr:%llu",
@@ -136,7 +139,8 @@ static void au_show_wbr_create(struct seq_file *m, int v,
 	case AuWbrCreate_MFSRRV:
 		seq_printf(m, /*pat*/"mfsrr:%llu:%lu",
 			   sbinfo->si_wbr_mfs.mfsrr_watermark,
-			   sbinfo->si_wbr_mfs.mfs_expire / HZ);
+			   jiffies_to_msecs(sbinfo->si_wbr_mfs.mfs_expire)
+			   / MSEC_PER_SEC);
 		break;
 	}
 }
@@ -248,7 +252,7 @@ static int aufs_show_options(struct seq_file *m, struct vfsmount *mnt)
 
 	AuUInt(DIRWH, dirwh, sbinfo->si_dirwh);
 
-	n = sbinfo->si_rdcache / HZ;
+	n = jiffies_to_msecs(sbinfo->si_rdcache) / MSEC_PER_SEC;
 	AuUInt(RDCACHE, rdcache, n);
 
 	AuUInt(RDBLK, rdblk, sbinfo->si_rdblk);
@@ -731,7 +735,6 @@ static int alloc_root(struct super_block *sb)
 
 out_iput:
 	iget_failed(inode);
-	iput(inode);
 out:
 	return err;
 

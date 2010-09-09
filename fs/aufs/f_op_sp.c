@@ -244,8 +244,6 @@ static int au_do_open_sp(struct file *file, int flags)
 	di_read_lock_child(dentry, AuLock_IR);
 	if (!err)
 		au_init_fop_sp(file);
-	else
-		au_finfo_fin(file);
 
 out:
 	return err;
