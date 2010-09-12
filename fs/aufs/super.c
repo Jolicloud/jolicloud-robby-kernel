@@ -814,6 +814,7 @@ static int aufs_get_sb(struct file_system_type *fs_type, int flags,
 		si_write_lock(sb);
 		sysaufs_brs_add(sb, 0);
 		si_write_unlock(sb);
+		au_sbilist_add(sb);
 	}
 	return err;
 }
@@ -824,6 +825,7 @@ static void aufs_kill_sb(struct super_block *sb)
 
 	sbinfo = au_sbi(sb);
 	if (sbinfo) {
+		au_sbilist_del(sb);
 		aufs_write_lock(sb->s_root);
 		if (sbinfo->si_wbr_create_ops->fin)
 			sbinfo->si_wbr_create_ops->fin(sb);

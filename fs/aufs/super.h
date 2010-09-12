@@ -157,6 +157,10 @@ struct au_sbinfo {
 #endif
 #endif
 
+#ifdef CONFIG_AUFS_SBILIST
+	struct list_head	si_list;
+#endif
+
 	/* dirty, necessary for unmounting, sysfs and sysrq */
 	struct super_block	*si_sb;
 };
@@ -275,6 +279,32 @@ static inline int au_busy_or_stale(void)
 	return -EBUSY;
 }
 #endif /* CONFIG_AUFS_EXPORT */
+
+/* ---------------------------------------------------------------------- */
+
+#ifdef CONFIG_AUFS_SBILIST
+/* module.c */
+extern struct au_splhead au_sbilist;
+
+static inline void au_sbilist_init(void)
+{
+	au_spl_init(&au_sbilist);
+}
+
+static inline void au_sbilist_add(struct super_block *sb)
+{
+	au_spl_add(&au_sbi(sb)->si_list, &au_sbilist);
+}
+
+static inline void au_sbilist_del(struct super_block *sb)
+{
+	au_spl_del(&au_sbi(sb)->si_list, &au_sbilist);
+}
+#else
+AuStubVoid(au_sbilist_init, void)
+AuStubVoid(au_sbilist_add, struct super_block*)
+AuStubVoid(au_sbilist_del, struct super_block*)
+#endif
 
 /* ---------------------------------------------------------------------- */
 

@@ -76,6 +76,10 @@ static void au_cache_fin(void)
 
 int au_dir_roflags;
 
+#ifdef CONFIG_AUFS_SBILIST
+struct au_splhead au_sbilist;
+#endif
+
 /*
  * functions for module interface.
  */
@@ -116,6 +120,7 @@ static int __init aufs_init(void)
 
 	au_dir_roflags = au_file_roflags(O_DIRECTORY | O_LARGEFILE);
 
+	au_sbilist_init();
 	sysaufs_brs_init();
 	au_debug_init();
 	au_dy_init();
