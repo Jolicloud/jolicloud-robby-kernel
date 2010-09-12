@@ -824,13 +824,18 @@ static void aufs_kill_sb(struct super_block *sb)
 
 	sbinfo = au_sbi(sb);
 	if (sbinfo) {
-		si_write_lock(sb);
-		if (au_opt_test(au_mntflags(sb), PLINK))
-			au_plink_put(sb);
+		aufs_write_lock(sb->s_root);
 		if (sbinfo->si_wbr_create_ops->fin)
 			sbinfo->si_wbr_create_ops->fin(sb);
+		if (au_opt_test(sbinfo->si_mntflags, UDBA_HNOTIFY)) {
+			au_opt_set_udba(sbinfo->si_mntflags, UDBA_NONE);
+			au_remount_refresh(sb, /*flags*/0);
+		}
+		if (au_opt_test(sbinfo->si_mntflags, PLINK))
+			au_plink_put(sb);
 		au_xino_clr(sb);
-		si_write_unlock(sb);
+		aufs_write_unlock(sb->s_root);
+		au_nwt_flush(&sbinfo->si_nowait);
 	}
 	generic_shutdown_super(sb);
 }
