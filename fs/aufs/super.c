@@ -367,26 +367,6 @@ static int aufs_statfs(struct dentry *dentry, struct kstatfs *buf)
 
 /* ---------------------------------------------------------------------- */
 
-/*
- * this IS NOT for super_operations.
- * I guess it will be reverted someday.
- */
-static void aufs_umount_begin(struct super_block *sb)
-{
-	struct au_sbinfo *sbinfo;
-
-	sbinfo = au_sbi(sb);
-	if (!sbinfo)
-		return;
-
-	si_write_lock(sb);
-	if (au_opt_test(au_mntflags(sb), PLINK))
-		au_plink_put(sb);
-	if (sbinfo->si_wbr_create_ops->fin)
-		sbinfo->si_wbr_create_ops->fin(sb);
-	si_write_unlock(sb);
-}
-
 /* final actions when unmounting a file system */
 static void aufs_put_super(struct super_block *sb)
 {
@@ -396,7 +376,6 @@ static void aufs_put_super(struct super_block *sb)
 	if (!sbinfo)
 		return;
 
-	aufs_umount_begin(sb);
 	dbgaufs_si_fin(sbinfo);
 	kobject_put(&sbinfo->si_kobj);
 }
@@ -839,13 +818,29 @@ static int aufs_get_sb(struct file_system_type *fs_type, int flags,
 	return err;
 }
 
+static void aufs_kill_sb(struct super_block *sb)
+{
+	struct au_sbinfo *sbinfo;
+
+	sbinfo = au_sbi(sb);
+	if (sbinfo) {
+		si_write_lock(sb);
+		if (au_opt_test(au_mntflags(sb), PLINK))
+			au_plink_put(sb);
+		if (sbinfo->si_wbr_create_ops->fin)
+			sbinfo->si_wbr_create_ops->fin(sb);
+		si_write_unlock(sb);
+	}
+	generic_shutdown_super(sb);
+}
+
 struct file_system_type aufs_fs_type = {
 	.name		= AUFS_FSTYPE,
 	.fs_flags	=
 		FS_RENAME_DOES_D_MOVE	/* a race between rename and others */
 		| FS_REVAL_DOT,		/* for NFS branch and udba */
 	.get_sb		= aufs_get_sb,
-	.kill_sb	= generic_shutdown_super,
+	.kill_sb	= aufs_kill_sb,
 	/* no need to __module_get() and module_put(). */
 	.owner		= THIS_MODULE,
 };
