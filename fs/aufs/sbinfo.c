@@ -29,18 +29,16 @@
 void au_si_free(struct kobject *kobj)
 {
 	struct au_sbinfo *sbinfo;
-	struct super_block *sb;
 	char *locked __maybe_unused; /* debug only */
 
 	sbinfo = container_of(kobj, struct au_sbinfo, si_kobj);
 	AuDebugOn(!list_empty(&sbinfo->si_plink.head));
 	AuDebugOn(sbinfo->si_plink_maint);
+	AuDebugOn(atomic_read(&sbinfo->si_nowait.nw_len));
 
-	sb = sbinfo->si_sb;
-	si_write_lock(sb);
-	au_xino_clr(sb);
+	au_rw_write_lock(&sbinfo->si_rwsem);
 	au_br_free(sbinfo);
-	si_write_unlock(sb);
+	au_rw_write_unlock(&sbinfo->si_rwsem);
 
 	AuDebugOn(radix_tree_gang_lookup
 		  (&sbinfo->au_si_pid.tree, (void **)&locked,

@@ -829,6 +829,7 @@ static void aufs_kill_sb(struct super_block *sb)
 			au_plink_put(sb);
 		if (sbinfo->si_wbr_create_ops->fin)
 			sbinfo->si_wbr_create_ops->fin(sb);
+		au_xino_clr(sb);
 		si_write_unlock(sb);
 	}
 	generic_shutdown_super(sb);
