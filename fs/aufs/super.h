@@ -222,6 +222,8 @@ int au_sbr_realloc(struct au_sbinfo *sbinfo, int nbr);
 unsigned int au_sigen_inc(struct super_block *sb);
 aufs_bindex_t au_new_br_id(struct super_block *sb);
 
+void si_read_lock(struct super_block *sb, int flags);
+void si_write_lock(struct super_block *sb);
 void aufs_read_lock(struct dentry *dentry, int flags);
 void aufs_read_unlock(struct dentry *dentry, int flags);
 void aufs_write_lock(struct dentry *dentry);
@@ -406,30 +408,19 @@ static inline int si_noflush_write_trylock(struct super_block *sb)
 	return locked;
 }
 
-static inline void si_read_lock(struct super_block *sb, int flags)
-{
-	if (au_ftest_lock(flags, FLUSH))
-		au_nwt_flush(&au_sbi(sb)->si_nowait);
-	si_noflush_read_lock(sb);
-}
-
+#if 0 /* unused */
 static inline int si_read_trylock(struct super_block *sb, int flags)
 {
 	if (au_ftest_lock(flags, FLUSH))
 		au_nwt_flush(&au_sbi(sb)->si_nowait);
 	return si_noflush_read_trylock(sb);
 }
+#endif
 
 static inline void si_read_unlock(struct super_block *sb)
 {
 	si_pid_clr(sb);
 	__si_read_unlock(sb);
-}
-
-static inline void si_write_lock(struct super_block *sb)
-{
-	au_nwt_flush(&au_sbi(sb)->si_nowait);
-	si_noflush_write_lock(sb);
 }
 
 #if 0 /* unused */

@@ -180,6 +180,19 @@ aufs_bindex_t au_new_br_id(struct super_block *sb)
 
 /* ---------------------------------------------------------------------- */
 
+void si_read_lock(struct super_block *sb, int flags)
+{
+	if (au_ftest_lock(flags, FLUSH))
+		au_nwt_flush(&au_sbi(sb)->si_nowait);
+	si_noflush_read_lock(sb);
+}
+
+void si_write_lock(struct super_block *sb)
+{
+	au_nwt_flush(&au_sbi(sb)->si_nowait);
+	si_noflush_write_lock(sb);
+}
+
 /* dentry and super_block lock. call at entry point */
 void aufs_read_lock(struct dentry *dentry, int flags)
 {
