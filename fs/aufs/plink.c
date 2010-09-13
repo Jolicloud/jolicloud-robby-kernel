@@ -36,6 +36,73 @@ void au_plink_maint_block(struct super_block *sb)
 	wait_event(sbi->si_plink_wq, !sbi->si_plink_maint);
 }
 
+/*
+ * the pseudo-link maintenance mode.
+ * during a user process maintains the pseudo-links,
+ * prohibit adding a new plink and branch manipulation.
+ *
+ * Flags
+ * NOPLM:
+ *	For entry functions which will handle plink, and i_mutex is already held
+ *	in VFS.
+ *	They cannot wait and should return an error at once.
+ *	Callers has to check the error.
+ * NOPLMW:
+ *	For entry functions which will handle plink, but i_mutex is not held
+ *	in VFS.
+ *	They can wait the plink maintenance mode to finish.
+ *
+ * They behave like F_SETLK and F_SETLKW.
+ * If the caller never handle plink, then both flags are unnecessary.
+ */
+
+int au_plink_maint(struct super_block *sb, int flags)
+{
+	int err;
+	pid_t pid, ppid;
+	struct au_sbinfo *sbi;
+
+	SiMustAnyLock(sb);
+
+	err = 0;
+	if (!au_opt_test(au_mntflags(sb), PLINK))
+		goto out;
+
+	sbi = au_sbi(sb);
+	pid = sbi->si_plink_maint_pid;
+	if (!pid || pid == current->pid)
+		goto out;
+
+	/* todo: it highly depends upon /sbin/mount.aufs */
+	rcu_read_lock();
+	ppid = task_pid_vnr(rcu_dereference(current->real_parent));
+	rcu_read_unlock();
+	if (pid == ppid)
+		goto out;
+
+	if (au_ftest_lock(flags, NOPLMW)) {
+		/*
+		 * todo: debug by lockdep, if there is no i_mutex lock in VFS,
+		 * we don't need to wait.
+		 */
+		while (sbi->si_plink_maint_pid) {
+			si_read_unlock(sb);
+			/* gave up wake_up_bit() */
+			wait_event(sbi->si_plink_wq, !sbi->si_plink_maint_pid);
+
+			if (au_ftest_lock(flags, FLUSH))
+				au_nwt_flush(&sbi->si_nowait);
+			si_noflush_read_lock(sb);
+		}
+	} else if (au_ftest_lock(flags, NOPLM)) {
+		AuDbg("ppid %d, pid %d\n", ppid, pid);
+		err = -EAGAIN;
+	}
+
+out:
+	return err;
+}
+
 void au_plink_maint_leave(struct file *file)
 {
 	struct au_sbinfo *sbinfo;

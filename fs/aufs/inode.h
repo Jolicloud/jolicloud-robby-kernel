@@ -207,6 +207,7 @@ void au_iinfo_fin(struct inode *inode);
 int au_ii_realloc(struct au_iinfo *iinfo, int nbr);
 
 /* plink.c */
+int au_plink_maint(struct super_block *sb, int flags);
 void au_plink_maint_block(struct super_block *sb);
 void au_plink_maint_leave(struct file *file);
 #ifdef CONFIG_AUFS_DEBUG

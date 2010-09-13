@@ -142,6 +142,7 @@ struct au_sbinfo {
 	wait_queue_head_t	si_plink_wq;
 	spinlock_t		si_plink_maint_lock;
 	struct file		*si_plink_maint;
+	pid_t			si_plink_maint_pid;
 
 	/*
 	 * sysfs and lifetime management.
@@ -202,6 +203,8 @@ static inline unsigned char au_do_ftest_si(struct au_sbinfo *sbi,
 #define AuLock_IW		(1 << 2)	/* write-lock inode */
 #define AuLock_FLUSH		(1 << 3)	/* wait for 'nowait' tasks */
 #define AuLock_DIR		(1 << 4)	/* target is a dir */
+#define AuLock_NOPLM		(1 << 5)	/* return err in plm mode */
+#define AuLock_NOPLMW		(1 << 6)	/* wait for plm mode ends */
 #define au_ftest_lock(flags, name)	((flags) & AuLock_##name)
 #define au_fset_lock(flags, name)	{ (flags) |= AuLock_##name; }
 #define au_fclr_lock(flags, name)	{ (flags) &= ~AuLock_##name; }
