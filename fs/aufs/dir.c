@@ -208,7 +208,6 @@ static int aufs_release_dir(struct inode *inode __maybe_unused,
 	struct au_fidir *fidir;
 	aufs_bindex_t bindex, bend;
 
-	au_plink_maint_leave(file);
 	sb = file->f_dentry->d_sb;
 	finfo = au_fi(file);
 	fidir = finfo->fi_hdir;

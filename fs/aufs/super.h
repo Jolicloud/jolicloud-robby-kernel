@@ -141,7 +141,6 @@ struct au_sbinfo {
 	struct au_splhead	si_plink;
 	wait_queue_head_t	si_plink_wq;
 	spinlock_t		si_plink_maint_lock;
-	struct file		*si_plink_maint;
 	pid_t			si_plink_maint_pid;
 
 	/*

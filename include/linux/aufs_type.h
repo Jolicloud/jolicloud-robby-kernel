@@ -106,9 +106,6 @@ typedef __s16 aufs_bindex_t;
 
 /* ioctl */
 enum {
-	AuCtl_PLINK_MAINT,
-	AuCtl_PLINK_CLEAN,
-
 	/* readdir in userspace */
 	AuCtl_RDU,
 	AuCtl_RDU_INO,
@@ -186,8 +183,6 @@ struct aufs_rdu {
 } __aligned(8);
 
 #define AuCtlType		'A'
-#define AUFS_CTL_PLINK_MAINT	_IO(AuCtlType, AuCtl_PLINK_MAINT)
-#define AUFS_CTL_PLINK_CLEAN	_IO(AuCtlType, AuCtl_PLINK_CLEAN)
 #define AUFS_CTL_RDU		_IOWR(AuCtlType, AuCtl_RDU, struct aufs_rdu)
 #define AUFS_CTL_RDU_INO	_IOWR(AuCtlType, AuCtl_RDU_INO, struct aufs_rdu)
 #define AUFS_CTL_WBR_FD		_IO(AuCtlType, AuCtl_WBR_FD)

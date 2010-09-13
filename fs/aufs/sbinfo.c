@@ -33,7 +33,6 @@ void au_si_free(struct kobject *kobj)
 
 	sbinfo = container_of(kobj, struct au_sbinfo, si_kobj);
 	AuDebugOn(!list_empty(&sbinfo->si_plink.head));
-	AuDebugOn(sbinfo->si_plink_maint);
 	AuDebugOn(atomic_read(&sbinfo->si_nowait.nw_len));
 
 	au_rw_write_lock(&sbinfo->si_rwsem);

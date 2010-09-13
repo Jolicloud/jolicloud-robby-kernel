@@ -23,20 +23,6 @@
 #include "aufs.h"
 
 /*
- * during a user process maintains the pseudo-links,
- * prohibit adding a new plink and branch manipulation.
- */
-void au_plink_maint_block(struct super_block *sb)
-{
-	struct au_sbinfo *sbi = au_sbi(sb);
-
-	SiMustAnyLock(sb);
-
-	/* gave up wake_up_bit() */
-	wait_event(sbi->si_plink_wq, !sbi->si_plink_maint);
-}
-
-/*
  * the pseudo-link maintenance mode.
  * during a user process maintains the pseudo-links,
  * prohibit adding a new plink and branch manipulation.
@@ -103,40 +89,36 @@ out:
 	return err;
 }
 
-void au_plink_maint_leave(struct file *file)
+void au_plink_maint_leave(struct au_sbinfo *sbinfo)
 {
-	struct au_sbinfo *sbinfo;
 	int iam;
 
-	AuDebugOn(atomic_long_read(&file->f_count));
-
-	sbinfo = au_sbi(file->f_dentry->d_sb);
 	spin_lock(&sbinfo->si_plink_maint_lock);
-	iam = (sbinfo->si_plink_maint == file);
+	iam = (sbinfo->si_plink_maint_pid == current->pid);
 	if (iam)
-		sbinfo->si_plink_maint = NULL;
+		sbinfo->si_plink_maint_pid = 0;
 	spin_unlock(&sbinfo->si_plink_maint_lock);
 	if (iam)
 		wake_up_all(&sbinfo->si_plink_wq);
 }
 
-static int au_plink_maint_enter(struct file *file)
+int au_plink_maint_enter(struct super_block *sb)
 {
 	int err;
-	struct super_block *sb;
 	struct au_sbinfo *sbinfo;
 
 	err = 0;
-	sb = file->f_dentry->d_sb;
 	sbinfo = au_sbi(sb);
 	/* make sure i am the only one in this fs */
 	si_write_lock(sb);
-	/* spin_lock(&sbinfo->si_plink_maint_lock); */
-	if (!sbinfo->si_plink_maint)
-		sbinfo->si_plink_maint = file;
-	else
-		err = -EBUSY;
-	/* spin_unlock(&sbinfo->si_plink_maint_lock); */
+	if (au_opt_test(au_mntflags(sb), PLINK)) {
+		spin_lock(&sbinfo->si_plink_maint_lock);
+		if (!sbinfo->si_plink_maint_pid)
+			sbinfo->si_plink_maint_pid = current->pid;
+		else
+			err = -EBUSY;
+		spin_unlock(&sbinfo->si_plink_maint_lock);
+	}
 	si_write_unlock(sb);
 
 	return err;
@@ -397,7 +379,6 @@ void au_plink_append(struct inode *inode, aufs_bindex_t bindex,
 		cnt++;
 		WARN_ONCE(cnt > AUFS_PLINK_WARN,
 			  "unexpectedly many pseudo links, %d\n", cnt);
-		au_plink_maint_block(sb);
 		err = whplink(h_dentry, inode, bindex, au_sbr(sb, bindex));
 	} else {
 		do_put_plink(tmp, 0);
@@ -431,6 +412,17 @@ void au_plink_put(struct super_block *sb)
 	list_for_each_entry_safe(plink, tmp, plink_list, list)
 		do_put_plink(plink, 0);
 	INIT_LIST_HEAD(plink_list);
+}
+
+void au_plink_clean(struct super_block *sb, int verbose)
+{
+	struct dentry *root;
+
+	root = sb->s_root;
+	aufs_write_lock(root);
+	if (au_opt_test(au_mntflags(sb), PLINK))
+		au_plink_put(sb);
+	aufs_write_unlock(root);
 }
 
 /* free the plinks on a branch specified by @br_id */
@@ -480,39 +472,4 @@ void au_plink_half_refresh(struct super_block *sb, aufs_bindex_t br_id)
 		ii_write_unlock(inode);
 		iput(inode);
 	}
-}
-
-/* ---------------------------------------------------------------------- */
-
-long au_plink_ioctl(struct file *file, unsigned int cmd)
-{
-	long err;
-	struct super_block *sb;
-
-	err = -EACCES;
-	if (!capable(CAP_SYS_ADMIN))
-		goto out;
-
-	err = 0;
-	sb = file->f_dentry->d_sb;
-	switch (cmd) {
-	case AUFS_CTL_PLINK_MAINT:
-		/*
-		 * pseudo-link maintenance mode,
-		 * cleared by aufs_release_dir()
-		 */
-		err = au_plink_maint_enter(file);
-		break;
-	case AUFS_CTL_PLINK_CLEAN:
-		aufs_write_lock(sb->s_root);
-		if (au_opt_test(au_mntflags(sb), PLINK))
-			au_plink_put(sb);
-		aufs_write_unlock(sb->s_root);
-		break;
-	default:
-		/* err = -ENOTTY; */
-		err = -EINVAL;
-	}
-out:
-	return err;
 }

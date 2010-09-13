@@ -208,8 +208,8 @@ int au_ii_realloc(struct au_iinfo *iinfo, int nbr);
 
 /* plink.c */
 int au_plink_maint(struct super_block *sb, int flags);
-void au_plink_maint_block(struct super_block *sb);
-void au_plink_maint_leave(struct file *file);
+void au_plink_maint_leave(struct au_sbinfo *sbinfo);
+int au_plink_maint_enter(struct super_block *sb);
 #ifdef CONFIG_AUFS_DEBUG
 void au_plink_list(struct super_block *sb);
 #else
@@ -220,8 +220,8 @@ struct dentry *au_plink_lkup(struct inode *inode, aufs_bindex_t bindex);
 void au_plink_append(struct inode *inode, aufs_bindex_t bindex,
 		     struct dentry *h_dentry);
 void au_plink_put(struct super_block *sb);
+void au_plink_clean(struct super_block *sb, int verbose);
 void au_plink_half_refresh(struct super_block *sb, aufs_bindex_t br_id);
-long au_plink_ioctl(struct file *file, unsigned int cmd);
 
 /* ---------------------------------------------------------------------- */
 
