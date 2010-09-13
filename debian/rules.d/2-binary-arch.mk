@@ -255,7 +255,7 @@ ifeq ($(do_libc_dev_package),true)
 	dh_compress -plinux-libc-dev
 	dh_fixperms -plinux-libc-dev
 	dh_installdeb -plinux-libc-dev
-	dh_gencontrol -plinux-libc-dev
+	dh_gencontrol -plinux-libc-dev -- $(libc_dev_version)
 	dh_md5sums -plinux-libc-dev
 	dh_builddeb -plinux-libc-dev
 endif

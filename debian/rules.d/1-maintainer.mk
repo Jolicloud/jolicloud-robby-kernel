@@ -108,6 +108,7 @@ endif
 	@echo "do_full_source            = $(do_full_source)"
 	@echo "do_tools                  = $(do_tools)"
 	@echo "full_build                = $(full_build)"
+	@echo "libc_dev_version		 = $(libc_dev_version)"
 
 printchanges:
 	@baseCommit=$$(git log --pretty=format:'%H %s' | \

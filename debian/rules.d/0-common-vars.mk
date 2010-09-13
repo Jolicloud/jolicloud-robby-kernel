@@ -79,6 +79,18 @@ ifneq ($(full_build),false)
   uploadnum	:= $(uploadnum)-Ubuntu
 endif
 
+# XXX: linux-libc-dev got bumped to -803.N inadvertantly by a ti-omap4 upload
+#      shift our version higher for this package only.  Ensure this only
+#      occurs for the v2.6.35 kernel so that we do not propogate this into
+#      any other series.
+raw_uploadnum	:= $(shell echo $(revision) | sed -e 's/.*\.//')
+libc_dev_version :=
+ifeq ($(DEBIAN),debian.master)
+ifeq ($(release),2.6.35)
+libc_dev_version := -v$(release)-$(shell expr "$(abinum)" + 1000).$(raw_uploadnum)
+endif
+endif
+
 # We force the sublevel to be exactly what we want. The actual source may
 # be an in development git tree. We want to force it here instead of
 # committing changes to the top level Makefile
