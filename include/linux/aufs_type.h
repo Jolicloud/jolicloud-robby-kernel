@@ -80,6 +80,11 @@ typedef __s16 aufs_bindex_t;
 #define AUFS_MFS_SECOND_DEF	30 /* seconds */
 #define AUFS_PLINK_WARN		100 /* number of plinks */
 
+/* pseudo-link maintenace under /proc */
+#define AUFS_PLINK_MAINT_NAME	"plink_maint"
+#define AUFS_PLINK_MAINT_DIR	"fs/" AUFS_NAME
+#define AUFS_PLINK_MAINT_PATH	AUFS_PLINK_MAINT_DIR "/" AUFS_PLINK_MAINT_NAME
+
 #define AUFS_DIROPQ_NAME	AUFS_WH_PFX ".opq" /* whiteouted doubly */
 #define AUFS_WH_DIROPQ		AUFS_WH_PFX AUFS_DIROPQ_NAME
 

@@ -87,8 +87,14 @@ static match_table_t options = {
 	{Opt_trunc_xib, "trunc_xib"},
 	{Opt_notrunc_xib, "notrunc_xib"},
 
+#ifdef CONFIG_PROC_FS
 	{Opt_plink, "plink"},
+#else
+	{Opt_ignore_silent, "plink"},
+#endif
+
 	{Opt_noplink, "noplink"},
+
 #ifdef CONFIG_AUFS_DEBUG
 	{Opt_list_plink, "list_plink"},
 #endif
