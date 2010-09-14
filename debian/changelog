@@ -1,3 +1,14 @@
+linux (2.6.35.4-1.35) robby-lucid; urgency=low
+
+  [ Adam McDaniel ]
+
+  * Revert "Fix debuild error on linux-libc-PKGNUM-ABINUM-dev"
+  * Revert "Renamed linux-libc-dev to linux-libc-PKGNUM-ABINUM-dev"
+  * Added 'grub-pc' as recommended bootloader
+  * JAMBON: btusb: Hide excessive error messages
+
+ -- Adam McDaniel <adam@jolicloud.org>  Tue, 14 Sep 2010 12:14:28 -0600
+
 linux (2.6.35.4-1.34) robby-lucid; urgency=low
 
   [ Adam McDaniel ]
