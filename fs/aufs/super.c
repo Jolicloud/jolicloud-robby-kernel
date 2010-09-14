@@ -845,7 +845,7 @@ static void aufs_kill_sb(struct super_block *sb)
 			au_remount_refresh(sb, /*flags*/0);
 		}
 		if (au_opt_test(sbinfo->si_mntflags, PLINK))
-			au_plink_put(sb);
+			au_plink_put(sb, /*verbose*/1);
 		au_xino_clr(sb);
 		aufs_write_unlock(sb->s_root);
 

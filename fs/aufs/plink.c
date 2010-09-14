@@ -145,6 +145,7 @@ void au_plink_list(struct super_block *sb)
 
 	sbinfo = au_sbi(sb);
 	AuDebugOn(!au_opt_test(au_mntflags(sb), PLINK));
+	AuDebugOn(au_plink_maint(sb, AuLock_NOPLM));
 
 	plink_list = &sbinfo->si_plink.head;
 	rcu_read_lock();
@@ -165,6 +166,7 @@ int au_plink_test(struct inode *inode)
 	sbinfo = au_sbi(inode->i_sb);
 	AuRwMustAnyLock(&sbinfo->si_rwsem);
 	AuDebugOn(!au_opt_test(au_mntflags(inode->i_sb), PLINK));
+	AuDebugOn(au_plink_maint(inode->i_sb, AuLock_NOPLM));
 
 	found = 0;
 	plink_list = &sbinfo->si_plink.head;
@@ -208,6 +210,8 @@ struct dentry *au_plink_lkup(struct inode *inode, aufs_bindex_t bindex)
 	struct qstr tgtname = {
 		.name	= a
 	};
+
+	AuDebugOn(au_plink_maint(inode->i_sb, AuLock_NOPLM));
 
 	br = au_sbr(inode->i_sb, bindex);
 	h_parent = br->br_wbr->wbr_plink;
@@ -341,6 +345,7 @@ void au_plink_append(struct inode *inode, aufs_bindex_t bindex,
 	sb = inode->i_sb;
 	sbinfo = au_sbi(sb);
 	AuDebugOn(!au_opt_test(au_mntflags(sb), PLINK));
+	AuDebugOn(au_plink_maint(sb, AuLock_NOPLM));
 
 	cnt = 0;
 	found = 0;
@@ -396,7 +401,7 @@ out:
 }
 
 /* free all plinks */
-void au_plink_put(struct super_block *sb)
+void au_plink_put(struct super_block *sb, int verbose)
 {
 	struct au_sbinfo *sbinfo;
 	struct list_head *plink_list;
@@ -406,9 +411,11 @@ void au_plink_put(struct super_block *sb)
 
 	sbinfo = au_sbi(sb);
 	AuDebugOn(!au_opt_test(au_mntflags(sb), PLINK));
+	AuDebugOn(au_plink_maint(sb, AuLock_NOPLM));
 
 	plink_list = &sbinfo->si_plink.head;
 	/* no spin_lock since sbinfo is write-locked */
+	WARN(verbose && !list_empty(plink_list), "pseudo-link is not flushed");
 	list_for_each_entry_safe(plink, tmp, plink_list, list)
 		do_put_plink(plink, 0);
 	INIT_LIST_HEAD(plink_list);
@@ -421,7 +428,7 @@ void au_plink_clean(struct super_block *sb, int verbose)
 	root = sb->s_root;
 	aufs_write_lock(root);
 	if (au_opt_test(au_mntflags(sb), PLINK))
-		au_plink_put(sb);
+		au_plink_put(sb, verbose);
 	aufs_write_unlock(root);
 }
 
@@ -439,6 +446,7 @@ void au_plink_half_refresh(struct super_block *sb, aufs_bindex_t br_id)
 
 	sbinfo = au_sbi(sb);
 	AuDebugOn(!au_opt_test(au_mntflags(sb), PLINK));
+	AuDebugOn(au_plink_maint(sb, AuLock_NOPLM));
 
 	plink_list = &sbinfo->si_plink.head;
 	/* no spin_lock since sbinfo is write-locked */

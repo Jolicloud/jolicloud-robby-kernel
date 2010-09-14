@@ -1129,7 +1129,7 @@ static int au_opt_simple(struct super_block *sb, struct au_opt *opt,
 		break;
 	case Opt_noplink:
 		if (au_opt_test(sbinfo->si_mntflags, PLINK))
-			au_plink_put(sb);
+			au_plink_put(sb, /*verbose*/1);
 		au_opt_clr(sbinfo->si_mntflags, PLINK);
 		break;
 	case Opt_list_plink:
