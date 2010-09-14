@@ -222,13 +222,13 @@ int au_sbr_realloc(struct au_sbinfo *sbinfo, int nbr);
 unsigned int au_sigen_inc(struct super_block *sb);
 aufs_bindex_t au_new_br_id(struct super_block *sb);
 
-void si_read_lock(struct super_block *sb, int flags);
+int si_read_lock(struct super_block *sb, int flags);
 void si_write_lock(struct super_block *sb, int flags);
-void aufs_read_lock(struct dentry *dentry, int flags);
+int aufs_read_lock(struct dentry *dentry, int flags);
 void aufs_read_unlock(struct dentry *dentry, int flags);
 void aufs_write_lock(struct dentry *dentry);
 void aufs_write_unlock(struct dentry *dentry);
-void aufs_read_and_write_lock2(struct dentry *d1, struct dentry *d2, int isdir);
+int aufs_read_and_write_lock2(struct dentry *d1, struct dentry *d2, int flags);
 void aufs_read_and_write_unlock2(struct dentry *d1, struct dentry *d2);
 
 int si_pid_test_slow(struct super_block *sb);

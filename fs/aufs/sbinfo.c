@@ -180,11 +180,21 @@ aufs_bindex_t au_new_br_id(struct super_block *sb)
 
 /* ---------------------------------------------------------------------- */
 
-void si_read_lock(struct super_block *sb, int flags)
+int si_read_lock(struct super_block *sb, int flags)
 {
+	int err;
+
+	err = 0;
 	if (au_ftest_lock(flags, FLUSH))
 		au_nwt_flush(&au_sbi(sb)->si_nowait);
+
+	/* it is ok new 'nwt' tasks are appended while we are sleeping */
 	si_noflush_read_lock(sb);
+	err = au_plink_maint(sb, flags);
+	if (unlikely(err))
+		si_read_unlock(sb);
+
+	return err;
 }
 
 void si_write_lock(struct super_block *sb, int flags)
@@ -210,13 +220,19 @@ void si_write_lock(struct super_block *sb, int flags)
 }
 
 /* dentry and super_block lock. call at entry point */
-void aufs_read_lock(struct dentry *dentry, int flags)
+int aufs_read_lock(struct dentry *dentry, int flags)
 {
-	si_read_lock(dentry->d_sb, flags);
-	if (au_ftest_lock(flags, DW))
-		di_write_lock_child(dentry);
-	else
-		di_read_lock_child(dentry, flags);
+	int err;
+
+	err = si_read_lock(dentry->d_sb, flags);
+	if (!err) {
+		if (au_ftest_lock(flags, DW))
+			di_write_lock_child(dentry);
+		else
+			di_read_lock_child(dentry, flags);
+	}
+
+	return err;
 }
 
 void aufs_read_unlock(struct dentry *dentry, int flags)
@@ -240,10 +256,14 @@ void aufs_write_unlock(struct dentry *dentry)
 	si_write_unlock(dentry->d_sb);
 }
 
-void aufs_read_and_write_lock2(struct dentry *d1, struct dentry *d2, int flags)
+int aufs_read_and_write_lock2(struct dentry *d1, struct dentry *d2, int flags)
 {
-	si_read_lock(d1->d_sb, flags);
-	di_write_lock2_child(d1, d2, au_ftest_lock(flags, DIR));
+	int err;
+
+	err = si_read_lock(d1->d_sb, flags);
+	if (!err)
+		di_write_lock2_child(d1, d2, au_ftest_lock(flags, DIR));
+	return err;
 }
 
 void aufs_read_and_write_unlock2(struct dentry *d1, struct dentry *d2)
