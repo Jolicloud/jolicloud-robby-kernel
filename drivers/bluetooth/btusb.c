@@ -217,7 +217,7 @@ static void btusb_intr_complete(struct urb *urb)
 		if (hci_recv_fragment(hdev, HCI_EVENT_PKT,
 						urb->transfer_buffer,
 						urb->actual_length) < 0) {
-			BT_ERR("%s corrupted event packet", hdev->name);
+			BT_INFO("%s corrupted event packet", hdev->name);
 			hdev->stat.err_rx++;
 		}
 	}
@@ -230,7 +230,7 @@ static void btusb_intr_complete(struct urb *urb)
 
 	err = usb_submit_urb(urb, GFP_ATOMIC);
 	if (err < 0) {
-		BT_ERR("%s urb %p failed to resubmit (%d)",
+		BT_INFO("%s urb %p failed to resubmit (%d)",
 						hdev->name, urb, -err);
 		usb_unanchor_urb(urb);
 	}
@@ -273,7 +273,7 @@ static int btusb_submit_intr_urb(struct hci_dev *hdev, gfp_t mem_flags)
 
 	err = usb_submit_urb(urb, mem_flags);
 	if (err < 0) {
-		BT_ERR("%s urb %p submission failed (%d)",
+		BT_INFO("%s urb %p submission failed (%d)",
 						hdev->name, urb, -err);
 		usb_unanchor_urb(urb);
 	}
@@ -301,7 +301,7 @@ static void btusb_bulk_complete(struct urb *urb)
 		if (hci_recv_fragment(hdev, HCI_ACLDATA_PKT,
 						urb->transfer_buffer,
 						urb->actual_length) < 0) {
-			BT_ERR("%s corrupted ACL packet", hdev->name);
+			BT_INFO("%s corrupted ACL packet", hdev->name);
 			hdev->stat.err_rx++;
 		}
 	}
@@ -314,7 +314,7 @@ static void btusb_bulk_complete(struct urb *urb)
 
 	err = usb_submit_urb(urb, GFP_ATOMIC);
 	if (err < 0) {
-		BT_ERR("%s urb %p failed to resubmit (%d)",
+		BT_INFO("%s urb %p failed to resubmit (%d)",
 						hdev->name, urb, -err);
 		usb_unanchor_urb(urb);
 	}
@@ -355,7 +355,7 @@ static int btusb_submit_bulk_urb(struct hci_dev *hdev, gfp_t mem_flags)
 
 	err = usb_submit_urb(urb, mem_flags);
 	if (err < 0) {
-		BT_ERR("%s urb %p submission failed (%d)",
+		BT_INFO("%s urb %p submission failed (%d)",
 						hdev->name, urb, -err);
 		usb_unanchor_urb(urb);
 	}
@@ -390,7 +390,7 @@ static void btusb_isoc_complete(struct urb *urb)
 			if (hci_recv_fragment(hdev, HCI_SCODATA_PKT,
 						urb->transfer_buffer + offset,
 								length) < 0) {
-				BT_ERR("%s corrupted SCO packet", hdev->name);
+				BT_INFO("%s corrupted SCO packet", hdev->name);
 				hdev->stat.err_rx++;
 			}
 		}
@@ -403,7 +403,7 @@ static void btusb_isoc_complete(struct urb *urb)
 
 	err = usb_submit_urb(urb, GFP_ATOMIC);
 	if (err < 0) {
-		BT_ERR("%s urb %p failed to resubmit (%d)",
+		BT_INFO("%s urb %p failed to resubmit (%d)",
 						hdev->name, urb, -err);
 		usb_unanchor_urb(urb);
 	}
@@ -475,7 +475,7 @@ static int btusb_submit_isoc_urb(struct hci_dev *hdev, gfp_t mem_flags)
 
 	err = usb_submit_urb(urb, mem_flags);
 	if (err < 0) {
-		BT_ERR("%s urb %p submission failed (%d)",
+		BT_INFO("%s urb %p submission failed (%d)",
 						hdev->name, urb, -err);
 		usb_unanchor_urb(urb);
 	}
@@ -726,7 +726,7 @@ skip_waking:
 
 	err = usb_submit_urb(urb, GFP_ATOMIC);
 	if (err < 0) {
-		BT_ERR("%s urb %p submission failed", hdev->name, urb);
+		BT_INFO("%s urb %p submission failed", hdev->name, urb);
 		kfree(urb->setup_packet);
 		usb_unanchor_urb(urb);
 	} else {
@@ -772,7 +772,7 @@ static int inline __set_isoc_interface(struct hci_dev *hdev, int altsetting)
 
 	err = usb_set_interface(data->udev, 1, altsetting);
 	if (err < 0) {
-		BT_ERR("%s setting interface failed (%d)", hdev->name, -err);
+		BT_INFO("%s setting interface failed (%d)", hdev->name, -err);
 		return err;
 	}
 
@@ -796,7 +796,7 @@ static int inline __set_isoc_interface(struct hci_dev *hdev, int altsetting)
 	}
 
 	if (!data->isoc_tx_ep || !data->isoc_rx_ep) {
-		BT_ERR("%s invalid SCO descriptors", hdev->name);
+		BT_INFO("%s invalid SCO descriptors", hdev->name);
 		return -ENODEV;
 	}
 
