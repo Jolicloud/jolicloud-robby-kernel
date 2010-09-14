@@ -110,7 +110,7 @@ int au_plink_maint_enter(struct super_block *sb)
 	err = 0;
 	sbinfo = au_sbi(sb);
 	/* make sure i am the only one in this fs */
-	si_write_lock(sb);
+	si_write_lock(sb, AuLock_FLUSH);
 	if (au_opt_test(au_mntflags(sb), PLINK)) {
 		spin_lock(&sbinfo->si_plink_maint_lock);
 		if (!sbinfo->si_plink_maint_pid)
