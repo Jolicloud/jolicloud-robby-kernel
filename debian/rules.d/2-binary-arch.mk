@@ -82,7 +82,7 @@ endif
 	# Remove all modules not in the inclusion list.
 	#
 	if [ -f $(DEBIAN)/control.d/$(target_flavour).inclusion-list ] ; then \
-		$(DROOT)/scripts/module-inclusion $(pkgdir)/lib/modules/$(abi_release)-$*/kernel \
+		$(SHELL) $(DROOT)/scripts/module-inclusion $(pkgdir)/lib/modules/$(abi_release)-$*/kernel \
 			$(DEBIAN)/control.d/$(target_flavour).inclusion-list 2>&1 | \
 				tee $(target_flavour).inclusion-list.log; \
 		/sbin/depmod -b $(pkgdir) -ea -F $(pkgdir)/boot/System.map-$(abi_release)-$* \
