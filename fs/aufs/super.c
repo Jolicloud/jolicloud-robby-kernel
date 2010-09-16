@@ -367,26 +367,6 @@ static int aufs_statfs(struct dentry *dentry, struct kstatfs *buf)
 
 /* ---------------------------------------------------------------------- */
 
-/*
- * this IS NOT for super_operations.
- * I guess it will be reverted someday.
- */
-static void aufs_umount_begin(struct super_block *sb)
-{
-	struct au_sbinfo *sbinfo;
-
-	sbinfo = au_sbi(sb);
-	if (!sbinfo)
-		return;
-
-	si_write_lock(sb);
-	if (au_opt_test(au_mntflags(sb), PLINK))
-		au_plink_put(sb);
-	if (sbinfo->si_wbr_create_ops->fin)
-		sbinfo->si_wbr_create_ops->fin(sb);
-	si_write_unlock(sb);
-}
-
 /* final actions when unmounting a file system */
 static void aufs_put_super(struct super_block *sb)
 {
@@ -396,7 +376,6 @@ static void aufs_put_super(struct super_block *sb)
 	if (!sbinfo)
 		return;
 
-	aufs_umount_begin(sb);
 	dbgaufs_si_fin(sbinfo);
 	kobject_put(&sbinfo->si_kobj);
 }
@@ -659,8 +638,19 @@ static int aufs_remount_fs(struct super_block *sb, int *flags, char *data)
 
 	sbinfo = au_sbi(sb);
 	inode = root->d_inode;
-	mutex_lock(&inode->i_mutex);
-	aufs_write_lock(root);
+	/* todo: very ugly */
+	while (1) {
+		au_nwt_flush(&sbinfo->si_nowait);
+		mutex_lock(&inode->i_mutex);
+		si_noflush_write_lock(sb);
+		if (!au_plink_maint(sb, AuLock_NOPLM))
+			break;
+		si_write_unlock(sb);
+		mutex_unlock(&inode->i_mutex);
+		si_read_lock(sb, AuLock_NOPLMW);
+		si_read_unlock(sb);
+	}
+	di_write_lock_child(root);
 
 	/* au_opts_remount() may return an error */
 	err = au_opts_remount(sb, &opts);
@@ -832,11 +822,37 @@ static int aufs_get_sb(struct file_system_type *fs_type, int flags,
 	err = get_sb_nodev(fs_type, flags, raw_data, aufs_fill_super, mnt);
 	if (!err) {
 		sb = mnt->mnt_sb;
-		si_write_lock(sb);
+		si_write_lock(sb, !AuLock_FLUSH);
 		sysaufs_brs_add(sb, 0);
 		si_write_unlock(sb);
+		au_sbilist_add(sb);
 	}
 	return err;
+}
+
+static void aufs_kill_sb(struct super_block *sb)
+{
+	struct au_sbinfo *sbinfo;
+
+	sbinfo = au_sbi(sb);
+	if (sbinfo) {
+		au_sbilist_del(sb);
+		aufs_write_lock(sb->s_root);
+		if (sbinfo->si_wbr_create_ops->fin)
+			sbinfo->si_wbr_create_ops->fin(sb);
+		if (au_opt_test(sbinfo->si_mntflags, UDBA_HNOTIFY)) {
+			au_opt_set_udba(sbinfo->si_mntflags, UDBA_NONE);
+			au_remount_refresh(sb, /*flags*/0);
+		}
+		if (au_opt_test(sbinfo->si_mntflags, PLINK))
+			au_plink_put(sb, /*verbose*/1);
+		au_xino_clr(sb);
+		aufs_write_unlock(sb->s_root);
+
+		au_plink_maint_leave(sbinfo);
+		au_nwt_flush(&sbinfo->si_nowait);
+	}
+	generic_shutdown_super(sb);
 }
 
 struct file_system_type aufs_fs_type = {
@@ -845,7 +861,7 @@ struct file_system_type aufs_fs_type = {
 		FS_RENAME_DOES_D_MOVE	/* a race between rename and others */
 		| FS_REVAL_DOT,		/* for NFS branch and udba */
 	.get_sb		= aufs_get_sb,
-	.kill_sb	= generic_shutdown_super,
+	.kill_sb	= aufs_kill_sb,
 	/* no need to __module_get() and module_put(). */
 	.owner		= THIS_MODULE,
 };

@@ -58,7 +58,7 @@ struct dentry *au_wh_create(struct dentry *dentry, aufs_bindex_t bindex,
 /* real rmdir for the whiteout-ed dir */
 struct au_whtmp_rmdir {
 	struct inode *dir;
-	aufs_bindex_t bindex;
+	struct au_branch *br;
 	struct dentry *wh_dentry;
 	struct au_nhash whlist;
 };

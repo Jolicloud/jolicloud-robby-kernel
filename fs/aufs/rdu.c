@@ -164,7 +164,10 @@ static int au_rdu(struct file *file, struct aufs_rdu *rdu)
 		goto out_mtx;
 
 	arg.sb = inode->i_sb;
-	si_read_lock(arg.sb, AuLock_FLUSH);
+	err = si_read_lock(arg.sb, AuLock_FLUSH | AuLock_NOPLM);
+	if (unlikely(err))
+		goto out_mtx;
+	/* todo: reval? */
 	fi_read_lock(file);
 
 	err = -EAGAIN;
