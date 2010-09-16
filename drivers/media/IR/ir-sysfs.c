@@ -51,13 +51,14 @@ static ssize_t show_protocols(struct device *d,
 	u64 allowed, enabled;
 	char *tmp = buf;
 
-	if (ir_dev->props->driver_type == RC_DRIVER_SCANCODE) {
+	if (ir_dev->props && ir_dev->props->driver_type == RC_DRIVER_SCANCODE) {
 		enabled = ir_dev->rc_tab.ir_type;
 		allowed = ir_dev->props->allowed_protos;
-	} else {
+	} else if (ir_dev->raw) {
 		enabled = ir_dev->raw->enabled_protocols;
 		allowed = ir_raw_get_allowed_protocols();
-	}
+	} else
+		return sprintf(tmp, "[builtin]\n");
 
 	IR_dprintk(1, "allowed - 0x%llx, enabled - 0x%llx\n",
 		   (long long)allowed,
@@ -137,6 +138,9 @@ static ssize_t store_protocols(struct device *d,
 	int rc;
 	unsigned long flags;
 
+	if (!ir_dev->props && !ir_dev->raw)
+		return -EINVAL;
+
 	tmp = skip_spaces(data);
 
 	if (*tmp == '+') {
@@ -209,7 +213,7 @@ static ssize_t store_protocols(struct device *d,
 		}
 	}
 
-	if (ir_dev->props->driver_type == RC_DRIVER_SCANCODE) {
+	if (ir_dev->props && ir_dev->props->driver_type == RC_DRIVER_SCANCODE) {
 		spin_lock_irqsave(&ir_dev->rc_tab.lock, flags);
 		ir_dev->rc_tab.ir_type = type;
 		spin_unlock_irqrestore(&ir_dev->rc_tab.lock, flags);
