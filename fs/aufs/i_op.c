@@ -374,6 +374,7 @@ int au_do_pin(struct au_pin *p)
 	 * and h_parent can be NULL.
 	 */
 	if (unlikely(!p->hdir || !h_dir || !h_parent)) {
+		err = -EBUSY;
 		if (!au_ftest_pin(p->flags, DI_LOCKED))
 			di_read_unlock(p->parent, AuLock_IR);
 		dput(p->parent);
