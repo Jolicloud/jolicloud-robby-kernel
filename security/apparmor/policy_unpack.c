@@ -575,6 +575,9 @@ static struct aa_profile *unpack_profile(struct aa_ext *e)
 
 	size = unpack_array(e, "net_allowed_af");
 	if (size) {
+		if (size > AF_MAX)
+			goto fail;
+
 		for (i = 0; i < size; i++) {
 			if (!unpack_u16(e, &profile->net.allow[i], NULL))
 				goto fail;
