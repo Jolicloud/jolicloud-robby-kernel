@@ -659,8 +659,7 @@ static int psmouse_extensions(struct psmouse *psmouse,
 		ps2_command(&psmouse->ps2dev, NULL, PSMOUSE_CMD_RESET_DIS);
 		if (alps_detect(psmouse, set_properties) == 0) {
 			if (!set_properties || alps_init(psmouse) == 0)
-/* If ALPS model quirk was applied, don't change the settings */
-				return psmouse->type ? psmouse->type : PSMOUSE_ALPS;
+				return PSMOUSE_ALPS;
 /*
  * Init failed, try basic relative protocols
  */
