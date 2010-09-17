@@ -988,35 +988,38 @@ int au_whtmp_rmdir(struct inode *dir, aufs_bindex_t bindex,
 static void call_rmdir_whtmp(void *args)
 {
 	int err;
+	aufs_bindex_t bindex;
 	struct au_whtmp_rmdir *a = args;
 	struct super_block *sb;
 	struct dentry *h_parent;
 	struct inode *h_dir;
-	struct au_branch *br;
 	struct au_hinode *hdir;
 
 	/* rmdir by nfsd may cause deadlock with this i_mutex */
 	/* mutex_lock(&a->dir->i_mutex); */
+	err = -EROFS;
 	sb = a->dir->i_sb;
-	si_noflush_read_lock(sb);
-	err = au_test_ro(sb, a->bindex, NULL);
-	if (unlikely(err))
+	si_read_lock(sb, !AuLock_FLUSH);
+	if (!au_br_writable(a->br->br_perm))
+		goto out;
+	bindex = au_br_index(sb, a->br->br_id);
+	if (unlikely(bindex < 0))
 		goto out;
 
 	err = -EIO;
-	br = au_sbr(sb, a->bindex);
 	ii_write_lock_parent(a->dir);
 	h_parent = dget_parent(a->wh_dentry);
 	h_dir = h_parent->d_inode;
-	hdir = au_hi(a->dir, a->bindex);
+	hdir = au_hi(a->dir, bindex);
 	au_hn_imtx_lock_nested(hdir, AuLsc_I_PARENT);
-	err = au_h_verify(a->wh_dentry, au_opt_udba(sb), h_dir, h_parent, br);
+	err = au_h_verify(a->wh_dentry, au_opt_udba(sb), h_dir, h_parent,
+			  a->br);
 	if (!err) {
-		err = mnt_want_write(br->br_mnt);
+		err = mnt_want_write(a->br->br_mnt);
 		if (!err) {
-			err = au_whtmp_rmdir(a->dir, a->bindex, a->wh_dentry,
+			err = au_whtmp_rmdir(a->dir, bindex, a->wh_dentry,
 					     &a->whlist);
-			mnt_drop_write(br->br_mnt);
+			mnt_drop_write(a->br->br_mnt);
 		}
 	}
 	au_hn_imtx_unlock(hdir);
@@ -1025,6 +1028,7 @@ static void call_rmdir_whtmp(void *args)
 
 out:
 	/* mutex_unlock(&a->dir->i_mutex); */
+	atomic_dec(&a->br->br_count);
 	au_nwt_done(&au_sbi(sb)->si_nowait);
 	si_read_unlock(sb);
 	au_whtmp_rmdir_free(a);
@@ -1036,14 +1040,17 @@ void au_whtmp_kick_rmdir(struct inode *dir, aufs_bindex_t bindex,
 			 struct dentry *wh_dentry, struct au_whtmp_rmdir *args)
 {
 	int wkq_err;
+	struct super_block *sb;
 
 	IMustLock(dir);
 
 	/* all post-process will be done in do_rmdir_whtmp(). */
+	sb = dir->i_sb;
 	args->dir = au_igrab(dir);
-	args->bindex = bindex;
+	args->br = au_sbr(sb, bindex);
+	atomic_inc(&args->br->br_count);
 	args->wh_dentry = dget(wh_dentry);
-	wkq_err = au_wkq_nowait(call_rmdir_whtmp, args, dir->i_sb);
+	wkq_err = au_wkq_nowait(call_rmdir_whtmp, args, sb);
 	if (unlikely(wkq_err)) {
 		pr_warning("rmdir error %.*s (%d), ignored\n",
 			   AuDLNPair(wh_dentry), wkq_err);

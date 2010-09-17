@@ -87,8 +87,14 @@ static match_table_t options = {
 	{Opt_trunc_xib, "trunc_xib"},
 	{Opt_notrunc_xib, "notrunc_xib"},
 
+#ifdef CONFIG_PROC_FS
 	{Opt_plink, "plink"},
+#else
+	{Opt_ignore_silent, "plink"},
+#endif
+
 	{Opt_noplink, "noplink"},
+
 #ifdef CONFIG_AUFS_DEBUG
 	{Opt_list_plink, "list_plink"},
 #endif
@@ -1126,7 +1132,7 @@ static int au_opt_simple(struct super_block *sb, struct au_opt *opt,
 		break;
 	case Opt_noplink:
 		if (au_opt_test(sbinfo->si_mntflags, PLINK))
-			au_plink_put(sb);
+			au_plink_put(sb, /*verbose*/1);
 		au_opt_clr(sbinfo->si_mntflags, PLINK);
 		break;
 	case Opt_list_plink:
