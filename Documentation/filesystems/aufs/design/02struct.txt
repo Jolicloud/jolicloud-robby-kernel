@@ -113,6 +113,13 @@ All the hardlinks under the Pseudo-link Directory of the writable branch
 should be restored in a proper location later. Aufs provides a utility
 to do this. The userspace helpers executed at remounting and unmounting
 aufs by default.
+During this utility is running, it puts aufs into the pseudo-link
+maintenance mode. In this mode, only the process which began the
+maintenance mode (and its child processes) is allowed to operate in
+aufs. Some other processes which are not related to the pseudo-link will
+be allowed to run too, but the rest have to return an error or wait
+until the maintenance mode ends. If a process already acquires an inode
+mutex (in VFS), it has to return an error.
 
 
 XIB(external inode number bitmap)
