@@ -789,10 +789,19 @@ static int aufs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 	struct super_block *sb;
 	struct inode *inode;
 
-	err = -EINVAL;
+	valid = 1;
 	sb = dentry->d_sb;
 	inode = dentry->d_inode;
-	aufs_read_lock(dentry, AuLock_FLUSH | AuLock_DW);
+	/*
+	 * todo: very ugly
+	 * i_mutex of parent dir may be held,
+	 * but we should not return 'invalid' due to busy.
+	 */
+	err = aufs_read_lock(dentry, AuLock_FLUSH | AuLock_DW | AuLock_NOPLM);
+	if (unlikely(err)) {
+		valid = err;
+		goto out;
+	}
 	sigen = au_sigen(sb);
 	if (au_digen(dentry) != sigen) {
 		AuDebugOn(IS_ROOT(dentry));
@@ -816,23 +825,24 @@ static int aufs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 
 		if (bstart >= 0
 		    && au_test_higen(inode, au_h_iptr(inode, bstart)))
-			goto out;
+			goto out_inval;
 	}
 
 	err = h_d_revalidate(dentry, inode, nd, do_udba);
 	if (unlikely(!err && do_udba && au_dbstart(dentry) < 0))
 		/* both of real entry and whiteout found */
 		err = -EIO;
-	goto out;
+	goto out_inval;
 
 out_dgrade:
 	di_downgrade_lock(dentry, AuLock_IR);
-out:
+out_inval:
 	aufs_read_unlock(dentry, AuLock_IR);
 	AuTraceErr(err);
 	valid = !err;
+out:
 	if (!valid)
-		AuDbg("%.*s invalid\n", AuDLNPair(dentry));
+		AuDbg("%.*s invalid, %d\n", AuDLNPair(dentry), valid);
 	return valid;
 }
 
