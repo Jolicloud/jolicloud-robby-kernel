@@ -1,3 +1,11 @@
+linux (2.6.35.4-1.36) robby-lucid; urgency=low
+
+  [ Adam McDaniel ]
+
+  * CONFIG: Enabled Generic/686 optimizations on "jolicloud" kernel
+
+ -- Adam McDaniel <adam@jolicloud.org>  Sat, 18 Sep 2010 17:52:33 -0600
+
 linux (2.6.35.4-1.35) robby-lucid; urgency=low
 
   [ Adam McDaniel ]
