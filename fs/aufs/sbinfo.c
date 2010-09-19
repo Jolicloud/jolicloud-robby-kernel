@@ -180,6 +180,7 @@ aufs_bindex_t au_new_br_id(struct super_block *sb)
 
 /* ---------------------------------------------------------------------- */
 
+/* it is ok that new 'nwt' tasks are appended while we are sleeping */
 int si_read_lock(struct super_block *sb, int flags)
 {
 	int err;
@@ -188,7 +189,6 @@ int si_read_lock(struct super_block *sb, int flags)
 	if (au_ftest_lock(flags, FLUSH))
 		au_nwt_flush(&au_sbi(sb)->si_nowait);
 
-	/* it is ok new 'nwt' tasks are appended while we are sleeping */
 	si_noflush_read_lock(sb);
 	err = au_plink_maint(sb, flags);
 	if (unlikely(err))
@@ -197,26 +197,19 @@ int si_read_lock(struct super_block *sb, int flags)
 	return err;
 }
 
-void si_write_lock(struct super_block *sb, int flags)
+int si_write_lock(struct super_block *sb, int flags)
 {
-	struct au_sbinfo *sbi;
+	int err;
 
-	sbi = au_sbi(sb);
-	do {
-		if (au_ftest_lock(flags, FLUSH))
-			au_nwt_flush(&sbi->si_nowait);
+	if (au_ftest_lock(flags, FLUSH))
+		au_nwt_flush(&au_sbi(sb)->si_nowait);
 
-		/*
-		 * it is ok new 'nwt' tasks are appended while we are sleeping
-		 */
-		si_noflush_write_lock(sb);
-		if (!au_plink_maint(sb, AuLock_NOPLM))
-			break;
+	si_noflush_write_lock(sb);
+	err = au_plink_maint(sb, flags);
+	if (unlikely(err))
 		si_write_unlock(sb);
-		/* todo: ugly */
-		si_read_lock(sb, AuLock_NOPLMW);
-		si_read_unlock(sb);
-	} while (1);
+
+	return err;
 }
 
 /* dentry and super_block lock. call at entry point */
@@ -246,7 +239,7 @@ void aufs_read_unlock(struct dentry *dentry, int flags)
 
 void aufs_write_lock(struct dentry *dentry)
 {
-	si_write_lock(dentry->d_sb, AuLock_FLUSH);
+	si_write_lock(dentry->d_sb, AuLock_FLUSH | AuLock_NOPLMW);
 	di_write_lock_child(dentry);
 }
 
