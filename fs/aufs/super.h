@@ -223,7 +223,7 @@ unsigned int au_sigen_inc(struct super_block *sb);
 aufs_bindex_t au_new_br_id(struct super_block *sb);
 
 int si_read_lock(struct super_block *sb, int flags);
-void si_write_lock(struct super_block *sb, int flags);
+int si_write_lock(struct super_block *sb, int flags);
 int aufs_read_lock(struct dentry *dentry, int flags);
 void aufs_read_unlock(struct dentry *dentry, int flags);
 void aufs_write_lock(struct dentry *dentry);
