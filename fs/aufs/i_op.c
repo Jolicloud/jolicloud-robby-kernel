@@ -373,6 +373,7 @@ int au_do_pin(struct au_pin *p)
 	 * and h_parent can be NULL.
 	 */
 	if (unlikely(!p->hdir || !h_dir || !h_parent)) {
+		err = -EBUSY;
 		if (!au_ftest_pin(p->flags, DI_LOCKED))
 			di_read_unlock(p->parent, AuLock_IR);
 		dput(p->parent);
@@ -490,7 +491,7 @@ static int au_pin_and_icpup(struct dentry *dentry, struct iattr *ia,
 {
 	int err;
 	loff_t sz;
-	aufs_bindex_t bstart;
+	aufs_bindex_t bstart, ibstart;
 	struct dentry *hi_wh, *parent;
 	struct inode *inode;
 	struct file *h_file;
@@ -504,8 +505,9 @@ static int au_pin_and_icpup(struct dentry *dentry, struct iattr *ia,
 	if (S_ISDIR(inode->i_mode))
 		au_fset_wrdir(wr_dir_args.flags, ISDIR);
 	/* plink or hi_wh() case */
-	if (bstart != au_ibstart(inode))
-		wr_dir_args.force_btgt = au_ibstart(inode);
+	ibstart = au_ibstart(inode);
+	if (bstart != ibstart)
+		wr_dir_args.force_btgt = ibstart;
 	err = au_wr_dir(dentry, /*src_dentry*/NULL, &wr_dir_args);
 	if (unlikely(err < 0))
 		goto out;
@@ -610,7 +612,10 @@ static int aufs_setattr(struct dentry *dentry, struct iattr *ia)
 
 	file = NULL;
 	sb = dentry->d_sb;
-	si_read_lock(sb, AuLock_FLUSH);
+	err = si_read_lock(sb, AuLock_FLUSH | AuLock_NOPLM);
+	if (unlikely(err))
+		goto out_kfree;
+
 	if (ia->ia_valid & ATTR_FILE) {
 		/* currently ftruncate(2) only */
 		AuDebugOn(!S_ISREG(inode->i_mode));
@@ -686,6 +691,7 @@ out_dentry:
 	}
 out_si:
 	si_read_unlock(sb);
+out_kfree:
 	kfree(a);
 out:
 	AuTraceErr(err);
@@ -729,7 +735,7 @@ static int aufs_getattr(struct vfsmount *mnt __maybe_unused,
 	err = 0;
 	sb = dentry->d_sb;
 	inode = dentry->d_inode;
-	si_read_lock(sb, AuLock_FLUSH);
+	si_read_lock(sb, AuLock_FLUSH | AuLock_NOPLMW);
 	mnt_flags = au_mntflags(sb);
 	udba_none = !!au_opt_test(mnt_flags, UDBA_NONE);
 

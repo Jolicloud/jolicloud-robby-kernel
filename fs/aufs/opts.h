@@ -80,6 +80,15 @@ struct super_block;
 } while (0)
 #define au_opt_clr(flags, name)		{ ((flags) &= ~AuOpt_##name); }
 
+static inline unsigned int au_opts_plink(unsigned int mntflags)
+{
+#ifdef CONFIG_PROC_FS
+	return mntflags;
+#else
+	return mntflags & ~AuOpt_PLINK;
+#endif
+}
+
 /* ---------------------------------------------------------------------- */
 
 /* policies to select one among multiple writable branches */

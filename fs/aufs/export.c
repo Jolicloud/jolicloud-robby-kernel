@@ -741,7 +741,7 @@ static int aufs_commit_metadata(struct inode *inode)
 	int (*f)(struct inode *inode);
 
 	sb = inode->i_sb;
-	si_read_lock(sb, AuLock_FLUSH);
+	si_read_lock(sb, AuLock_FLUSH | AuLock_NOPLMW);
 	ii_write_lock_child(inode);
 	bindex = au_ibstart(inode);
 	AuDebugOn(bindex < 0);

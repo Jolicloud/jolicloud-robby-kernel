@@ -10,7 +10,7 @@ ccflags-y += -D'pr_fmt(fmt)="aufs %s:%d:%s[%d]: " fmt, \
 obj-$(CONFIG_AUFS_FS) += aufs.o
 aufs-y := module.o sbinfo.o super.o branch.o xino.o sysaufs.o opts.o \
 	wkq.o vfsub.o dcsub.o \
-	cpup.o whout.o plink.o wbr_policy.o \
+	cpup.o whout.o wbr_policy.o \
 	dinfo.o dentry.o \
 	dynop.o \
 	finfo.o file.o f_op.o \
@@ -19,6 +19,7 @@ aufs-y := module.o sbinfo.o super.o branch.o xino.o sysaufs.o opts.o \
 	ioctl.o
 
 # all are boolean
+aufs-$(CONFIG_PROC_FS) += procfs.o plink.o
 aufs-$(CONFIG_SYSFS) += sysfs.o
 aufs-$(CONFIG_DEBUG_FS) += dbgaufs.o
 aufs-$(CONFIG_AUFS_BDEV_LOOP) += loop.o

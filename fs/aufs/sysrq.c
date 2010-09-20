@@ -49,17 +49,21 @@ static void sysrq_sb(struct super_block *sb)
 #if 0
 	struct inode *i;
 	printk(KERN_WARNING AUFS_NAME ": isolated inode\n");
+	spin_lock(&inode_lock);
 	list_for_each_entry(i, &sb->s_inodes, i_sb_list)
 		if (list_empty(&i->i_dentry))
 			au_dpri_inode(i);
+	spin_unlock(&inode_lock);
 #endif
 	printk(KERN_WARNING AUFS_NAME ": files\n");
+	file_list_lock();
 	list_for_each_entry(file, &sb->s_files, f_u.fu_list) {
 		umode_t mode;
 		mode = file->f_dentry->d_inode->i_mode;
 		if (!special_file(mode) || au_special_file(mode))
 			au_dpri_file(file);
 	}
+	file_list_unlock();
 	printk(KERN_WARNING AUFS_NAME ": done\n");
 
 	au_plevel = plevel;
@@ -75,15 +79,12 @@ MODULE_PARM_DESC(sysrq, "MagicSysRq key for " AUFS_NAME);
 static void au_sysrq(int key __maybe_unused,
 		     struct tty_struct *tty __maybe_unused)
 {
-	struct kobject *kobj;
 	struct au_sbinfo *sbinfo;
 
-	/* spin_lock(&sysaufs_kset->list_lock); */
-	list_for_each_entry(kobj, &sysaufs_kset->list, entry) {
-		sbinfo = container_of(kobj, struct au_sbinfo, si_kobj);
+	spin_lock(&au_sbilist.spin);
+	list_for_each_entry(sbinfo, &au_sbilist.head, si_list)
 		sysrq_sb(sbinfo->si_sb);
-	}
-	/* spin_unlock(&sysaufs_kset->list_lock); */
+	spin_unlock(&au_sbilist.spin);
 }
 
 static struct sysrq_key_op au_sysrq_op = {

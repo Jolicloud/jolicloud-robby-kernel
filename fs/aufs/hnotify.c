@@ -451,8 +451,7 @@ static void au_hn_bh(void *_args)
 	AuDebugOn(!sb);
 	sbinfo = au_sbi(sb);
 	AuDebugOn(!sbinfo);
-	/* big aufs lock */
-	si_noflush_write_lock(sb);
+	si_write_lock(sb, !AuLock_FLUSH | AuLock_NOPLMW);
 
 	ii_read_lock_parent(a->dir);
 	bfound = -1;
