@@ -278,11 +278,13 @@ static struct vfsmount *au_mnt_get(struct super_block *sb)
 	};
 	struct mnt_namespace *ns;
 
+	spin_lock(&vfsmount_lock);
 	/* no get/put ?? */
 	AuDebugOn(!current->nsproxy);
 	ns = current->nsproxy->mnt_ns;
 	AuDebugOn(!ns);
 	err = iterate_mounts(au_compare_mnt, &args, ns->root);
+	spin_unlock(&vfsmount_lock);
 	AuDebugOn(!err);
 	AuDebugOn(!args.mnt);
 	return args.mnt;

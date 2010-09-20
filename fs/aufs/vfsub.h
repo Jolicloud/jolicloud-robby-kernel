@@ -27,6 +27,9 @@
 
 #include <linux/fs.h>
 
+/* fs/internal.h */
+extern spinlock_t vfsmount_lock;
+
 /* ---------------------------------------------------------------------- */
 
 /* lock subclass for lower inode */
