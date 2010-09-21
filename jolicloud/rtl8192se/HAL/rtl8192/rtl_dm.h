@@ -333,8 +333,8 @@ extern  void    dm_shadow_init(struct net_device *dev);
 extern  void dm_initialize_txpower_tracking(struct net_device *dev);
 
 #if (defined RTL8192E || defined RTL8192SE)
-extern	u8 RfOnOffDetect(struct net_device *dev);
 extern  void    dm_CheckRfCtrlGPIO(void *data);
+extern	u8 RfOnOffDetect(struct net_device *dev);
 #endif
 
 #ifdef RTL8192SE

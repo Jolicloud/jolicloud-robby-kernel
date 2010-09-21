@@ -43,6 +43,10 @@
 #include <linux/ctype.h>
 
 #include "rtllib.h"
+#ifdef ASL
+#include <linux/spinlock.h>
+#include "../HAL/rtl8192/rtl_softap.h"
+#endif
 #ifdef ENABLE_DOT11D
 #include "dot11d.h"
 #endif
@@ -51,7 +55,7 @@
 #include <net/ieee80211_radiotap.h>
 #endif
 
-#if defined CONFIG_CFG_80211
+#if defined CONFIG_CFG_80211 && LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30)  
 #include <linux/crc32.h>
 
 struct ieee80211_channel *rtllib_get_channel(struct wiphy *wiphy,
@@ -659,7 +663,6 @@ rtllib_rx_frame_mgmt(struct rtllib_device *ieee, struct sk_buff *skb,
 	dev_kfree_skb_any(skb);
 	
 	return 0;
-	
 #ifdef NOT_YET
 	if (ieee->iw_mode == IW_MODE_MASTER) {
 		printk(KERN_DEBUG "%s: Master mode not yet suppported.\n",
@@ -706,17 +709,89 @@ rtllib_rx_frame_mgmt(struct rtllib_device *ieee, struct sk_buff *skb,
 	return -1;
 #endif
 }
+#ifdef ASL
+/* rtllib_ap_rx_frame_mgtmt
+ *
+ * Responsible for handling management control frames
+ *
+ * Called by rtllib_rx */
+static inline int
+rtllib_ap_rx_frame_mgmt(struct rtllib_device *ieee, struct sk_buff *skb,
+			struct rtllib_rx_stats *rx_stats, u16 type,
+			u16 stype)
+{
+	/* On the struct stats definition there is written that
+	 * this is not mandatory.... but seems that the probe
+	 * response parser uses it
+	 */
+	int hostapd_flag=1;
+	struct rtllib_hdr_3addr * hdr = (struct rtllib_hdr_3addr *)skb->data;
+	rx_stats->len = skb->len;
+	switch (stype) {
+		case RTLLIB_STYPE_BEACON:
+			hostapd_flag = 0;
+			break;
+		case RTLLIB_STYPE_PROBE_RESP:
+			hostapd_flag = 0;
+			break;
+		case RTLLIB_STYPE_PROBE_REQ:
+			hostapd_flag = 0;
+			break;
+		case RTLLIB_STYPE_MANAGE_ACT:
+			hostapd_flag = 0;
+			break;
+		default:
+			break;
+	}
+	if (ieee->hostap != 1)
+		hostapd_flag = 0;
+	if (hostapd_flag == 1) {
+		printk("Sending management frame to hostapd: stype is %x\n",stype);
+		if(stype == RTLLIB_STYPE_AUTH){
+			dump_buf(skb->data,skb->len);
+			printk("\n");
+		}
+#ifdef ASL_DEBUG_2
+		printk("Sending management frame to hostapd");
+#endif
+		if ((memcmp(hdr->addr1, ieee->dev->dev_addr, ETH_ALEN))
+		     ||(memcmp(hdr->addr3, ieee->current_network.bssid, ETH_ALEN)))
+		{
+			dev_kfree_skb_any(skb);
+			return 0;
+		}
 
-#ifndef CONFIG_CFG_80211
+		spin_lock_init(&ieee->mgmt_rx_lock);
+		apdev_create_event_send(ieee,skb->data,skb->len);
+		dev_kfree_skb_any(skb);
+		return 0;
+#if 0
+		skb2 = skb_clone(skb, GFP_ATOMIC);
+		if (skb2)
+		{
+			spin_lock_irqsave(&ieee->mgmt_rx_lock,flag);
+			printk("===================>send hostapd\n");
+			ap_send_to_hostapd(ieee,skb2);
+			spin_unlock_irqrestore(&ieee->mgmt_rx_lock,flag);
+		}
+#endif
+	} else {
+#ifdef ASL_DEBUG_2
+		printk("Handling in driver");
+#endif
+		return rtllib_rx_frame_mgmt(ieee, skb, rx_stats, type, stype);
+	}
+
+}
+#endif
 /* See IEEE 802.1H for LLC/SNAP encapsulation/decapsulation */
 /* Ethernet-II snap header (RFC1042 for most EtherTypes) */
-static unsigned char rfc1042_header[] =
+static unsigned char rtl_rfc1042_header[] =
 { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00 };
 /* Bridge-Tunnel header (for EtherTypes ETH_P_AARP and ETH_P_IPX) */
-static unsigned char bridge_tunnel_header[] =
+static unsigned char rtl_bridge_tunnel_header[] =
 { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0xf8 };
 /* No encapsulation header if EtherType < 0x600 (=length) */
-#endif
 
 /* Called by rtllib_rx_frame_decrypt */
 static int rtllib_is_eapol_frame(struct rtllib_device *ieee,
@@ -773,7 +848,6 @@ rtllib_rx_frame_decrypt(struct rtllib_device* ieee, struct sk_buff *skb,
 	{
 		cb_desc *tcb_desc = (cb_desc *)(skb->cb+ MAX_DEV_ADDR_SIZE);
 		tcb_desc->bHwSec = 1;
-
 		if(ieee->need_sw_enc)
 			tcb_desc->bHwSec = 0;
 	}
@@ -1043,9 +1117,9 @@ void rtllib_indicate_packets(struct rtllib_device *ieee, struct rtllib_rxb** prx
 		/* convert hdr + possible LLC headers into Ethernet header */
 			ethertype = (sub_skb->data[6] << 8) | sub_skb->data[7];
 			if (sub_skb->len >= 8 &&
-				((memcmp(sub_skb->data, rfc1042_header, SNAP_SIZE) == 0 &&
+				((memcmp(sub_skb->data, rtl_rfc1042_header, SNAP_SIZE) == 0 &&
 				  ethertype != ETH_P_AARP && ethertype != ETH_P_IPX) ||
-				 memcmp(sub_skb->data, bridge_tunnel_header, SNAP_SIZE) == 0)) {
+				 memcmp(sub_skb->data, rtl_bridge_tunnel_header, SNAP_SIZE) == 0)) {
 			/* remove RFC1042 or Bridge-Tunnel encapsulation and
 			 * replace EtherType */
 				skb_pull(sub_skb, SNAP_SIZE);
@@ -1617,7 +1691,11 @@ int rtllib_rx_get_crypt(
 	struct rtllib_hdr_4addr *hdr = (struct rtllib_hdr_4addr *)skb->data;
 	u16 fc = le16_to_cpu(hdr->frame_ctl);
 	int idx = 0;
+#ifdef ASL
+	u8 stype = WLAN_FC_GET_STYPE(fc);
 
+	int entry_sta = -1;
+#endif
 #if defined (RTL8192S_WAPI_SUPPORT)
 	if (ieee->host_decrypt && (!ieee->wapiInfo.bWapiEnable))
 #else
@@ -1626,8 +1704,31 @@ int rtllib_rx_get_crypt(
 	{
 		if (skb->len >= hdrlen + 3)
 			idx = skb->data[hdrlen + 3] >> 6;
-
-#ifdef _RTL8192_EXT_PATCH_
+#ifdef ASL
+		if (ieee->iw_mode == IW_MODE_MASTER){
+			if(is_broadcast_ether_addr(hdr->addr1) ||
+				is_multicast_ether_addr(hdr->addr1) || ieee->iswep) {
+				 entry_sta = 0;
+				 if(ieee->iswep == 0)
+					idx=1;
+			} else
+				entry_sta = ap_cryptlist_find_station(ieee,hdr->addr2,1);/*the sender.Just find*/
+			if (entry_sta <0)
+				*crypt = NULL;
+			else{
+				*crypt = ieee->stations_crypt[entry_sta]->crypt[idx];
+#ifdef ASL_DEBUG2
+				if(!(*crypt))
+					 printk("\n Find idx_sta,but crypt is NULL.iswep=%d,idx_sta=%d,idx=%d",ieee->iswep,entry_sta,idx);	
+#endif
+			}
+			if (stype == RTLLIB_STYPE_AUTH){
+    				printk("===>entry_sta is %d,idx is %d\n",entry_sta,idx);
+				printk("===>crypt is %p\n",crypt);
+			}
+		} else
+#endif
+#if defined(_RTL8192_EXT_PATCH_) || defined(ASL)
 		*crypt = ieee->sta_crypt[idx];
 #else
 		*crypt = ieee->crypt[idx];
@@ -1650,7 +1751,6 @@ int rtllib_rx_get_crypt(
 			return -1;
 		}
 	}
-
 	return 0;
 }
 int rtllib_rx_decrypt(
@@ -1683,6 +1783,18 @@ int rtllib_rx_decrypt(
 #endif
 	    )
 	{
+#ifdef ASL_DEBUG_2
+		printk("\nieee->host_decrypt : %d", ieee->host_decrypt);
+		printk("\nfc & IEEE80211_FCTL_WEP : %x", (fc & IEEE80211_FCTL_WEP));
+		printk("\nkeyidx : %d", keyidx);
+                if (type == IEEE80211_FTYPE_DATA && keyidx == -5) {
+                         printk("\n----------------------------------------\n");
+                         for(i = 0; i < skb->len; i++)
+                                   printk("%02X-", skb->data[i] & 0xff);
+                         printk("\n----------------------------------------\n");
+                }
+#endif
+
 		printk("%s: decrypt frame error\n", __func__);
 		return -1;
 	}
@@ -1837,8 +1949,9 @@ void rtllib_rx_indicate_pkt_legacy(
 		u8 *dst, 
 		u8 *src)
 {
-#ifndef _RTL8192_EXT_PATCH_
 	struct net_device *dev = ieee->dev;
+#ifdef ASL
+	struct sk_buff * skb2 = NULL;
 #endif
 	u16 ethertype;
 	int i = 0;
@@ -1855,9 +1968,9 @@ void rtllib_rx_indicate_pkt_legacy(
 			/* convert hdr + possible LLC headers into Ethernet header */
 			ethertype = (sub_skb->data[6] << 8) | sub_skb->data[7];
 			if (sub_skb->len >= 8 &&
-					((memcmp(sub_skb->data, rfc1042_header, SNAP_SIZE) == 0 &&
+					((memcmp(sub_skb->data, rtl_rfc1042_header, SNAP_SIZE) == 0 &&
 					  ethertype != ETH_P_AARP && ethertype != ETH_P_IPX) ||
-					 memcmp(sub_skb->data, bridge_tunnel_header, SNAP_SIZE) == 0)) {
+					 memcmp(sub_skb->data, rtl_bridge_tunnel_header, SNAP_SIZE) == 0)) {
 				/* remove RFC1042 or Bridge-Tunnel encapsulation and
 				 * replace EtherType */
 				skb_pull(sub_skb, SNAP_SIZE);
@@ -1878,14 +1991,70 @@ void rtllib_rx_indicate_pkt_legacy(
 			if(is_multicast_ether_addr(dst)) {
 				ieee->stats.multicast++;
 			}
+#ifdef ASL
+			if ((ieee->iw_mode == IW_MODE_MASTER) && (ethertype != ETH_P_PAE)) {
+				if((dst[0] == 0xff) && (dst[1] == 0xff) && (dst[2] == 0xff) && (dst[3] == 0xff) && (dst[4] == 0xff) && (dst[5] == 0xff)) {
+#ifdef ASL_DEBUG
+					printk("\nFrame is broadcasted!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+#endif
+					skb2 = skb_clone(sub_skb, GFP_ATOMIC);
+					if (skb2 == NULL)
+						printk(KERN_DEBUG "%s: skb_clone failed for "
+						       "frame\n", dev->name);
+				} else if (memcmp(dst,dev->dev_addr, ETH_ALEN) != 0) {
+#ifdef ASL_DEBUG
+					printk("\nFrame is not for AP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+#endif
+					skb2 = skb_clone(sub_skb, GFP_ATOMIC);
+					if (skb2 == NULL)
+						printk(KERN_DEBUG "%s: skb_clone failed for "
+						       "frame\n", dev->name);
+				}
+#ifdef ASL_DEBUG
+				else
+					printk("\nFrame is for AP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+#endif
+			}
+
+			if (skb2 != NULL) {
+#ifdef ASL_DEBUG
+				printk("\nSending frame to wireless media!!!!");
+#endif
+				/* send to wireless media */
+				skb2->protocol = __constant_htons(ETH_P_802_3);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,22)
+				skb_reset_mac_header(skb2);
+#else
+				skb2->mac.raw = skb2->nh.raw = skb2->data;
+#endif
+
+				/* skb2->nh.raw = skb2->data + ETH_HLEN; */
+				skb2->dev = ieee->apdev;
+				rtllib_xmit(skb2,dev);
+			}
+#endif
 
 			/* Indicat the packets to upper layer */
 			memset(sub_skb->cb, 0, sizeof(sub_skb->cb));
 #ifdef _RTL8192_EXT_PATCH_
+#ifdef ASL
+			if (ieee->iw_mode == IW_MODE_MASTER) {
+				sub_skb->protocol = eth_type_trans(sub_skb, ieee->apdev);
+				sub_skb->dev = ieee->apdev;
+			}else
+#endif
 			sub_skb->protocol = eth_type_trans(sub_skb, sub_skb->dev);
 #else
+#ifdef ASL
+			if (ieee->iw_mode == IW_MODE_MASTER) {
+				sub_skb->protocol = eth_type_trans(sub_skb, ieee->apdev);
+				sub_skb->dev = ieee->apdev;
+			}else
+#endif
+			{
 			sub_skb->protocol = eth_type_trans(sub_skb, dev);
 			sub_skb->dev = dev;
+			}
 #endif
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,18))
 			sub_skb->dev->stats.rx_packets++;
@@ -2126,6 +2295,297 @@ int rtllib_rx_InfraAdhoc(struct rtllib_device *ieee, struct sk_buff *skb,
 int rtllib_rx_Master(struct rtllib_device *ieee, struct sk_buff *skb,
 		 struct rtllib_rx_stats *rx_stats)
 {
+#ifdef ASL
+	struct net_device *dev = ieee->dev;
+	struct rtllib_hdr_4addr *hdr = (struct rtllib_hdr_4addr *)skb->data;
+	struct rtllib_crypt_data *crypt = NULL;
+#if defined(RTL8192U) || defined(RTL8192SU) || defined(RTL8192SE)
+	struct sta_info * psta = NULL;
+#endif
+	struct rtllib_rxb* rxb = NULL;
+	PRX_TS_RECORD pTS = NULL;
+	u16 fc, sc, SeqNum = 0;
+	u8 type, stype, multicast = 0, unicast = 0, nr_subframes = 0, TID = 0;
+	u8 dst[ETH_ALEN], src[ETH_ALEN], bssid[ETH_ALEN] = {0}, *payload;
+	size_t hdrlen = 0;
+	bool bToOtherSTA = false;
+	int ret = 0, i = 0;
+	int frame_authorized = 0;
+	u8 bEnableRxReorder = false;
+	int keyidx = 0;
+	u16 ethertype;
+	/*If hostapd is not running,then do nothing.By lawrence*/
+	if(ieee->hostap == 0)
+		goto rx_dropped;
+	
+	hdr = (struct rtllib_hdr_4addr *)skb->data;
+	fc = le16_to_cpu(hdr->frame_ctl);
+	type = WLAN_FC_GET_TYPE(fc);
+	stype = WLAN_FC_GET_STYPE(fc);
+	sc = le16_to_cpu(hdr->seq_ctl);
+
+	/*Filter pkt not to me*/
+	multicast = is_multicast_ether_addr(hdr->addr1)|is_broadcast_ether_addr(hdr->addr1);
+	unicast = !multicast;
+	if (unicast && (compare_ether_addr(dev->dev_addr, hdr->addr1) != 0)) {
+		if(ieee->bNetPromiscuousMode)
+			bToOtherSTA = true;
+		else
+			goto rx_dropped;
+	}
+	
+	/*Filter pkt has too small length */
+	hdrlen = rtllib_rx_get_hdrlen(ieee, skb, rx_stats);
+	if(skb->len < hdrlen){
+		printk("%s():ERR!!! skb->len is smaller than hdrlen\n",__FUNCTION__);
+		goto rx_dropped;
+	}
+	
+	/* Get crypt if encrypted */
+	ret = rtllib_rx_get_crypt(ieee, skb, &crypt, hdrlen);
+	if(ret == -1)
+		goto rx_dropped;
+	
+	/* Filter Duplicate pkt */
+	ret = rtllib_rx_check_duplicate(ieee, skb, multicast);
+	if(ret < 0)
+		goto rx_dropped;
+
+	/* Filter MGNT Frame */
+	if (type == RTLLIB_FTYPE_MGMT) {
+		if(bToOtherSTA)
+			goto rx_dropped;
+		if(crypt) {
+			if (strcmp(crypt->ops->name, "WEP") == 0) {
+			    	if(stype == RTLLIB_STYPE_AUTH){
+				    	printk("dump auth data\n");
+					dump_buf(skb->data,skb->len);
+					printk("\n");
+				}
+				if (ieee->host_decrypt && (fc & RTLLIB_FCTL_WEP) && (stype == RTLLIB_STYPE_AUTH))
+				    ieee->need_sw_enc = 1;
+				if (ieee->host_decrypt && (fc & RTLLIB_FCTL_WEP) && (stype == RTLLIB_STYPE_AUTH) &&
+				    (keyidx = rtllib_rx_frame_decrypt(ieee, skb, crypt)) < 0)
+				{
+					printk(KERN_DEBUG "%s: failed to decrypt mgmt::auth "
+					       "from " MAC_FMT "\n", dev->name,
+					       MAC_ARG(hdr->addr2));
+					goto rx_dropped;
+				}
+				if(stype == RTLLIB_STYPE_AUTH){
+				    printk("after decrypt\n");
+				    printk("dump auth data\n");
+				    dump_buf(skb->data,skb->len);
+				    printk("\n");
+				}
+
+			}
+#ifdef ASL_DEBUG_2
+			if (stype == IEEE80211_STYPE_BEACON) {
+				printk("BEACON RECEIVED++++++++++++");
+	        		printk("\n----------------------------------------\n");
+			        for(i = 0; i < skb->len; i++)
+	        		        printk("%02X-", skb->data[i] & 0xff);
+			        printk("\n----------------------------------------\n");
+			}
+#endif
+		}
+		if (rtllib_ap_rx_frame_mgmt(ieee, skb, rx_stats, type, stype))
+			goto rx_dropped;
+		else
+			goto rx_exit;
+	}
+
+	/* Update statstics for AP roaming */
+	if(!bToOtherSTA){
+		ieee->LinkDetectInfo.NumRecvDataInPeriod++;
+		ieee->LinkDetectInfo.NumRxOkInPeriod++;
+	}
+	dev->last_rx = jiffies;
+	
+	/* Data frame - extract src/dst addresses */
+	rtllib_rx_extract_addr(ieee, hdr, dst, src, bssid);
+
+	/* Filter CTRL Frame */
+	if (type == RTLLIB_FTYPE_CTL) {
+		if( (stype == RTLLIB_STYPE_PSPOLL) && (memcmp(dst, dev->dev_addr, ETH_ALEN))){
+				psta = ap_get_stainfo(ieee, src);
+				if(NULL != psta){
+					ap_ps_on_pspoll(ieee, fc, src, psta);
+				}
+#ifdef NOT_YET				
+				else{
+					if( state_auth == not_auth ){
+						Mgnt_Indicate(Adapter, pRfd, class2);
+					}
+					else{
+						Mgnt_Indicate(Adapter, pRfd, class3);
+					}
+				}
+#endif				
+			}
+		goto rx_dropped;
+	}
+	ap_ps_update_station_psstate(ieee, src, ((WLAN_FC_GET_PWRMGT(fc)==RTLLIB_FCTL_PM) ? true : false) );
+
+	
+	frame_authorized = 0;
+	switch(ap_is_data_frame_authorized(ieee, dev, src, dst)) {
+		case 1:
+#ifdef ASL_DEBUG
+			printk("\nData frame authorized!");
+#endif
+			frame_authorized = 1;
+			break;
+		case -1:
+#ifdef ASL_DEBUG
+			printk("\nData frame not authorized - from unassociated client!");
+#endif
+			break;
+		case -2:
+			frame_authorized = 1;
+#ifdef ASL_DEBUG
+			printk("\nData frame not authorized - to a bridge!");
+#endif
+			break;
+		case -3:
+#ifdef ASL_DEBUG
+			printk("\nData frame not authorized!");
+#endif
+			break;
+		default:
+			break;
+	}
+
+
+	/* Filter Data frames */
+	ret = rtllib_rx_data_filter(ieee, fc, dst, src, bssid, hdr->addr2);
+	if(ret < 0)
+		goto rx_dropped;
+
+	if(skb->len == hdrlen){
+		goto rx_dropped;
+	}
+	
+	if(NULL != psta)
+		psta->LastActiveTime = jiffies;
+	
+	/* Decrypt data frame (including reassemble) */
+	ret = rtllib_rx_decrypt(ieee, &skb, rx_stats, crypt, hdrlen);
+	if(ret == -1)
+		goto rx_dropped;
+	else if(ret == -2)
+		goto rx_exit;
+
+	ethertype = (skb->data[6] << 8) | skb->data[7];
+	if (ethertype != ETH_P_PAE) {
+		if(frame_authorized) {
+#ifdef ASL_DEBUG
+			printk("\nFrame is authorized!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+#endif
+		} else {
+#ifdef ASL_DEBUG
+			printk("\nFrame is not authorized!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+#endif
+			goto rx_dropped;
+		}
+
+		psta = ap_get_stainfo(ieee, src);
+		if(psta == NULL)
+			goto rx_dropped;
+	}
+
+	/* Get TS for Rx Reorder  */
+	hdr = (struct rtllib_hdr_4addr *) skb->data;
+	if(ieee->current_network.qos_data.active && IsQoSDataFrame(skb->data) 
+		&& !is_multicast_ether_addr(hdr->addr1) && !is_broadcast_ether_addr(hdr->addr1) 
+		&& (!bToOtherSTA))
+	{
+		TID = Frame_QoSTID(skb->data);
+		SeqNum = WLAN_GET_SEQ_SEQ(sc);
+		GetTs(ieee,(PTS_COMMON_INFO*) &pTS,hdr->addr2,TID,RX_DIR,true);
+		if(TID !=0 && TID !=3){
+			ieee->bis_any_nonbepkts = true;
+		}
+	}
+
+	if(rtllib_is_eapol_frame(ieee, skb, hdrlen)) {
+#ifdef ASL_DEBUG2
+		printk(KERN_WARNING "RX: IEEE802.1X EPAOL frame!\n");
+#endif
+	}
+
+#ifdef RATE_ADAPTIVE_FOR_AP
+        if(ieee->enableRateAdaptive )
+        { 
+		ap_update_stainfo(ieee,hdr,rx_stats);
+        }
+#endif
+
+
+	/* Parse rx data frame (For AMSDU) */
+	/* skb: hdr + (possible reassembled) full plaintext payload */
+	payload = skb->data + hdrlen;
+	rxb = (struct rtllib_rxb*)kmalloc(sizeof(struct rtllib_rxb),GFP_ATOMIC);
+	if(rxb == NULL)
+	{
+		RTLLIB_DEBUG(RTLLIB_DL_ERR,"%s(): kmalloc rxb error\n",__FUNCTION__);
+		goto rx_dropped;
+	}
+	/* to parse amsdu packets */
+	/* qos data packets & reserved bit is 1 */
+	if(parse_subframe(ieee,skb,rx_stats,rxb,src,dst) == 0) {
+		/* only to free rxb, and not submit the packets to upper layer */
+		for(i =0; i < rxb->nr_subframes; i++) {
+			dev_kfree_skb(rxb->subframes[i]);
+		}
+		kfree(rxb);
+		rxb = NULL;
+		goto rx_dropped;
+	}
+
+	/* Check if leave LPS */
+	if(!bToOtherSTA){
+		if(ieee->bIsAggregateFrame)
+			nr_subframes = rxb->nr_subframes;
+		else
+			nr_subframes = 1;
+		if(unicast)
+			ieee->LinkDetectInfo.NumRxUnicastOkInPeriod += nr_subframes;
+		rtllib_rx_check_leave_lps(ieee, unicast, nr_subframes);
+	}
+	
+	/* Indicate packets to upper layer or Rx Reorder */
+	if(psta->htinfo.bCurRxReorderEnable)
+			bEnableRxReorder = true;
+	
+	if(ieee->pHTInfo->bCurRxReorderEnable == false || psta->htinfo.bCurRxReorderEnable == false ||pTS == NULL || bToOtherSTA){
+		rtllib_rx_indicate_pkt_legacy(ieee, rx_stats, rxb, dst, src);
+	}else{
+#ifdef TCP_CSUM_OFFLOAD_RX
+		rxb->tcp_csum_valid = rx_stats->tcp_csum_valid;
+#endif		
+		RxReorderIndicatePacket(ieee, rxb, pTS, SeqNum);
+	}
+
+	dev_kfree_skb(skb);
+	skb = NULL;
+
+ rx_exit:
+	return 1;
+
+ rx_dropped:
+	if (rxb != NULL)
+	{
+		kfree(rxb);
+		rxb = NULL;
+	}		
+	ieee->stats.rx_dropped++;
+
+	/* Returning 0 indicates to caller that we have not handled the SKB--
+	 * so it is still allocated and can be used again by underlying
+	 * hardware as a DMA target */
+#endif
 	return 0;
 }
 int rtllib_rx_Monitor(struct rtllib_device *ieee, struct sk_buff *skb,
@@ -3315,9 +3775,9 @@ int rtllib_rx(struct rtllib_device *ieee, struct sk_buff *skb,
 					/* convert hdr + possible LLC headers into Ethernet header */
 					ethertype = (sub_skb->data[6] << 8) | sub_skb->data[7];
 					if (sub_skb->len >= 8 &&
-							((memcmp(sub_skb->data, rfc1042_header, SNAP_SIZE) == 0 &&
+							((memcmp(sub_skb->data, rtl_rfc1042_header, SNAP_SIZE) == 0 &&
 							  ethertype != ETH_P_AARP && ethertype != ETH_P_IPX) ||
-							 memcmp(sub_skb->data, bridge_tunnel_header, SNAP_SIZE) == 0)) {
+							 memcmp(sub_skb->data, rtl_bridge_tunnel_header, SNAP_SIZE) == 0)) {
 						/* remove RFC1042 or Bridge-Tunnel encapsulation and
 						 * replace EtherType */
 						skb_pull(sub_skb, SNAP_SIZE);
@@ -4291,55 +4751,21 @@ int rtllib_parse_info_param(struct rtllib_device *ieee,
 }
 
 static inline u8 rtllib_SignalStrengthTranslate(
-	u8  CurrSS
+	u8  CurrSig
 	)
 {
-	u8 RetSS;
+	u8 RetSig;
 
-	if(CurrSS >= 71 && CurrSS <= 100)
-	{
-		RetSS = 90 + ((CurrSS - 70) / 3);
-	}	
-	else if(CurrSS >= 41 && CurrSS <= 70)
-	{
-		RetSS = 78 + ((CurrSS - 40) / 3);
-	}	
-	else if(CurrSS >= 31 && CurrSS <= 40)
-	{
-		RetSS = 66 + (CurrSS - 30);
-	}	
-	else if(CurrSS >= 21 && CurrSS <= 30)
-	{
-		RetSS = 54 + (CurrSS - 20);
-	}	
-	else if(CurrSS >= 5 && CurrSS <= 20)
-	{
-		RetSS = 42 + (((CurrSS - 5) * 2) / 3);
-	}	
-	else if(CurrSS == 4)
-	{
-		RetSS = 36; 
-	}
-	else if(CurrSS == 3)
-	{
-		RetSS = 27; 
-	}
-	else if(CurrSS == 2)
-	{
-		RetSS = 18; 
-	}
-	else if(CurrSS == 1)
-	{
-		RetSS = 9; 
-	}
-	else
-	{
-		RetSS = CurrSS; 
-	}
+	if(CurrSig> 47)
+		RetSig = 100; 
+	else if(CurrSig >14 && CurrSig <=47)
+		RetSig = 100 - ((47-CurrSig)*3)/2;
+	else if(CurrSig >2 && CurrSig <=14)
+		RetSig = 48-((14-CurrSig)*15)/7;
+	else if(CurrSig >=0)
+		RetSig = CurrSig * 9+1;
 
-	
-
-	return RetSS;
+	return RetSig;
 }
 
 long rtllib_translate_todbm(u8 signal_strength_index	)
@@ -5299,7 +5725,7 @@ void rtllib_rx_mgt(struct rtllib_device *ieee,
     }
 
 #if 0
-#ifdef CONFIG_CFG_80211 
+#if defined CONFIG_CFG_80211 && LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30)  
 	if((rtllib_act_scanning(ieee,false) == true) && ((WLAN_FC_GET_STYPE(header->frame_ctl) ==RTLLIB_STYPE_PROBE_RESP) ||
 		(WLAN_FC_GET_STYPE(header->frame_ctl) ==RTLLIB_STYPE_BEACON)))
 		return ieee80211_scan_rx(ieee, skb, stats);

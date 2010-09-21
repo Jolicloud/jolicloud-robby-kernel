@@ -1,3 +1,4 @@
+NIC_SELECT = RTL8192SE
 LINUX_KSRC_MODULE = /lib/modules/$(shell uname -r)/kernel/drivers/net/wireless/
 RTL819x_DIR = $(shell pwd)
 KVER  = $(shell uname -r)
@@ -17,12 +18,13 @@ ifeq ($(shell uname -r|cut -d. -f1,2), 2.4)
 else	
 #	@make -C $(KSRC) SUBDIRS=$(RTL819x_DIR)/rtllib modules 
 #	@test -f $(MODULE_FILE) && cp $(MODULE_FILE) $(RTL819x_DIR)/HAL/$(HAL_SUB_DIR) || echo > /dev/null 
+ifeq ($(NIC_SELECT), RTL8192SE_SA)
+	@make -C $(RTL819x_DIR)/hostapd-0.6.0/hostapd
+endif
 	@make -C $(KSRC) SUBDIRS=$(RTL819x_DIR)/HAL/$(HAL_SUB_DIR) modules 
 #	@make -C $(RTL819x_DIR)/wapi_supplicant
 endif
 install: all
-	@grep r8192_pci.ko /lib/modules/$(shell uname -r)/modules.dep && rm -fr /lib/modules/$(shell uname -r)/kernel/drivers/staging/rtl8192e/ || echo > /dev/null
-	@grep r8192se_pci.ko /lib/modules/$(shell uname -r)/modules.dep && rm -fr /lib/modules/$(shell uname -r)/kernel/ubuntu/rtl8192se/* || echo > /dev/null
 	@rm -f /etc/acpi/wireless-rtl-ac-dc-power.sh
 	@rm -f /etc/acpi/events/RadioPower.sh
 	@cp -fr realtek/ /etc
@@ -44,3 +46,6 @@ clean:
 	@rm -fr .tmp_versions
 	@rm -fr *~
 	@rm -f tags
+ifeq ($(NIC_SELECT), RTL8192SE_SA)
+	@make -C $(RTL819x_DIR)/hostapd-0.6.0/hostapd clean
+endif

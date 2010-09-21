@@ -44,7 +44,7 @@ static CHANNEL_LIST ChannelPlan[] = {
 void Dot11d_Init(struct rtllib_device *ieee)
 {
 	PRT_DOT11D_INFO pDot11dInfo = GET_DOT11D_INFO(ieee);
-#ifdef CONFIG_CRDA 
+#if defined CONFIG_CRDA && LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30)  
 	ieee->bGlobalDomain = true;
 	pDot11dInfo->bEnabled = true;
 #else
@@ -109,7 +109,8 @@ void Dot11d_Reset(struct rtllib_device *ieee)
 		return;
 #endif
 
-#ifndef CONFIG_CRDA
+#if defined CONFIG_CRDA && LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30) 
+#else
 	u32 i;
 	memset(pDot11dInfo->channel_map, 0, MAX_CHANNEL_NUMBER+1);
 	memset(pDot11dInfo->MaxTxPwrDbmList, 0xFF, MAX_CHANNEL_NUMBER+1);
@@ -130,7 +131,8 @@ void Dot11d_UpdateCountryIe(struct rtllib_device *dev, u8 *pTaddr,
 	                    u16 CoutryIeLen, u8* pCoutryIe)
 {
 	PRT_DOT11D_INFO pDot11dInfo = GET_DOT11D_INFO(dev);
-#ifdef CONFIG_CRDA 
+	
+#if defined CONFIG_CRDA && LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30) 
 	
 #else	
 	u8 i, j, NumTriples, MaxChnlNum;
@@ -178,7 +180,7 @@ void Dot11d_UpdateCountryIe(struct rtllib_device *dev, u8 *pTaddr,
 	memcpy(pDot11dInfo->CountryIeBuf, pCoutryIe,CoutryIeLen);
 	pDot11dInfo->State = DOT11D_STATE_LEARNED;
 
-#ifdef CONFIG_CRDA 
+#if defined CONFIG_CRDA && LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30)  
    	queue_delayed_work_rsl(dev->wq, &dev->softmac_hint11d_wq, 0);
 #endif	
 }

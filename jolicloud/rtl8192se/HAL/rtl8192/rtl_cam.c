@@ -33,7 +33,7 @@ void CamResetAllEntry(struct net_device *dev)
 	write_nic_dword(dev, RWCAM, ulcommand); 
 }
 
-#ifdef _RTL8192_EXT_PATCH_
+#if defined(_RTL8192_EXT_PATCH_) || defined(ASL)
 void CamDeleteOneEntry(struct net_device *dev, u8 EntryNo)
 {
 	u32 ulCommand = EntryNo * CAM_CONTENT_COUNT;
@@ -51,8 +51,8 @@ void CamRestoreEachIFEntry(struct net_device* dev,u8 is_mesh)
 	struct r8192_priv *priv = rtllib_priv(dev);
 	struct rtllib_device *ieee = priv->rtllib;
 	for( i = 0 ; i<	TOTAL_CAM_ENTRY; i++) {
-
 		if (is_mesh) {
+#ifdef _RTL8192_EXT_PATCH_
 			if(ieee->swmeshcamtable[i].bused )
 			{
 				setKey(dev,
@@ -64,6 +64,7 @@ void CamRestoreEachIFEntry(struct net_device* dev,u8 is_mesh)
 						(u32*)(&ieee->swmeshcamtable[i].key_buf[0])					
 				      );
 			}
+#endif
 		} else {
 			if(ieee->swcamtable[i].bused )
 			{
@@ -79,7 +80,6 @@ void CamRestoreEachIFEntry(struct net_device* dev,u8 is_mesh)
 	}
 }
 #endif
-
 void write_cam(struct net_device *dev, u8 addr, u32 data)
 {
 	write_nic_dword(dev, WCAMI, data);
@@ -131,6 +131,12 @@ void EnableHWSecurityConfig8192(struct net_device *dev)
 		ieee->hwsec_active = 0;
 		SECR_value &= ~SCR_RxDecEnable;
 	}
+
+	if(ieee->group_key_type & (KEY_TYPE_WEP104 | KEY_TYPE_WEP40))
+	{
+
+	} else {
+	}
 #endif
 
 #ifdef RTL8192CE
@@ -161,7 +167,7 @@ void set_swcam(struct net_device *dev,
 {
 	struct r8192_priv *priv = rtllib_priv(dev);
 	struct rtllib_device *ieee = priv->rtllib;
-	printk("===========>%s():EntryNo is %d,KeyIndex is %d,KeyType is %d,is_mesh is %d\n",__FUNCTION__,EntryNo,KeyIndex,KeyType,is_mesh);
+	printk("%s():EntryNo is %d,KeyIndex is %d,KeyType is %d,is_mesh is %d\n",__FUNCTION__,EntryNo,KeyIndex,KeyType,is_mesh);
 	if(is_mesh){
 #ifdef _RTL8192_EXT_PATCH_	
 		ieee->swmeshcamtable[EntryNo].bused=true;
@@ -493,7 +499,7 @@ void CamRestoreAllEntry(	struct net_device *dev)
 }
 
 
-#ifdef _RTL8192_EXT_PATCH_
+#if defined(_RTL8192_EXT_PATCH_) || defined(ASL)
 u8 rtl8192_get_free_hwsec_cam_entry(struct rtllib_device *ieee, u8 *sta_addr)
 {
 	u32 bitmap = (ieee->HwSecCamBitMap)>>4;
@@ -507,14 +513,14 @@ u8 rtl8192_get_free_hwsec_cam_entry(struct rtllib_device *ieee, u8 *sta_addr)
 
 	/* Does STA already exist? */
 	/* CAM Index 31 is for AP */
-	for (i = 4; i < TOTAL_CAM_ENTRY-1; i++) {
+	for (i = 4; i < TOTAL_CAM_ENTRY; i++) {
 		addr = ieee->HwSecCamStaAddr[i];
 		if(memcmp(addr, sta_addr, ETH_ALEN) == 0)
 			return i;
 	}
 
 	/* Get a free CAM entry. */
-	for (entry_idx = 4; entry_idx < TOTAL_CAM_ENTRY - 1; entry_idx++) {
+	for (entry_idx = 4; entry_idx < TOTAL_CAM_ENTRY; entry_idx++) {
 		if ((bitmap & BIT0) == 0) {
 			ieee->HwSecCamBitMap |= BIT0<<entry_idx;
 			memcpy(ieee->HwSecCamStaAddr[entry_idx], sta_addr, ETH_ALEN);
@@ -526,7 +532,7 @@ u8 rtl8192_get_free_hwsec_cam_entry(struct rtllib_device *ieee, u8 *sta_addr)
 	return TOTAL_CAM_ENTRY;
 }
 
-void rtl8192_del_hwsec_cam_entry(struct rtllib_device *ieee, u8 *sta_addr)
+void rtl8192_del_hwsec_cam_entry(struct rtllib_device *ieee, u8 *sta_addr, bool is_mesh)
 {
 	u32 bitmap;
 	u8 i, *addr;
@@ -551,7 +557,13 @@ void rtl8192_del_hwsec_cam_entry(struct rtllib_device *ieee, u8 *sta_addr)
 			CamDeleteOneEntry(ieee->dev, i);
 			memset(ieee->HwSecCamStaAddr[i], 0, ETH_ALEN);
 			ieee->HwSecCamBitMap &= ~(BIT0<<i);
+			if (is_mesh) {
+#ifdef _RTL8192_EXT_PATCH_
 			memset(&(ieee->swmeshcamtable[i]), 0, sizeof(SW_CAM_TABLE));
+#endif
+			}
+			else
+				memset(&(ieee->swcamtable[i]), 0, sizeof(SW_CAM_TABLE));
 			RT_TRACE(COMP_SEC, "====>del sw entry, EntryNo:%d, MacAddr:"MAC_FMT"\n", 
 					i, MAC_ARG(sta_addr));
 		}
@@ -559,4 +571,5 @@ void rtl8192_del_hwsec_cam_entry(struct rtllib_device *ieee, u8 *sta_addr)
 	return;
 }
 #endif
+
 

@@ -22,6 +22,9 @@ case "$card" in
 	"RTL8192ce_Mesh")
 	  ifconfig mesh0 down;
 	  ifconfig ra0 down;;
+        "RTL8192se_SOFTAP")
+	  ifconfig wlan0 down;
+	  ifconfig softap0 down;;
         *)
         echo "Unknown NIC type"
 	break;;
@@ -50,6 +53,8 @@ case "$card" in
 	rmmod r8192ce_pci;;
 	"RTL8192ce_Mesh")
 	rmmod r8192ce_pci_mesh;;
+        "RTL8192se_SOFTAP")
+	rmmod r8192se_pci_softap;;
 	*)
 		echo "Unknown NIC type";;
 esac
@@ -81,6 +86,8 @@ case "$card" in
         rmmod r8192ce_pci.ko;;
 	"RTL8192ce_Mesh")
 	rmmod r8192ce_pci_mesh.ko;;
+        "RTL8192se_SOFTAP")
+        rmmod r8192se_pci_softap.ko;;
         *)
         echo "Unknown NIC type"
 	break;;

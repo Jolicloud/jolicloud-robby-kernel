@@ -51,9 +51,11 @@ int rtl8192_set_key_for_AP(struct rtllib_device *ieee);
 
 void CAM_read_entry(struct net_device *dev, u32 iIndex);
 
-#ifdef _RTL8192_EXT_PATCH_
+#if defined(_RTL8192_EXT_PATCH_) || defined(ASL) 
 u8 rtl8192_get_free_hwsec_cam_entry(struct rtllib_device *ieee, u8 *sta_addr);
-void rtl8192_del_hwsec_cam_entry(struct rtllib_device *ieee, u8 *sta_addr);
+void rtl8192_del_hwsec_cam_entry(struct rtllib_device *ieee, u8 *sta_addr, bool is_mesh);
+#endif
+#ifdef _RTL8192_EXT_PATCH_
 int meshdev_set_key_for_peer(struct net_device *dev, u8 *Addr, u8 KeyIndex, u16 KeyType, u32 *KeyContent);
 #endif
 

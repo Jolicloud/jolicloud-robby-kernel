@@ -379,6 +379,8 @@ int rtllib_wx_set_encode(struct rtllib_device *ieee,
 	if(is_mesh)
 		crypt = &ieee->cryptlist[0]->crypt[key];
 	else
+#endif
+#if defined(_RTL8192_EXT_PATCH_) ||defined(ASL)
 		crypt = &ieee->sta_crypt[key];
 #else
 	crypt = &ieee->crypt[key];
@@ -394,28 +396,31 @@ int rtllib_wx_set_encode(struct rtllib_device *ieee,
 		/* Check all the keys to see if any are still configured,
 		 * and if no key index was provided, de-init them all */
 		for (i = 0; i < WEP_KEYS; i++) {
-#ifdef _RTL8192_EXT_PATCH_
 			bool null_crypt = false;
+#ifdef _RTL8192_EXT_PATCH_
+		
 			if(is_mesh)
 				null_crypt = (ieee->cryptlist[0]->crypt[i] != NULL) ? true:false; 
 			else
-				null_crypt = (ieee->sta_crypt[i] != NULL) ? true:false;
-			if (null_crypt)	
-#else
-				if (ieee->crypt[i] != NULL) 
 #endif
-				{
+#if defined(_RTL8192_EXT_PATCH_) || defined(ASL)
+				null_crypt = (ieee->sta_crypt[i] != NULL) ? true:false;
+#else
+				null_crypt = (ieee->crypt[i] != NULL) ? true:false;
+#endif
+			if (null_crypt) {
 					if (key_provided)
 						break;
 #ifdef _RTL8192_EXT_PATCH_			
 					if(is_mesh)
 						rtllib_crypt_delayed_deinit(ieee, &ieee->cryptlist[0]->crypt[i]);
 					else
+#endif
+#if defined(_RTL8192_EXT_PATCH_) || defined(ASL)
 						rtllib_crypt_delayed_deinit(ieee, &ieee->sta_crypt[i]);
 #else
 					rtllib_crypt_delayed_deinit(ieee, &ieee->crypt[i]);
 #endif
-
 				}
 		}
 
@@ -608,6 +613,8 @@ int rtllib_wx_get_encode(struct rtllib_device *ieee,
 	if(is_mesh)
 		crypt = ieee->cryptlist[0]->crypt[key];
 	else
+#endif
+#if defined(_RTL8192_EXT_PATCH_) || defined(ASL)
 		crypt = ieee->sta_crypt[key];
 #else
 	crypt = ieee->crypt[key];
@@ -683,6 +690,8 @@ int rtllib_wx_set_encode_ext(struct rtllib_device *ieee,
 		if(is_mesh)
 			crypt = &ieee->cryptlist[0]->crypt[idx];
 		else
+#endif
+#if defined(_RTL8192_EXT_PATCH_) ||defined(ASL)
 			crypt = &ieee->sta_crypt[idx];
 #else
 		crypt = &ieee->crypt[idx];
@@ -704,7 +713,11 @@ int rtllib_wx_set_encode_ext(struct rtllib_device *ieee,
 			return -EINVAL;
 #else
 		if (ieee->iw_mode == IW_MODE_INFRA)
+#ifdef ASL
+			crypt = &ieee->sta_crypt[idx];
+#else
 			crypt = &ieee->crypt[idx];
+#endif
 		else
 			return -EINVAL;
 #endif
@@ -724,7 +737,11 @@ int rtllib_wx_set_encode_ext(struct rtllib_device *ieee,
 			if ((!is_mesh)&&(ieee->sta_crypt[i] != NULL))
 				break;
 #else
+	#ifdef ASL
+			if(ieee->sta_crypt[i] != NULL)
+	#else
 			if (ieee->crypt[i] != NULL)
+	#endif
 				break;
 #endif	
 		}
@@ -930,6 +947,8 @@ int rtllib_wx_get_encode_ext(struct rtllib_device *ieee,
 	if(is_mesh)
 		crypt = ieee->cryptlist[0]->crypt[idx];
 	else
+#endif
+#if defined(_RTL8192_EXT_PATCH_) || defined(ASL)
 		crypt = ieee->sta_crypt[idx];
 #else
 	crypt = ieee->crypt[idx];

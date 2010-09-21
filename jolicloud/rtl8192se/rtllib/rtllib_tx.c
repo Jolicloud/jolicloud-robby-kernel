@@ -53,6 +53,9 @@
 #include <linux/if_vlan.h>
 
 #include "rtllib.h"
+#ifdef ASL
+#include "../HAL/rtl8192/rtl_softap.h"
+#endif
 
 #ifdef RTK_DMP_PLATFORM
 #include <linux/usb_setting.h> 
@@ -181,12 +184,12 @@ inline int rtllib_put_snap(u8 *data, u16 h_proto)
 	return SNAP_SIZE + sizeof(u16);
 }
 
-#ifdef _RTL8192_EXT_PATCH_
+#if defined(_RTL8192_EXT_PATCH_) || defined(ASL)
 int rtllib_encrypt_fragment(
 	struct rtllib_device *ieee,
 	struct sk_buff *frag,
 	int hdr_len,
-	u8 is_mesh,
+	u8 type,
 	u8 entry)
 #else
 int rtllib_encrypt_fragment(
@@ -197,16 +200,33 @@ int rtllib_encrypt_fragment(
 {
 	struct rtllib_crypt_data* crypt = NULL;
 	int res;
-	
-#ifdef _RTL8192_EXT_PATCH_
-      	if (is_mesh) {
-		crypt = ieee->cryptlist[entry]->crypt[ieee->mesh_txkeyidx]; 
-	} else
+	u8 is_type = 0;
+#if defined(_RTL8192_EXT_PATCH_) || defined(ASL)
+	is_type = type;
+#endif
+	switch (is_type) {
+		case 0:
+#if defined(_RTL8192_EXT_PATCH_) || defined(ASL)
 		crypt = ieee->sta_crypt[ieee->tx_keyidx]; 		
 #else
 	crypt = ieee->crypt[ieee->tx_keyidx];
 #endif
-
+			break;
+		case 1:
+#ifdef _RTL8192_EXT_PATCH_
+			crypt = ieee->cryptlist[entry]->crypt[ieee->mesh_txkeyidx]; 
+#endif
+			break;
+		case 2:
+#ifdef ASL
+			crypt = ieee->stations_crypt[entry]->crypt[ieee->tx_keyidx];
+#endif
+			break;
+		default:
+			printk("===>%s(): is_type is %d, unknown type\n",__func__,is_type);
+			crypt = NULL;
+			break;
+	}
 	if (!(crypt && crypt->ops))
 	{
 		printk("=========>%s(), crypt is null\n", __FUNCTION__);
@@ -410,7 +430,7 @@ void rtllib_tx_query_agg_cap(struct rtllib_device* ieee, struct sk_buff* skb, cb
 		}
 #ifndef _RTL8192_EXT_PATCH_
 #ifndef RTL8192S_WAPI_SUPPORT  
-		if (ieee->iw_mode == IW_MODE_INFRA)
+		if ((ieee->iw_mode == IW_MODE_INFRA) || (ieee->iw_mode == IW_MODE_MASTER))
 #endif
 #endif
 		{
@@ -496,13 +516,13 @@ void rtllib_query_BandwidthMode(struct rtllib_device* ieee, cb_desc *tcb_desc)
 	return;
 }
 #if defined(RTL8192U) || defined(RTL8192SU) || defined(RTL8192SE) || defined(RTL8192CE)
-extern void rtllib_ibss_query_HTCapShortGI(struct rtllib_device *ieee, cb_desc *tcb_desc,u8 is_peer_shortGI_40M,u8 is_peer_shortGI_20M)
+extern void rtllib_entry_query_HTCapShortGI(struct rtllib_device *ieee, cb_desc *tcb_desc,u8 is_peer_shortGI_40M,u8 is_peer_shortGI_20M)
 {
 	PRT_HIGH_THROUGHPUT		pHTInfo = ieee->pHTInfo;
 
 	tcb_desc->bUseShortGI 		= false;
 
-	if(!pHTInfo->bCurrentHTSupport||!pHTInfo->bEnableHT || (ieee->iw_mode != IW_MODE_ADHOC))
+	if(!pHTInfo->bCurrentHTSupport||!pHTInfo->bEnableHT || ((ieee->iw_mode != IW_MODE_ADHOC) && (ieee->iw_mode != IW_MODE_MASTER)))
 	{
 		return;
 	}
@@ -517,13 +537,13 @@ extern void rtllib_ibss_query_HTCapShortGI(struct rtllib_device *ieee, cb_desc *
 	else if((pHTInfo->bCurBW40MHz==false) && is_peer_shortGI_20M)
 		tcb_desc->bUseShortGI = true;
 }
-void rtllib_ibss_query_BandwidthMode(struct rtllib_device* ieee, cb_desc *tcb_desc, u8 is_peer_40M)
+void rtllib_entry_query_BandwidthMode(struct rtllib_device* ieee, cb_desc *tcb_desc, u8 is_peer_40M)
 {
 	PRT_HIGH_THROUGHPUT	pHTInfo = ieee->pHTInfo;
 
 	tcb_desc->bPacketBW = false;
 
-	if(!pHTInfo->bCurrentHTSupport||!pHTInfo->bEnableHT || (ieee->iw_mode != IW_MODE_ADHOC))
+	if(!pHTInfo->bCurrentHTSupport||!pHTInfo->bEnableHT || ((ieee->iw_mode != IW_MODE_ADHOC) && (ieee->iw_mode != IW_MODE_MASTER)))
 	{
 		return;
 	}
@@ -652,6 +672,8 @@ void rtllib_txrate_selectmode(struct rtllib_device* ieee, cb_desc* tcb_desc,stru
 void rtllib_txrate_selectmode(struct rtllib_device* ieee, cb_desc* tcb_desc)
 #endif
 {
+        u8 max_aid;
+        max_aid = 0;
 	if(ieee->bTxDisableRateFallBack)
 		tcb_desc->bTxDisableRateFallBack = true;
 
@@ -676,17 +698,61 @@ void rtllib_txrate_selectmode(struct rtllib_device* ieee, cb_desc* tcb_desc)
 		}
 	}
 
-#ifdef RTL8192CE
-	if(ieee->bUseRAMask && ieee->mode != WIRELESS_MODE_B)
-#else
 	if(ieee->bUseRAMask)
-#endif
 	{
 		if((ieee->iw_mode == IW_MODE_ADHOC) && (NULL != psta)){
 			short peer_AID = psta->aid;
 		
 			tcb_desc->macId =0;
 			if((peer_AID > 0) && (peer_AID < PEER_MAX_ASSOC))
+			{
+				tcb_desc->macId = peer_AID + 1;
+			}else{
+				tcb_desc->macId = 1;
+			}
+		}
+		else{
+							
+			tcb_desc->macId = 0;
+			
+			if((ieee->mode & WIRELESS_MODE_N_24G) || (ieee->mode & WIRELESS_MODE_N_5G))
+				tcb_desc->RATRIndex = RATR_INX_WIRELESS_NGB;
+			else if(ieee->mode & WIRELESS_MODE_G)
+				tcb_desc->RATRIndex = RATR_INX_WIRELESS_GB;
+			else if(ieee->mode & WIRELESS_MODE_B){
+				tcb_desc->RATRIndex = RATR_INX_WIRELESS_B;
+#ifdef RTL8192CE
+				tcb_desc->macId = 1;
+#endif
+			}
+
+		}
+	}
+#else
+#if defined(RTL8192U) || defined(RTL8192SU) || defined(RTL8192SE) || defined RTL8192CE
+	if(!tcb_desc->bTxDisableRateFallBack || !tcb_desc->bTxUseDriverAssingedRate)
+	{
+		if (ieee->iw_mode == IW_MODE_INFRA) 
+			tcb_desc->RATRIndex = 0;
+		if ((ieee->iw_mode == IW_MODE_MASTER) || (ieee->iw_mode == IW_MODE_ADHOC)) {
+			if(psta!=NULL)
+				tcb_desc->RATRIndex = psta->ratr_index;
+			else
+				tcb_desc->RATRIndex = 7;
+		}
+	}
+	if(ieee->bUseRAMask) {
+		if(((ieee->iw_mode == IW_MODE_ADHOC) || (ieee->iw_mode == IW_MODE_MASTER)) && (NULL != psta)){
+			short peer_AID = psta->aid;
+		       
+			tcb_desc->macId =0;
+                        if (ieee->iw_mode == IW_MODE_ADHOC)
+                                max_aid = PEER_MAX_ASSOC;
+#ifdef ASL
+                        if (ieee->iw_mode == IW_MODE_MASTER)
+                                max_aid = APDEV_MAX_ASSOC;
+#endif
+			if((peer_AID > 0) && (peer_AID < max_aid))
 			{
 				tcb_desc->macId = peer_AID + 1;
 			}else{
@@ -707,9 +773,10 @@ void rtllib_txrate_selectmode(struct rtllib_device* ieee, cb_desc* tcb_desc)
 #else
 	if(!tcb_desc->bTxDisableRateFallBack || !tcb_desc->bTxUseDriverAssingedRate)
 	{
-		if (ieee->iw_mode == IW_MODE_INFRA || ieee->iw_mode == IW_MODE_ADHOC) 
+		if ((ieee->iw_mode == IW_MODE_INFRA) || (ieee->iw_mode == IW_MODE_ADHOC)) 
 			tcb_desc->RATRIndex = 0;
 	}
+#endif
 #endif
 }
 
@@ -887,11 +954,17 @@ u8 AMSDU_GetAggregatibleList(
 	nAggrSkbNum++;
 
 	if(ieee->iw_mode == IW_MODE_MASTER){	
-		psta = GetStaInfo(ieee, addr);
-		if(NULL != psta)
+#ifdef ASL	    
+		psta = ap_get_stainfo(ieee, addr);
+		if(NULL != psta){
 			nMaxAMSDUSize = psta->htinfo.AMSDU_MaxSize;
-		else
+		}
+		else {
 			return 1;
+		}
+#else
+			return 1;
+#endif
 	}else if(ieee->iw_mode == IW_MODE_ADHOC){
 		psta = GetStaInfo(ieee, addr);
 		if(NULL != psta)
@@ -999,10 +1072,13 @@ int rtllib_xmit_inter(struct sk_buff *skb, struct net_device *dev)
 	struct sta_info *p_sta = NULL;
 #endif	
 	u8 IsAmsdu = false;
+	cb_desc *tcb_desc_skb;
 #ifdef ENABLE_AMSDU	
 	u8 queue_index = WME_AC_BE;
-	cb_desc *tcb_desc_skb;
 	u8 bIsSptAmsdu = false;
+#ifdef ASL
+	int sta_qos_actived = false;
+#endif
 #endif	
 
 	bool	bdhcp =false;
@@ -1011,6 +1087,11 @@ int rtllib_xmit_inter(struct sk_buff *skb, struct net_device *dev)
 #ifdef RTL8192S_WAPI_SUPPORT
 	static u8 zero14[14] = {0};
 #endif
+#ifdef ASL
+	u8 bMoreData = false;
+	int idx_sta = -1;
+#endif
+	
 	spin_lock_irqsave(&ieee->lock, flags);
 
 	/* If there is no driver handler to take the TXB, dont' bother
@@ -1042,10 +1123,9 @@ int rtllib_xmit_inter(struct sk_buff *skb, struct net_device *dev)
 		/* Save source and destination addresses */
 		memcpy(dest, skb->data, ETH_ALEN);
 		memcpy(src, skb->data+ETH_ALEN, ETH_ALEN);
-	
+		tcb_desc_skb = (pcb_desc)(skb->cb + MAX_DEV_ADDR_SIZE);  
 #ifdef ENABLE_AMSDU	
-		if(ieee->iw_mode == IW_MODE_ADHOC)
-		{
+		if (ieee->iw_mode == IW_MODE_ADHOC) {
 			p_sta = GetStaInfo(ieee, dest);
 			if(p_sta)	{
 				if(p_sta->htinfo.bEnableHT)
@@ -1053,16 +1133,41 @@ int rtllib_xmit_inter(struct sk_buff *skb, struct net_device *dev)
 			}
 		}else if(ieee->iw_mode == IW_MODE_INFRA) {
 			bIsSptAmsdu = true;
+		}else if (ieee->iw_mode == IW_MODE_MASTER) {
+			bIsMulticast = is_broadcast_ether_addr(dest) ||is_multicast_ether_addr(dest);
+#ifdef ASL
+			if (!bIsMulticast) { 
+				p_sta = ap_get_stainfo(ieee, dest);
+				if(p_sta)	{
+					if (p_sta->bPowerSave) {
+						skb_queue_tail(&(p_sta->PsQueue), skb);
+						spin_unlock_irqrestore(&ieee->lock, flags);
+						return 0;
+					}
+					if(p_sta->htinfo.bEnableHT)
+						bIsSptAmsdu = true;
+					sta_qos_actived = p_sta->wme_enable;
+					qos_actived = (sta_qos_actived && qos_actived);
+				}
+			} else {
+				if((ieee->PowerSaveStationNum > 0)&&(!tcb_desc_skb->bFromPsQ))
+				{
+					skb_queue_tail(&ieee->GroupPsQueue, skb);
+					spin_unlock_irqrestore(&ieee->lock, flags);
+					return 0;
+				}
+			}
+			if(tcb_desc_skb->bMoreData)
+				bMoreData = true;
+#else
+			bIsSptAmsdu = true;
+#endif
 		}else
 			bIsSptAmsdu = true;
 		bIsSptAmsdu = (bIsSptAmsdu && ieee->pHTInfo->bCurrent_AMSDU_Support && qos_actived);
-			
-		tcb_desc_skb = (pcb_desc)(skb->cb + MAX_DEV_ADDR_SIZE);  
 		if(bIsSptAmsdu) {
-			if(!tcb_desc_skb->bFromAggrQ)  
-			{
-				if(qos_actived)
-				{
+			if(!tcb_desc_skb->bFromAggrQ) {  
+				if (qos_actived) {
 					queue_index = UP2AC(skb->priority);
 				} else {
 					queue_index = WME_AC_BE;
@@ -1082,15 +1187,18 @@ int rtllib_xmit_inter(struct sk_buff *skb, struct net_device *dev)
 					spin_unlock_irqrestore(&ieee->lock, flags);
 					return 0;
 				}
-			}
-			else  
-			{
+			} else {  
 				if(tcb_desc_skb->bAMSDU)
 					IsAmsdu = true;
 				
 				ieee->amsdu_in_process = false;
 			}
 		}
+#else
+	#ifdef ASL
+		if(tcb_desc_skb->bMoreData)
+			bMoreData = true;
+	#endif
 #endif	
 		memset(skb->cb, 0, sizeof(skb->cb));
 		ether_type = ntohs(((struct ethhdr *)skb->data)->h_proto);
@@ -1138,6 +1246,21 @@ int rtllib_xmit_inter(struct sk_buff *skb, struct net_device *dev)
 		}
 		
 		skb->priority = rtllib_classify(skb, IsAmsdu);
+#ifdef ASL
+		if (ieee->iw_mode == IW_MODE_MASTER) {
+			if(!ieee->iswep){
+				if(bIsMulticast){
+					ieee->tx_keyidx = 1;
+					idx_sta = 0;
+				}else{
+					ieee->tx_keyidx = 0;
+					idx_sta = ap_cryptlist_find_station(ieee,dest,1);/*the sender.Just find*/
+				}
+			}else {
+				idx_sta = 0;
+			}
+		} 
+#endif
 #ifdef RTL8192S_WAPI_SUPPORT
 		if(ieee->WapiSupport && ieee->wapiInfo.bWapiEnable){
 			crypt = NULL;
@@ -1146,13 +1269,37 @@ int rtllib_xmit_inter(struct sk_buff *skb, struct net_device *dev)
 		}
 		else{
 #endif	
-#ifdef _RTL8192_EXT_PATCH_
+#ifdef ASL /*For softap's WPA.by Lawrence.*/
+		if (ieee->iw_mode == IW_MODE_MASTER) {
+			if (idx_sta < 0){
+				crypt = NULL;
+			}
+			else{
+				crypt = ieee->stations_crypt[idx_sta]->crypt[ieee->tx_keyidx];
+			}
+		#ifdef ASL_DEBUG_2
+			printk("====>%s(): crypt1 is %p, crypt2 is %p\n",__FUNCTION__,&(ieee->stations_crypt[0]->crypt[0]),&(ieee->stations_crypt[idx_sta]->crypt[ieee->tx_keyidx]));
+			printk("\nDEST: %x:%x:%x:%x:%x:%x",dest[0],dest[1],dest[2],dest[3],dest[4],dest[5]);
+			printk(" idx_sta = %d  crypt_idx = %d", idx_sta, ieee->tx_keyidx);
+			printk("\nether_type == ETH_P_PAE = %d", ether_type == ETH_P_PAE);
+			printk("\nieee->ieee802_1x = %d", ieee->ieee802_1x);
+			printk("\nieee->host_encrypt = %d", ieee->host_encrypt);
+			printk("\nieee->encrypt_activated = %d", ieee->encrypt_activated);
+		#endif
+			encrypt = (ieee->host_encrypt && crypt && crypt->ops &&  (strcmp(crypt->ops->name, "WEP") == 0)) 
+				 	  || (ieee->encrypt_activated && ieee->host_encrypt && crypt && crypt->ops);
+		} else {
+#endif
+#if defined(_RTL8192_EXT_PATCH_) || defined(ASL)
 		crypt = ieee->sta_crypt[ieee->tx_keyidx];
 #else
 		crypt = ieee->crypt[ieee->tx_keyidx];
 #endif	
 		encrypt = !(ether_type == ETH_P_PAE && ieee->ieee802_1x) &&
 			ieee->host_encrypt && crypt && crypt->ops;
+#ifdef ASL
+		}
+#endif
 #ifdef RTL8192S_WAPI_SUPPORT
 		}
 #endif		
@@ -1192,7 +1339,10 @@ int rtllib_xmit_inter(struct sk_buff *skb, struct net_device *dev)
 			fc |= RTLLIB_STYPE_QOS_DATA; 
 		else
 			fc |= RTLLIB_STYPE_DATA;
-	
+#ifdef ASL
+		if(bMoreData)
+			fc |= RTLLIB_FCTL_MOREDATA;
+#endif	
 #ifdef _RTL8192_EXT_PATCH_
 		if ((ieee->iw_mode == IW_MODE_INFRA) 
 			|| (ieee->iw_mode == IW_MODE_MESH) ) 
@@ -1215,9 +1365,23 @@ int rtllib_xmit_inter(struct sk_buff *skb, struct net_device *dev)
 			memcpy(&header.addr1, dest, ETH_ALEN);
 			memcpy(&header.addr2, src, ETH_ALEN);
 			memcpy(&header.addr3, ieee->current_network.bssid, ETH_ALEN);
+		} else if (ieee->iw_mode == IW_MODE_MASTER) {
+			fc |= RTLLIB_FCTL_FROMDS;
+			/* From DS: Addr1 = DA, Addr2 = BSSID,
+			Addr3 = SA */
+			memcpy(&header.addr1, dest, ETH_ALEN);
+			memcpy(&header.addr2, ieee->current_network.bssid, ETH_ALEN);
+			memcpy(&header.addr3, src, ETH_ALEN);
+#ifdef ASL
+#ifdef ASL_DEBUG
+			printk("\nfc=%x",fc);
+			printk("\nIn ap,xmit src = %x:%x:%x:%x:%x:%x", src[0], src[1], src[2], src[3], src[4], src[5]);
+			printk("\nIn ap,xmit dest = %x:%x:%x:%x:%x:%x", dest[0], dest[1], dest[2], dest[3], dest[4], dest[5]);
+#endif
+#endif
 		}
-
-		bIsMulticast = is_broadcast_ether_addr(header.addr1) ||is_multicast_ether_addr(header.addr1);
+		if (ieee->iw_mode != IW_MODE_MASTER)
+		        bIsMulticast = is_broadcast_ether_addr(header.addr1) ||is_multicast_ether_addr(header.addr1);
 
                 header.frame_ctl = cpu_to_le16(fc);
 
@@ -1413,8 +1577,13 @@ int rtllib_xmit_inter(struct sk_buff *skb, struct net_device *dev)
 #endif		
 				{
 
-#ifdef _RTL8192_EXT_PATCH_
-				rtllib_encrypt_fragment(ieee, skb_frag, hdr_len, 0, 0);
+#if defined(_RTL8192_EXT_PATCH_) || defined(ASL)
+#ifdef ASL
+				if (ieee->iw_mode == IW_MODE_MASTER)
+					rtllib_encrypt_fragment(ieee, skb_frag, hdr_len, 2, idx_sta);
+				else
+#endif
+					rtllib_encrypt_fragment(ieee, skb_frag, hdr_len, 0, 0);
 #else
 				rtllib_encrypt_fragment(ieee, skb_frag, hdr_len);
 #endif
@@ -1425,13 +1594,7 @@ int rtllib_xmit_inter(struct sk_buff *skb, struct net_device *dev)
 				skb_put(skb_frag, 4);
 		}
 
-		if((qos_actived) && (!bIsMulticast))
-		{
-		  if (ieee->seq_ctrl[UP2AC(skb->priority) + 1] == 0xFFF)
-			ieee->seq_ctrl[UP2AC(skb->priority) + 1] = 0;
-		  else
-			ieee->seq_ctrl[UP2AC(skb->priority) + 1]++;
-		} else {
+		if ((!qos_actived) || (bIsMulticast)) {
   		  if (ieee->seq_ctrl[0] == 0xFFF)
 			ieee->seq_ctrl[0] = 0;
 		  else
@@ -1510,11 +1673,35 @@ int rtllib_xmit_inter(struct sk_buff *skb, struct net_device *dev)
 					}
 					rtllib_qurey_ShortPreambleMode(ieee, tcb_desc);
 					rtllib_tx_query_agg_cap(ieee, txb->fragments[0], tcb_desc);
-					rtllib_ibss_query_HTCapShortGI(ieee, tcb_desc,is_peer_shortGI_40M,is_peer_shortGI_20M); 
-					rtllib_ibss_query_BandwidthMode(ieee, tcb_desc,is_peer_BW_40M);
+					rtllib_entry_query_HTCapShortGI(ieee, tcb_desc,is_peer_shortGI_40M,is_peer_shortGI_20M); 
+					rtllib_entry_query_BandwidthMode(ieee, tcb_desc,is_peer_BW_40M);
 					rtllib_query_protectionmode(ieee, tcb_desc, txb->fragments[0]);
-				}
-				else {
+				} else if (ieee->iw_mode == IW_MODE_MASTER) {
+#ifdef ASL
+					u8 is_sta_shortGI_40M = 0;
+					u8 is_sta_shortGI_20M = 0;
+					u8 is_sta_BW_40M = 0;
+					struct sta_info *p_sta = ap_get_stainfo(ieee, header.addr1);
+					if(NULL == p_sta)
+					{
+						rtllib_txrate_selectmode(ieee, tcb_desc, p_sta);
+						tcb_desc->data_rate = ieee->rate;
+				        }
+					else
+					{
+						rtllib_txrate_selectmode(ieee, tcb_desc, p_sta);
+						tcb_desc->data_rate = CURRENT_RATE(p_sta->wireless_mode, p_sta->CurDataRate, p_sta->htinfo.HTHighestOperaRate);
+						is_sta_shortGI_40M = p_sta->htinfo.bCurShortGI40MHz;
+						is_sta_shortGI_20M = p_sta->htinfo.bCurShortGI20MHz;
+						is_sta_BW_40M = p_sta->htinfo.bCurTxBW40MHz;
+					}
+					rtllib_qurey_ShortPreambleMode(ieee, tcb_desc);
+					rtllib_tx_query_agg_cap(ieee, txb->fragments[0], tcb_desc);
+					rtllib_entry_query_HTCapShortGI(ieee, tcb_desc,is_sta_shortGI_40M,is_sta_shortGI_20M); 
+					rtllib_entry_query_BandwidthMode(ieee, tcb_desc,is_sta_BW_40M);
+					rtllib_query_protectionmode(ieee, tcb_desc, txb->fragments[0]);
+#endif
+				} else {
 					rtllib_txrate_selectmode(ieee, tcb_desc, p_sta); 
 					tcb_desc->data_rate = CURRENT_RATE(ieee->mode, ieee->rate, ieee->HTCurrentOperaRate);
 					if(bdhcp == true){
@@ -1580,6 +1767,15 @@ int rtllib_xmit_inter(struct sk_buff *skb, struct net_device *dev)
 			dev->stats.tx_packets++;
 			dev->stats.tx_bytes += txb->payload_size;
 #endif	
+#ifdef ASL
+#ifdef RATE_ADAPTIVE_FOR_AP
+			if(ieee->enableRateAdaptive && (ieee->iw_mode == IW_MODE_MASTER)){
+				struct sta_info *pEntry = ap_get_stainfo(ieee, &dest);
+				if(pEntry )
+					ap_set_dataframe_txrate(ieee, pEntry);
+			}
+#endif
+#endif
 			rtllib_softmac_xmit(txb, ieee);
 		}else{
 			if ((*ieee->hard_start_xmit)(txb, dev) == 0) {

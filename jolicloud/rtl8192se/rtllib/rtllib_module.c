@@ -76,7 +76,7 @@ MODULE_LICENSE("GPL");
 #define DRV_NAME "rtllib_9x"
 #endif
 
-#ifdef CONFIG_CFG_80211 
+#if defined CONFIG_CFG_80211 && LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30)  
 #ifdef CONFIG_RTL_RFKILL
 static inline void rtllib_rfkill_poll(struct wiphy *wiphy)
 {
@@ -186,7 +186,7 @@ static inline void rtllib_networks_initialize(struct rtllib_device *ieee)
 #endif
 }
 
-#if defined CONFIG_CFG_80211 
+#if defined CONFIG_CFG_80211 && LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30)  
 static bool rtllib_wdev_alloc(struct rtllib_device *ieee, int sizeof_priv)
 {
 	int priv_size;
@@ -228,6 +228,15 @@ struct net_device *alloc_rtllib(int sizeof_priv)
 	struct rtllib_device *ieee = NULL;
 	struct net_device *dev;
 	int i,err;
+#ifdef ASL
+#ifdef ASL_WME
+	const __le16 cw_min[QOS_QUEUE_NUM] = {4,4,3,2};
+	const __le16 cw_max[QOS_QUEUE_NUM] = {6,10,4,3};
+	const u8 aifs[QOS_QUEUE_NUM] = {3,7,2,2};
+	const u8 flag[QOS_QUEUE_NUM] = {0,0,0,0};
+	const __le16 tx_op_limit[QOS_QUEUE_NUM] = {0,0,3000 / 32+1,1500 / 32+1};
+#endif
+#endif
 
 	RTLLIB_DEBUG_INFO("Initializing...\n");
 
@@ -240,7 +249,7 @@ struct net_device *alloc_rtllib(int sizeof_priv)
 	memset(ieee, 0, sizeof(struct rtllib_device)+sizeof_priv);
 	ieee->dev = dev;
 
-#ifdef CONFIG_CFG_80211
+#if defined CONFIG_CFG_80211 && LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30)  
 	if(!rtllib_wdev_alloc(ieee, sizeof_priv))
 		goto failed;
 #endif
@@ -281,6 +290,46 @@ struct net_device *alloc_rtllib(int sizeof_priv)
 	spin_lock_init(&ieee->wpax_suitlist_lock);
 	spin_lock_init(&ieee->bw_spinlock);
 	spin_lock_init(&ieee->reorder_spinlock);
+	
+#ifdef ASL
+	spin_lock_init(&ieee->psQ_lock);
+	ieee->mDtimPeriod = 2;
+	ieee->mDtimCount = 0;
+	ieee->PowerSaveStationNum = 0;
+	skb_queue_head_init(&ieee->GroupPsQueue);
+	ieee->idx_ptk = 0;
+	ieee->idx_gtk = 1;
+	ieee->iswep = 0;
+	for (i=0; i<APDEV_MAX_ASSOC; i++) {
+		ieee->stations_crypt[i] = (struct rtllib_crypt_data_list*) kmalloc(sizeof(struct rtllib_crypt_data_list), GFP_KERNEL);
+		if (NULL == ieee->stations_crypt) {
+			printk("error kmalloc cryptlist\n");
+			goto failed;
+		}
+		memset(ieee->stations_crypt[i], 0, sizeof(struct rtllib_crypt_data_list));
+	}
+	for(i = 0; i<APDEV_MAX_ASSOC; i++)
+		ieee->apdev_assoc_list[i]=NULL;
+	ieee->ForcedDataRate = 0;
+	spin_lock_init(&ieee->apdev_queue_lock);
+#ifdef RATE_ADAPTIVE_FOR_AP
+	ieee->enableRateAdaptive = 1;
+#endif
+
+#ifdef ASL_WME
+	ieee->parameter_set_count = 0;
+	ieee->wme_enabled = 0;
+	/*Init WME registers*/	
+	memcpy(ieee->current_network.qos_data.parameters.cw_min, cw_min, QOS_QUEUE_NUM);
+	memcpy(ieee->current_network.qos_data.parameters.cw_max, cw_max, QOS_QUEUE_NUM);
+	memcpy(ieee->current_network.qos_data.parameters.aifs, aifs, QOS_QUEUE_NUM);
+	memcpy(ieee->current_network.qos_data.parameters.flag, flag, QOS_QUEUE_NUM);
+	memcpy(ieee->current_network.qos_data.parameters.tx_op_limit, tx_op_limit, QOS_QUEUE_NUM);
+	
+/*init by apdev_tx from  hostapd configure.So here do nothing.*/	
+#endif
+
+#endif
 	atomic_set(&(ieee->atm_chnlop), 0);
 	atomic_set(&(ieee->atm_swbw), 0);
 
@@ -348,13 +397,22 @@ struct net_device *alloc_rtllib(int sizeof_priv)
 
  failed:
 #ifdef _RTL8192_EXT_PATCH_
-	for (i=0; i<MAX_MP; i++)
-	{
+	for (i=0; i<MAX_MP; i++) {
 		if (ieee->cryptlist[i]==NULL){
 			continue;
 		}
 		kfree(ieee->cryptlist[i]);
 		ieee->cryptlist[i] = NULL;
+
+	}
+#endif
+#ifdef ASL
+	for (i=0; i<APDEV_MAX_ASSOC; i++) {
+		if (ieee->stations_crypt[i]==NULL){
+			continue;
+		}
+		kfree(ieee->stations_crypt[i]);
+		ieee->stations_crypt[i] = NULL;
 
 	}
 #endif
@@ -373,10 +431,14 @@ void free_rtllib(struct net_device *dev)
 {
 	struct rtllib_device *ieee = (struct rtllib_device *)netdev_priv_rsl(dev);
 	int i;
+	struct rtllib_crypt_data *crypt = NULL;
+#ifdef ASL
+	int j;
+#endif
+
 #ifdef _RTL8192_EXT_PATCH_
 	int j;
 	struct list_head *p, *q;
-	struct rtllib_crypt_data *crypt = NULL;
 #endif	
 #if 1	
 	if (ieee->pHTInfo != NULL)
@@ -390,8 +452,7 @@ void free_rtllib(struct net_device *dev)
 	rtllib_crypt_deinit_entries(ieee, 1);
 
 #ifdef _RTL8192_EXT_PATCH_
-	for (j=0;j<MAX_MP; j++)
-	{
+	for (j=0;j<MAX_MP; j++) {
 		if (ieee->cryptlist[j] == NULL)
 			continue;
 		for (i = 0; i < WEP_KEYS; i++) {
@@ -416,10 +477,35 @@ void free_rtllib(struct net_device *dev)
 		}
 		kfree(ieee->cryptlist[j]);
 	}
+#endif
+#ifdef ASL
+	for (j=0;j < APDEV_MAX_ASSOC; j++) {
+		if (ieee->stations_crypt[j] == NULL)
+			continue;
+		for (i = 0; i < WEP_KEYS; i++) {
+			crypt = ieee->stations_crypt[j]->crypt[i];
+			if (crypt) {
+				if (crypt->ops) {
+					crypt->ops->deinit(crypt->priv);
+#ifndef BUILT_IN_RTLLIB
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0)
+					module_put(crypt->ops->owner);
+#else
+					__MOD_DEC_USE_COUNT(crypt->ops->owner);
+#endif
+#endif
+				}
+				kfree(crypt);
+				ieee->stations_crypt[j]->crypt[i] = NULL;
+			}
+		}
+		kfree(ieee->stations_crypt[j]);
+	}
+#endif
+#if defined(_RTL8192_EXT_PATCH_) || defined(ASL)
 	for (i = 0; i < WEP_KEYS; i++) {
 		crypt = ieee->sta_crypt[i];
-		if (crypt) 
-		{
+		if (crypt) 	{
 			if (crypt->ops) {
 				crypt->ops->deinit(crypt->priv);
 #ifndef BUILT_IN_RTLLIB
@@ -436,7 +522,7 @@ void free_rtllib(struct net_device *dev)
 	}
 #else
 	for (i = 0; i < WEP_KEYS; i++) {
-		struct rtllib_crypt_data *crypt = ieee->crypt[i];
+		crypt = ieee->crypt[i];
 		if (crypt) {
 			if (crypt->ops) {
 				crypt->ops->deinit(crypt->priv);
@@ -453,7 +539,6 @@ void free_rtllib(struct net_device *dev)
 		}
 	}
 #endif
-
 	rtllib_networks_free(ieee);
 #ifdef _RTL8192_EXT_PATCH_
 	rtllib_mesh_networks_free(ieee);
@@ -482,7 +567,7 @@ void free_rtllib(struct net_device *dev)
 	}
 #endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0))	
-#ifdef CONFIG_CFG_80211
+#if defined CONFIG_CFG_80211 && LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30)  
 	wiphy_unregister(ieee->wdev.wiphy);
 	wiphy_free(ieee->wdev.wiphy);
 #endif

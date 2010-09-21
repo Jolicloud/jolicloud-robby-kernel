@@ -1188,10 +1188,12 @@ void HTOnAssocRsp(struct rtllib_device *ieee)
 #endif
 	RTLLIB_DEBUG_DATA(RTLLIB_DL_DATA|RTLLIB_DL_HT, pPeerHTCap, sizeof(HT_CAPABILITY_ELE));
 	HTSetConnectBwMode(ieee, (HT_CHANNEL_WIDTH)(pPeerHTCap->ChlWidth), (HT_EXTCHNL_OFFSET)(pPeerHTInfo->ExtChlOffset));
-#if defined RTL8192SE || defined RTL8192SU || defined RTL8192CE
-	if(pHTInfo->bCurBW40MHz == true)
-#endif
-		pHTInfo->bCurTxBW40MHz = ((pPeerHTInfo->RecommemdedTxWidth == 1)?true:false);
+
+	if(pHTInfo->bCurBW40MHz == true && (pPeerHTInfo->RecommemdedTxWidth == 1)){
+		pHTInfo->bCurTxBW40MHz = true;
+	}else{
+		pHTInfo->bCurTxBW40MHz = false;
+	}
 
 	pHTInfo->bCurShortGI20MHz= 
 		((pHTInfo->bRegShortGI20MHz)?((pPeerHTCap->ShortGI20Mhz==1)?true:false):false);

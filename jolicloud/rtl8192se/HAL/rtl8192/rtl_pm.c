@@ -21,6 +21,10 @@
 
 #include "rtl_core.h"
 #include "rtl_pm.h"
+#ifdef _RTL8192_EXT_PATCH_
+#include "../../mshclass/msh_class.h"
+#endif
+
 
 int rtl8192E_save_state (struct pci_dev *dev, pm_message_t state)
 {
@@ -37,6 +41,10 @@ int rtl8192E_suspend (struct pci_dev *pdev, pm_message_t state)
 {
 	struct net_device *dev = pci_get_drvdata(pdev);
 	struct r8192_priv *priv = rtllib_priv(dev); 
+#ifdef _RTL8192_EXT_PATCH_
+ 	struct net_device *meshdev = priv->rtllib->meshdev;
+#endif
+
 #if !(defined RTL8192SE || defined RTL8192CE)		
 	u32	ulRegRead;
 #endif
@@ -49,16 +57,52 @@ int rtl8192E_suspend (struct pci_dev *pdev, pm_message_t state)
 	priv->polling_timer_on = 0;
 #endif
 
-        if (!netif_running(dev)){
+#ifdef _RTL8192_EXT_PATCH_
+        if ((!netif_running(dev)) && (!netif_running(meshdev)))
+#else
+        if (!netif_running(dev))
+#endif
+	{
             printk("RTL819XE:UI is open out of suspend function\n");
             goto out_pci_suspend;
         }
 
 #ifdef HAVE_NET_DEVICE_OPS
-	if (dev->netdev_ops->ndo_stop)
-		dev->netdev_ops->ndo_stop(dev);
+	if (!(priv->up)) {
+		priv->rtllib->wlan_up_before_suspend = 0;
+	} else {
+		priv->rtllib->wlan_up_before_suspend = 1;
+		
+		printk("====>%s(2), stop wlan, wlan_up_before_suspend = %d\n", __func__, priv->rtllib->wlan_up_before_suspend);		
+	        if (dev->netdev_ops->ndo_stop)
+		        dev->netdev_ops->ndo_stop(dev);
+	}
+#ifdef _RTL8192_EXT_PATCH_
+	if (!(priv->mesh_up)) {
+		printk("====>%s(1), stop wlan, wlan_up_before_suspend = %d\n", __func__, priv->rtllib->wlan_up_before_suspend);		
+		priv->rtllib->mesh_up_before_suspend = 0;
+	} else {
+		priv->rtllib->mesh_up_before_suspend = 1;
+			
+		if (meshdev->netdev_ops->ndo_stop)
+			meshdev->netdev_ops->ndo_stop(meshdev);
+	}
+#endif
 #else
-	dev->stop(dev);
+	if (!(priv->up))
+                priv->rtllib->wlan_up_before_suspend = 0;
+        else {
+                priv->rtllib->wlan_up_before_suspend = 1;
+	        dev->stop(dev);
+	}
+#ifdef _RTL8192_EXT_PATCH_
+	if (!(priv->mesh_up))
+                priv->rtllib->mesh_up_before_suspend = 0;
+        else {
+                priv->rtllib->mesh_up_before_suspend = 1;
+		meshdev->stop(meshdev);
+	}	
+#endif
 #endif	
 	netif_device_detach(dev);
 
@@ -112,9 +156,11 @@ out_pci_suspend:
 int rtl8192E_resume (struct pci_dev *pdev)
 {
     struct net_device *dev = pci_get_drvdata(pdev);
-#if defined ENABLE_GPIO_RADIO_CTL || !(defined RTL8192SE || defined RTL8192CE)		
     struct r8192_priv *priv = rtllib_priv(dev); 
+#ifdef _RTL8192_EXT_PATCH_
+	struct net_device *meshdev = priv->rtllib->meshdev;
 #endif
+
     int err;
     u32 val;
 
@@ -148,17 +194,39 @@ int rtl8192E_resume (struct pci_dev *pdev)
     }
 #endif
 
-    if(!netif_running(dev)){
+#ifdef _RTL8192_EXT_PATCH_
+    if ((!netif_running(dev)) && (!netif_running(meshdev)))
+#else
+    if(!netif_running(dev))
+#endif
+    {
         printk("RTL819XE:UI is open out of resume function\n");
         goto out;
     }
 
     netif_device_attach(dev);
 #ifdef HAVE_NET_DEVICE_OPS
-    if (dev->netdev_ops->ndo_open)
-	    dev->netdev_ops->ndo_open(dev);
+	if (priv->rtllib->wlan_up_before_suspend) {
+                if (dev->netdev_ops->ndo_open)
+	                dev->netdev_ops->ndo_open(dev);
+	}
+#ifdef _RTL8192_EXT_PATCH_
+        if (priv->rtllib->mesh_up_before_suspend) { 
+		if (meshdev->netdev_ops->ndo_open)
+			meshdev->netdev_ops->ndo_open(meshdev);
+		netif_carrier_on(meshdev);
+	}
+#endif
 #else
-    dev->open(dev);
+	if (priv->rtllib->wlan_up_before_suspend) {
+            dev->open(dev);
+	}
+#ifdef _RTL8192_EXT_PATCH_
+	if (priv->rtllib->mesh_up_before_suspend) {
+		meshdev->open(meshdev);
+		netif_carrier_on(meshdev);
+	}
+#endif
 #endif    
 
 #if !(defined RTL8192SE || defined RTL8192CE)		

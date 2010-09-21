@@ -3,7 +3,6 @@
 
 #include <linux/kernel.h>
 #include <linux/list.h>
-#include "rtl819x_Qos.h"
 
 /* WAPI trace debug */
 extern u32 wapi_debug_component;
@@ -21,11 +20,11 @@ do { if(wapi_debug_component & (component)){ \
 }while(0);
 
 enum WAPI_DEBUG {
-	WAPI_INIT				=BIT0,
-	WAPI_API				= BIT1,	 
-	WAPI_TX				= BIT2,	 
-	WAPI_RX				= BIT3,
-	WAPI_ERR		        	= BIT31
+	WAPI_INIT				=1,
+	WAPI_API				= 2,	 
+	WAPI_TX				= 4,	 
+	WAPI_RX				= 8,
+	WAPI_ERR		        	= 1<<31
 };
 
 #define			WAPI_MAX_BKID_NUM				64

@@ -130,6 +130,7 @@ Change history =
 	5. To make LED dim time short enough when power save open.
 	6. Remove ubuntu10.04 self rtl8192se driver in make install.
 ---------------------------------------------------------------------------------------------
+
 ---------------------------------------------------------------------------------------------
 Release date = 2010-05-25
 Operating system release = Ubuntu 8.10/ubuntu9.04/ubuntu9.10/ubuntu10.04/moblin2/android-x86_090916
@@ -138,6 +139,7 @@ Release driver version = 0017.0525.2010
 Change history =
 	1. Fix LED flashing issue, when adapter start in the condition of RF OFF.
 ---------------------------------------------------------------------------------------------
+
 ---------------------------------------------------------------------------------------------
 Release date = 2010-07-05
 Operating system release = Ubuntu 8.10/ubuntu9.04/ubuntu9.10/ubuntu10.04/moblin2/android-x86_090916
@@ -145,4 +147,21 @@ Kernel version = 2.6.28/2.6.30/2.6.31/2.6.32/2.6.33/2.6.34
 Release driver version = 0017.0705.2010
 Change history =
 	1. Fix powertop crash issue.
+	2. Fix G rate show wrong issue.
 ---------------------------------------------------------------------------------------------
+
+---------------------------------------------------------------------------------------------
+Release date = 2010-07-30
+Operating system release = RedFlag7/OpenSUSE11/SUSE SLED11/Ubuntu 8.10/ubuntu9.04/ubuntu9.10/ubuntu10.04/moblin2/android-x86_090916
+Kernel version = 2.6.27/2.6.28/2.6.29/2.6.31/2.6.32/2.6.33/2.6.34/2.6.35
+Release driver version = 0018.0730.2010
+Change history =
+	1. Add MRC support.
+	2. Auto remove old driver before install.
+	3. Support 2.6.35
+	4. Fix 20Mhz N rate show wrong issue.
+	5. del some test script.
+	6. fix signal parse wrong issue.
+---------------------------------------------------------------------------------------------
+
+

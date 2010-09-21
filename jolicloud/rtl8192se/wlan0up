@@ -1,5 +1,7 @@
 #!/bin/bash
 
+echo > /etc/udev/rules.d/70-persistent-net.rules
+
 # Select NIC type
 card=RTL8192se
 
@@ -44,6 +46,9 @@ case "$card" in
 	"RTL8192ce_Mesh")
 	cd ../HAL/rtl8192;
 	insmod r8192ce_pci_mesh.o;;
+	"RTL8192se_SOFTAP")
+	cd ../HAL/rtl8192;
+	insmod r8192se_pci_softap.o;;
 
         *)
         echo "Unknown NIC type"
@@ -93,6 +98,9 @@ case "$card" in
 	"RTL8192ce_Mesh")
 	cd ../HAL/rtl8192;
 	insmod r8192ce_pci_mesh.ko;;
+	"RTL8192se_SOFTAP")
+	cd ../HAL/rtl8192;
+	insmod r8192se_pci_softap.ko;;
 
         *)
         echo "Unknown NIC type"

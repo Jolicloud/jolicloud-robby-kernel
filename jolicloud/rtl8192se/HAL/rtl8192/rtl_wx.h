@@ -31,4 +31,7 @@ u16 rtl8192_11n_user_show_rates(struct net_device* dev);
 #ifdef _RTL8192_EXT_PATCH_
 extern struct iw_handler_def meshdev_wx_handlers_def;
 #endif
+#ifdef ASL
+extern struct iw_handler_def  apdev_wx_handlers_def;
+#endif
 #endif

@@ -69,7 +69,7 @@
 #include "rtl8192c/r8192C_inc.h"
 #endif
 
-#ifdef CONFIG_CFG_80211 
+#if defined CONFIG_CFG_80211 && LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30)  
 #include "rtl_regd.h"
 #endif
 
@@ -85,7 +85,7 @@
 
 #define DRV_COPYRIGHT  "Copyright(c) 2008 - 2010 Realsil Semiconductor Corporation"
 #define DRV_AUTHOR  "<wlanfae@realtek.com>"
-#define DRV_VERSION  "0017.0705.2010"
+#define DRV_VERSION  "0018.0730.2010"
 
 #ifdef RTL8190P
 #define DRV_NAME "rtl819xP"
@@ -159,10 +159,19 @@ typedef int __bitwise pci_power_t;
 #define BIT(_i)				(1<<(_i))
 #endif
 
+
 #ifdef _RTL8192_EXT_PATCH_	
+#ifdef ASL
+#define IS_NIC_DOWN(priv)	((!(priv)->up) && (!(priv)->mesh_up) && (!(priv)->apdev_up))
+#else
 #define IS_NIC_DOWN(priv)	((!(priv)->up) && (!(priv)->mesh_up))
+#endif
+#else 
+#ifdef ASL
+#define IS_NIC_DOWN(priv)	((!(priv)->up) && (!(priv)->apdev_up))
 #else  
 #define IS_NIC_DOWN(priv)	(!(priv)->up)
+#endif  
 #endif  
 
 #define IS_ADAPTER_SENDS_BEACON(dev) 0
@@ -241,6 +250,9 @@ typedef int __bitwise pci_power_t;
 
 #define	PHY_RSSI_SLID_WIN_MAX		 	100
 
+#ifdef ASL
+#define RTL_IOCTL_WPA					SIOCIWFIRSTPRIV+10
+#endif
 #define RTL_IOCTL_WPA_SUPPLICANT		SIOCIWFIRSTPRIV+30
 
 #define TxBBGainTableLength 		        37
@@ -646,6 +658,9 @@ struct rtl819x_ops{
 	void (* interrupt_recognized)(struct net_device *dev, u32 *p_inta, u32 *p_intb);
 	bool (* TxCheckStuckHandler)(struct net_device* dev);
 	bool (* RxCheckStuckHandler)(struct net_device* dev);
+#ifdef ASL
+	void (* rtl819x_hwconfig)(struct net_device* dev);
+#endif
 };
 
 typedef struct r8192_priv
@@ -656,7 +671,10 @@ typedef struct r8192_priv
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,10))
 	u32		pci_state;
 #endif
-
+#ifdef ASL
+	struct net_device *apdev;
+	short	apdev_up;
+#endif
 	bool 		bfirst_init;
 	bool 		bfirst_after_down;
 	bool 		initialized_at_probe;
@@ -743,6 +761,7 @@ typedef struct r8192_priv
 	struct timer_list 			watch_dog_timer;
 	struct timer_list 			fsync_timer;
 	struct timer_list 			gpio_polling_timer;
+	struct timer_list 			SwAntennaSwitchTimer;
 	
 	spinlock_t 				fw_scan_lock;
 	spinlock_t 				irq_lock;
@@ -781,7 +800,7 @@ typedef struct r8192_priv
 	void (*rf_close)(struct net_device *dev);
 	void (*rf_init)(struct net_device *dev);
 	
-#ifdef CONFIG_CFG_80211
+#if defined CONFIG_CFG_80211 && LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30)  
 	struct ieee80211_rate rates[IEEE80211_NUM_BANDS][RTL_RATE_MAX];
 	struct ieee80211_supported_band bands[IEEE80211_NUM_BANDS];
 #endif	
@@ -898,6 +917,7 @@ typedef struct r8192_priv
 	u16		FirmwareSubVersion;
 	u16 		rf_pathmap;
 	bool 		AutoloadFailFlag;
+	bool		bFWReady;
 
 	u8		RegPciASPM;
 	u8		RegAMDPciASPM;
@@ -1034,6 +1054,7 @@ typedef struct r8192_priv
 	u32		ADDA_backup[16];
 #if defined RTL8192CE
 	u32		IQK_MAC_backup[IQK_MAC_REG_NUM];
+	u32		IQK_BB_backup[10];
 #endif
 
 	bool 		SetFwCmdInProgress; 
@@ -1228,6 +1249,8 @@ typedef struct r8192_priv
 	bool		bAPKThermalMeterIgnore;
 	bool		bInterruptMigration;
 	bool		bDisableTxInt;
+
+	u8		bDefaultAntenna;
 #endif
 
 }r8192_priv;
@@ -1240,7 +1263,19 @@ struct meshdev_priv {
 	struct r8192_priv * priv;
 };
 #endif
-
+#ifdef ASL
+struct apdev_priv {
+	struct net_device_stats stats;
+	struct rtllib_device *rtllib;
+	struct r8192_priv * priv;
+	int status;
+	int rx_int_enabled;
+	int tx_packetlen;
+	u8 *tx_packetdata;
+	struct sk_buff *skb;
+	spinlock_t lock;
+};
+#endif
 extern const struct ethtool_ops rtl819x_ethtool_ops;
 
 #ifdef RTL8192CE
@@ -1350,7 +1385,7 @@ ActUpdateChannelAccessSetting(
 	PCHANNEL_ACCESS_SETTING	ChnlAccessSetting
 	);
 
-#ifdef CONFIG_CFG_80211
+#if defined CONFIG_CFG_80211 && LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30)  
 struct net_device *wiphy_to_net_device(struct wiphy *wiphy);
 #endif
 

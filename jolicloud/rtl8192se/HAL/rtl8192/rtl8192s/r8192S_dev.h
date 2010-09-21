@@ -55,7 +55,7 @@ void rtl8192se_halt_adapter(struct net_device *dev, bool bReset);
 void rtl8192se_update_ratr_table(struct net_device* dev,u8* pMcsRate,struct sta_info* pEntry);
 int r8192se_resume_firm(struct net_device *dev);
 void PHY_SetRtl8192seRfHalt(struct net_device* dev);
-void UpdateHalRAMask8192SE(struct net_device* dev, bool bMulticast, u8 macId, u8 MimoPs, u8 WirelessMode, u8 bCurTxBW40MHz,	u8 rssi_level);
+void UpdateHalRAMask8192SE(struct net_device* dev, bool bMulticast, u8 macId, u8 MimoPs, u8 WirelessMode, u8 bCurTxBW40MHz,	u8 rssi_level,u8 * entry_ratrindex);
 u8 HalSetSysClk8192SE(struct net_device *dev, u8 Data);
 bool	rtl8192se_RxCommandPacketHandle(struct net_device *dev, struct sk_buff* skb,rx_desc *pdesc);
 bool rtl8192se_check_ht_cap(struct net_device* dev, struct sta_info *sta, 
@@ -75,6 +75,8 @@ void rtl8192se_check_tsf_wq(struct net_device *dev);
 void rtl8192se_update_assoc_sta_info_wq(struct net_device *dev);
 #endif
 void gen_RefreshLedState(struct net_device *dev);
-
+#ifdef ASL
+extern void HwConfigureRTL8192SE(struct net_device *dev);
 #endif
 
+#endif

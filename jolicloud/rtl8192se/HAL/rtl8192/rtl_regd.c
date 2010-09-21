@@ -22,10 +22,11 @@
  * Contact Information:
  * wlanfae <wlanfae@realtek.com>
  ******************************************************************************/
-#ifdef CONFIG_CFG_80211
 #include "rtl_core.h"
 #include <linux/kernel.h>
 #include <linux/slab.h>
+
+#if defined CONFIG_CFG_80211 && LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30)  
 #include <net/cfg80211.h>
 
 #ifdef CONFIG_CRDA
@@ -164,11 +165,9 @@ int rtl_reg_notifier_apply(struct wiphy *wiphy,
 	case NL80211_REGDOM_SET_BY_DRIVER:
 	case NL80211_REGDOM_SET_BY_USER:
 		rtl_reg_apply_world_flags(wiphy, request->initiator, reg);
-		rtl_dump_channel_map(wiphy);
 		break;
 	case NL80211_REGDOM_SET_BY_COUNTRY_IE:
 		rtl_reg_apply_world_flags(wiphy, request->initiator, reg);
-		rtl_dump_channel_map(wiphy);
 		break;
 	}
 
@@ -213,12 +212,18 @@ rtl_regd_init_wiphy(struct rtl_regulatory *reg,
 
 	wiphy->reg_notifier = reg_notifier;
 
+#if LINUX_VERSION_CODE >=KERNEL_VERSION(2,6,33)
+	wiphy->flags |= WIPHY_FLAG_CUSTOM_REGULATORY;
+	wiphy->flags &= ~WIPHY_FLAG_STRICT_REGULATORY;
+	wiphy->flags &= WIPHY_FLAG_DISABLE_BEACON_HINTS;
+#else
 	wiphy->custom_regulatory = true;
 	wiphy->strict_regulatory = false;
+	wiphy->disable_beacon_hints = true;
+#endif
 
 	regd = rtl_regdomain_select(reg);
 
-	wiphy->disable_beacon_hints = true;
 	wiphy_apply_custom_regulatory(wiphy, regd);
 
 	rtl_reg_apply_world_flags(wiphy, NL80211_REGDOM_SET_BY_DRIVER, reg);
@@ -273,7 +278,6 @@ int rtl_regd_init(struct net_device *dev,
 	printk(KERN_DEBUG "rtl: Country alpha2 being used: %c%c\n",
 		reg->alpha2[0], reg->alpha2[1]);
 	rtl_regd_init_wiphy(reg, wiphy, reg_notifier);
-	rtl_dump_channel_map(wiphy);
 	return 0;
 }
 
@@ -387,4 +391,5 @@ bool rtl8192_register_wiphy_dev(struct net_device *dev)
 #endif
 	return true;
 }
+
 #endif

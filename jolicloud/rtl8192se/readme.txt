@@ -1,10 +1,10 @@
-Release Date: 2010-0705, ver 0017 
+Release Date: 2010-0730, ver 0018 
 RTL8192SE Linux driver
    --This driver supports RealTek rtl8192SE PCI Wireless LAN NIC
      for
      2.6 kernel:
-     Fedora Core 2/3/4/5, Debian 3.1, Mandrake 10.2/Mandriva 2006, 
-     SUSE 9.3/10.1/10.2, Gentoo 3.1, Ubuntu 7.10/8.04/8.10/9.04/9.10/10.04, 
+     Fedora Core 2/3/4/5, RedFlag7, Debian 3.1, Mandrake 10.2/Mandriva 2006, 
+     SUSE/SLED 9.3/10.1/10.2/11, Gentoo 3.1, Ubuntu 7.10/8.04/8.10/9.04/9.10/10.04, 
      moblin(V2), android-x86_090916, etc.
      2.4 kernel:
      Redhat 9.0/9.1
@@ -27,19 +27,11 @@ The driver is composed of several parts:
 	3. Script to build the modules
 	   3.1 Makefile 
 
-	4. Script to load/unload modules
-	   4.1 wlan0up 
-	   4.2 wlan0down 
+	4. Example of supplicant configuration file:
+	   4.1 wpa1.conf
 
-	5. Script and configuration for DHCP
- 	   5.1 wlan0dhcp
-	   5.2 ifcfg-wlan0
-
-	6. Example of supplicant configuration file:
-	   6.1 wpa1.conf
-
-	7. Script to run wpa_supplicant
-	   7.1 runwpa
+	5. Script to run wpa_supplicant
+	   5.1 runwpa
 
 ========================================================================================
 				II. Compile & Installation & uninstall
@@ -63,7 +55,7 @@ Compile, Installation, or uninstall the driver:
 				III. Start Up Wireless
 ========================================================================================
 You can use two methord to start up wireless:
-<<Method 1>>
+
 	1. Install driver like II. and reboot OS
 	2. Wireless will brought up by GUI, such as NetworkManager
 	3. If Wireless is not brought up by GUI, you can use: 
@@ -72,29 +64,6 @@ You can use two methord to start up wireless:
 		 interface "wlan0" may be changed to "wlan1" or "wlan2", etc. 
 		 So before "ifconfig wlan0 up", you can use "iwconfig" to check
 		 which interface our NIC is.
-
-<<Method 2>>
-	Not install driver But Only load the driver module to kernel and 
-	start up nic.
-	1. Compile the drivers from the source code
-	   make
-
-        2. Copy firmware to /lib/firmware/ or /lib/firmware/(KERNEL_VERSION)/
-           cp -rf firmware/RTL8192SE /lib/firmware           or
-           cp -rf firmware/RTL8192SE /lib/firmware/(KERNEL_VERSION)
-           Note: This depends on whether (KERNEL_VERSION) subdirectory exists 
-	         under /lib/firmware
-
-	3. Load driver module to kernel.
-	   ./wlan0up
-           Note: when "insmod: error inserting 'xxxx.ko': -1 File exists" comes 
-		 out after run ./wlan0up, please run ./wlan0down first, then it 
-		 should Be ok..
-	   Note: If you see the message of "unkown symbol" during ./wlan0up, it
-		 is suggested to start up nic use <<Method 1>>.
-
-	4. start up nic
-	   ifconfig wlan0 up 
 
 ========================================================================================
 				IV. Set wireless lan MIBs 
@@ -164,11 +133,7 @@ If using DHCP, setting steps is as below:
 	   iwconfig wlan0 ap XX:XX:XX:XX:XX:XX
 
 	2. run the script which run the dhclient
-	   ./wlan0dhcp           or 
-	   dhcpcd wlan0
-           Note: Some network admins require that you use the hostname and 
-	         domainname provided by the DHCP server. In that case, use 
-	         dhcpcd -HD wlan0.
+	   dhclient wlan0
 		
 
 ========================================================================================

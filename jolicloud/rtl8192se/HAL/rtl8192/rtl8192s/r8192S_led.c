@@ -1310,17 +1310,15 @@ void LedControl8192SE(struct net_device *dev, LED_CTL_MODE LedAction)
 	if(IS_NIC_DOWN(priv))
 		return;
 
-	if(priv->bdisable_nic == true) //for IPS
+	if(priv->bdisable_nic == true) 
 		return;
-
+	
 #ifdef TO_DO_LIST
 	if(Adapter->bInHctTest)
 		return;
 #endif
 
-	if(	priv->rtllib->eRFPowerState != eRfOn &&
-		//priv->rtllib->RfOffReason > RF_CHANGE_BY_PS && 
-		//priv->rtllib->RfOffReason > RF_CHANGE_BY_INIT && 
+	if(	priv->rtllib->eRFPowerState != eRfOn && 
 		(LedAction == LED_CTL_TX || LedAction == LED_CTL_RX || 
 		 LedAction == LED_CTL_SITE_SURVEY || 
 		 LedAction == LED_CTL_LINK || 

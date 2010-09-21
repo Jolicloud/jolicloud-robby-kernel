@@ -238,6 +238,7 @@ static int r8192_wx_force_mic_error(struct net_device *dev,
 }
 
 #define MAX_ADHOC_PEER_NUM 64 
+
 typedef struct 
 {
 	unsigned char MacAddr[ETH_ALEN];
@@ -266,7 +267,6 @@ int r8192_wx_get_adhoc_peers(struct net_device *dev,
 	int k=0;
 
 
-	//bigger than 1024 will crash here.
 	memset(extra, 0, 1024);
 	padhoc_peers_info->num = 0;
 
@@ -281,7 +281,7 @@ int r8192_wx_get_adhoc_peers(struct net_device *dev,
 				printk("====> we can not show so many peers\n");
 				break;
 			}
-
+					
 			padhoc_peer_entry = &padhoc_peers_info->Entry[padhoc_peers_info->num];
 			memset(padhoc_peer_entry,0, sizeof(adhoc_peer_entry_t));
 			memcpy(padhoc_peer_entry->MacAddr, psta->macaddr, ETH_ALEN);
@@ -720,7 +720,8 @@ static int r8192_wx_set_scan(struct net_device *dev, struct iw_request_info *a,
 		return -EAGAIN;
 
 #ifdef _RTL8192_EXT_PATCH_	
-	if((ieee->iw_mode == IW_MODE_MESH)&&(ieee->mesh_state == RTLLIB_MESH_LINKED))
+	if((ieee->iw_mode == IW_MODE_MESH)&&(ieee->mesh_state == RTLLIB_MESH_LINKED)
+					&&(ieee->only_mesh == 1))
 	{
 		return 0;
 	}
@@ -1353,7 +1354,9 @@ static int r8192_set_hw_enc(struct net_device *dev,
 	u32 key[4] = {0};
 	struct iw_encode_ext *ext = (struct iw_encode_ext *)extra;
 	struct iw_point *encoding = &wrqu->encoding;
-	u8 idx = 0, alg = 0, group = 0;
+	u8 idx = 0, alg = 0;
+	bool group = false;
+	bool wep_nogroup = false;
 	u8 broadcast_addr[6] = {0xff,0xff,0xff,0xff,0xff,0xff};
 	u8 zero[6] = {0};
         priv->rtllib->wx_set_enc = 1;
@@ -1388,12 +1391,21 @@ static int r8192_set_hw_enc(struct net_device *dev,
 	idx = encoding->flags & IW_ENCODE_INDEX;
 	if (idx)
 		idx --;
-	group = ext->ext_flags & IW_ENCODE_EXT_GROUP_KEY;
-	printk("====>group is %x\n",group);
-	if ((!group) || (IW_MODE_ADHOC == ieee->iw_mode) || (alg ==  KEY_TYPE_WEP40) || (IW_MODE_MESH == ieee->iw_mode))
+	
+	group = (ext->ext_flags & IW_ENCODE_EXT_GROUP_KEY) > 0 ? true:false;
+	printk("%s() group:%d, alg:%d, last_pairwise_key_type:%d, key_len:%d\n", 
+			__func__, group, alg, ieee->pairwise_key_type, ext->key_len);
+
+	
+	if ((!group) || (IW_MODE_ADHOC == ieee->iw_mode) || (ieee->pairwise_key_type == KEY_TYPE_NA) 
+			|| (ieee->mesh_pairwise_key_type == KEY_TYPE_NA) || (IW_MODE_MESH == ieee->iw_mode))
 	{
+		if(ieee->pairwise_key_type == KEY_TYPE_NA && alg == KEY_TYPE_WEP40)
+				wep_nogroup = true;
+		
 		if ((ext->key_len == 13) && (alg == KEY_TYPE_WEP40) )
 			alg = KEY_TYPE_WEP104;
+		
 		if(is_mesh)
 			ieee->mesh_pairwise_key_type = alg;
 		else
@@ -1401,7 +1413,7 @@ static int r8192_set_hw_enc(struct net_device *dev,
 		EnableHWSecurityConfig8192(dev);
 	}
 	memcpy((u8*)key, ext->key, 16); 
-	if ((alg & KEY_TYPE_WEP40) && (ieee->auth_mode !=2) )
+	if (wep_nogroup && (ieee->auth_mode !=2)) 
 	{
 		printk("=====>set WEP key\n");
 		if (ext->key_len == 13){
@@ -1451,6 +1463,10 @@ static int r8192_set_hw_enc(struct net_device *dev,
 	else if (group)
 	{
 		printk("set group key\n");
+
+		if ((ext->key_len == 13) && (alg == KEY_TYPE_WEP40) )
+				alg = KEY_TYPE_WEP104;
+		
 		if(is_mesh)
 			ieee->mesh_group_key_type = alg;
 		else
@@ -1734,7 +1750,9 @@ static int r8192_wx_set_enc_ext(struct net_device *dev,
 			{0x00, 0x00, 0x00, 0x00, 0x00, 0x02},
 			{0x00, 0x00, 0x00, 0x00, 0x00, 0x03}};
 #endif
-		u8 idx = 0, alg = 0, group = 0;
+		u8 idx = 0, alg = 0;
+		bool group = 0;
+		bool wep_nogroup = false;
 		if ((encoding->flags & IW_ENCODE_DISABLED) ||
 		ext->alg == IW_ENCODE_ALG_NONE) 
 		{
@@ -1747,18 +1765,25 @@ static int r8192_wx_set_enc_ext(struct net_device *dev,
 		idx = encoding->flags & IW_ENCODE_INDEX;
 		if (idx)
 			idx --;
-		group = ext->ext_flags & IW_ENCODE_EXT_GROUP_KEY;
+		
+		group = (ext->ext_flags & IW_ENCODE_EXT_GROUP_KEY) > 0 ? true:false;
+		printk("%s() group:%d, alg:%d, last_pairwise_key_type:%d, key_len:%d\n", 
+			__func__, group, alg, ieee->pairwise_key_type, ext->key_len);
 
-		if ((!group) || (IW_MODE_ADHOC == ieee->iw_mode) || (alg ==  KEY_TYPE_WEP40))
+		if ((!group) || (IW_MODE_ADHOC == ieee->iw_mode) || ieee->pairwise_key_type == KEY_TYPE_NA)
 		{
+			if(ieee->pairwise_key_type == KEY_TYPE_NA && alg == KEY_TYPE_WEP40)
+				wep_nogroup = true;
+
 			if ((ext->key_len == 13) && (alg == KEY_TYPE_WEP40) )
 				alg = KEY_TYPE_WEP104;
+
 			ieee->pairwise_key_type = alg;
 			EnableHWSecurityConfig8192(dev);
 		}
 		memcpy((u8*)key, ext->key, 16); 
 		
-		if ((alg & KEY_TYPE_WEP40) && (ieee->auth_mode !=2) )
+		if(wep_nogroup && (ieee->auth_mode !=2))
 		{
 			if (ext->key_len == 13)
 				ieee->pairwise_key_type = alg = KEY_TYPE_WEP104;
@@ -1780,6 +1805,9 @@ static int r8192_wx_set_enc_ext(struct net_device *dev,
 		}
 		else if (group)
 		{
+			if ((ext->key_len == 13) && (alg == KEY_TYPE_WEP40) )
+				alg = KEY_TYPE_WEP104;
+			
 			ieee->group_key_type = alg;
 			setKey( dev,
 					idx,
@@ -2546,7 +2574,7 @@ static const struct iw_priv_args r8192_private_args[] = {
 	,
 	{
 		SIOCIWFIRSTPRIV + 0xb,
-		0, IW_PRIV_TYPE_CHAR|1024, "adhoc_peer_list" //just < 1024 can set.
+		0, IW_PRIV_TYPE_CHAR|1024, "adhoc_peer_list" 
 	}
         ,
 	{
@@ -2753,6 +2781,7 @@ u16 rtl8192_11n_user_show_rates(struct net_device* dev)
 	u8  rate = MGN_1M;
 	u32  Sgstrength;
 	bool TxorRx = priv->rtllib->bForcedShowRxRate;          
+	PRT_HIGH_THROUGHPUT pHTInfo = priv->rtllib->pHTInfo;
 	u8 bCurrentMRC = 0;
 
 	priv->rtllib->GetHwRegHandler(dev, HW_VAR_MRC, (u8*)(&bCurrentMRC));
@@ -2764,11 +2793,7 @@ u16 rtl8192_11n_user_show_rates(struct net_device* dev)
 		}
 	}
 
-	if(priv->rtllib->bForcedShowRateStill) {
-		Sgstrength = 100;
-	} else {
-		Sgstrength = priv->undecorated_smoothed_pwdb;
-	}
+	Sgstrength = 100;
 
 	if (priv->rtllib->mode == WIRELESS_MODE_A ||
 			priv->rtllib->mode == WIRELESS_MODE_G ||
@@ -2798,17 +2823,43 @@ u16 rtl8192_11n_user_show_rates(struct net_device* dev)
 		else
 			bMaxRateMcs15 = true;
 
-		if((priv->rtllib->state == RTLLIB_LINKED) && !(priv->rtllib->pHTInfo->bCurBW40MHz))
-			bMaxRateMcs15 = false;
+		//if((priv->rtllib->state == RTLLIB_LINKED) && !(pHTInfo->bCurBW40MHz))
+		//	bMaxRateMcs15 = false;
 
 		if(priv->rtllib->state != RTLLIB_LINKED)
 			priv->rtllib->SystemQueryDataRateCount = 0;
 		if (TimesForReportingFullRxSpeedAfterConnected > priv->rtllib->SystemQueryDataRateCount) {
 			priv->rtllib->SystemQueryDataRateCount++;
-			if(bMaxRateMcs15)
-				return 600;
-			else
-				return 270;
+
+			if(bMaxRateMcs15){
+				if(pHTInfo->bCurBW40MHz){
+					if(pHTInfo->bCurShortGI40MHz){ 
+						return 600;
+					}else{
+						return 540;
+					}
+				} else {
+					if(pHTInfo->bCurShortGI20MHz){ 
+						return 289;
+					}else{
+						return 260;
+					}
+				}
+			}else{
+				if(pHTInfo->bCurBW40MHz){
+					if(pHTInfo->bCurShortGI40MHz){ 
+						return 300;
+					}else{
+						return 270;
+					}
+				} else {
+					if(pHTInfo->bCurShortGI20MHz){ 
+						return 144;
+					}else{
+						return 130;
+					}
+				}
+			}
 		}
 
 		if (bMaxRateMcs15)
@@ -2845,7 +2896,468 @@ struct iw_handler_def  r8192_wx_handlers_def={
 #endif
 	.private_args = (struct iw_priv_args *)r8192_private_args,	
 };
+#ifdef ASL
+static int apdev_wx_get_name(struct net_device *apdev, 
+			     struct iw_request_info *info, 
+			     union iwreq_data *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+	return r8192_wx_get_name(dev, info, wrqu, extra);
+}
+static int apdev_wx_set_freq(struct net_device *apdev, struct iw_request_info *a,
+			     union iwreq_data *wrqu, char *b)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
 
+	return r8192_wx_set_freq(dev, a,wrqu,b);
+}
+static int apdev_wx_get_freq(struct net_device *apdev,
+			     struct iw_request_info *a,
+			     union iwreq_data *wrqu, char *b)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_get_freq(dev,a,wrqu,b);
+}
+static int apdev_wx_set_mode(struct net_device *apdev, struct iw_request_info *a,
+			     union iwreq_data *wrqu, char *b)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_set_mode(dev,a,wrqu,b);
+}
+static int apdev_wx_get_mode(struct net_device *apdev, struct iw_request_info *a,
+			     union iwreq_data *wrqu, char *b)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_get_mode(dev,a,wrqu,b);
+}
+static int apdev_wx_set_sens(struct net_device *apdev, 
+				struct iw_request_info *info, 
+				union iwreq_data *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_set_sens(dev,info,wrqu,extra);
+}
+static int apdev_wx_get_sens(struct net_device *apdev, 
+				struct iw_request_info *info, 
+				union iwreq_data *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_get_sens(dev,info,wrqu,extra);
+}
+static int apdev_wx_get_range(struct net_device *apdev, 
+				struct iw_request_info *info, 
+				union iwreq_data *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return rtl8192_wx_get_range(dev,info,wrqu,extra);
+}
+static int apdev_wx_set_wap(struct net_device *apdev,
+			 struct iw_request_info *info,
+			 union iwreq_data *awrq,
+			 char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_set_wap(dev,info,awrq,extra);
+}
+static int apdev_wx_get_wap(struct net_device *apdev, 
+			    struct iw_request_info *info, 
+			    union iwreq_data *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_get_wap(dev,info,wrqu,extra);
+}
+static int apdev_wx_set_essid(struct net_device *apdev, 
+			      struct iw_request_info *a,
+			      union iwreq_data *wrqu, char *b)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_set_essid(dev,a,wrqu,b);
+}
+static int apdev_wx_get_essid(struct net_device *apdev, 
+			      struct iw_request_info *a,
+			      union iwreq_data *wrqu, char *b)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_get_essid(dev,a,wrqu,b);
+}
+static int apdev_wx_set_nick(struct net_device *apdev,
+			   struct iw_request_info *info,
+			   union iwreq_data *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_set_nick(dev,info,wrqu,extra);
+}
+static int apdev_wx_get_nick(struct net_device *apdev,
+			     struct iw_request_info *info, 
+			     union iwreq_data *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_get_nick(dev,info,wrqu,extra);
+}
+static int apdev_wx_set_rate(struct net_device *apdev, 
+			     struct iw_request_info *info, 
+			     union iwreq_data *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_set_rate(dev,info,wrqu,extra);
+}
+static int apdev_wx_get_rate(struct net_device *apdev, 
+			     struct iw_request_info *info, 
+			     union iwreq_data *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_get_rate(dev,info,wrqu,extra);
+}
+static int apdev_wx_set_rts(struct net_device *apdev, 
+			     struct iw_request_info *info, 
+			     union iwreq_data *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+	
+	return r8192_wx_set_rts(dev,info,wrqu,extra);
+}
+static int apdev_wx_get_rts(struct net_device *apdev, 
+			     struct iw_request_info *info, 
+			     union iwreq_data *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_get_rts(dev,info,wrqu,extra);
+}
+static int apdev_wx_set_frag(struct net_device *apdev, 
+			     struct iw_request_info *info, 
+			     union iwreq_data *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_set_frag(dev,info,wrqu,extra);
+}
+static int apdev_wx_get_frag(struct net_device *apdev, 
+			     struct iw_request_info *info, 
+			     union iwreq_data *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_get_frag(dev,info,wrqu,extra);
+}
+static int apdev_wx_set_retry(struct net_device *apdev, 
+				struct iw_request_info *info, 
+				union iwreq_data *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_set_retry(dev,info,wrqu,extra);
+}
+static int apdev_wx_get_retry(struct net_device *apdev, 
+				struct iw_request_info *info, 
+				union iwreq_data *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_get_retry(dev,info,wrqu,extra);
+}
+static int apdev_wx_get_enc(struct net_device *apdev, 
+			    struct iw_request_info *info, 
+			    union iwreq_data *wrqu, char *key)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_get_enc(dev,info,wrqu,key);
+}
+static int apdev_wx_set_mlme(struct net_device *apdev,
+                                        struct iw_request_info *info,
+                                        union iwreq_data *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_set_mlme(dev,info,wrqu,extra);
+}
+static iw_handler apdev_wx_handlers[] =
+{
+        IW_IOCTL(SIOCGIWNAME) = apdev_wx_get_name,   	  
+        IW_IOCTL(SIOCSIWFREQ) = apdev_wx_set_freq,        
+        IW_IOCTL(SIOCGIWFREQ) = apdev_wx_get_freq,        
+        IW_IOCTL(SIOCSIWMODE) = apdev_wx_set_mode,        
+        IW_IOCTL(SIOCGIWMODE) = apdev_wx_get_mode,        
+        IW_IOCTL(SIOCSIWSENS) = apdev_wx_set_sens,        
+        IW_IOCTL(SIOCGIWSENS) = apdev_wx_get_sens,        
+        IW_IOCTL(SIOCGIWRANGE) = apdev_wx_get_range,	  
+        IW_IOCTL(SIOCSIWAP) = apdev_wx_set_wap,      	  
+        IW_IOCTL(SIOCGIWAP) = apdev_wx_get_wap,           
+        IW_IOCTL(SIOCSIWSCAN) = NULL,        
+        IW_IOCTL(SIOCGIWSCAN) = NULL,        
+        IW_IOCTL(SIOCSIWESSID) = apdev_wx_set_essid,      
+        IW_IOCTL(SIOCGIWESSID) = apdev_wx_get_essid,      
+        IW_IOCTL(SIOCSIWNICKN) = apdev_wx_set_nick,
+	 IW_IOCTL(SIOCGIWNICKN) = apdev_wx_get_nick,
+        IW_IOCTL(SIOCSIWRATE) = apdev_wx_set_rate,        
+        IW_IOCTL(SIOCGIWRATE) = apdev_wx_get_rate,        
+        IW_IOCTL(SIOCSIWRTS) = apdev_wx_set_rts,          
+        IW_IOCTL(SIOCGIWRTS) = apdev_wx_get_rts,          
+        IW_IOCTL(SIOCSIWFRAG) = apdev_wx_set_frag,        
+        IW_IOCTL(SIOCGIWFRAG) = apdev_wx_get_frag,        
+        IW_IOCTL(SIOCSIWRETRY) = apdev_wx_set_retry,      
+        IW_IOCTL(SIOCGIWRETRY) = apdev_wx_get_retry,      
+        IW_IOCTL(SIOCSIWENCODE) = NULL,       
+        IW_IOCTL(SIOCGIWENCODE) = apdev_wx_get_enc,       
+        IW_IOCTL(SIOCSIWPOWER) = NULL,         
+        IW_IOCTL(SIOCGIWPOWER) = NULL,         
+#if (WIRELESS_EXT >= 18)
+		IW_IOCTL(SIOCSIWGENIE) = NULL, 	     
+		IW_IOCTL(SIOCGIWGENIE) = NULL,
+		IW_IOCTL(SIOCSIWMLME) = apdev_wx_set_mlme,        
+		IW_IOCTL(SIOCSIWAUTH) = NULL,	    
+		IW_IOCTL(SIOCSIWENCODEEXT) = NULL,  
+#endif
+}; 
+static int apdev_wx_set_debugflag(struct net_device *apdev, 
+			       struct iw_request_info *info, 
+			       union iwreq_data *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_set_debugflag(dev,info,wrqu,extra);
+}
+static int apdev_wx_force_reset(struct net_device *apdev,
+		struct iw_request_info *info,
+		union iwreq_data *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+	printk("====>%s()\n",__FUNCTION__);
+
+	return r8192_wx_force_reset(dev,info,wrqu,extra);
+}
+static int apdev_wx_force_mic_error(struct net_device *apdev,
+		struct iw_request_info *info,
+		union iwreq_data *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_force_mic_error(dev,info,wrqu,extra);
+}
+static int apdev_wx_get_firm_version(struct net_device *apdev,
+		struct iw_request_info *info,
+		struct iw_param *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8191se_wx_get_firm_version(dev,info,wrqu,extra);
+}
+static int apdev_wx_set_PromiscuousMode(struct net_device *apdev,
+                struct iw_request_info *info,
+                union iwreq_data *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_set_PromiscuousMode(dev,info,wrqu,extra);
+}
+static int apdev_wx_get_PromiscuousMode(struct net_device *apdev,
+                               struct iw_request_info *info,
+                               union iwreq_data *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+
+	return r8192_wx_get_PromiscuousMode(dev,info,wrqu,extra);
+}
+#ifdef RATE_ADAPTIVE_FOR_AP
+static int apdev_wx_setrate_adaptive(struct net_device *apdev,
+                               struct iw_request_info *info,
+                               union iwreq_data *wrqu, char *extra)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct r8192_priv * priv = appriv->priv;
+	u8 flag;
+
+	down(&priv->wx_sem);
+	flag = *extra;
+	
+	priv->rtllib->enableRateAdaptive = flag;
+	if(flag)
+		printk("\nEnable Rate Adaptive Mechanism.");
+	else
+		printk("\nDisable Rate Adaptive Mechanism.");
+		
+        up(&priv->wx_sem);
+        return 0;
+
+}
+#endif
+
+/* 
+ * the following rule need to be follwing,
+ * Odd : get (world access), 
+ * even : set (root access) 
+ * */
+static const struct iw_priv_args apdev_private_args[] = { 
+	{
+		SIOCIWFIRSTPRIV + 0x0, 
+		IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "set_debugflag" 
+	}
+	, 
+	{
+		SIOCIWFIRSTPRIV + 0x3,
+		IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "forcereset"
+	}
+	,
+	{
+		SIOCIWFIRSTPRIV + 0x4,
+		IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "force_mic_error"
+	}
+	,
+	{
+		SIOCIWFIRSTPRIV + 0x5,
+		IW_PRIV_TYPE_NONE, IW_PRIV_TYPE_INT|IW_PRIV_SIZE_FIXED|1, 
+		"firm_ver"
+	}
+	,
+	{
+		SIOCIWFIRSTPRIV + 0x16,
+                IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 3, 0, "setpromisc"
+	}
+	,
+	{
+		SIOCIWFIRSTPRIV + 0x17,
+		0,IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_FIXED | 45, "getpromisc"
+	}
+#ifdef RATE_ADAPTIVE_FOR_AP
+	,
+	{
+		SIOCIWFIRSTPRIV + 0x1a,
+                IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "set_ra"
+	}
+#endif
+};
+
+static iw_handler apdev_private_handler[] = {
+	(iw_handler)apdev_wx_set_debugflag,   /*SIOCIWSECONDPRIV*/
+	(iw_handler)NULL,
+	(iw_handler)NULL,
+	(iw_handler)apdev_wx_force_reset,
+	(iw_handler)apdev_wx_force_mic_error,
+	(iw_handler)apdev_wx_get_firm_version,
+	(iw_handler)NULL,	    
+	(iw_handler)NULL, 
+	(iw_handler)NULL,
+	(iw_handler)NULL,
+	(iw_handler)NULL,
+	(iw_handler)NULL,
+	(iw_handler)NULL,
+	(iw_handler)NULL,
+	(iw_handler)NULL,
+	(iw_handler)NULL,
+	(iw_handler)NULL,
+	(iw_handler)NULL,
+	(iw_handler)NULL,
+ 	(iw_handler)NULL,
+	(iw_handler)NULL,
+	(iw_handler)NULL,
+	(iw_handler)apdev_wx_set_PromiscuousMode,
+	(iw_handler)apdev_wx_get_PromiscuousMode,
+	(iw_handler)NULL,
+	(iw_handler)NULL,
+#ifdef RATE_ADAPTIVE_FOR_AP
+	(iw_handler)apdev_wx_set_rate_adaptive,
+#else
+	(iw_handler)NULL,
+#endif
+};
+struct iw_statistics *apdev_get_wireless_stats(struct net_device *apdev)
+{
+	struct apdev_priv *appriv = (struct apdev_priv *)netdev_priv_rsl(apdev);
+	struct r8192_priv * priv = appriv->priv;
+	struct rtllib_device *ieee = appriv->rtllib;
+	struct net_device *dev = ieee->dev;
+	struct iw_statistics* wstats = &priv->wstats;
+	
+	wstats = r8192_get_wireless_stats(dev);
+	return wstats;
+}
+struct iw_handler_def  apdev_wx_handlers_def={
+	.standard = apdev_wx_handlers,
+	.num_standard = sizeof(apdev_wx_handlers) / sizeof(iw_handler),
+	.private = apdev_private_handler,
+	.num_private = sizeof(apdev_private_handler) / sizeof(iw_handler),
+ 	.num_private_args = sizeof(apdev_private_args) / sizeof(struct iw_priv_args),
+#if WIRELESS_EXT >= 17	
+	.get_wireless_stats = apdev_get_wireless_stats,
+#endif
+	.private_args = (struct iw_priv_args *)apdev_private_args,	
+};
+#endif
 #ifdef _RTL8192_EXT_PATCH_
 #define OID_802_11_MESH_SECURITY_INFO 0x0651
 #define OID_802_11_MESH_ID 0x0652

@@ -340,9 +340,17 @@ bool FirmwareDownload92S(struct net_device *dev)
 			if(pFirmware->szFwTmpBufferLen == 0)
 			{
 #ifdef _RTL8192_EXT_PATCH_
+#ifdef ASL
+				const char 		*pFwImageFileName[1] = {"RTL8192SE_SA/rtl8192sfw.bin"};
+#else
 				const char 		*pFwImageFileName[1] = {"RTL8191SE_MESH/rtl8192sfw.bin"};
+#endif
+#else
+#ifdef ASL
+				const char 		*pFwImageFileName[1] = {"RTL8192SE_SA/rtl8192sfw.bin"};
 #else
 				const char 		*pFwImageFileName[1] = {"RTL8192SE/rtl8192sfw.bin"};
+#endif
 #endif
 				const struct firmware 	*fw_entry = NULL;
 				u32 ulInitStep = 0;

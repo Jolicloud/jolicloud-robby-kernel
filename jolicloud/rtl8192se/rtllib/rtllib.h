@@ -39,7 +39,7 @@
 #include <linux/delay.h>
 #include <linux/wireless.h>
 
-#ifdef CONFIG_CFG_80211 
+#if (defined CONFIG_CFG_80211 && (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30)))
 #include <net/cfg80211.h>
 #endif
 
@@ -317,7 +317,8 @@ static inline void *netdev_priv_rsl(struct net_device *dev)
 #endif
 
 /* defined for skb cb field */
-/* At most 28 byte */
+/* MAX size is 48 bytes*/
+/* we use 33 byte */
 typedef struct cb_desc {
 	/* Tx Desc Related flags (8-9) */
 	u8 bLastIniPkt:1;
@@ -374,14 +375,16 @@ typedef struct cb_desc {
 #endif
 	u8 macId;
 	u8 priority;
-
-	/* Tx firmware related element(20-27) */
+	/* Tx firmware related element(20-29) */
 	u8 data_rate;
 	u8 rts_rate;
 	u8 ampdu_factor;
 	u8 ampdu_density;
 	u8 DrvAggrNum;
-	u8 bdhcp;
+	u8 bdhcp:1;
+	u8 bMoreData:1;
+	u8 bFromPsQ:1;
+	u8 reserved7:5;
 	u16 pkt_size;
 	u8 bIsSpecialDataFrame;
 
@@ -1108,8 +1111,8 @@ enum _REG_PREAMBLE_MODE{
 #define WLAN_FC_GET_FRAMETYPE(fc) ((fc) & RTLLIB_FCTL_FRAMETYPE)
 #define WLAN_GET_SEQ_FRAG(seq) ((seq) & RTLLIB_SCTL_FRAG)
 #define WLAN_GET_SEQ_SEQ(seq)  (((seq) & RTLLIB_SCTL_SEQ) >> 4)
+#define WLAN_FC_GET_PWRMGT(fc) ((fc) & RTLLIB_FCTL_PM)
 
-#ifndef CONFIG_CFG_80211
 /* Authentication algorithms */
 #define WLAN_AUTH_OPEN 0
 #define WLAN_AUTH_SHARED_KEY 1
@@ -1135,6 +1138,15 @@ enum _REG_PREAMBLE_MODE{
 #define WLAN_ERP_USE_PROTECTION (1<<1)
 #define WLAN_ERP_BARKER_PREAMBLE (1<<2)
 
+/* Status codes */
+enum rtllib_statuscode {
+        RTLLIB_WLAN_STATUS_SUCCESS = 0,
+        RTLLIB_WLAN_STATUS_CAPS_UNSUPPORTED = 10,
+        RTLLIB_WLAN_STATUS_NOT_SUPPORTED_AUTH_ALG = 13,
+        RTLLIB_WLAN_STATUS_ASSOC_DENIED_RATES = 18,
+};
+
+#if 0
 /* Status codes */
 enum rtllib_statuscode {
         WLAN_STATUS_SUCCESS = 0,
@@ -2481,7 +2493,7 @@ typedef struct _RT_LINK_DETECT_T{
 	u32				LastNumRxUnicast;
 }RT_LINK_DETECT_T, *PRT_LINK_DETECT_T;
 
-#ifdef _RTL8192_EXT_PATCH_
+#if defined(_RTL8192_EXT_PATCH_) || defined(ASL)  
 struct rtllib_crypt_data_list{
 	u8 used;
 	u8 mac_addr[ETH_ALEN];  
@@ -2675,7 +2687,7 @@ typedef struct _RT_PMKID_LIST
 	u16 					ssid_length;
 } RT_PMKID_LIST, *PRT_PMKID_LIST;
 
-#ifdef CONFIG_CFG_80211 
+#if (defined CONFIG_CFG_80211 && (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30)))
 enum {
 	LIBIPW_CH_PASSIVE_ONLY 		= (1 << 0),
 	LIBIPW_CH_80211H_RULES 		= (1 << 1),
@@ -2860,6 +2872,31 @@ enum {
 	LPS_WAIT_NULL_DATA_SEND =2,
 };
 
+#ifdef ASL
+/*the Max connetct number.*/
+#define APDEV_MAX_ASSOC 10
+#define APDEV_MAX_BUFF_LEN		2000
+#define APDEV_MAX_QUEUE_LEN		6
+struct del_item {
+		u8 addr[ETH_ALEN];
+		bool isused;
+};
+typedef struct _APDEV_QUEUE_NODE
+{
+    u16  ItemSize;
+    u8   Item[APDEV_MAX_BUFF_LEN];
+}APDEV_QUEUE_NODE;
+typedef struct _APDEV_QUEUE
+{
+    int     Head;
+    int     Tail;
+    int     NumItem;
+    int     MaxItem;
+    APDEV_QUEUE_NODE        ItemArray[APDEV_MAX_QUEUE_LEN];
+    int	MaxData;
+}APDEV_QUEUE;
+#endif
+
 struct rtllib_device {
 	struct pci_dev *pdev;
 	struct net_device *dev;
@@ -2872,7 +2909,46 @@ struct rtllib_device {
 	HT_EXTCHNL_OFFSET chan_offset_bk;
 	HT_CHANNEL_WIDTH bandwidth_bk;
 	u8 hwscan_sem_up;
-#ifdef CONFIG_CFG_80211
+#ifdef ASL
+	struct net_device *apdev;
+	struct net_device_stats *apstats;
+	spinlock_t mgmt_rx_lock;	
+	int hostap;
+       
+	u8 rsn_ie[MAX_WPA_IE_LEN];
+	int rsn_ie_len;
+	int rsn_activated;
+	int encrypt_activated;
+	int bhidden_ssid;
+
+	struct sta_info *apdev_assoc_list[APDEV_MAX_ASSOC];
+	u8	ForcedDataRate;
+
+#ifdef RATE_ADAPTIVE_FOR_AP
+	u8	enableRateAdaptive;
+#endif
+	
+/*For PTK&GTK index*/
+	u8 idx_ptk;
+	u8 idx_gtk;
+	struct del_item to_be_del_cam_entry[APDEV_MAX_ASSOC];
+	u8 iswep;
+	struct sk_buff_head  GroupPsQueue;
+	u16	PowerSaveStationNum; 
+	spinlock_t psQ_lock;
+	u8 mDtimPeriod;	
+	u8 mDtimCount;
+	OCTET_STRING Tim; 
+	u8 TimBuf[254]; 
+	spinlock_t apdev_queue_lock; 
+	APDEV_QUEUE * apdev_queue;
+#ifdef ASL_WME
+	int parameter_set_count;
+	int wme_enabled;
+#endif
+#endif
+
+#if (defined CONFIG_CFG_80211 && (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30)))
 	struct wireless_dev wdev;
 	struct rtl_regulatory regulatory;
 #endif
@@ -3019,6 +3095,11 @@ struct rtllib_device {
 	struct list_head crypt_deinit_list;
 #ifdef _RTL8192_EXT_PATCH_
 	struct rtllib_crypt_data_list* cryptlist[MAX_MP];
+#endif
+#ifdef ASL
+	struct rtllib_crypt_data_list* stations_crypt[APDEV_MAX_ASSOC];
+#endif
+#if defined(_RTL8192_EXT_PATCH_) || defined(ASL)
 	struct rtllib_crypt_data *sta_crypt[WEP_KEYS];
 #else
 	struct rtllib_crypt_data *crypt[WEP_KEYS];
@@ -3207,6 +3288,7 @@ struct rtllib_device {
 	struct timer_list ibss_wait_timer;
 #endif
 	u8 need_sw_enc;
+	u8 wlan_up_before_suspend;	
 #ifdef _RTL8192_EXT_PATCH_
 	struct net_device *meshdev;
 	struct net_device_stats *meshstats;
@@ -3231,8 +3313,6 @@ struct rtllib_device {
 	int mesh_txkeyidx;
 	u16 mesh_pairwise_key_type;
 	u16 mesh_group_key_type;
-	u32 HwSecCamBitMap; 
-	u8 HwSecCamStaAddr[TOTAL_CAM_ENTRY][ETH_ALEN]; 
 	SW_CAM_TABLE swmeshcamtable[TOTAL_CAM_ENTRY];
 	SW_RATR_TABLE swmeshratrtable[8];
 	short meshid_set;
@@ -3242,7 +3322,14 @@ struct rtllib_device {
 	short meshScanMode;
 	struct sk_buff_head  skb_meshaggQ[MAX_QUEUE_SIZE]; 
 	u8 mesh_amsdu_in_process;
+	u8 mesh_up_before_suspend;	
 #endif
+
+#if defined(_RTL8192_EXT_PATCH_) || defined(ASL)
+	u32 HwSecCamBitMap; 
+	u8 HwSecCamStaAddr[TOTAL_CAM_ENTRY][ETH_ALEN]; 
+#endif
+
 	work_struct_rsl associate_complete_wq;
 #ifdef ENABLE_IPS
 	work_struct_rsl ips_leave_wq;
@@ -3250,6 +3337,9 @@ struct rtllib_device {
 #if defined(RTL8192U) || defined(RTL8192SU) || defined(RTL8192SE)
 	delayed_work_struct_rsl check_tsf_wq;
 	delayed_work_struct_rsl update_assoc_sta_info_wq;
+#ifdef ASL
+	delayed_work_struct_rsl clear_sta_hw_sec_wq;
+#endif
 #endif
 	delayed_work_struct_rsl associate_procedure_wq;
 	delayed_work_struct_rsl softmac_scan_wq;
@@ -3431,7 +3521,7 @@ struct rtllib_device {
 	
 #ifdef _RTL8192_EXT_PATCH_
 	int (*set_key_for_AP)(struct rtllib_device *ieee);
-	void (*del_hwsec_cam_entry)(struct rtllib_device *ieee, u8 *addr); 
+	void (*del_hwsec_cam_entry)(struct rtllib_device *ieee, u8 *addr, bool is_mesh); 
 	int (*set_key_for_peer) (struct net_device *dev,u8 *Addr,u8 KeyIndex,u16 KeyType,u32 *KeyContent );
 	int (*ext_patch_rtllib_start_protocol) (struct rtllib_device *ieee); 
 
@@ -3494,7 +3584,7 @@ struct rtllib_device {
 
 #endif 
 	bool (*SetFwCmdHandler)(struct net_device *dev,	FW_CMD_IO_TYPE		FwCmdIO);
-	void (*UpdateHalRAMaskHandler)(struct net_device* dev, bool bMulticast, u8 macId, u8 MimoPs, u8 WirelessMode, u8 bCurTxBW40MHz,	u8 rssi_level);
+	void (*UpdateHalRAMaskHandler)(struct net_device* dev, bool bMulticast, u8 macId, u8 MimoPs, u8 WirelessMode, u8 bCurTxBW40MHz,	u8 rssi_level,u8* entry_ratrindex);
 	void (*UpdateBeaconInterruptHandler)(struct net_device* dev, bool start);
 	void (*UpdateInterruptMaskHandler)(struct net_device* dev, u32 AddMSR, u32 RemoveMSR);
 	u16  (*rtl_11n_user_show_rates)(struct net_device *dev);
@@ -3561,6 +3651,89 @@ struct rtllib_device {
  * to the card 
  */ 
 #define IEEE_SOFTMAC_BEACONS (1<<6)
+#ifdef ASL
+#ifdef ASL_WME
+#define WME_OUI_TYPE 2
+#define WME_OUI_SUBTYPE_INFORMATION_ELEMENT 0
+#define WME_OUI_SUBTYPE_PARAMETER_ELEMENT 1
+#define WME_OUI_SUBTYPE_TSPEC_ELEMENT 2
+#define WME_VERSION 1
+
+#define WME_ACTION_CATEGORY 17
+#define WME_ACTION_CODE_SETUP_REQUEST 0
+#define WME_ACTION_CODE_SETUP_RESPONSE 1
+#define WME_ACTION_CODE_TEARDOWN 2
+
+#define WME_SETUP_RESPONSE_STATUS_ADMISSION_ACCEPTED 0
+#define WME_SETUP_RESPONSE_STATUS_INVALID_PARAMETERS 1
+#define WME_SETUP_RESPONSE_STATUS_REFUSED 3
+
+#define WME_TSPEC_DIRECTION_UPLINK 0
+#define WME_TSPEC_DIRECTION_DOWNLINK 1
+#define WME_TSPEC_DIRECTION_BI_DIRECTIONAL 3
+
+struct wme_information_element {
+	/* required fields for WME version 1 */
+	u8 oui[3];
+	u8 oui_type;
+	u8 oui_subtype;
+	u8 version;
+	u8 acInfo;
+
+} __attribute__ ((packed));
+
+struct wme_ac_parameter {
+	/* byte 1 */
+	u8 	aifsn:4,
+		acm:1,
+	 	aci:2,
+	 	reserved:1;
+
+	/* byte 2 */
+	u8 	eCWmin:4,
+	 	eCWmax:4;
+
+	/* bytes 3 & 4 */
+	u16 txopLimit;
+} __attribute__ ((packed));
+
+struct wme_parameter_element {
+	/* required fields for WME version 1 */
+	u8 oui[3];
+	u8 oui_type;
+	u8 oui_subtype;
+	u8 version;
+	u8 acInfo;
+	u8 reserved;
+	struct wme_ac_parameter ac[4];
+
+} __attribute__ ((packed));
+
+struct wme_tspec_info_element {
+	u8 eid;
+	u8 length;
+	u8 oui[3];
+	u8 oui_type;
+	u8 oui_subtype;
+	u8 version;
+	u16 ts_info;
+	u16 nominal_msdu_size;
+	u16 maximum_msdu_size;
+	u32 minimum_service_interval;
+	u32 maximum_service_interval;
+	u32 inactivity_interval;
+	u32 start_time;
+	u32 minimum_data_rate;
+	u32 mean_data_rate;
+	u32 maximum_burst_size;
+	u32 minimum_phy_rate;
+	u32 peak_data_rate;
+	u32 delay_bound;
+	u16 surplus_bandwidth_allowance;
+	u16 medium_time;
+} __attribute__ ((packed));
+#endif
+#endif
 
 #ifdef _RTL8192_EXT_PATCH_
 static inline int rtllib_find_MP(struct rtllib_device* ieee, const u8* addr, u8 set)
@@ -3720,7 +3893,7 @@ extern int rtllib_set_encryption(struct rtllib_device *ieee);
 
 /* rtllib_tx.c */
 
-#ifdef _RTL8192_EXT_PATCH_
+#if defined(_RTL8192_EXT_PATCH_) || defined(ASL)
 extern int rtllib_encrypt_fragment(
 	struct rtllib_device *ieee,
 	struct sk_buff *frag,
