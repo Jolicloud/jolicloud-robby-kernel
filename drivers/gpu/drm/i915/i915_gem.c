@@ -465,6 +465,11 @@ i915_gem_pread_ioctl(struct drm_device *dev, void *data,
 		return -EINVAL;
 	}
 
+	if (args->size == 0) {
+		drm_gem_object_unreference_unlocked(obj);
+		return 0;
+	}
+
 	if (i915_gem_object_needs_bit17_swizzle(obj)) {
 		ret = i915_gem_shmem_pread_slow(dev, obj, args, file_priv);
 	} else {
@@ -475,7 +480,6 @@ i915_gem_pread_ioctl(struct drm_device *dev, void *data,
 	}
 
 	drm_gem_object_unreference_unlocked(obj);
-
 	return ret;
 }
 
@@ -911,7 +915,7 @@ i915_gem_pwrite_ioctl(struct drm_device *dev, void *data,
 	struct drm_i915_gem_pwrite *args = data;
 	struct drm_gem_object *obj;
 	struct drm_i915_gem_object *obj_priv;
-	int ret = 0;
+	int ret;
 
 	obj = drm_gem_object_lookup(dev, file_priv, args->handle);
 	if (obj == NULL)
@@ -922,6 +926,11 @@ i915_gem_pwrite_ioctl(struct drm_device *dev, void *data,
 	if (args->offset > obj->size || args->size > obj->size - args->offset) {
 		drm_gem_object_unreference_unlocked(obj);
 		return -EINVAL;
+	}
+
+	if (args->size == 0) {
+		drm_gem_object_unreference_unlocked(obj);
+		return 0;
 	}
 
 	/* We can only do the GTT pwrite on untiled buffers, as otherwise
@@ -956,7 +965,6 @@ i915_gem_pwrite_ioctl(struct drm_device *dev, void *data,
 #endif
 
 	drm_gem_object_unreference_unlocked(obj);
-
 	return ret;
 }
 
