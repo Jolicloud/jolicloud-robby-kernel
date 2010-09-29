@@ -19,6 +19,11 @@ config VGA_CONSOLE
 
 	  Say Y.
 
+config VGACON_DISABLE_CURSOR
+       bool "Disable the blinking cursor by default"
+       depends on VGA_CONSOLE
+       default n
+
 config VGACON_SOFT_SCROLLBACK
        bool "Enable Scrollback Buffer in System RAM"
        depends on VGA_CONSOLE
