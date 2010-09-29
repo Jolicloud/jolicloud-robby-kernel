@@ -85,6 +85,7 @@ static int audit_net(struct aa_profile *profile, int op, u16 family, int type,
 	sa.u.net.sk = sk;
 	sa.aad.net.type = type;
 	sa.aad.net.protocol = protocol;
+	sa.aad.error = error;
 
 	if (likely(!sa.aad.error)) {
 		u16 audit_mask = profile->net.audit[sa.u.net.family];
