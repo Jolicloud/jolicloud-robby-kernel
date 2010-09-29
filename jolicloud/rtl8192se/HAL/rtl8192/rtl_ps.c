@@ -592,6 +592,7 @@ bool PlatformSwitchDevicePciASPM(struct net_device *dev, u8 value)
 	value |= 0x40;
 #endif
 
+	printk(" %s %x\n", __func__, value);
 	pci_write_config_byte(priv->pdev, 0x80, value);
 
 #ifdef RTL8192SE
@@ -690,6 +691,7 @@ PlatformDisableASPM(struct net_device *dev)
 	PciBridgeLinkCtrlReg &=~(BIT0|BIT1);
 
 #ifdef RTL8192CE
+	printk(" %s \n", __func__);
 	PlatformSwitchDevicePciASPM(dev, LinkCtrlReg);
 	udelay( 50);
 #endif
@@ -718,7 +720,8 @@ PlatformDisableASPM(struct net_device *dev)
 	}
 
 #ifdef RTL8192SE
-	PlatformSwitchDevicePciASPM(dev, priv->NdisAdapter.LinkCtrlReg);
+	printk(" %s \n", __func__);
+	PlatformSwitchDevicePciASPM(dev, LinkCtrlReg);
 
 	PlatformSwitchClkReq(dev, 0x0);
 	if (pPSC->RegRfPsLevel & RT_RF_OFF_LEVL_CLK_REQ)
@@ -799,6 +802,7 @@ void PlatformEnableASPM(struct net_device *dev)
 #endif
 		uDeviceASPMSetting |= ASPMLevel;
 	
+	printk(" %s \n", __func__);
 	PlatformSwitchDevicePciASPM(dev, uDeviceASPMSetting);
 
 	if (pPSC->RegRfPsLevel & RT_RF_OFF_LEVL_CLK_REQ) {
