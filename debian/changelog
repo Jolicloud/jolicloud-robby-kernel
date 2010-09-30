@@ -1,3 +1,11 @@
+linux (2.6.35.4-1.40) robby-lucid; urgency=low
+
+  [ Adam McDaniel ]
+
+  * Imported rtl8192se (2.6.0018.0730.2010_debug)
+
+ -- Adam McDaniel <adam@jolicloud.org>  Thu, 30 Sep 2010 11:03:03 -0600
+
 linux (2.6.35.4-1.39) robby-lucid; urgency=low
 
   [ Adam McDaniel ]
