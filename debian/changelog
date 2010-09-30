@@ -1,3 +1,17 @@
+linux (2.6.35.4-1.39) robby-lucid; urgency=low
+
+  [ Adam McDaniel ]
+
+  * Revert "Staging: Add initial release of brcm80211 - Broadcom 802.11n
+    wireless LAN driver."
+  * CONFIG: Disabled CONFIG_BRCM80211 due to kernel panic; fall back to OEM
+    broadcom driver.
+  * Revert "JAMBON: vt: Default to not displaying a cursor"
+  * JAMBON: vgacon: Add config option to not display a cursor
+  * CONFIG: Enable CONFIG_VGACON_DISABLE_CURSOR setting
+
+ -- Adam McDaniel <adam@jolicloud.org>  Wed, 29 Sep 2010 17:04:25 -0600
+
 linux (2.6.35.4-1.38) robby-lucid; urgency=low
 
   [ Adam McDaniel ]
