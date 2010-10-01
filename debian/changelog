@@ -1,3 +1,11 @@
+linux (2.6.35.4-1.41) robby-lucid; urgency=low
+
+  [ Adam McDaniel ]
+
+  * CONFIG: Enable devtmpfs, activate on bootup by default
+
+ -- Adam McDaniel <adam@jolicloud.org>  Fri, 01 Oct 2010 12:13:03 -0600
+
 linux (2.6.35.4-1.40) robby-lucid; urgency=low
 
   [ Adam McDaniel ]
