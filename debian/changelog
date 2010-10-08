@@ -1,3 +1,11 @@
+linux (2.6.35.4-1.42) robby-lucid; urgency=low
+
+  [ Adam McDaniel ]
+
+  * Revert "Imported rtl8192se (2.6.0018.0730.2010_debug)"
+
+ -- Adam McDaniel <adam@jolicloud.org>  Thu, 07 Oct 2010 21:42:01 -0600
+
 linux (2.6.35.4-1.41) robby-lucid; urgency=low
 
   [ Adam McDaniel ]
