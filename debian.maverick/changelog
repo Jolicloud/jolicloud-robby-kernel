@@ -1,4 +1,8 @@
-linux (2.6.35-22.34) lucid-proposed; urgency=low
+linux-lts-backport-maverick (2.6.35-22.34~lucid1) lucid-proposed; urgency=low
+
+  [ Tim Gardner ]
+
+  * First upload according to https://wiki.ubuntu.com/KernelTeam/Specs/KernelMaverickNewKernelOnLTS
 
   [ John Johansen ]
 
