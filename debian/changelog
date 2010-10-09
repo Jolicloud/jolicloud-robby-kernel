@@ -1,3 +1,16 @@
+linux (2.6.35.4-1.43) robby-lucid; urgency=low
+
+  [ Adam McDaniel ]
+
+  * CONFIG: Enabled CONFIG_DRM_NOUVEAU for those who wish to test it
+  * nvidia: Imported Nvidia DRM driver 195.36.24
+  * nvidia: Added Kbuild hooks for nvidia driver
+  * nvidia: Converted nvidia to be compatible with Kbuild
+  * CONFIG: Enabled CONFIG_DRM_NVIDIA as module
+  * Kernel image DEB now provides "nvidia-modules"
+
+ -- Adam McDaniel <adam@jolicloud.org>  Sat, 09 Oct 2010 12:27:15 -0600
+
 linux (2.6.35.4-1.42) robby-lucid; urgency=low
 
   [ Adam McDaniel ]
