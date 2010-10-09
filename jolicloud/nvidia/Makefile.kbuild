@@ -81,6 +81,9 @@ obj ?= .
 # SYSSRC directive; this new directive replaces NVIDIA's SYSINCLUDE.
 #
 
+SYSSRC := $(KBUILD_SRC)/$(obj)
+SYSOUT := $(O)/$(obj)
+
 KERNEL_MODLIB := /lib/modules/$(shell uname -r)
 
 ifdef SYSSRC
@@ -172,8 +175,8 @@ COMPILE_TESTS = \
 # to satisfy KBUILD requirements and to support NVIDIA specifics.
 #
 
-$(obj)/$(CORE_OBJS):
-	@cp $(src)/$(CORE_OBJS) $(obj)/$(CORE_OBJS)
+$(obj)/nv-kernel.o: $(src)/nv-kernel.o.uu
+	uudecode -o $@ $^
 
 $(obj)/$(VERSION_HEADER):
 	@echo \#define NV_COMPILER \"`$(CC) -v 2>&1 | tail -n 1`\" > $@
@@ -276,8 +279,8 @@ clean:
 	@$(RM) -f $(RESMAN_GLUE_OBJS) $(KERNEL_GLUE_OBJS)
 	@$(RM) -f build-in.o nv-linux.o *.d .*.{cmd,flags}
 	@$(RM) -f $(MODULE_NAME).{o,ko,mod.{o,c}} $(VERSION_HEADER) *~
-	@$(RM) -f patches.h
-	@$(RM) -f conftest*.c conftest.h
+	#@$(RM) -f patches.h
+	#@$(RM) -f conftest*.c conftest.h
 	@$(RM) -rf Modules.symvers .tmp_versions
 
 #
