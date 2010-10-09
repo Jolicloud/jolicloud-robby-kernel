@@ -1,0 +1,5 @@
+config DRM_NVIDIA
+	tristate "NVIDIA"
+	depends on DRM && PCI && !FB_RIVA && !FB_NVIDIA
+	help
+	  Choose
