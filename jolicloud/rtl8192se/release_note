@@ -154,7 +154,7 @@ Change history =
 Release date = 2010-07-30
 Operating system release = RedFlag7/OpenSUSE11/SUSE SLED11/Ubuntu 8.10/ubuntu9.04/ubuntu9.10/ubuntu10.04/moblin2/android-x86_090916
 Kernel version = 2.6.27/2.6.28/2.6.29/2.6.31/2.6.32/2.6.33/2.6.34/2.6.35
-Release driver version = 0018.0730.2010
+Release driver version = 0018.1011.2010
 Change history =
 	1. Add MRC support.
 	2. Auto remove old driver before install.
@@ -162,6 +162,15 @@ Change history =
 	4. Fix 20Mhz N rate show wrong issue.
 	5. del some test script.
 	6. fix signal parse wrong issue.
+---------------------------------------------------------------------------------------------
+
+---------------------------------------------------------------------------------------------
+Release date = 2010-10-11
+Operating system release = RedFlag7/OpenSUSE11/SUSE SLED11/Ubuntu 8.10/ubuntu9.04/ubuntu9.10/ubuntu10.04/moblin2/android-x86_090916
+Kernel version = 2.6.27/2.6.28/2.6.29/2.6.31/2.6.32/2.6.33/2.6.34/2.6.35/2.6.36
+Release driver version = 0018.1011.2010
+Change history =
+	1. Fix ASPM cause Jolicloud OS install hang issue.
 ---------------------------------------------------------------------------------------------
 
 

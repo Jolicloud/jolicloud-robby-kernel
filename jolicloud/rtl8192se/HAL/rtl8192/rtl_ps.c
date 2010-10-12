@@ -718,7 +718,7 @@ PlatformDisableASPM(struct net_device *dev)
 	}
 
 #ifdef RTL8192SE
-	PlatformSwitchDevicePciASPM(dev, priv->NdisAdapter.LinkCtrlReg);
+	PlatformSwitchDevicePciASPM(dev, LinkCtrlReg);
 
 	PlatformSwitchClkReq(dev, 0x0);
 	if (pPSC->RegRfPsLevel & RT_RF_OFF_LEVL_CLK_REQ)
