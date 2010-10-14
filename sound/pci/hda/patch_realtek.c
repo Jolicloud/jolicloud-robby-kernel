@@ -10298,7 +10298,8 @@ static struct alc_config_preset alc882_presets[] = {
  * Pin config fixes
  */
 enum {
-	PINFIX_ABIT_AW9D_MAX
+	PINFIX_ABIT_AW9D_MAX,
+	PINFIX_ACER_ASPIRE_7736,
 };
 
 static struct alc_pincfg alc882_abit_aw9d_pinfix[] = {
@@ -10312,10 +10313,14 @@ static const struct alc_fixup alc882_fixups[] = {
 	[PINFIX_ABIT_AW9D_MAX] = {
 		.pins = alc882_abit_aw9d_pinfix
 	},
+	[PINFIX_ACER_ASPIRE_7736] = {
+		.sku = ALC_FIXUP_SKU_IGNORE,
+	},
 };
 
 static struct snd_pci_quirk alc882_fixup_tbl[] = {
 	SND_PCI_QUIRK(0x147b, 0x107a, "Abit AW9D-MAX", PINFIX_ABIT_AW9D_MAX),
+	SND_PCI_QUIRK(0x1025, 0x0296, "Acer Aspire 7736z", PINFIX_ACER_ASPIRE_7736),
 	{}
 };
 
