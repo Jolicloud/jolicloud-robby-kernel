@@ -77,7 +77,7 @@ Pre-Depends: dpkg (>= 1.10.24)
 Provides: linux-image, linux-image-2.6, fuse-module, kvm-api-4, redhat-cluster-modules, ivtv-modules, ndiswrapper-modules-1.9, psb-modules, nvidia-modules
 Depends: initramfs-tools (>= 0.36ubuntu6), coreutils | fileutils (>= 4.0), module-init-tools (>= 3.3-pre11-4ubuntu3), wireless-crda
 Conflicts: hotplug (<< 0.0.20040105-1)
-Recommends: grub-pc | grub | lilo (>= 19.1)
+Recommends: grub-pc | grub | lilo (>= 19.1), v86d
 Suggests: fdutils, linux-doc-2.6.35.4 | linux-source-2.6.35.4
 Description: Linux kernel image for version 2.6.35.4 on x86-based netbooks
  This package contains the Linux kernel image for version 2.6.35.4 on
@@ -131,7 +131,7 @@ Pre-Depends: dpkg (>= 1.10.24)
 Provides: linux-image, linux-image-2.6, fuse-module, kvm-api-4, redhat-cluster-modules, ivtv-modules, ndiswrapper-modules-1.9, psb-modules, nvidia-modules
 Depends: initramfs-tools (>= 0.36ubuntu6), coreutils | fileutils (>= 4.0), module-init-tools (>= 3.3-pre11-4ubuntu3), wireless-crda
 Conflicts: hotplug (<< 0.0.20040105-1)
-Recommends: grub-pc | grub | lilo (>= 19.1)
+Recommends: grub-pc | grub | lilo (>= 19.1), v86d
 Suggests: fdutils, linux-doc-2.6.35.4 | linux-source-2.6.35.4
 Description: Linux kernel image for version 2.6.35.4 on Intel Atom processors
  This package contains the Linux kernel image for version 2.6.35.4 on
