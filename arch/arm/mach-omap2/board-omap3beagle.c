@@ -306,6 +306,10 @@ static int beagle_twl_gpio_setup(struct device *dev,
        if (cpu_is_omap3630()) {
                gpio_request(gpio + 1, "nDVI_PWR_EN");
                gpio_direction_output(gpio + 1, 0);
+
+               /* On the xM A3 DVI_PUP was moved to an empty GPIO pin on the TPS65950 */
+               gpio_request(gpio + 2, "DVI_PUP");
+               gpio_direction_output(gpio + 2, 1);
  
                /* TWL4030_GPIO_MAX + 0 == ledA, EHCI nEN_USB_PWR (out, active low) */
                gpio_request(gpio + TWL4030_GPIO_MAX, "nEN_USB_PWR");
