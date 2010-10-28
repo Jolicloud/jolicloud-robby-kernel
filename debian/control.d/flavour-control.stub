@@ -14,7 +14,7 @@
 
 Package: linux-image-PKGVER-ABINUM-FLAVOUR
 Architecture: ARCH
-Section: base
+Section: restricted/base
 Priority: optional
 Pre-Depends: dpkg (>= 1.10.24)
 Provides: linux-image, linux-image-2.6, fuse-module, =PROVIDES=
@@ -40,7 +40,7 @@ Description: Linux kernel image for version PKGVER on DESC
 
 Package: linux-headers-PKGVER-ABINUM-FLAVOUR
 Architecture: ARCH
-Section: devel
+Section: restricted/devel
 Priority: optional
 Depends: coreutils | fileutils (>= 4.0), linux-headers-PKGVER-ABINUM, ${shlibs:Depends}
 Provides: linux-headers, linux-headers-2.6, =PROVIDES_HEADERS=
@@ -53,7 +53,7 @@ Description: Linux kernel headers for version PKGVER on DESC
 
 Package: linux-image-debug-PKGVER-ABINUM-FLAVOUR
 Architecture: ARCH
-Section: devel
+Section: restricted/devel
 Priority: optional
 Provides: linux-debug
 Description: Linux kernel debug image for version PKGVER on DESC

@@ -1,5 +1,5 @@
 Source: linux
-Section: devel
+Section: restricted/devel
 Priority: optional
 Maintainer: Ubuntu Kernel Team <kernel-team@lists.ubuntu.com>
 Standards-Version: 3.6.1
@@ -9,7 +9,7 @@ Vcs-Git: http://kernel.ubuntu.com/git-repos/ubuntu/ubuntu-jaunty.git
 
 #Package: linux-source-2.6.35.4
 #Architecture: all
-#Section: devel
+#Section: restricted/devel
 #Priority: optional
 #Provides: linux-source, linux-source-2.6
 #Depends: binutils, bzip2, coreutils | fileutils (>= 4.0)
@@ -32,7 +32,7 @@ Vcs-Git: http://kernel.ubuntu.com/git-repos/ubuntu/ubuntu-jaunty.git
 
 Package: linux-doc-2.6.35.4
 Architecture: all
-Section: doc
+Section: restricted/doc
 Priority: optional
 Provides: linux-doc-2.6
 Conflicts: linux-doc-2.6
@@ -49,7 +49,7 @@ Description: Linux kernel specific documentation for version 2.6.35.4
 
 Package: linux-headers-2.6.35.4-1
 Architecture: all
-Section: devel
+Section: restricted/devel
 Priority: optional
 Depends: coreutils | fileutils (>= 4.0)
 Provides: linux-headers, linux-headers-2.6
@@ -71,7 +71,7 @@ Description: Linux Kernel Headers for development
 
 Package: linux-image-2.6.35.4-1-jolicloud
 Architecture: i386
-Section: base
+Section: restricted/base
 Priority: optional
 Pre-Depends: dpkg (>= 1.10.24)
 Provides: linux-image, linux-image-2.6, fuse-module, kvm-api-4, redhat-cluster-modules, ivtv-modules, ndiswrapper-modules-1.9, psb-modules, nvidia-modules
@@ -97,7 +97,7 @@ Description: Linux kernel image for version 2.6.35.4 on x86-based netbooks
 
 Package: linux-headers-2.6.35.4-1-jolicloud
 Architecture: i386
-Section: devel
+Section: restricted/devel
 Priority: optional
 Depends: coreutils | fileutils (>= 4.0), linux-headers-2.6.35.4-1, ${shlibs:Depends}
 Provides: linux-headers, linux-headers-2.6, psb-kernel-headers
@@ -110,7 +110,7 @@ Description: Linux kernel headers for version 2.6.35.4 on x86-based netbooks
 
 Package: linux-image-debug-2.6.35.4-1-jolicloud
 Architecture: i386
-Section: devel
+Section: restricted/devel
 Priority: optional
 Provides: linux-debug
 Description: Linux kernel debug image for version 2.6.35.4 on x86-based netbooks
@@ -125,7 +125,7 @@ Description: Linux kernel debug image for version 2.6.35.4 on x86-based netbooks
 
 Package: linux-image-2.6.35.4-1-jolicloud-atom
 Architecture: i386
-Section: base
+Section: restricted/base
 Priority: optional
 Pre-Depends: dpkg (>= 1.10.24)
 Provides: linux-image, linux-image-2.6, fuse-module, kvm-api-4, redhat-cluster-modules, ivtv-modules, ndiswrapper-modules-1.9, psb-modules, nvidia-modules
@@ -151,7 +151,7 @@ Description: Linux kernel image for version 2.6.35.4 on Intel Atom processors
 
 Package: linux-headers-2.6.35.4-1-jolicloud-atom
 Architecture: i386
-Section: devel
+Section: restricted/devel
 Priority: optional
 Depends: coreutils | fileutils (>= 4.0), linux-headers-2.6.35.4-1, ${shlibs:Depends}
 Provides: linux-headers, linux-headers-2.6, psb-kernel-headers
@@ -164,7 +164,7 @@ Description: Linux kernel headers for version 2.6.35.4 on Intel Atom processors
 
 Package: linux-image-debug-2.6.35.4-1-jolicloud-atom
 Architecture: i386
-Section: devel
+Section: restricted/devel
 Priority: optional
 Provides: linux-debug
 Description: Linux kernel debug image for version 2.6.35.4 on Intel Atom processors

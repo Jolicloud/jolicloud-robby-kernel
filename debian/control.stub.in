@@ -1,5 +1,5 @@
 Source: linux
-Section: devel
+Section: restricted/devel
 Priority: optional
 Maintainer: Ubuntu Kernel Team <kernel-team@lists.ubuntu.com>
 Standards-Version: 3.6.1
@@ -9,7 +9,7 @@ Vcs-Git: http://kernel.ubuntu.com/git-repos/ubuntu/ubuntu-jaunty.git
 
 #Package: linux-source-PKGVER
 #Architecture: all
-#Section: devel
+#Section: restricted/devel
 #Priority: optional
 #Provides: linux-source, linux-source-2.6
 #Depends: binutils, bzip2, coreutils | fileutils (>= 4.0)
@@ -32,7 +32,7 @@ Vcs-Git: http://kernel.ubuntu.com/git-repos/ubuntu/ubuntu-jaunty.git
 
 Package: linux-doc-PKGVER
 Architecture: all
-Section: doc
+Section: restricted/doc
 Priority: optional
 Provides: linux-doc-2.6
 Conflicts: linux-doc-2.6
@@ -49,7 +49,7 @@ Description: Linux kernel specific documentation for version PKGVER
 
 Package: linux-headers-PKGVER-ABINUM
 Architecture: all
-Section: devel
+Section: restricted/devel
 Priority: optional
 Depends: coreutils | fileutils (>= 4.0)
 Provides: linux-headers, linux-headers-2.6
