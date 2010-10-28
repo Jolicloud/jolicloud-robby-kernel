@@ -35,8 +35,8 @@
 #include <linux/notifier.h>
 #include <linux/fb.h>
 
-int drm_psb_debug = 0;
-EXPORT_SYMBOL(drm_psb_debug);
+int psb_drm_psb_debug = 0;
+EXPORT_SYMBOL(psb_drm_psb_debug);
 static int drm_psb_trap_pagefaults = 0;
 static int drm_psb_clock_gating = 0;
 static int drm_psb_ta_mem_size = 32 * 1024;
@@ -55,6 +55,8 @@ int psb_init_yres;
 extern int SII_1392;
 #endif
 
+MODULE_FIRMWARE("msvdx_fw.bin");
+
 MODULE_PARM_DESC(debug, "Enable debug output");
 MODULE_PARM_DESC(clock_gating, "clock gating");
 MODULE_PARM_DESC(no_fb, "Disable FBdev");
@@ -67,7 +69,7 @@ MODULE_PARM_DESC(mode, "initial mode name");
 MODULE_PARM_DESC(xres, "initial mode width");
 MODULE_PARM_DESC(yres, "initial mode height");
 
-module_param_named(debug, drm_psb_debug, int, 0600);
+module_param_named(debug, psb_drm_psb_debug, int, 0600);
 module_param_named(clock_gating, drm_psb_clock_gating, int, 0600);
 module_param_named(no_fb, drm_psb_no_fb, int, 0600);
 module_param_named(trap_pagefaults, drm_psb_trap_pagefaults, int, 0600);
@@ -169,23 +171,23 @@ static void psb_do_takedown(struct drm_device *dev)
 	mutex_lock(&dev->struct_mutex);
 	if (dev->bm.initialized) {
 		if (dev_priv->have_mem_rastgeom) {
-			drm_bo_clean_mm(dev, DRM_PSB_MEM_RASTGEOM);
+			psb_drm_bo_clean_mm(dev, DRM_PSB_MEM_RASTGEOM);
 			dev_priv->have_mem_rastgeom = 0;
 		}
 		if (dev_priv->have_mem_mmu) {
-			drm_bo_clean_mm(dev, DRM_PSB_MEM_MMU);
+			psb_drm_bo_clean_mm(dev, DRM_PSB_MEM_MMU);
 			dev_priv->have_mem_mmu = 0;
 		}
 		if (dev_priv->have_mem_aper) {
-			drm_bo_clean_mm(dev, DRM_PSB_MEM_APER);
+			psb_drm_bo_clean_mm(dev, DRM_PSB_MEM_APER);
 			dev_priv->have_mem_aper = 0;
 		}
 		if (dev_priv->have_tt) {
-			drm_bo_clean_mm(dev, DRM_BO_MEM_TT);
+			psb_drm_bo_clean_mm(dev, DRM_BO_MEM_TT);
 			dev_priv->have_tt = 0;
 		}
 		if (dev_priv->have_vram) {
-			drm_bo_clean_mm(dev, DRM_BO_MEM_VRAM);
+			psb_drm_bo_clean_mm(dev, DRM_BO_MEM_VRAM);
 			dev_priv->have_vram = 0;
 		}
 	}
@@ -263,7 +265,8 @@ static int psb_do_init(struct drm_device *dev)
 
 	int ret = -ENOMEM;
 
-	DRM_ERROR("Debug is 0x%08x\n", drm_psb_debug);
+	if (psb_drm_psb_debug)
+		DRM_ERROR("Debug is 0x%08x\n", psb_drm_psb_debug);
 
 	dev_priv->ta_mem_pages =
 	    PSB_ALIGN_TO(drm_psb_ta_mem_size * 1024, PAGE_SIZE) >> PAGE_SHIFT;
@@ -322,7 +325,7 @@ static int psb_do_init(struct drm_device *dev)
 	if (ret)
 		goto out_err;
 
-	if (1 || drm_debug) {
+	if (1 || psb_drm_debug) {
 		uint32_t core_id = PSB_RSGX32(PSB_CR_CORE_ID);
 		uint32_t core_rev = PSB_RSGX32(PSB_CR_CORE_REVISION);
 		DRM_INFO("SGX core id = 0x%08x\n", core_id);
@@ -339,7 +342,7 @@ static int psb_do_init(struct drm_device *dev)
 		     _PSB_CC_REVISION_DESIGNER_SHIFT);
 	}
 
-	dev_priv->irqmask_lock = SPIN_LOCK_UNLOCKED;
+	spin_lock_init(&dev_priv->irqmask_lock);
 	dev_priv->fence0_irq_on = 0;
 
 	tt_pages = (pg->gatt_pages < PSB_TT_PRIV0_PLIMIT) ?
@@ -349,30 +352,30 @@ static int psb_do_init(struct drm_device *dev)
 
 	mutex_lock(&dev->struct_mutex);
 
-	if (!drm_bo_init_mm(dev, DRM_BO_MEM_VRAM, 0,
+	if (!psb_drm_bo_init_mm(dev, DRM_BO_MEM_VRAM, 0,
 			    pg->stolen_size >> PAGE_SHIFT)) {
 		dev_priv->have_vram = 1;
 	}
 
-	if (!drm_bo_init_mm(dev, DRM_BO_MEM_TT, tt_start >> PAGE_SHIFT,
+	if (!psb_drm_bo_init_mm(dev, DRM_BO_MEM_TT, tt_start >> PAGE_SHIFT,
 			    tt_pages)) {
 		dev_priv->have_tt = 1;
 	}
 
-	if (!drm_bo_init_mm(dev, DRM_PSB_MEM_MMU, 0x00000000,
+	if (!psb_drm_bo_init_mm(dev, DRM_PSB_MEM_MMU, 0x00000000,
 			    (pg->gatt_start -
 			     PSB_MEM_MMU_START) >> PAGE_SHIFT)) {
 		dev_priv->have_mem_mmu = 1;
 	}
 
-	if (!drm_bo_init_mm(dev, DRM_PSB_MEM_RASTGEOM, 0x00000000,
+	if (!psb_drm_bo_init_mm(dev, DRM_PSB_MEM_RASTGEOM, 0x00000000,
 			    (PSB_MEM_MMU_START -
 			     PSB_MEM_RASTGEOM_START) >> PAGE_SHIFT)) {
 		dev_priv->have_mem_rastgeom = 1;
 	}
 #if 0
 	if (pg->gatt_pages > PSB_TT_PRIV0_PLIMIT) {
-		if (!drm_bo_init_mm(dev, DRM_PSB_MEM_APER, PSB_TT_PRIV0_PLIMIT,
+		if (!psb_drm_bo_init_mm(dev, DRM_PSB_MEM_APER, PSB_TT_PRIV0_PLIMIT,
 				    pg->gatt_pages - PSB_TT_PRIV0_PLIMIT)) {
 			dev_priv->have_mem_aper = 1;
 		}
@@ -408,16 +411,16 @@ static int psb_driver_unload(struct drm_device *dev)
 
 		mutex_lock(&dev->struct_mutex);
 		if (dev_priv->have_mem_pds) {
-			drm_bo_clean_mm(dev, DRM_PSB_MEM_PDS);
+			psb_drm_bo_clean_mm(dev, DRM_PSB_MEM_PDS);
 			dev_priv->have_mem_pds = 0;
 		}
 		if (dev_priv->have_mem_kernel) {
-			drm_bo_clean_mm(dev, DRM_PSB_MEM_KERNEL);
+			psb_drm_bo_clean_mm(dev, DRM_PSB_MEM_KERNEL);
 			dev_priv->have_mem_kernel = 0;
 		}
 		mutex_unlock(&dev->struct_mutex);
 
-		(void)drm_bo_driver_finish(dev);
+		(void)psb_drm_bo_driver_finish(dev);
 
 		if (dev_priv->pf_pd) {
 			psb_mmu_free_pagedir(dev_priv->pf_pd);
@@ -455,17 +458,17 @@ static int psb_driver_unload(struct drm_device *dev)
 			dev_priv->msvdx_reg = NULL;
 		}
 
-		drm_free(dev_priv, sizeof(*dev_priv), DRM_MEM_DRIVER);
+		psb_drm_free(dev_priv, sizeof(*dev_priv), DRM_MEM_DRIVER);
 		dev->dev_private = NULL;
 	}
 	return 0;
 }
 
-extern int drm_crtc_probe_output_modes(struct drm_device *dev, int, int);
-extern int drm_pick_crtcs(struct drm_device *dev);
-extern char drm_init_mode[32];
-extern int drm_init_xres;
-extern int drm_init_yres;
+extern int psb_drm_crtc_probe_output_modes(struct drm_device *dev, int, int);
+extern int psb_drm_pick_crtcs(struct drm_device *dev);
+extern char psb_drm_init_mode[32];
+extern int psb_drm_init_xres;
+extern int psb_drm_init_yres;
 
 static int psb_initial_config(struct drm_device *dev, bool can_grow)
 {
@@ -476,14 +479,14 @@ static int psb_initial_config(struct drm_device *dev, bool can_grow)
 
 	mutex_lock(&dev->mode_config.mutex);
 
-	drm_crtc_probe_output_modes(dev, 2048, 2048);
+	psb_drm_crtc_probe_output_modes(dev, 2048, 2048);
 	
-	/* strncpy(drm_init_mode, psb_init_mode, strlen(psb_init_mode)); */
-	drm_init_xres = psb_init_xres;
-	drm_init_yres = psb_init_yres;
+	/* strncpy(psb_drm_init_mode, psb_init_mode, strlen(psb_init_mode)); */
+	psb_drm_init_xres = psb_init_xres;
+	psb_drm_init_yres = psb_init_yres;
 	printk(KERN_ERR "detear is %sabled\n", drm_psb_detear ? "en" : "dis" );
 
-	drm_pick_crtcs(dev);
+	psb_drm_pick_crtcs(dev);
 
 	if ((I915_READ(PIPEACONF) & PIPEACONF_ENABLE) && !drm_psb_force_pipeb)
 		list_for_each_entry(crtc, &dev->mode_config.crtc_list, head) {
@@ -506,15 +509,15 @@ static int psb_initial_config(struct drm_device *dev, bool can_grow)
 			continue;
 
 		if (output->crtc->fb)
-			drm_crtc_set_mode(output->crtc,
+			psb_drm_crtc_set_mode(output->crtc,
 					  output->crtc->desired_mode, 0, 0);
 	}
 
 #ifdef SII_1392_WA
 	if((SII_1392 != 1) || (drm_psb_no_fb==0))
-		drm_disable_unused_functions(dev);
+		psb_drm_disable_unused_functions(dev);
 #else
-	drm_disable_unused_functions(dev);
+	psb_drm_disable_unused_functions(dev);
 #endif
 
 	mutex_unlock(&dev->mode_config.mutex);
@@ -531,7 +534,7 @@ static int psb_driver_load(struct drm_device *dev, unsigned long chipset)
 	int ret = -ENOMEM;
 
 	DRM_INFO("psb - %s\n", PSB_PACKAGE_VERSION);
-	dev_priv = drm_calloc(1, sizeof(*dev_priv), DRM_MEM_DRIVER);
+	dev_priv = psb_drm_calloc(1, sizeof(*dev_priv), DRM_MEM_DRIVER);
 	if (dev_priv == NULL)
 		return -ENOMEM;
 
@@ -644,18 +647,18 @@ static int psb_driver_load(struct drm_device *dev, unsigned long chipset)
 
 	psb_init_2d(dev_priv);
 
-	ret = drm_bo_driver_init(dev);
+	ret = psb_drm_bo_driver_init(dev);
 	if (ret)
 		goto out_err;
 
-	ret = drm_bo_init_mm(dev, DRM_PSB_MEM_KERNEL, 0x00000000,
+	ret = psb_drm_bo_init_mm(dev, DRM_PSB_MEM_KERNEL, 0x00000000,
 			     (PSB_MEM_PDS_START - PSB_MEM_KERNEL_START)
 			     >> PAGE_SHIFT);
 	if (ret)
 		goto out_err;
 	dev_priv->have_mem_kernel = 1;
 
-	ret = drm_bo_init_mm(dev, DRM_PSB_MEM_PDS, 0x00000000,
+	ret = psb_drm_bo_init_mm(dev, DRM_PSB_MEM_PDS, 0x00000000,
 			     (PSB_MEM_RASTGEOM_START - PSB_MEM_PDS_START)
 			     >> PAGE_SHIFT);
 	if (ret)
@@ -716,7 +719,7 @@ static int psb_prepare_msvdx_suspend(struct drm_device *dev)
 		do {
 			DRM_WAIT_ON(ret, fc->fence_queue, 3 * DRM_HZ,
 				    (signaled =
-				     drm_fence_object_signaled(fence,
+				     psb_drm_fence_object_signaled(fence,
 							       DRM_FENCE_TYPE_EXE)));
 			if (signaled)
 				break;
@@ -841,7 +844,7 @@ static int psb_resume(struct pci_dev *pdev)
 	if (drm_psb_no_fb == 0) {
             list_for_each_entry(output, &dev->mode_config.output_list, head) {
                 if(output->crtc != NULL)
-                    drm_crtc_set_mode(output->crtc, &output->crtc->mode,
+                    psb_drm_crtc_set_mode(output->crtc, &output->crtc->mode,
                               output->crtc->x, output->crtc->y);
             }
         }
@@ -913,7 +916,7 @@ static int psb_release(struct inode *inode, struct file *filp)
 	if (dev_priv && dev_priv->xhw_file) {
 		psb_xhw_init_takedown(dev_priv, file_priv, 1);
 	}
-	return drm_release(inode, filp);
+	return psb_drm_release(inode, filp);
 }
 
 extern struct drm_fence_driver psb_fence_driver;
@@ -965,7 +968,7 @@ static struct drm_driver driver = {
 	.load = psb_driver_load,
 	.unload = psb_driver_unload,
 	.dri_library_name = dri_library_name,
-	.get_reg_ofs = drm_core_get_reg_ofs,
+	.get_reg_ofs = psb_drm_core_get_reg_ofs,
 	.ioctls = psb_ioctls,
 	.device_is_agp = psb_driver_device_is_agp,
 	.vblank_wait = psb_vblank_wait2,
@@ -974,24 +977,24 @@ static struct drm_driver driver = {
 	.irq_postinstall = psb_irq_postinstall,
 	.irq_uninstall = psb_irq_uninstall,
 	.irq_handler = psb_irq_handler,
-	.fb_probe = psbfb_probe,
-	.fb_remove = psbfb_remove,
+	.fb_probe = psb_psbfb_probe,
+	.fb_remove = psb_psbfb_remove,
 	.firstopen = NULL,
 	.lastclose = psb_lastclose,
 	.fops = {
 		 .owner = THIS_MODULE,
-		 .open = drm_open,
+		 .open = psb_drm_open,
 		 .release = psb_release,
-		 .ioctl = drm_ioctl,
-		 .mmap = drm_mmap,
+		 .ioctl = psb_drm_ioctl,
+		 .mmap = psb_drm_mmap,
 		 .poll = psb_poll,
-		 .fasync = drm_fasync,
+		 .fasync = psb_drm_fasync,
 		 },
 	.pci_driver = {
 		       .name = DRIVER_NAME,
 		       .id_table = pciidlist,
 		       .probe = probe,
-		       .remove = __devexit_p(drm_cleanup_pci),
+		       .remove = __devexit_p(psb_drm_cleanup_pci),
 		       .resume = psb_resume,
 		       .suspend = psb_suspend,
 		       },
@@ -1007,19 +1010,19 @@ static struct drm_driver driver = {
 
 static int probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
-	return drm_get_dev(pdev, ent, &driver);
+	return psb_drm_get_dev(pdev, ent, &driver);
 }
 
 static int __init psb_init(void)
 {
 	driver.num_ioctls = psb_max_ioctl;
 
-	return drm_init(&driver, pciidlist);
+	return psb_drm_init(&driver, pciidlist);
 }
 
 static void __exit psb_exit(void)
 {
-	drm_exit(&driver);
+	psb_drm_exit(&driver);
 }
 
 module_init(psb_init);

@@ -249,7 +249,7 @@ static int intelfb_set_par(struct fb_info *info)
         info->screen_size = info->fix.smem_len; /* ??? */
 
 	/* create a drm mode */
-        drm_mode = drm_mode_create(dev);
+        drm_mode = psb_drm_mode_create(dev);
         drm_mode->hdisplay = var->xres;
         drm_mode->hsync_start = drm_mode->hdisplay + var->right_margin;
         drm_mode->hsync_end = drm_mode->hsync_start + var->hsync_len;
@@ -259,21 +259,21 @@ static int intelfb_set_par(struct fb_info *info)
         drm_mode->vsync_end = drm_mode->vsync_start + var->vsync_len;
         drm_mode->vtotal = drm_mode->vsync_end + var->upper_margin;
         drm_mode->clock = PICOS2KHZ(var->pixclock);
-        drm_mode->vrefresh = drm_mode_vrefresh(drm_mode);
-        drm_mode_set_name(drm_mode);
-	drm_mode_set_crtcinfo(drm_mode, CRTC_INTERLACE_HALVE_V);
+        drm_mode->vrefresh = psb_drm_mode_vrefresh(drm_mode);
+        psb_drm_mode_set_name(drm_mode);
+	psb_drm_mode_set_crtcinfo(drm_mode, CRTC_INTERLACE_HALVE_V);
 
         list_for_each_entry(output, &dev->mode_config.output_list, head) {
                 if (output->crtc == par->crtc)
                         break;
         }
 
-	drm_mode_debug_printmodeline(dev, drm_mode);    
+	psb_drm_mode_debug_printmodeline(dev, drm_mode);    
         list_for_each_entry(search_mode, &output->modes, head) {
 		DRM_ERROR("mode %s : %s\n", drm_mode->name, search_mode->name);
-		drm_mode_debug_printmodeline(dev, search_mode);
-		if (drm_mode_equal(drm_mode, search_mode)) {
-			drm_mode_destroy(dev, drm_mode);
+		psb_drm_mode_debug_printmodeline(dev, search_mode);
+		if (psb_drm_mode_equal(drm_mode, search_mode)) {
+			psb_drm_mode_destroy(dev, drm_mode);
 			drm_mode = search_mode;
 			found = 1;
 			break;
@@ -281,19 +281,19 @@ static int intelfb_set_par(struct fb_info *info)
 	}
 	
 	if (!found) {
-		drm_mode_addmode(dev, drm_mode);
+		psb_drm_mode_addmode(dev, drm_mode);
 		if (par->fb_mode) {
-			drm_mode_detachmode_crtc(dev, par->fb_mode);
-			drm_mode_rmmode(dev, par->fb_mode);
+			psb_drm_mode_detachmode_crtc(dev, par->fb_mode);
+			psb_drm_mode_rmmode(dev, par->fb_mode);
 		}
 	
 		par->fb_mode = drm_mode;
-		drm_mode_debug_printmodeline(dev, drm_mode);
+		psb_drm_mode_debug_printmodeline(dev, drm_mode);
 		/* attach mode */
-		drm_mode_attachmode_crtc(dev, par->crtc, par->fb_mode);
+		psb_drm_mode_attachmode_crtc(dev, par->crtc, par->fb_mode);
 	}
 
-        if (!drm_crtc_set_mode(par->crtc, drm_mode, 0, 0))
+        if (!psb_drm_crtc_set_mode(par->crtc, drm_mode, 0, 0))
                 return -EINVAL;
 
 	return 0;
@@ -460,7 +460,7 @@ static struct fb_ops intelfb_ops = {
 	.fb_imageblit = cfb_imageblit, //intelfb_imageblit,
 };
 
-int intelfb_probe(struct drm_device *dev, struct drm_crtc *crtc)
+int psb_intelfb_probe(struct drm_device *dev, struct drm_crtc *crtc)
 {
 	struct fb_info *info;
 	struct intelfb_par *par;
@@ -475,7 +475,7 @@ int intelfb_probe(struct drm_device *dev, struct drm_crtc *crtc)
 		return -EINVAL;
 	}
 
-	fb = drm_framebuffer_create(dev);
+	fb = psb_drm_framebuffer_create(dev);
 	if (!fb) {
 		framebuffer_release(info);
 		DRM_ERROR("failed to allocate fb.\n");
@@ -489,7 +489,7 @@ int intelfb_probe(struct drm_device *dev, struct drm_crtc *crtc)
 	fb->bits_per_pixel = 32;
 	fb->pitch = fb->width * ((fb->bits_per_pixel + 1) / 8);
 	fb->depth = 24;
-	ret = drm_buffer_object_create(dev, fb->width * fb->height * 4, 
+	ret = psb_drm_buffer_object_create(dev, fb->width * fb->height * 4, 
 				       drm_bo_type_kernel,
 				       DRM_BO_FLAG_READ |
 				       DRM_BO_FLAG_WRITE |
@@ -500,7 +500,7 @@ int intelfb_probe(struct drm_device *dev, struct drm_crtc *crtc)
 				       &fbo);
 	if (ret || !fbo) {
 		printk(KERN_ERR "failed to allocate framebuffer\n");
-		drm_framebuffer_destroy(fb);
+		psb_drm_framebuffer_destroy(fb);
 		framebuffer_release(info);
 		return -EINVAL;
 	}
@@ -537,7 +537,7 @@ int intelfb_probe(struct drm_device *dev, struct drm_crtc *crtc)
 
 	info->flags = FBINFO_DEFAULT;
 
-	ret = drm_bo_kmap(fb->bo, 0, fb->bo->num_pages, &fb->kmap);
+	ret = psb_drm_bo_kmap(fb->bo, 0, fb->bo->num_pages, &fb->kmap);
 	if (ret)
 		DRM_ERROR("error mapping fb: %d\n", ret);
 
@@ -633,9 +633,9 @@ int intelfb_probe(struct drm_device *dev, struct drm_crtc *crtc)
 	       info->fix.id);
 	return 0;
 }
-EXPORT_SYMBOL(intelfb_probe);
+EXPORT_SYMBOL(psb_intelfb_probe);
 
-int intelfb_remove(struct drm_device *dev, struct drm_crtc *crtc)
+int psb_intelfb_remove(struct drm_device *dev, struct drm_crtc *crtc)
 {
 	struct drm_framebuffer *fb = crtc->fb;
 	struct fb_info *info = fb->fbdev;
@@ -643,11 +643,11 @@ int intelfb_remove(struct drm_device *dev, struct drm_crtc *crtc)
 	if (info) {
 		unregister_framebuffer(info);
                 framebuffer_release(info);
-                drm_bo_kunmap(&fb->kmap);
-                drm_bo_usage_deref_unlocked(&fb->bo);
-                drm_framebuffer_destroy(fb);
+                psb_drm_bo_kunmap(&fb->kmap);
+                psb_drm_bo_usage_deref_unlocked(&fb->bo);
+                psb_drm_framebuffer_destroy(fb);
         }
 	return 0;
 }
-EXPORT_SYMBOL(intelfb_remove);
+EXPORT_SYMBOL(psb_intelfb_remove);
 MODULE_LICENSE("GPL");

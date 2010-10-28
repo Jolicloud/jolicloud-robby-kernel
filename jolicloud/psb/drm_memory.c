@@ -75,7 +75,7 @@ out:
 	return ret;
 }
 
-void drm_free_memctl(size_t size)
+void psb_drm_free_memctl(size_t size)
 {
 	unsigned long a_size = drm_size_align(size);
 
@@ -90,9 +90,9 @@ void drm_free_memctl(size_t size)
 	drm_memctl.cur_used -= a_size;
 	spin_unlock(&drm_memctl.lock);
 }
-EXPORT_SYMBOL(drm_free_memctl);
+EXPORT_SYMBOL(psb_drm_free_memctl);
 
-void drm_query_memctl(uint64_t *cur_used,
+void psb_drm_query_memctl(uint64_t *cur_used,
 		      uint64_t *emer_used,
 		      uint64_t *low_threshold,
 		      uint64_t *high_threshold,
@@ -106,7 +106,7 @@ void drm_query_memctl(uint64_t *cur_used,
 	*emer_threshold = drm_memctl.emer_threshold;
 	spin_unlock(&drm_memctl.lock);
 }
-EXPORT_SYMBOL(drm_query_memctl);
+EXPORT_SYMBOL(psb_drm_query_memctl);
 
 void drm_init_memctl(size_t p_low_threshold,
 		     size_t p_high_threshold,
@@ -150,14 +150,14 @@ int drm_mem_info(char *buf, char **start, off_t offset,
 }
 
 /** Wrapper around kmalloc() */
-void *drm_calloc(size_t nmemb, size_t size, int area)
+void *psb_drm_calloc(size_t nmemb, size_t size, int area)
 {
 	return kcalloc(nmemb, size, GFP_KERNEL);
 }
-EXPORT_SYMBOL(drm_calloc);
+EXPORT_SYMBOL(psb_drm_calloc);
 
 /** Wrapper around kmalloc() and kfree() */
-void *drm_realloc(void *oldpt, size_t oldsize, size_t size, int area)
+void *psb_drm_realloc(void *oldpt, size_t oldsize, size_t size, int area)
 {
 	void *pt;
 
@@ -233,11 +233,10 @@ void drm_free_pages(unsigned long address, int order, int area)
 static void *agp_remap(unsigned long offset, unsigned long size,
 			      struct drm_device * dev)
 {
-	unsigned long i, num_pages =
+	unsigned long *phys_addr_map, i, num_pages =
 	    PAGE_ALIGN(size) / PAGE_SIZE;
 	struct drm_agp_mem *agpmem;
 	struct page **page_map;
-	struct page **phys_page_map;
 	void *addr;
 
 	size = PAGE_ALIGN(size);
@@ -264,10 +263,10 @@ static void *agp_remap(unsigned long offset, unsigned long size,
 	if (!page_map)
 		return NULL;
 
-	phys_page_map = 
+	phys_addr_map =
 	    agpmem->memory->pages + (offset - agpmem->bound) / PAGE_SIZE;
 	for (i = 0; i < num_pages; ++i)
-		page_map[i] = phys_page_map[i];
+		page_map[i] = pfn_to_page(phys_addr_map[i] >> PAGE_SHIFT);
 	addr = vmap(page_map, num_pages, VM_IOREMAP, PAGE_AGP);
 	vfree(page_map);
 
@@ -296,7 +295,7 @@ int drm_free_agp(DRM_AGP_MEM * handle, int pages)
 /** Wrapper around agp_bind_memory() */
 int drm_bind_agp(DRM_AGP_MEM * handle, unsigned int start)
 {
-	return drm_agp_bind_memory(handle, start);
+	return psb_drm_agp_bind_memory(handle, start);
 }
 
 /** Wrapper around agp_unbind_memory() */
@@ -320,7 +319,7 @@ static void *agp_remap(unsigned long offset, unsigned long size,
 }
 #endif				/* debug_memory */
 
-void drm_core_ioremap(struct drm_map *map, struct drm_device *dev)
+void psb_drm_core_ioremap(struct drm_map *map, struct drm_device *dev)
 {
 	if (drm_core_has_AGP(dev) &&
 	    dev->agp && dev->agp->cant_use_aperture && map->type == _DRM_AGP)
@@ -328,9 +327,9 @@ void drm_core_ioremap(struct drm_map *map, struct drm_device *dev)
 	else
 		map->handle = ioremap(map->offset, map->size);
 }
-EXPORT_SYMBOL_GPL(drm_core_ioremap);
+EXPORT_SYMBOL_GPL(psb_drm_core_ioremap);
 
-void drm_core_ioremapfree(struct drm_map *map, struct drm_device *dev)
+void psb_drm_core_ioremapfree(struct drm_map *map, struct drm_device *dev)
 {
 	if (!map->handle || !map->size)
 		return;
@@ -341,4 +340,4 @@ void drm_core_ioremapfree(struct drm_map *map, struct drm_device *dev)
 	else
 		iounmap(map->handle);
 }
-EXPORT_SYMBOL_GPL(drm_core_ioremapfree);
+EXPORT_SYMBOL_GPL(psb_drm_core_ioremapfree);

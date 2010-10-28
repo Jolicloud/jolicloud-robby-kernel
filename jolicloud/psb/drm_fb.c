@@ -247,7 +247,7 @@ static int drmfb_set_par(struct fb_info *info)
 		    break;
 	}
 #else
-	drm_mode = drm_mode_create(dev);
+	drm_mode = psb_drm_mode_create(dev);
 	drm_mode->hdisplay = var->xres;
 	drm_mode->hsync_start = drm_mode->hdisplay + var->right_margin;
 	drm_mode->hsync_end = drm_mode->hsync_start + var->hsync_len;
@@ -257,19 +257,19 @@ static int drmfb_set_par(struct fb_info *info)
 	drm_mode->vsync_end = drm_mode->vsync_start + var->vsync_len;
 	drm_mode->vtotal = drm_mode->vsync_end + var->upper_margin;
 	drm_mode->clock = PICOS2KHZ(var->pixclock);
-	drm_mode->vrefresh = drm_mode_vrefresh(drm_mode);
-	drm_mode_set_name(drm_mode);
-	drm_mode_set_crtcinfo(drm_mode, CRTC_INTERLACE_HALVE_V);
+	drm_mode->vrefresh = psb_drm_mode_vrefresh(drm_mode);
+	psb_drm_mode_set_name(drm_mode);
+	psb_drm_mode_set_crtcinfo(drm_mode, CRTC_INTERLACE_HALVE_V);
 #endif
 
-	if (!drm_crtc_set_mode(par->crtc, drm_mode, 0, 0))
+	if (!psb_drm_crtc_set_mode(par->crtc, drm_mode, 0, 0))
 		return -EINVAL;
 
 	/* Have to destroy our created mode if we're not searching the mode
 	 * list for it.
 	 */
 #if 1 
-	drm_mode_destroy(dev, drm_mode);
+	psb_drm_mode_destroy(dev, drm_mode);
 #endif
 
 	return 0;
@@ -290,7 +290,7 @@ static struct fb_ops drmfb_ops = {
 	.fb_imageblit = cfb_imageblit,
 };
 
-int drmfb_probe(struct drm_device *dev, struct drm_crtc *crtc)
+int psb_drmfb_probe(struct drm_device *dev, struct drm_crtc *crtc)
 {
 	struct fb_info *info;
 	struct drm_framebuffer *fb = crtc->fb;
@@ -325,7 +325,7 @@ int drmfb_probe(struct drm_device *dev, struct drm_crtc *crtc)
 
 	info->flags = FBINFO_DEFAULT;
 
-	ret = drm_bo_kmap(fb->bo, 0, fb->bo->num_pages, &fb->kmap);
+	ret = psb_drm_bo_kmap(fb->bo, 0, fb->bo->num_pages, &fb->kmap);
 	if (ret)
 		DRM_ERROR("error mapping fb: %d\n", ret);
 
@@ -417,9 +417,9 @@ int drmfb_probe(struct drm_device *dev, struct drm_crtc *crtc)
 	       info->fix.id);
 	return 0;
 }
-EXPORT_SYMBOL(drmfb_probe);
+EXPORT_SYMBOL(psb_drmfb_probe);
 
-int drmfb_remove(struct drm_device *dev, struct drm_crtc *crtc)
+int psb_drmfb_remove(struct drm_device *dev, struct drm_crtc *crtc)
 {
 	struct fb_info *info = fb->fbdev;
 	struct drm_framebuffer *fb = crtc->fb;
@@ -427,10 +427,10 @@ int drmfb_remove(struct drm_device *dev, struct drm_crtc *crtc)
 	if (info) {
 		unregister_framebuffer(info);
 		framebuffer_release(info);
-		drm_bo_kunmap(&fb->kmap);
-                drm_bo_usage_deref_unlocked(fb->bo);
+		psb_drm_bo_kunmap(&fb->kmap);
+                psb_drm_bo_usage_deref_unlocked(fb->bo);
 	}
 	return 0;
 }
-EXPORT_SYMBOL(drmfb_remove);
+EXPORT_SYMBOL(psb_drmfb_remove);
 MODULE_LICENSE("GPL");

@@ -80,7 +80,7 @@ int drm_irq_by_busid(struct drm_device *dev, void *data,
  * \c drm_driver_irq_preinstall() and \c drm_driver_irq_postinstall() functions
  * before and after the installation.
  */
-int drm_irq_install(struct drm_device * dev)
+int psb_drm_irq_install(struct drm_device * dev)
 {
 	int ret;
 	unsigned long sh_flags = 0;
@@ -140,7 +140,7 @@ int drm_irq_install(struct drm_device * dev)
 
 	return 0;
 }
-EXPORT_SYMBOL(drm_irq_install);
+EXPORT_SYMBOL(psb_drm_irq_install);
 
 /**
  * Uninstall the IRQ handler.
@@ -149,7 +149,7 @@ EXPORT_SYMBOL(drm_irq_install);
  *
  * Calls the driver's \c drm_driver_irq_uninstall() function, and stops the irq.
  */
-int drm_irq_uninstall(struct drm_device * dev)
+int psb_drm_irq_uninstall(struct drm_device * dev)
 {
 	int irq_enabled;
 
@@ -174,7 +174,7 @@ int drm_irq_uninstall(struct drm_device * dev)
 
 	return 0;
 }
-EXPORT_SYMBOL(drm_irq_uninstall);
+EXPORT_SYMBOL(psb_drm_irq_uninstall);
 
 /**
  * IRQ control ioctl.
@@ -202,11 +202,11 @@ int drm_control(struct drm_device *dev, void *data,
 		if (dev->if_version < DRM_IF_VERSION(1, 2) &&
 		    ctl->irq != dev->irq)
 			return -EINVAL;
-		return drm_irq_install(dev);
+		return psb_drm_irq_install(dev);
 	case DRM_UNINST_HANDLER:
 		if (!drm_core_check_feature(dev, DRIVER_HAVE_IRQ))
 			return 0;
-		return drm_irq_uninstall(dev);
+		return psb_drm_irq_uninstall(dev);
 	default:
 		return -EINVAL;
 	}
@@ -308,7 +308,7 @@ int drm_wait_vblank(struct drm_device *dev, void *data, struct drm_file *file_pr
 
 		if (!
 		    (vbl_sig =
-		     drm_alloc(sizeof(struct drm_vbl_sig), DRM_MEM_DRIVER))) {
+		     psb_drm_alloc(sizeof(struct drm_vbl_sig), DRM_MEM_DRIVER))) {
 			return -ENOMEM;
 		}
 
@@ -355,7 +355,7 @@ int drm_wait_vblank(struct drm_device *dev, void *data, struct drm_file *file_pr
  *
  * If a signal is not requested, then calls vblank_wait().
  */
-void drm_vbl_send_signals(struct drm_device * dev)
+void psb_drm_vbl_send_signals(struct drm_device * dev)
 {
 	unsigned long flags;
 	int i;
@@ -376,7 +376,7 @@ void drm_vbl_send_signals(struct drm_device * dev)
 
 				list_del(&vbl_sig->head);
 
-				drm_free(vbl_sig, sizeof(*vbl_sig),
+				psb_drm_free(vbl_sig, sizeof(*vbl_sig),
 					 DRM_MEM_DRIVER);
 
 				dev->vbl_pending--;
@@ -386,7 +386,7 @@ void drm_vbl_send_signals(struct drm_device * dev)
 
 	spin_unlock_irqrestore(&dev->vbl_lock, flags);
 }
-EXPORT_SYMBOL(drm_vbl_send_signals);
+EXPORT_SYMBOL(psb_drm_vbl_send_signals);
 
 /**
  * Tasklet wrapper function.
@@ -436,7 +436,7 @@ static void drm_locked_tasklet_func(unsigned long data)
  * context, it must not make any assumptions about this. Also, the HW lock will
  * be held with the kernel context or any client context.
  */
-void drm_locked_tasklet(struct drm_device *dev, void (*func)(struct drm_device *))
+void psb_drm_locked_tasklet(struct drm_device *dev, void (*func)(struct drm_device *))
 {
 	unsigned long irqflags;
 	static DECLARE_TASKLET(drm_tasklet, drm_locked_tasklet_func, 0);
@@ -460,4 +460,4 @@ void drm_locked_tasklet(struct drm_device *dev, void (*func)(struct drm_device *
 
 	tasklet_hi_schedule(&drm_tasklet);
 }
-EXPORT_SYMBOL(drm_locked_tasklet);
+EXPORT_SYMBOL(psb_drm_locked_tasklet);

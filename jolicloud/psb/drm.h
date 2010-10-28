@@ -593,7 +593,7 @@ struct drm_agp_binding {
  * drmAgpBase(), drmAgpSize(), drmAgpMemoryUsed(), drmAgpMemoryAvail(),
  * drmAgpVendorId() and drmAgpDeviceId().
  */
-struct drm_agp_info {
+struct psb_drm_agp_info {
 	int agp_version_major;
 	int agp_version_minor;
 	unsigned long mode;
@@ -1076,7 +1076,7 @@ struct drm_mode_mode_cmd {
 #define DRM_IOCTL_AGP_ACQUIRE		DRM_IO(  0x30)
 #define DRM_IOCTL_AGP_RELEASE		DRM_IO(  0x31)
 #define DRM_IOCTL_AGP_ENABLE		DRM_IOW( 0x32, struct drm_agp_mode)
-#define DRM_IOCTL_AGP_INFO		DRM_IOR( 0x33, struct drm_agp_info)
+#define DRM_IOCTL_AGP_INFO		DRM_IOR( 0x33, struct psb_drm_agp_info)
 #define DRM_IOCTL_AGP_ALLOC		DRM_IOWR(0x34, struct drm_agp_buffer)
 #define DRM_IOCTL_AGP_FREE		DRM_IOW( 0x35, struct drm_agp_buffer)
 #define DRM_IOCTL_AGP_BIND		DRM_IOW( 0x36, struct drm_agp_binding)
@@ -1179,7 +1179,7 @@ typedef struct drm_irq_busid drm_irq_busid_t;
 typedef enum drm_vblank_seq_type drm_vblank_seq_type_t;
 typedef struct drm_agp_buffer drm_agp_buffer_t;
 typedef struct drm_agp_binding drm_agp_binding_t;
-typedef struct drm_agp_info drm_agp_info_t;
+typedef struct psb_drm_agp_info drm_agp_info_t;
 typedef struct drm_scatter_gather drm_scatter_gather_t;
 typedef struct drm_set_version drm_set_version_t;
 

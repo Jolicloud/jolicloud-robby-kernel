@@ -116,7 +116,7 @@ int i915_driver_load(struct drm_device *dev, unsigned long flags)
 	unsigned long sareapage;
 	int size, ret;
 
-	dev_priv = drm_alloc(sizeof(struct drm_i915_private), DRM_MEM_DRIVER);
+	dev_priv = psb_drm_alloc(sizeof(struct drm_i915_private), DRM_MEM_DRIVER);
 	if (dev_priv == NULL)
 		return -ENOMEM;
 
@@ -132,15 +132,15 @@ int i915_driver_load(struct drm_device *dev, unsigned long flags)
 	dev->types[9] = _DRM_STAT_DMA;
 
 	if (IS_I9XX(dev)) {
-		dev_priv->mmiobase = drm_get_resource_start(dev, 0);
-		dev_priv->mmiolen = drm_get_resource_len(dev, 0);
+		dev_priv->mmiobase = psb_drm_get_resource_start(dev, 0);
+		dev_priv->mmiolen = psb_drm_get_resource_len(dev, 0);
 		dev->mode_config.fb_base =
-			drm_get_resource_start(dev, 2) & 0xff000000;
-	} else if (drm_get_resource_start(dev, 1)) {
-		dev_priv->mmiobase = drm_get_resource_start(dev, 1);
-		dev_priv->mmiolen = drm_get_resource_len(dev, 1);
+			psb_drm_get_resource_start(dev, 2) & 0xff000000;
+	} else if (psb_drm_get_resource_start(dev, 1)) {
+		dev_priv->mmiobase = psb_drm_get_resource_start(dev, 1);
+		dev_priv->mmiolen = psb_drm_get_resource_len(dev, 1);
 		dev->mode_config.fb_base =
-			drm_get_resource_start(dev, 0) & 0xff000000;
+			psb_drm_get_resource_start(dev, 0) & 0xff000000;
 	} else {
 		DRM_ERROR("Unable to find MMIO registers\n");
 		return -ENODEV;
@@ -148,7 +148,7 @@ int i915_driver_load(struct drm_device *dev, unsigned long flags)
 
 	DRM_DEBUG("fb_base: 0x%08lx\n", dev->mode_config.fb_base);
 
-	ret = drm_addmap(dev, dev_priv->mmiobase, dev_priv->mmiolen,
+	ret = psb_drm_addmap(dev, dev_priv->mmiobase, dev_priv->mmiolen,
 			 _DRM_REGISTERS, _DRM_READ_ONLY|_DRM_DRIVER, &dev_priv->mmio_map);
 	if (ret != 0) {
 		DRM_ERROR("Cannot add mapping for MMIO registers\n");
@@ -157,7 +157,7 @@ int i915_driver_load(struct drm_device *dev, unsigned long flags)
 
 	/* prebuild the SAREA */
 	sareapage = max(SAREA_MAX, PAGE_SIZE);
-	ret = drm_addmap(dev, 0, sareapage, _DRM_SHM, _DRM_CONTAINS_LOCK|_DRM_DRIVER,
+	ret = psb_drm_addmap(dev, 0, sareapage, _DRM_SHM, _DRM_CONTAINS_LOCK|_DRM_DRIVER,
 			 &dev_priv->sarea);
 	if (ret) {
 		DRM_ERROR("SAREA setup failed\n");
@@ -172,20 +172,20 @@ int i915_driver_load(struct drm_device *dev, unsigned long flags)
 	/*
 	 * Initialize the memory manager for local and AGP space
 	 */
-	drm_bo_driver_init(dev);
+	psb_drm_bo_driver_init(dev);
 
 	i915_probe_agp(dev->pdev, &agp_size, &prealloc_size);
 	printk("setting up %ld bytes of VRAM space\n", prealloc_size);
 	printk("setting up %ld bytes of TT space\n", (agp_size - prealloc_size));
-	drm_bo_init_mm(dev, DRM_BO_MEM_VRAM, 0, prealloc_size >> PAGE_SHIFT);
-	drm_bo_init_mm(dev, DRM_BO_MEM_TT, prealloc_size >> PAGE_SHIFT, (agp_size - prealloc_size) >> PAGE_SHIFT);
+	psb_drm_bo_init_mm(dev, DRM_BO_MEM_VRAM, 0, prealloc_size >> PAGE_SHIFT);
+	psb_drm_bo_init_mm(dev, DRM_BO_MEM_TT, prealloc_size >> PAGE_SHIFT, (agp_size - prealloc_size) >> PAGE_SHIFT);
 
 	I915_WRITE(LP_RING + RING_LEN, 0);
 	I915_WRITE(LP_RING + RING_HEAD, 0);
 	I915_WRITE(LP_RING + RING_TAIL, 0);
 
 	size = PRIMARY_RINGBUFFER_SIZE;
-	ret = drm_buffer_object_create(dev, size, drm_bo_type_kernel,
+	ret = psb_drm_buffer_object_create(dev, size, drm_bo_type_kernel,
 				       DRM_BO_FLAG_READ | DRM_BO_FLAG_WRITE |
 				       DRM_BO_FLAG_MEM_VRAM |
 				       DRM_BO_FLAG_NO_EVICT |
@@ -203,7 +203,7 @@ int i915_driver_load(struct drm_device *dev, unsigned long flags)
 	dev_priv->ring.tail_mask = dev_priv->ring.Size - 1;
 
 	/* FIXME: need wrapper with PCI mem checks */
-	ret = drm_mem_reg_ioremap(dev, &dev_priv->ring_buffer->mem,
+	ret = psb_drm_mem_reg_ioremap(dev, &dev_priv->ring_buffer->mem,
 				  (void **) &dev_priv->ring.virtual_start);
 	if (ret)
 		DRM_ERROR("error mapping ring buffer: %d\n", ret);
@@ -232,7 +232,7 @@ int i915_driver_load(struct drm_device *dev, unsigned long flags)
 	/* Program Hardware Status Page */
 	if (!IS_G33(dev)) {
 		dev_priv->status_page_dmah = 
-			drm_pci_alloc(dev, PAGE_SIZE, PAGE_SIZE, 0xffffffff);
+			psb_drm_pci_alloc(dev, PAGE_SIZE, PAGE_SIZE, 0xffffffff);
 
 		if (!dev_priv->status_page_dmah) {
 			dev->dev_private = (void *)dev_priv;
@@ -250,7 +250,7 @@ int i915_driver_load(struct drm_device *dev, unsigned long flags)
 	DRM_DEBUG("Enabled hardware status page\n");
 
 	intel_modeset_init(dev);
-	drm_initial_config(dev, false);
+	psb_drm_initial_config(dev, false);
 
 	return 0;
 }
@@ -260,11 +260,11 @@ int i915_driver_unload(struct drm_device *dev)
 	struct drm_i915_private *dev_priv = dev->dev_private;
 
 	if (dev_priv->ring.virtual_start) {
-		drm_core_ioremapfree(&dev_priv->ring.map, dev);
+		psb_drm_core_ioremapfree(&dev_priv->ring.map, dev);
 	}
 
 	if (dev_priv->status_page_dmah) {
-		drm_pci_free(dev, dev_priv->status_page_dmah);
+		psb_drm_pci_free(dev, dev_priv->status_page_dmah);
 		dev_priv->status_page_dmah = NULL;
 		dev_priv->hw_status_page = NULL;
 		dev_priv->dma_status_page = 0;
@@ -274,7 +274,7 @@ int i915_driver_unload(struct drm_device *dev)
 
 	if (dev_priv->status_gfx_addr) {
 		dev_priv->status_gfx_addr = 0;
-		drm_core_ioremapfree(&dev_priv->hws_map, dev);
+		psb_drm_core_ioremapfree(&dev_priv->hws_map, dev);
 		I915_WRITE(I915REG_HWS_PGA, 0x1ffff000);
 	}
 
@@ -282,30 +282,30 @@ int i915_driver_unload(struct drm_device *dev)
 
 	intel_modeset_cleanup(dev);
 
-	drm_mem_reg_iounmap(dev, &dev_priv->ring_buffer->mem,
+	psb_drm_mem_reg_iounmap(dev, &dev_priv->ring_buffer->mem,
 			    dev_priv->ring.virtual_start);
 
 	DRM_DEBUG("usage is %d\n", atomic_read(&dev_priv->ring_buffer->usage));
 	mutex_lock(&dev->struct_mutex);
-	drm_bo_usage_deref_locked(&dev_priv->ring_buffer);
+	psb_drm_bo_usage_deref_locked(&dev_priv->ring_buffer);
 
-	if (drm_bo_clean_mm(dev, DRM_BO_MEM_TT)) {
+	if (psb_drm_bo_clean_mm(dev, DRM_BO_MEM_TT)) {
 		DRM_ERROR("Memory manager type 3 not clean. "
 			  "Delaying takedown\n");
 	}
-	if (drm_bo_clean_mm(dev, DRM_BO_MEM_VRAM)) {
+	if (psb_drm_bo_clean_mm(dev, DRM_BO_MEM_VRAM)) {
 		DRM_ERROR("Memory manager type 3 not clean. "
 			  "Delaying takedown\n");
 	}
 	mutex_unlock(&dev->struct_mutex);
 
-	drm_bo_driver_finish(dev);
+	psb_drm_bo_driver_finish(dev);
 
         DRM_DEBUG("%p, %p\n", dev_priv->mmio_map, dev_priv->sarea);
-        drm_rmmap(dev, dev_priv->mmio_map);
-        drm_rmmap(dev, dev_priv->sarea);
+        psb_drm_rmmap(dev, dev_priv->mmio_map);
+        psb_drm_rmmap(dev, dev_priv->sarea);
 
-	drm_free(dev_priv, sizeof(*dev_priv), DRM_MEM_DRIVER);
+	psb_drm_free(dev_priv, sizeof(*dev_priv), DRM_MEM_DRIVER);
 
 	dev->dev_private = NULL;
 	return 0;

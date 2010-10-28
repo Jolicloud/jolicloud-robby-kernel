@@ -401,7 +401,7 @@ int psb_xhw_init(struct drm_device *dev)
 	unsigned long irq_flags;
 
 	INIT_LIST_HEAD(&dev_priv->xhw_in);
-	dev_priv->xhw_lock = SPIN_LOCK_UNLOCKED;
+	spin_lock_init(&dev_priv->sequence_lock);
 	atomic_set(&dev_priv->xhw_client, 0);
 	init_waitqueue_head(&dev_priv->xhw_queue);
 	init_waitqueue_head(&dev_priv->xhw_caller_queue);
@@ -427,13 +427,13 @@ static int psb_xhw_init_init(struct drm_device *dev,
 
 		mutex_lock(&dev->struct_mutex);
 		dev_priv->xhw_bo =
-		    drm_lookup_buffer_object(file_priv, arg->buffer_handle, 1);
+		    psb_drm_lookup_buffer_object(file_priv, arg->buffer_handle, 1);
 		mutex_unlock(&dev->struct_mutex);
 		if (!dev_priv->xhw_bo) {
 			ret = -EINVAL;
 			goto out_err;
 		}
-		ret = drm_bo_kmap(dev_priv->xhw_bo, 0,
+		ret = psb_drm_bo_kmap(dev_priv->xhw_bo, 0,
 				  dev_priv->xhw_bo->num_pages,
 				  &dev_priv->xhw_kmap);
 		if (ret) {
@@ -462,9 +462,9 @@ static int psb_xhw_init_init(struct drm_device *dev,
 	}
       out_err1:
 	dev_priv->xhw = NULL;
-	drm_bo_kunmap(&dev_priv->xhw_kmap);
+	psb_drm_bo_kunmap(&dev_priv->xhw_kmap);
       out_err0:
-	drm_bo_usage_deref_unlocked(&dev_priv->xhw_bo);
+	psb_drm_bo_usage_deref_unlocked(&dev_priv->xhw_bo);
       out_err:
 	atomic_dec(&dev_priv->xhw_client);
 	return ret;
@@ -507,8 +507,8 @@ void psb_xhw_init_takedown(struct drm_psb_private *dev_priv,
 		}
 
 		dev_priv->xhw = NULL;
-		drm_bo_kunmap(&dev_priv->xhw_kmap);
-		drm_bo_usage_deref_unlocked(&dev_priv->xhw_bo);
+		psb_drm_bo_kunmap(&dev_priv->xhw_kmap);
+		psb_drm_bo_usage_deref_unlocked(&dev_priv->xhw_bo);
 		dev_priv->xhw_file = NULL;
 	}
 }

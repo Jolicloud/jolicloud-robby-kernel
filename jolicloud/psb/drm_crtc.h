@@ -350,7 +350,7 @@ struct drm_crtc {
 	/* RRCrtcPtr randr_crtc? */
 };
 
-extern struct drm_crtc *drm_crtc_create(struct drm_device *dev,
+extern struct drm_crtc *psb_drm_crtc_create(struct drm_device *dev,
 					const struct drm_crtc_funcs *funcs);
 
 /**
@@ -496,69 +496,69 @@ struct drm_mode_config {
 	unsigned long fb_base;
 };
 
-struct drm_output *drm_output_create(struct drm_device *dev,
+struct drm_output *psb_drm_output_create(struct drm_device *dev,
 				     const struct drm_output_funcs *funcs,
 				     const char *name);
-extern void drm_output_destroy(struct drm_output *output);
-extern bool drm_output_rename(struct drm_output *output, const char *name);
+extern void psb_drm_output_destroy(struct drm_output *output);
+extern bool psb_drm_output_rename(struct drm_output *output, const char *name);
 extern void drm_fb_release(struct file *filp);
 
-extern struct edid *drm_get_edid(struct drm_output *output,
+extern struct edid *psb_drm_get_edid(struct drm_output *output,
 				 struct i2c_adapter *adapter);
-extern int drm_add_edid_modes(struct drm_output *output, struct edid *edid);
-extern void drm_mode_probed_add(struct drm_output *output, struct drm_display_mode *mode);
-extern void drm_mode_remove(struct drm_output *output, struct drm_display_mode *mode);
-extern struct drm_display_mode *drm_mode_duplicate(struct drm_device *dev,
+extern int psb_drm_add_edid_modes(struct drm_output *output, struct edid *edid);
+extern void psb_drm_mode_probed_add(struct drm_output *output, struct drm_display_mode *mode);
+extern void psb_drm_mode_remove(struct drm_output *output, struct drm_display_mode *mode);
+extern struct drm_display_mode *psb_drm_mode_duplicate(struct drm_device *dev,
 						   struct drm_display_mode *mode);
-extern void drm_mode_debug_printmodeline(struct drm_device *dev,
+extern void psb_drm_mode_debug_printmodeline(struct drm_device *dev,
 					 struct drm_display_mode *mode);
-extern void drm_mode_config_init(struct drm_device *dev);
-extern void drm_mode_config_cleanup(struct drm_device *dev);
-extern void drm_mode_set_name(struct drm_display_mode *mode);
-extern bool drm_mode_equal(struct drm_display_mode *mode1, struct drm_display_mode *mode2);
-extern void drm_disable_unused_functions(struct drm_device *dev);
+extern void psb_drm_mode_config_init(struct drm_device *dev);
+extern void psb_drm_mode_config_cleanup(struct drm_device *dev);
+extern void psb_drm_mode_set_name(struct drm_display_mode *mode);
+extern bool psb_drm_mode_equal(struct drm_display_mode *mode1, struct drm_display_mode *mode2);
+extern void psb_drm_disable_unused_functions(struct drm_device *dev);
 
-extern void drm_mode_addmode(struct drm_device *dev, struct drm_display_mode *user_mode);
-extern int drm_mode_rmmode(struct drm_device *dev, struct drm_display_mode *mode);
+extern void psb_drm_mode_addmode(struct drm_device *dev, struct drm_display_mode *user_mode);
+extern int psb_drm_mode_rmmode(struct drm_device *dev, struct drm_display_mode *mode);
 
 /* for us by fb module */
-extern int drm_mode_attachmode_crtc(struct drm_device *dev,
+extern int psb_drm_mode_attachmode_crtc(struct drm_device *dev,
 				    struct drm_crtc *crtc,
 				    struct drm_display_mode *mode);
-extern int drm_mode_detachmode_crtc(struct drm_device *dev, struct drm_display_mode *mode);
+extern int psb_drm_mode_detachmode_crtc(struct drm_device *dev, struct drm_display_mode *mode);
 
-extern struct drm_display_mode *drm_mode_create(struct drm_device *dev);
-extern void drm_mode_destroy(struct drm_device *dev, struct drm_display_mode *mode);
+extern struct drm_display_mode *psb_drm_mode_create(struct drm_device *dev);
+extern void psb_drm_mode_destroy(struct drm_device *dev, struct drm_display_mode *mode);
 extern void drm_mode_list_concat(struct list_head *head,
 				 struct list_head *new);
-extern void drm_mode_validate_size(struct drm_device *dev,
+extern void psb_drm_mode_validate_size(struct drm_device *dev,
 				   struct list_head *mode_list,
 				   int maxX, int maxY, int maxPitch);
 extern void drm_mode_prune_invalid(struct drm_device *dev,
 				   struct list_head *mode_list, bool verbose);
 extern void drm_mode_sort(struct list_head *mode_list);
-extern int drm_mode_vrefresh(struct drm_display_mode *mode);
-extern void drm_mode_set_crtcinfo(struct drm_display_mode *p,
+extern int psb_drm_mode_vrefresh(struct drm_display_mode *mode);
+extern void psb_drm_mode_set_crtcinfo(struct drm_display_mode *p,
 				  int adjust_flags);
 extern void drm_mode_output_list_update(struct drm_output *output);
 
 extern struct drm_display_mode *drm_crtc_mode_create(struct drm_device *dev);
-extern bool drm_initial_config(struct drm_device *dev, bool cangrow);
+extern bool psb_drm_initial_config(struct drm_device *dev, bool cangrow);
 extern void drm_framebuffer_set_object(struct drm_device *dev,
 				       unsigned long handle);
-extern struct drm_framebuffer *drm_framebuffer_create(struct drm_device *dev);
-extern void drm_framebuffer_destroy(struct drm_framebuffer *fb);
-extern int drmfb_probe(struct drm_device *dev, struct drm_crtc *crtc);
-extern int drmfb_remove(struct drm_device *dev, struct drm_framebuffer *fb);
-extern bool drm_crtc_set_mode(struct drm_crtc *crtc, struct drm_display_mode *mode,
+extern struct drm_framebuffer *psb_drm_framebuffer_create(struct drm_device *dev);
+extern void psb_drm_framebuffer_destroy(struct drm_framebuffer *fb);
+extern int psb_drmfb_probe(struct drm_device *dev, struct drm_crtc *crtc);
+extern int psb_drmfb_remove(struct drm_device *dev, struct drm_framebuffer *fb);
+extern bool psb_drm_crtc_set_mode(struct drm_crtc *crtc, struct drm_display_mode *mode,
 		       int x, int y);
 
-extern int drm_output_attach_property(struct drm_output *output,
+extern int psb_drm_output_attach_property(struct drm_output *output,
 				      struct drm_property *property, int init_val);
-extern struct drm_property *drm_property_create(struct drm_device *dev, int flags,
+extern struct drm_property *psb_drm_property_create(struct drm_device *dev, int flags,
 						const char *name, int num_values);
-extern void drm_property_destroy(struct drm_device *dev, struct drm_property *property);
-extern int drm_property_add_enum(struct drm_property *property, int index, 
+extern void psb_drm_property_destroy(struct drm_device *dev, struct drm_property *property);
+extern int psb_drm_property_add_enum(struct drm_property *property, int index, 
 				 uint32_t value, const char *name);
 
 /* IOCTLs */

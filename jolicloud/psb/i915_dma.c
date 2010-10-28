@@ -85,7 +85,7 @@ int i915_dma_cleanup(struct drm_device * dev)
 	 * is freed, it's too late.
 	 */
 	if (dev->irq)
-		drm_irq_uninstall(dev);
+		psb_drm_irq_uninstall(dev);
 
 	return 0;
 }
@@ -94,7 +94,7 @@ static int i915_initialize(struct drm_device * dev, drm_i915_init_t * init)
 {
 	struct drm_i915_private *dev_priv = dev->dev_private;
 
-	dev_priv->sarea = drm_getsarea(dev);
+	dev_priv->sarea = psb_drm_getsarea(dev);
 	if (!dev_priv->sarea) {
 		DRM_ERROR("can not find sarea!\n");
 		i915_dma_cleanup(dev);
@@ -126,7 +126,7 @@ static int i915_initialize(struct drm_device * dev, drm_i915_init_t * init)
 	dev_priv->ring.map.flags = 0;
 	dev_priv->ring.map.mtrr = 0;
 
-	drm_core_ioremap(&dev_priv->ring.map, dev);
+	psb_drm_core_ioremap(&dev_priv->ring.map, dev);
 
 	if (dev_priv->ring.map.handle == NULL) {
 		i915_dma_cleanup(dev);
@@ -156,7 +156,7 @@ static int i915_initialize(struct drm_device * dev, drm_i915_init_t * init)
 	/* Program Hardware Status Page */
 	if (!IS_G33(dev)) {
 		dev_priv->status_page_dmah =
-			drm_pci_alloc(dev, PAGE_SIZE, PAGE_SIZE, 0xffffffff);
+			psb_drm_pci_alloc(dev, PAGE_SIZE, PAGE_SIZE, 0xffffffff);
 
 		if (!dev_priv->status_page_dmah) {
 			i915_dma_cleanup(dev);
@@ -477,7 +477,7 @@ static int i915_dispatch_cmdbuffer(struct drm_device * dev,
 	i915_emit_breadcrumb( dev );
 #ifdef I915_HAVE_FENCE
 	if (unlikely((dev_priv->counter & 0xFF) == 0))
-		drm_fence_flush_old(dev, 0, dev_priv->counter);
+		psb_drm_fence_flush_old(dev, 0, dev_priv->counter);
 #endif
 	return 0;
 }
@@ -532,7 +532,7 @@ static int i915_dispatch_batchbuffer(struct drm_device * dev,
 	i915_emit_breadcrumb( dev );
 #ifdef I915_HAVE_FENCE
 	if (unlikely((dev_priv->counter & 0xFF) == 0))
-		drm_fence_flush_old(dev, 0, dev_priv->counter);
+		psb_drm_fence_flush_old(dev, 0, dev_priv->counter);
 #endif
 	return 0;
 }
@@ -607,7 +607,7 @@ void i915_dispatch_flip(struct drm_device * dev, int planes, int sync)
 	i915_emit_breadcrumb(dev);
 #ifdef I915_HAVE_FENCE
 	if (unlikely(!sync && ((dev_priv->counter & 0xFF) == 0)))
-		drm_fence_flush_old(dev, 0, dev_priv->counter);
+		psb_drm_fence_flush_old(dev, 0, dev_priv->counter);
 #endif
 }
 
@@ -704,7 +704,7 @@ static void i915_dereference_buffers_locked(struct drm_buffer_object **buffers,
 					    unsigned num_buffers)
 {
 	while (num_buffers--)
-		drm_bo_usage_deref_locked(&buffers[num_buffers]);
+		psb_drm_bo_usage_deref_locked(&buffers[num_buffers]);
 }
 
 int i915_apply_reloc(struct drm_file *file_priv, int num_buffers,
@@ -724,10 +724,10 @@ int i915_apply_reloc(struct drm_file *file_priv, int num_buffers,
 
 	new_cmd_offset = reloc[0];
 	if (!relocatee->data_page ||
-	    !drm_bo_same_page(relocatee->offset, new_cmd_offset)) {
-		drm_bo_kunmap(&relocatee->kmap);
+	    !psb_drm_bo_same_page(relocatee->offset, new_cmd_offset)) {
+		psb_drm_bo_kunmap(&relocatee->kmap);
 		relocatee->offset = new_cmd_offset;
-		ret = drm_bo_kmap(relocatee->buf, new_cmd_offset >> PAGE_SHIFT,
+		ret = psb_drm_bo_kmap(relocatee->buf, new_cmd_offset >> PAGE_SHIFT,
 				  1, &relocatee->kmap);
 		if (ret) {
 			DRM_ERROR("Could not map command buffer to apply relocs\n %08lx", new_cmd_offset);
@@ -767,12 +767,12 @@ int i915_process_relocs(struct drm_file *file_priv,
 	memset(&reloc_kmap, 0, sizeof(reloc_kmap));
 
 	mutex_lock(&dev->struct_mutex);
-	reloc_list_object = drm_lookup_buffer_object(file_priv, cur_handle, 1);
+	reloc_list_object = psb_drm_lookup_buffer_object(file_priv, cur_handle, 1);
 	mutex_unlock(&dev->struct_mutex);
 	if (!reloc_list_object)
 		return -EINVAL;
 
-	ret = drm_bo_kmap(reloc_list_object, 0, 1, &reloc_kmap);
+	ret = psb_drm_bo_kmap(reloc_list_object, 0, 1, &reloc_kmap);
 	if (ret) {
 		DRM_ERROR("Could not map relocation buffer.\n");
 		goto out;
@@ -797,7 +797,7 @@ int i915_process_relocs(struct drm_file *file_priv,
 	reloc_end = reloc_offset + (num_relocs * reloc_stride);
 
 	do {
-		next_offset = drm_bo_offset_end(reloc_offset, reloc_end);
+		next_offset = psb_drm_bo_offset_end(reloc_offset, reloc_end);
 
 		do {
 			cur_offset = ((reloc_offset + reloc_page_offset) & ~PAGE_MASK) / sizeof(uint32_t);
@@ -809,11 +809,11 @@ int i915_process_relocs(struct drm_file *file_priv,
 			reloc_offset += reloc_stride;
 		} while (reloc_offset < next_offset);
 
-		drm_bo_kunmap(&reloc_kmap);
+		psb_drm_bo_kunmap(&reloc_kmap);
 
 		reloc_offset = next_offset;
 		if (reloc_offset != reloc_end) {
-			ret = drm_bo_kmap(reloc_list_object, reloc_offset >> PAGE_SHIFT, 1, &reloc_kmap);
+			ret = psb_drm_bo_kmap(reloc_list_object, reloc_offset >> PAGE_SHIFT, 1, &reloc_kmap);
 			if (ret) {
 				DRM_ERROR("Could not map relocation buffer.\n");
 				goto out;
@@ -825,13 +825,13 @@ int i915_process_relocs(struct drm_file *file_priv,
 
 	} while (reloc_offset != reloc_end);
 out:
-	drm_bo_kunmap(&relocatee->kmap);
+	psb_drm_bo_kunmap(&relocatee->kmap);
 	relocatee->data_page = NULL;
 
-	drm_bo_kunmap(&reloc_kmap);
+	psb_drm_bo_kunmap(&reloc_kmap);
 
 	mutex_lock(&dev->struct_mutex);
-	drm_bo_usage_deref_locked(&reloc_list_object);
+	psb_drm_bo_usage_deref_locked(&reloc_list_object);
 	mutex_unlock(&dev->struct_mutex);
 
 	return ret;
@@ -849,7 +849,7 @@ static int i915_exec_reloc(struct drm_file *file_priv, drm_handle_t buf_handle,
 	memset(&relocatee, 0, sizeof(relocatee));
 
 	mutex_lock(&dev->struct_mutex);
-	relocatee.buf = drm_lookup_buffer_object(file_priv, buf_handle, 1);
+	relocatee.buf = psb_drm_lookup_buffer_object(file_priv, buf_handle, 1);
 	mutex_unlock(&dev->struct_mutex);
 	if (!relocatee.buf) {
 		DRM_DEBUG("relocatee buffer invalid %08x\n", buf_handle);
@@ -866,7 +866,7 @@ static int i915_exec_reloc(struct drm_file *file_priv, drm_handle_t buf_handle,
 	}
 
 	mutex_lock(&dev->struct_mutex);
-	drm_bo_usage_deref_locked(&relocatee.buf);
+	psb_drm_bo_usage_deref_locked(&relocatee.buf);
 	mutex_unlock(&dev->struct_mutex);
 
 out_err:
@@ -908,7 +908,7 @@ int i915_validate_buffer_list(struct drm_file *file_priv,
 		if (arg.handled) {
 			data = arg.next;
 			mutex_lock(&dev->struct_mutex);
-			buffers[buf_count] = drm_lookup_buffer_object(file_priv, req->arg_handle, 1);
+			buffers[buf_count] = psb_drm_lookup_buffer_object(file_priv, req->arg_handle, 1);
 			mutex_unlock(&dev->struct_mutex);
 			buf_count++;
 			continue;
@@ -932,7 +932,7 @@ int i915_validate_buffer_list(struct drm_file *file_priv,
 			DRM_MEMORYBARRIER();
 		}
 
-		rep.ret = drm_bo_handle_validate(file_priv, req->bo_req.handle,
+		rep.ret = psb_drm_bo_handle_validate(file_priv, req->bo_req.handle,
 						 req->bo_req.fence_class,
 						 req->bo_req.flags,
 						 req->bo_req.mask,
@@ -997,7 +997,7 @@ static int i915_execbuffer(struct drm_device *dev, void *data,
 		return -EINVAL;
 
 
-	ret = drm_bo_read_lock(&dev->bm.bm_lock, 1);
+	ret = psb_drm_bo_read_lock(&dev->bm.bm_lock, 1);
 	if (ret)
 		return ret;
 
@@ -1008,15 +1008,15 @@ static int i915_execbuffer(struct drm_device *dev, void *data,
 
 	ret = mutex_lock_interruptible(&dev_priv->cmdbuf_mutex);
 	if (ret) {
-		drm_bo_read_unlock(&dev->bm.bm_lock);
+		psb_drm_bo_read_unlock(&dev->bm.bm_lock);
 		return -EAGAIN;
 	}
 
 	num_buffers = exec_buf->num_buffers;
 
-	buffers = drm_calloc(num_buffers, sizeof(struct drm_buffer_object *), DRM_MEM_DRIVER);
+	buffers = psb_drm_calloc(num_buffers, sizeof(struct drm_buffer_object *), DRM_MEM_DRIVER);
 	if (!buffers) {
-	        drm_bo_read_unlock(&dev->bm.bm_lock);
+	        psb_drm_bo_read_unlock(&dev->bm.bm_lock);
 		mutex_unlock(&dev_priv->cmdbuf_mutex);
 		return -ENOMEM;
         }
@@ -1044,12 +1044,12 @@ static int i915_execbuffer(struct drm_device *dev, void *data,
 	sarea_priv->last_dispatch = READ_BREADCRUMB(dev_priv);
 
 	/* fence */
-	ret = drm_fence_buffer_objects(dev, NULL, 0, NULL, &fence);
+	ret = psb_drm_fence_buffer_objects(dev, NULL, 0, NULL, &fence);
 	if (ret)
 		goto out_err0;
 
 	if (!(fence_arg->flags & DRM_FENCE_FLAG_NO_USER)) {
-		ret = drm_fence_add_user_object(file_priv, fence, fence_arg->flags & DRM_FENCE_FLAG_SHAREABLE);
+		ret = psb_drm_fence_add_user_object(file_priv, fence, fence_arg->flags & DRM_FENCE_FLAG_SHAREABLE);
 		if (!ret) {
 			fence_arg->handle = fence->base.hash.key;
 			fence_arg->fence_class = fence->fence_class;
@@ -1057,7 +1057,7 @@ static int i915_execbuffer(struct drm_device *dev, void *data,
 			fence_arg->signaled = fence->signaled_types;
 		}
 	}
-	drm_fence_usage_deref_unlocked(&fence);
+	psb_drm_fence_usage_deref_unlocked(&fence);
 out_err0:
 
 	/* handle errors */
@@ -1066,10 +1066,10 @@ out_err0:
 	mutex_unlock(&dev->struct_mutex);
 
 out_free:
-	drm_free(buffers, (exec_buf->num_buffers * sizeof(struct drm_buffer_object *)), DRM_MEM_DRIVER);
+	psb_drm_free(buffers, (exec_buf->num_buffers * sizeof(struct drm_buffer_object *)), DRM_MEM_DRIVER);
 
 	mutex_unlock(&dev_priv->cmdbuf_mutex);
-	drm_bo_read_unlock(&dev->bm.bm_lock);
+	psb_drm_bo_read_unlock(&dev->bm.bm_lock);
 	return ret;
 }
 #endif
@@ -1262,7 +1262,7 @@ static int i915_set_status_page(struct drm_device *dev, void *data,
 	dev_priv->hws_map.flags = 0;
 	dev_priv->hws_map.mtrr = 0;
 
-	drm_core_ioremap(&dev_priv->hws_map, dev);
+	psb_drm_core_ioremap(&dev_priv->hws_map, dev);
 	if (dev_priv->hws_map.handle == NULL) {
 		i915_dma_cleanup(dev);
 		dev_priv->status_gfx_addr = 0;

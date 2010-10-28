@@ -155,11 +155,11 @@ static void i915_vblank_tasklet(struct drm_device *dev)
 		DRM_SPINUNLOCK(&dev_priv->swaps_lock);
 		DRM_SPINLOCK(&dev->drw_lock);
 
-		drw = drm_get_drawable_info(dev, vbl_swap->drw_id);
+		drw = psb_drm_get_drawable_info(dev, vbl_swap->drw_id);
 
 		if (!drw) {
 			DRM_SPINUNLOCK(&dev->drw_lock);
-			drm_free(vbl_swap, sizeof(*vbl_swap), DRM_MEM_DRIVER);
+			psb_drm_free(vbl_swap, sizeof(*vbl_swap), DRM_MEM_DRIVER);
 			DRM_SPINLOCK(&dev_priv->swaps_lock);
 			continue;
 		}
@@ -168,7 +168,7 @@ static void i915_vblank_tasklet(struct drm_device *dev)
 			struct drm_i915_vbl_swap *swap_cmp =
 				list_entry(hit, struct drm_i915_vbl_swap, head);
 			struct drm_drawable_info *drw_cmp =
-				drm_get_drawable_info(dev, swap_cmp->drw_id);
+				psb_drm_get_drawable_info(dev, swap_cmp->drw_id);
 
 			if (drw_cmp &&
 			    drw_cmp->rects[0].y1 > drw->rects[0].y1) {
@@ -229,7 +229,7 @@ static void i915_vblank_tasklet(struct drm_device *dev)
 			int num_rects, plane, front, back;
 			unsigned short top, bottom;
 
-			drw = drm_get_drawable_info(dev, swap_hit->drw_id);
+			drw = psb_drm_get_drawable_info(dev, swap_hit->drw_id);
 
 			if (!drw)
 				continue;
@@ -297,7 +297,7 @@ static void i915_vblank_tasklet(struct drm_device *dev)
 
 		list_del(hit);
 
-		drm_free(swap_hit, sizeof(*swap_hit), DRM_MEM_DRIVER);
+		psb_drm_free(swap_hit, sizeof(*swap_hit), DRM_MEM_DRIVER);
 	}
 }
 
@@ -350,10 +350,10 @@ irqreturn_t i915_driver_irq_handler(DRM_IRQ_ARGS)
 			atomic_inc(&dev->vbl_received);
 
 		DRM_WAKEUP(&dev->vbl_queue);
-		drm_vbl_send_signals(dev);
+		psb_drm_vbl_send_signals(dev);
 
 		if (dev_priv->swaps_pending > 0)
-			drm_locked_tasklet(dev, i915_vblank_tasklet);
+			psb_drm_locked_tasklet(dev, i915_vblank_tasklet);
 		I915_WRITE(I915REG_PIPEASTAT,
 			pipea_stats|I915_VBLANK_INTERRUPT_ENABLE|
 			I915_VBLANK_CLEAR);
@@ -632,7 +632,7 @@ int i915_vblank_swap(struct drm_device *dev, void *data,
 	 * server is too old to push drawable information to the DRM, in which
 	 * case all such swaps would become ineffective.
 	 */
-	if (!drm_get_drawable_info(dev, swap->drawable)) {
+	if (!psb_drm_get_drawable_info(dev, swap->drawable)) {
 		DRM_SPINUNLOCK_IRQRESTORE(&dev->drw_lock, irqflags);
 		DRM_DEBUG("Invalid drawable ID %d\n", swap->drawable);
 		return -EINVAL;
@@ -664,7 +664,7 @@ int i915_vblank_swap(struct drm_device *dev, void *data,
 
 			DRM_SPINLOCK_IRQSAVE(&dev->drw_lock, irqflags);
 
-			drw = drm_get_drawable_info(dev, swap->drawable);
+			drw = psb_drm_get_drawable_info(dev, swap->drawable);
 
 			if (!drw) {
 				DRM_SPINUNLOCK_IRQRESTORE(&dev->drw_lock,
@@ -704,7 +704,7 @@ int i915_vblank_swap(struct drm_device *dev, void *data,
 		return -EBUSY;
 	}
 
-	vbl_swap = drm_calloc(1, sizeof(*vbl_swap), DRM_MEM_DRIVER);
+	vbl_swap = psb_drm_calloc(1, sizeof(*vbl_swap), DRM_MEM_DRIVER);
 
 	if (!vbl_swap) {
 		DRM_ERROR("Failed to allocate memory to queue swap\n");

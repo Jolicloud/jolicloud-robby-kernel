@@ -38,8 +38,8 @@
 #include "drm_core.h"
 
 unsigned int drm_cards_limit = 16;	/* Enough for one machine */
-unsigned int drm_debug = 0;		/* 1 to enable debug output */
-EXPORT_SYMBOL(drm_debug);
+unsigned int psb_drm_debug = 0;		/* 1 to enable debug output */
+EXPORT_SYMBOL(psb_drm_debug);
 
 MODULE_AUTHOR(CORE_AUTHOR);
 MODULE_DESCRIPTION(CORE_DESC);
@@ -48,7 +48,7 @@ MODULE_PARM_DESC(cards_limit, "Maximum number of graphics cards");
 MODULE_PARM_DESC(debug, "Enable debug output");
 
 module_param_named(cards_limit, drm_cards_limit, int, 0444);
-module_param_named(debug, drm_debug, int, 0600);
+module_param_named(debug, psb_drm_debug, int, 0600);
 
 struct drm_head **drm_heads;
 struct class *drm_class;
@@ -89,7 +89,7 @@ static int drm_fill_in_dev(struct drm_device * dev, struct pci_dev *pdev,
 	if (drm_ht_create(&dev->map_hash, DRM_MAP_HASH_ORDER))
 		return -ENOMEM;
 
-	if (drm_mm_init(&dev->offset_manager, DRM_FILE_PAGE_OFFSET_START,
+	if (psb_drm_mm_init(&dev->offset_manager, DRM_FILE_PAGE_OFFSET_START,
 			DRM_FILE_PAGE_OFFSET_SIZE)) {
 		drm_ht_remove(&dev->map_hash);
 		return -ENOMEM;
@@ -97,7 +97,7 @@ static int drm_fill_in_dev(struct drm_device * dev, struct pci_dev *pdev,
 
 	if (drm_ht_create(&dev->object_hash, DRM_OBJECT_HASH_ORDER)) {
 		drm_ht_remove(&dev->map_hash);
-		drm_mm_takedown(&dev->offset_manager);
+		psb_drm_mm_takedown(&dev->offset_manager);
 		return -ENOMEM;
 	}
 
@@ -217,7 +217,7 @@ err_g1:
  * then register the character device and inter module information.
  * Try and register, if we fail to register, backout previous work.
  */
-int drm_get_dev(struct pci_dev *pdev, const struct pci_device_id *ent,
+int psb_drm_get_dev(struct pci_dev *pdev, const struct pci_device_id *ent,
 		struct drm_driver *driver)
 {
 	struct drm_device *dev;
@@ -225,7 +225,7 @@ int drm_get_dev(struct pci_dev *pdev, const struct pci_device_id *ent,
 
 	DRM_DEBUG("\n");
 
-	dev = drm_calloc(1, sizeof(*dev), DRM_MEM_STUB);
+	dev = psb_drm_calloc(1, sizeof(*dev), DRM_MEM_STUB);
 	if (!dev)
 		return -ENOMEM;
 
@@ -264,11 +264,11 @@ int drm_get_dev(struct pci_dev *pdev, const struct pci_device_id *ent,
 	if (!drm_fb_loaded)
 		pci_set_drvdata(pdev, NULL);
 
-	drm_free(dev, sizeof(*dev), DRM_MEM_STUB);
-	printk(KERN_ERR "DRM: drm_get_dev failed.\n");
+	psb_drm_free(dev, sizeof(*dev), DRM_MEM_STUB);
+	printk(KERN_ERR "DRM: psb_drm_get_dev failed.\n");
 	return ret;
 }
-EXPORT_SYMBOL(drm_get_dev);
+EXPORT_SYMBOL(psb_drm_get_dev);
 
 
 /**
@@ -286,16 +286,16 @@ int drm_put_dev(struct drm_device * dev)
 	DRM_DEBUG("release primary %s\n", dev->driver->pci_driver.name);
 
 	if (dev->unique) {
-		drm_free(dev->unique, strlen(dev->unique) + 1, DRM_MEM_DRIVER);
+		psb_drm_free(dev->unique, strlen(dev->unique) + 1, DRM_MEM_DRIVER);
 		dev->unique = NULL;
 		dev->unique_len = 0;
 	}
 	if (dev->devname) {
-		drm_free(dev->devname, strlen(dev->devname) + 1,
+		psb_drm_free(dev->devname, strlen(dev->devname) + 1,
 			 DRM_MEM_DRIVER);
 		dev->devname = NULL;
 	}
-	drm_free(dev, sizeof(*dev), DRM_MEM_STUB);
+	psb_drm_free(dev, sizeof(*dev), DRM_MEM_STUB);
 	return 0;
 }
 

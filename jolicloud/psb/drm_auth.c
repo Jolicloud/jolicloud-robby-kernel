@@ -78,7 +78,7 @@ static int drm_add_magic(struct drm_device * dev, struct drm_file * priv,
 
 	DRM_DEBUG("%d\n", magic);
 
-	entry = drm_alloc(sizeof(*entry), DRM_MEM_MAGIC);
+	entry = psb_drm_alloc(sizeof(*entry), DRM_MEM_MAGIC);
 	if (!entry)
 		return -ENOMEM;
 	memset(entry, 0, sizeof(*entry));
@@ -118,7 +118,7 @@ static int drm_remove_magic(struct drm_device * dev, drm_magic_t magic)
 	list_del(&pt->head);
 	mutex_unlock(&dev->struct_mutex);
 
-	drm_free(pt, sizeof(*pt), DRM_MEM_MAGIC);
+	psb_drm_free(pt, sizeof(*pt), DRM_MEM_MAGIC);
 
 	return 0;
 }

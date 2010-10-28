@@ -1068,7 +1068,7 @@ static void intel_crtc_mode_set(struct drm_crtc *crtc,
 		I915_WRITE(PFIT_CONTROL, 0);
 
 	DRM_DEBUG("Mode for pipe %c:\n", pipe == 0 ? 'A' : 'B');
-	drm_mode_debug_printmodeline(dev, mode);
+	psb_drm_mode_debug_printmodeline(dev, mode);
 
         /*psbPrintPll("chosen", &clock);*/
     DRM_DEBUG("clock regs: 0x%08x, 0x%08x,dspntr is 0x%8x, pipeconf is 0x%8x\n", (int)dpll,
@@ -1307,8 +1307,8 @@ struct drm_display_mode *intel_crtc_mode_get(struct drm_device *dev,
 	mode->vsync_start = (vsync & 0xffff) + 1;
 	mode->vsync_end = ((vsync & 0xffff0000) >> 16) + 1;
 
-	drm_mode_set_name(mode);
-	drm_mode_set_crtcinfo(mode, 0);
+	psb_drm_mode_set_name(mode);
+	psb_drm_mode_set_crtcinfo(mode, 0);
 
 	return mode;
 }
@@ -1331,7 +1331,7 @@ void intel_crtc_init(struct drm_device *dev, int pipe)
 	struct intel_crtc *intel_crtc;
 	int i;
 
-	crtc = drm_crtc_create(dev, &intel_crtc_funcs);
+	crtc = psb_drm_crtc_create(dev, &intel_crtc_funcs);
 	if (crtc == NULL)
 		return;
 
@@ -1436,7 +1436,7 @@ void intel_modeset_init(struct drm_device *dev)
 	int num_pipe;
 	int i;
 
-	drm_mode_config_init(dev);
+	psb_drm_mode_config_init(dev);
 
 	dev->mode_config.min_width = 0;
 	dev->mode_config.min_height = 0;
@@ -1463,10 +1463,10 @@ void intel_modeset_init(struct drm_device *dev)
 
 	intel_setup_outputs(dev);
 
-	//drm_initial_config(dev, false);
+	//psb_drm_initial_config(dev, false);
 }
 
 void intel_modeset_cleanup(struct drm_device *dev)
 {
-	drm_mode_config_cleanup(dev);
+	psb_drm_mode_config_cleanup(dev);
 }

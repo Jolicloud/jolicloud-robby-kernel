@@ -66,14 +66,14 @@ void drm_bo_init_lock(struct drm_bo_lock *lock)
 	atomic_set(&lock->readers, 0);
 }
 
-void drm_bo_read_unlock(struct drm_bo_lock *lock)
+void psb_drm_bo_read_unlock(struct drm_bo_lock *lock)
 {
 	if (atomic_dec_and_test(&lock->readers))
 		wake_up_all(&lock->queue);
 }
-EXPORT_SYMBOL(drm_bo_read_unlock);
+EXPORT_SYMBOL(psb_drm_bo_read_unlock);
 
-int drm_bo_read_lock(struct drm_bo_lock *lock, int interruptible)
+int psb_drm_bo_read_lock(struct drm_bo_lock *lock, int interruptible)
 {
 	while (unlikely(atomic_read(&lock->write_lock_pending) != 0)) {
 		int ret;
@@ -103,7 +103,7 @@ int drm_bo_read_lock(struct drm_bo_lock *lock, int interruptible)
 	}
 	return 0;
 }
-EXPORT_SYMBOL(drm_bo_read_lock);
+EXPORT_SYMBOL(psb_drm_bo_read_lock);
 
 static int __drm_bo_write_unlock(struct drm_bo_lock *lock)
 {
@@ -157,7 +157,7 @@ int drm_bo_write_lock(struct drm_bo_lock *lock, int interruptible,
 		wake_up_all(&lock->queue);
 	dev = file_priv->head->dev;
 	mutex_lock(&dev->struct_mutex);
-	ret = drm_add_user_object(file_priv, &lock->base, 0);
+	ret = psb_drm_add_user_object(file_priv, &lock->base, 0);
 	lock->base.remove = &drm_bo_write_lock_remove;
 	lock->base.type = drm_lock_type;
 	if (ret)
@@ -179,9 +179,9 @@ int drm_bo_write_unlock(struct drm_bo_lock *lock, struct drm_file *file_priv)
 		mutex_unlock(&dev->struct_mutex);
 		return -EINVAL;
 	}
-	ro = drm_lookup_ref_object(file_priv, &lock->base, _DRM_REF_USE);
+	ro = psb_drm_lookup_ref_object(file_priv, &lock->base, _DRM_REF_USE);
 	BUG_ON(!ro);
-	drm_remove_ref_object(file_priv, ro);
+	psb_drm_remove_ref_object(file_priv, ro);
 	lock->base.owner = NULL;
 
 	mutex_unlock(&dev->struct_mutex);

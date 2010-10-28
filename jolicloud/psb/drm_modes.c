@@ -34,7 +34,7 @@
 #include "drm_crtc.h"
 
 /**
- * drm_mode_debug_printmodeline - debug print a mode
+ * psb_drm_mode_debug_printmodeline - debug print a mode
  * @dev: DRM device
  * @mode: mode to print
  *
@@ -43,7 +43,7 @@
  *
  * Describe @mode using DRM_DEBUG.
  */
-void drm_mode_debug_printmodeline(struct drm_device *dev,
+void psb_drm_mode_debug_printmodeline(struct drm_device *dev,
 				  struct drm_display_mode *mode)
 {
 	DRM_DEBUG("Modeline %d:\"%s\" %d %d %d %d %d %d %d %d %d %d 0x%x\n",
@@ -53,10 +53,10 @@ void drm_mode_debug_printmodeline(struct drm_device *dev,
 		  mode->vdisplay, mode->vsync_start,
 		  mode->vsync_end, mode->vtotal, mode->type);
 }
-EXPORT_SYMBOL(drm_mode_debug_printmodeline);
+EXPORT_SYMBOL(psb_drm_mode_debug_printmodeline);
 
 /**
- * drm_mode_set_name - set the name on a mode
+ * psb_drm_mode_set_name - set the name on a mode
  * @mode: name will be set in this mode
  *
  * LOCKING:
@@ -64,12 +64,12 @@ EXPORT_SYMBOL(drm_mode_debug_printmodeline);
  *
  * Set the name of @mode to a standard format.
  */
-void drm_mode_set_name(struct drm_display_mode *mode)
+void psb_drm_mode_set_name(struct drm_display_mode *mode)
 {
 	snprintf(mode->name, DRM_DISPLAY_MODE_LEN, "%dx%d", mode->hdisplay,
 		 mode->vdisplay);
 }
-EXPORT_SYMBOL(drm_mode_set_name);
+EXPORT_SYMBOL(psb_drm_mode_set_name);
 
 /**
  * drm_mode_list_concat - move modes from one list to another
@@ -92,7 +92,7 @@ void drm_mode_list_concat(struct list_head *head, struct list_head *new)
 }
 
 /**
- * drm_mode_width - get the width of a mode
+ * psb_drm_mode_width - get the width of a mode
  * @mode: mode
  *
  * LOCKING:
@@ -105,15 +105,15 @@ void drm_mode_list_concat(struct list_head *head, struct list_head *new)
  * RETURNS:
  * @mode->hdisplay
  */
-int drm_mode_width(struct drm_display_mode *mode)
+int psb_drm_mode_width(struct drm_display_mode *mode)
 {
 	return mode->hdisplay;
 
 }
-EXPORT_SYMBOL(drm_mode_width);
+EXPORT_SYMBOL(psb_drm_mode_width);
 
 /**
- * drm_mode_height - get the height of a mode
+ * psb_drm_mode_height - get the height of a mode
  * @mode: mode
  *
  * LOCKING:
@@ -126,14 +126,14 @@ EXPORT_SYMBOL(drm_mode_width);
  * RETURNS:
  * @mode->vdisplay
  */
-int drm_mode_height(struct drm_display_mode *mode)
+int psb_drm_mode_height(struct drm_display_mode *mode)
 {
 	return mode->vdisplay;
 }
-EXPORT_SYMBOL(drm_mode_height);
+EXPORT_SYMBOL(psb_drm_mode_height);
 
 /**
- * drm_mode_vrefresh - get the vrefresh of a mode
+ * psb_drm_mode_vrefresh - get the vrefresh of a mode
  * @mode: mode
  *
  * LOCKING:
@@ -146,7 +146,7 @@ EXPORT_SYMBOL(drm_mode_height);
  * RETURNS:
  * Vertical refresh rate of @mode x 1000. For precision reasons.
  */
-int drm_mode_vrefresh(struct drm_display_mode *mode)
+int psb_drm_mode_vrefresh(struct drm_display_mode *mode)
 {
 	int refresh = 0;
 	unsigned int calc_val;
@@ -171,10 +171,10 @@ int drm_mode_vrefresh(struct drm_display_mode *mode)
 	}
 	return refresh;
 }
-EXPORT_SYMBOL(drm_mode_vrefresh);
+EXPORT_SYMBOL(psb_drm_mode_vrefresh);
 	
 /**
- * drm_mode_set_crtcinfo - set CRTC modesetting parameters
+ * psb_drm_mode_set_crtcinfo - set CRTC modesetting parameters
  * @p: mode
  * @adjust_flags: unused? (FIXME)
  *
@@ -183,7 +183,7 @@ EXPORT_SYMBOL(drm_mode_vrefresh);
  *
  * Setup the CRTC modesetting parameters for @p, adjusting if necessary.
  */
-void drm_mode_set_crtcinfo(struct drm_display_mode *p, int adjust_flags)
+void psb_drm_mode_set_crtcinfo(struct drm_display_mode *p, int adjust_flags)
 {
 	if ((p == NULL) || ((p->type & DRM_MODE_TYPE_CRTC_C) == DRM_MODE_TYPE_BUILTIN))
 		return;
@@ -231,11 +231,11 @@ void drm_mode_set_crtcinfo(struct drm_display_mode *p, int adjust_flags)
 	p->crtc_hadjusted = false;
 	p->crtc_vadjusted = false;
 }
-EXPORT_SYMBOL(drm_mode_set_crtcinfo);
+EXPORT_SYMBOL(psb_drm_mode_set_crtcinfo);
 
 
 /**
- * drm_mode_duplicate - allocate and duplicate an existing mode
+ * psb_drm_mode_duplicate - allocate and duplicate an existing mode
  * @m: mode to duplicate
  *
  * LOCKING:
@@ -244,13 +244,13 @@ EXPORT_SYMBOL(drm_mode_set_crtcinfo);
  * Just allocate a new mode, copy the existing mode into it, and return
  * a pointer to it.  Used to create new instances of established modes.
  */
-struct drm_display_mode *drm_mode_duplicate(struct drm_device *dev,
+struct drm_display_mode *psb_drm_mode_duplicate(struct drm_device *dev,
 					    struct drm_display_mode *mode)
 {
 	struct drm_display_mode *nmode;
 	int new_id;
 
-	nmode = drm_mode_create(dev);
+	nmode = psb_drm_mode_create(dev);
 	if (!nmode)
 		return NULL;
 
@@ -260,10 +260,10 @@ struct drm_display_mode *drm_mode_duplicate(struct drm_device *dev,
 	INIT_LIST_HEAD(&nmode->head);
 	return nmode;
 }
-EXPORT_SYMBOL(drm_mode_duplicate);
+EXPORT_SYMBOL(psb_drm_mode_duplicate);
 
 /**
- * drm_mode_equal - test modes for equality
+ * psb_drm_mode_equal - test modes for equality
  * @mode1: first mode
  * @mode2: second mode
  *
@@ -275,7 +275,7 @@ EXPORT_SYMBOL(drm_mode_duplicate);
  * RETURNS:
  * True if the modes are equal, false otherwise.
  */
-bool drm_mode_equal(struct drm_display_mode *mode1, struct drm_display_mode *mode2)
+bool psb_drm_mode_equal(struct drm_display_mode *mode1, struct drm_display_mode *mode2)
 {
 	if (mode1->clock == mode2->clock &&
 	    mode1->hdisplay == mode2->hdisplay &&
@@ -293,10 +293,10 @@ bool drm_mode_equal(struct drm_display_mode *mode1, struct drm_display_mode *mod
 	
 	return false;
 }
-EXPORT_SYMBOL(drm_mode_equal);
+EXPORT_SYMBOL(psb_drm_mode_equal);
 
 /**
- * drm_mode_validate_size - make sure modes adhere to size constraints
+ * psb_drm_mode_validate_size - make sure modes adhere to size constraints
  * @dev: DRM device
  * @mode_list: list of modes to check
  * @maxX: maximum width
@@ -310,7 +310,7 @@ EXPORT_SYMBOL(drm_mode_equal);
  * modes we probed for @dev against those limits and set their status as
  * necessary.
  */
-void drm_mode_validate_size(struct drm_device *dev,
+void psb_drm_mode_validate_size(struct drm_device *dev,
 			    struct list_head *mode_list,
 			    int maxX, int maxY, int maxPitch)
 {
@@ -327,10 +327,10 @@ void drm_mode_validate_size(struct drm_device *dev,
 			mode->status = MODE_VIRTUAL_Y;
 	}
 }
-EXPORT_SYMBOL(drm_mode_validate_size);
+EXPORT_SYMBOL(psb_drm_mode_validate_size);
 
 /**
- * drm_mode_validate_clocks - validate modes against clock limits
+ * psb_drm_mode_validate_clocks - validate modes against clock limits
  * @dev: DRM device
  * @mode_list: list of modes to check
  * @min: minimum clock rate array
@@ -345,7 +345,7 @@ EXPORT_SYMBOL(drm_mode_validate_size);
  * sure each mode falls within a given range (defined by @min and @max
  * arrays) and sets @mode->status as needed.
  */
-void drm_mode_validate_clocks(struct drm_device *dev,
+void psb_drm_mode_validate_clocks(struct drm_device *dev,
 			      struct list_head *mode_list,
 			      int *min, int *max, int n_ranges)
 {
@@ -364,7 +364,7 @@ void drm_mode_validate_clocks(struct drm_device *dev,
 			mode->status = MODE_CLOCK_RANGE;
 	}
 }
-EXPORT_SYMBOL(drm_mode_validate_clocks);
+EXPORT_SYMBOL(psb_drm_mode_validate_clocks);
 
 /**
  * drm_mode_prune_invalid - remove invalid modes from mode list
@@ -388,7 +388,7 @@ void drm_mode_prune_invalid(struct drm_device *dev,
 		if (mode->status != MODE_OK) {
 			list_del(&mode->head);
 			if (verbose) {
-				drm_mode_debug_printmodeline(dev, mode);
+				psb_drm_mode_debug_printmodeline(dev, mode);
 				DRM_DEBUG("Not using %s mode %d\n", mode->name, mode->status);
 			}
 			kfree(mode);
@@ -543,7 +543,7 @@ void drm_mode_output_list_update(struct drm_output *output)
 		found_it = 0;
 		/* go through current modes checking for the new probed mode */
 		list_for_each_entry(mode, &output->modes, head) {
-			if (drm_mode_equal(pmode, mode)) {
+			if (psb_drm_mode_equal(pmode, mode)) {
 				found_it = 1;
 				/* if equal delete the probed mode */
 				mode->status = pmode->status;

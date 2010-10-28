@@ -351,7 +351,7 @@ static bool intel_lvds_mode_fixup(struct drm_output *output,
 			dev_priv->panel_fixed_mode->vsync_end;
 		adjusted_mode->vtotal = dev_priv->panel_fixed_mode->vtotal;
 		adjusted_mode->clock = dev_priv->panel_fixed_mode->clock;
-		drm_mode_set_crtcinfo(adjusted_mode, CRTC_INTERLACE_HALVE_V);
+		psb_drm_mode_set_crtcinfo(adjusted_mode, CRTC_INTERLACE_HALVE_V);
 	}
 
 	/*
@@ -450,17 +450,17 @@ static int intel_lvds_get_modes(struct drm_output *output)
         struct edid *edid;
 
 	/* Try reading DDC from the adapter */
-        edid = (struct edid *)drm_ddc_read(&intel_output->ddc_bus->adapter);
+        edid = (struct edid *)psb_drm_ddc_read(&intel_output->ddc_bus->adapter);
 
         if (!edid) {
                 DRM_INFO("%s: no EDID data from device, reading ACPI _DDC data.\n",
                          output->name);
                 edid = kzalloc(sizeof(struct edid), GFP_KERNEL);
-                drm_get_acpi_edid(ACPI_EDID_LCD, (char*)edid, 128);
+                psb_drm_get_acpi_edid(ACPI_EDID_LCD, (char*)edid, 128);
         }
 
 	if (edid)
-	        drm_add_edid_modes(output, edid);
+	        psb_drm_add_edid_modes(output, edid);
 
 	/* Didn't get an EDID */
 	if (!output->monitor_info) {
@@ -482,8 +482,8 @@ static int intel_lvds_get_modes(struct drm_output *output)
 out:
 	if (dev_priv->panel_fixed_mode != NULL) {
 		struct drm_display_mode *mode =
-			drm_mode_duplicate(dev, dev_priv->panel_fixed_mode);
-		drm_mode_probed_add(output, mode);
+			psb_drm_mode_duplicate(dev, dev_priv->panel_fixed_mode);
+		psb_drm_mode_probed_add(output, mode);
 		return 1;
 	}
 
@@ -628,13 +628,13 @@ void intel_lvds_init(struct drm_device *dev)
 	if (!drm_intel_ignore_acpi && !intel_get_acpi_dod(ACPI_DOD))
 		return;
 
-	output = drm_output_create(dev, &intel_lvds_output_funcs, "LVDS");
+	output = psb_drm_output_create(dev, &intel_lvds_output_funcs, "LVDS");
 	if (!output)
 		return;
 
 	intel_output = kmalloc(sizeof(struct intel_output), GFP_KERNEL);
 	if (!intel_output) {
-		drm_output_destroy(output);
+		psb_drm_output_destroy(output);
 		return;
 	}
 
@@ -800,17 +800,29 @@ void intel_lvds_init(struct drm_device *dev)
 	}
 
 	if ((blc_type == BLC_I2C_TYPE) || (blc_type == BLC_PWM_TYPE)){	
-		struct backlight_properties props;
-
 		/* add /sys/class/backlight interface as standard */
-		memset(&props, 0, sizeof(struct backlight_properties));
-		props.max_brightness = BRIGHTNESS_MAX_LEVEL;
-		psbbl_device = backlight_device_register("psblvds",
-				&dev->pdev->dev, dev, &psbbl_ops, &props);
+		#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,34)
+			struct backlight_properties props;
+			memset(&props, 0, sizeof(struct backlight_properties));
+			props.max_brightness = BRIGHTNESS_MAX_LEVEL;
+			psbbl_device = backlight_device_register("psblvds", &dev->pdev->dev, dev, &psbbl_ops, &props);
+		#else
+			psbbl_device = backlight_device_register("psblvds", &dev->pdev->dev, dev, &psbbl_ops);
+		#endif
 		if (psbbl_device){
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,20)
+			down(&psbbl_device->sem);
+			psbbl_device->props->max_brightness = BRIGHTNESS_MAX_LEVEL;
+			psbbl_device->props->brightness = lvds_backlight;
+			psbbl_device->props->power = FB_BLANK_UNBLANK;
+			psbbl_device->props->update_status(psbbl_device);
+			up(&psbbl_device->sem);
+#else
+			psbbl_device->props.max_brightness = BRIGHTNESS_MAX_LEVEL;
 			psbbl_device->props.brightness = lvds_backlight;
 			psbbl_device->props.power = FB_BLANK_UNBLANK;
 			backlight_update_status(psbbl_device);
+#endif
 		}
 	}
 
@@ -834,7 +846,7 @@ blc_out:
 	list_for_each_entry(scan, &output->probed_modes, head) {
 		if (scan->type & DRM_MODE_TYPE_PREFERRED) {
 			dev_priv->panel_fixed_mode = 
-				drm_mode_duplicate(dev, scan);
+				psb_drm_mode_duplicate(dev, scan);
 			goto out; /* FIXME: check for quirks */
 		}
 	}
@@ -932,5 +944,5 @@ out:
 
 failed:
         DRM_DEBUG("No LVDS modes found, disabling.\n");
-	drm_output_destroy(output); /* calls intel_lvds_destroy above */
+	psb_drm_output_destroy(output); /* calls intel_lvds_destroy above */
 }

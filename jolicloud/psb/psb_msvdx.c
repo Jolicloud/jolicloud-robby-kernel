@@ -74,7 +74,7 @@ psb_msvdx_dequeue_send (struct drm_device *dev)
     }
   list_del (&msvdx_cmd->head);
   kfree (msvdx_cmd->cmd);
-  drm_free (msvdx_cmd, sizeof (struct psb_msvdx_cmd_queue), DRM_MEM_DRIVER);
+  psb_drm_free (msvdx_cmd, sizeof (struct psb_msvdx_cmd_queue), DRM_MEM_DRIVER);
   return ret;
 }
 
@@ -96,7 +96,7 @@ psb_msvdx_map_command (struct drm_device *dev,
   if (cmd_size + cmd_page_offset > PAGE_SIZE)
     return -EINVAL;
 
-  ret = drm_bo_kmap (cmd_buffer, cmd_offset >> PAGE_SHIFT, 2, &cmd_kmap);
+  ret = psb_drm_bo_kmap (cmd_buffer, cmd_offset >> PAGE_SHIFT, 2, &cmd_kmap);
 
   if (ret)
     {
@@ -156,7 +156,7 @@ psb_msvdx_map_command (struct drm_device *dev,
     {
       PSB_DEBUG_GENERAL
 	("MSVDXQUE: psb_msvdx_map_command copying command...\n");
-      tmp = drm_calloc (1, cmd_size, DRM_MEM_DRIVER);
+      tmp = psb_drm_calloc (1, cmd_size, DRM_MEM_DRIVER);
       if (tmp == NULL)
 	{
 	  ret = -ENOMEM;
@@ -179,7 +179,7 @@ psb_msvdx_map_command (struct drm_device *dev,
     }
 
 out:
-  drm_bo_kunmap (&cmd_kmap);
+  psb_drm_bo_kunmap (&cmd_kmap);
 
   return ret;
 }
@@ -250,7 +250,7 @@ psb_submit_video_cmdbuf (struct drm_device *dev,
       /*queue the command to be sent when the h/w is ready */
       PSB_DEBUG_GENERAL ("MSVDXQUE: queueing sequence:%08x..\n", sequence);
       msvdx_cmd =
-	drm_calloc (1, sizeof (struct psb_msvdx_cmd_queue), DRM_MEM_DRIVER);
+	psb_drm_calloc (1, sizeof (struct psb_msvdx_cmd_queue), DRM_MEM_DRIVER);
       if (msvdx_cmd == NULL)
 	{
 	  mutex_unlock (&dev_priv->msvdx_mutex);
@@ -265,7 +265,7 @@ psb_submit_video_cmdbuf (struct drm_device *dev,
 	{
 	  mutex_unlock (&dev_priv->msvdx_mutex);
 	  PSB_DEBUG_GENERAL ("MSVDXQUE: Failed to extract cmd...\n");
-	  drm_free (msvdx_cmd, sizeof (struct psb_msvdx_cmd_queue),
+	  psb_drm_free (msvdx_cmd, sizeof (struct psb_msvdx_cmd_queue),
 		    DRM_MEM_DRIVER);
 	  return ret;
 	}

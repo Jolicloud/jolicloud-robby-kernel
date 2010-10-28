@@ -94,10 +94,10 @@ struct drm_sman {
 
 /*
  * Take down a memory manager. This function should only be called after a
- * successful init and after a call to drm_sman_cleanup.
+ * successful init and after a call to psb_drm_sman_cleanup.
  */
 
-extern void drm_sman_takedown(struct drm_sman * sman);
+extern void psb_drm_sman_takedown(struct drm_sman * sman);
 
 /*
  * Allocate structures for a manager.
@@ -112,7 +112,7 @@ extern void drm_sman_takedown(struct drm_sman * sman);
  *
  */
 
-extern int drm_sman_init(struct drm_sman * sman, unsigned int num_managers,
+extern int psb_drm_sman_init(struct drm_sman * sman, unsigned int num_managers,
 			 unsigned int user_order, unsigned int owner_order);
 
 /*
@@ -120,7 +120,7 @@ extern int drm_sman_init(struct drm_sman * sman, unsigned int num_managers,
  * manager unless a customized allogator is used.
  */
 
-extern int drm_sman_set_range(struct drm_sman * sman, unsigned int manager,
+extern int psb_drm_sman_set_range(struct drm_sman * sman, unsigned int manager,
 			      unsigned long start, unsigned long size);
 
 /*
@@ -129,14 +129,14 @@ extern int drm_sman_set_range(struct drm_sman * sman, unsigned int manager,
  * so it can be destroyed after this call.
  */
 
-extern int drm_sman_set_manager(struct drm_sman * sman, unsigned int mananger,
+extern int psb_drm_sman_set_manager(struct drm_sman * sman, unsigned int mananger,
 				struct drm_sman_mm * allocator);
 
 /*
  * Allocate a memory block. Aligment is not implemented yet.
  */
 
-extern struct drm_memblock_item *drm_sman_alloc(struct drm_sman * sman,
+extern struct drm_memblock_item *psb_drm_sman_alloc(struct drm_sman * sman,
 						unsigned int manager,
 						unsigned long size,
 						unsigned alignment,
@@ -145,16 +145,16 @@ extern struct drm_memblock_item *drm_sman_alloc(struct drm_sman * sman,
  * Free a memory block identified by its user hash key.
  */
 
-extern int drm_sman_free_key(struct drm_sman * sman, unsigned int key);
+extern int psb_drm_sman_free_key(struct drm_sman * sman, unsigned int key);
 
 /*
  * returns 1 iff there are no stale memory blocks associated with this owner.
  * Typically called to determine if we need to idle the hardware and call
- * drm_sman_owner_cleanup. If there are no stale memory blocks, it removes all
+ * psb_drm_sman_owner_cleanup. If there are no stale memory blocks, it removes all
  * resources associated with owner.
  */
 
-extern int drm_sman_owner_clean(struct drm_sman * sman, unsigned long owner);
+extern int psb_drm_sman_owner_clean(struct drm_sman * sman, unsigned long owner);
 
 /*
  * Frees all stale memory blocks associated with this owner. Note that this
@@ -164,13 +164,13 @@ extern int drm_sman_owner_clean(struct drm_sman * sman, unsigned long owner);
  * is not going to be referenced anymore.
  */
 
-extern void drm_sman_owner_cleanup(struct drm_sman * sman, unsigned long owner);
+extern void psb_drm_sman_owner_cleanup(struct drm_sman * sman, unsigned long owner);
 
 /*
  * Frees all stale memory blocks associated with the memory manager.
  * See idling above.
  */
 
-extern void drm_sman_cleanup(struct drm_sman * sman);
+extern void psb_drm_sman_cleanup(struct drm_sman * sman);
 
 #endif

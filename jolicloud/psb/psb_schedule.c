@@ -916,14 +916,14 @@ static void psb_free_task_wq(struct work_struct *work)
 			if (task->feedback.bo) {
 				PSB_DEBUG_RENDER("Unref feedback bo %d\n",
 						 task->sequence);
-				drm_bo_usage_deref_locked(&task->feedback.bo);
+				psb_drm_bo_usage_deref_locked(&task->feedback.bo);
 			}
 			mutex_unlock(&dev->struct_mutex);
 		}
 
 		if (atomic_read(&task->buf.done)) {
 			PSB_DEBUG_RENDER("Deleting task %d\n", task->sequence);
-			drm_free(task, sizeof(*task), DRM_MEM_DRIVER);
+			psb_drm_free(task, sizeof(*task), DRM_MEM_DRIVER);
 			task = NULL;
 		}
 		spin_lock_irqsave(&scheduler->lock, irq_flags);
@@ -1087,7 +1087,7 @@ int psb_scheduler_init(struct drm_device *dev, struct psb_scheduler *scheduler)
 	memset(scheduler, 0, sizeof(*scheduler));
 	scheduler->dev = dev;
 	mutex_init(&scheduler->task_wq_mutex);
-	scheduler->lock = SPIN_LOCK_UNLOCKED;
+	spin_lock_init(&scheduler->lock);
 	scheduler->idle = 1;
 
 	INIT_LIST_HEAD(&scheduler->ta_queue);
@@ -1167,7 +1167,7 @@ static int psb_setup_task_devlocked(struct drm_device *dev,
 		return -EINVAL;
 	}
 
-	task = drm_calloc(1, sizeof(*task), DRM_MEM_DRIVER);
+	task = psb_drm_calloc(1, sizeof(*task), DRM_MEM_DRIVER);
 	if (!task)
 		return -ENOMEM;
 
@@ -1222,7 +1222,7 @@ static int psb_setup_task_devlocked(struct drm_device *dev,
 	*task_p = task;
 	return 0;
       out_err:
-	drm_free(task, sizeof(*task), DRM_MEM_DRIVER);
+	psb_drm_free(task, sizeof(*task), DRM_MEM_DRIVER);
 	*task_p = NULL;
 	return ret;
 }
@@ -1278,7 +1278,7 @@ int psb_cmdbuf_ta(struct drm_file *priv,
 	spin_unlock_irq(&scheduler->lock);
 
 	psb_fence_or_sync(priv, PSB_ENGINE_TA, arg, fence_arg, &fence);
-	drm_regs_fence(&dev_priv->use_manager, fence);
+	psb_drm_regs_fence(&dev_priv->use_manager, fence);
 	if (fence) {
 		spin_lock_irq(&scheduler->lock);
 		psb_report_fence(scheduler, PSB_ENGINE_TA, task->sequence, 0, 1);
@@ -1292,14 +1292,14 @@ int psb_cmdbuf_ta(struct drm_file *priv,
 
 	if (fence) {
 #ifdef PSB_WAIT_FOR_TA_COMPLETION
-		drm_fence_object_wait(fence, 1, 1, DRM_FENCE_TYPE_EXE |
+		psb_drm_fence_object_wait(fence, 1, 1, DRM_FENCE_TYPE_EXE |
 				      _PSB_FENCE_TYPE_TA_DONE);
 #ifdef PSB_BE_PARANOID
-		drm_fence_object_wait(fence, 1, 1, DRM_FENCE_TYPE_EXE |
+		psb_drm_fence_object_wait(fence, 1, 1, DRM_FENCE_TYPE_EXE |
 				      _PSB_FENCE_TYPE_SCENE_DONE);
 #endif
 #endif
-		drm_fence_usage_deref_unlocked(&fence);
+		psb_drm_fence_usage_deref_unlocked(&fence);
 	}
 	mutex_unlock(&dev_priv->reset_mutex);
 
@@ -1351,7 +1351,7 @@ int psb_cmdbuf_raster(struct drm_file *priv,
 	spin_unlock_irq(&scheduler->lock);
 
 	psb_fence_or_sync(priv, PSB_ENGINE_TA, arg, fence_arg, &fence);
-	drm_regs_fence(&dev_priv->use_manager, fence);
+	psb_drm_regs_fence(&dev_priv->use_manager, fence);
 	if (fence) {
 		spin_lock_irq(&scheduler->lock);
 		psb_report_fence(scheduler, PSB_ENGINE_TA, sequence_temp, 0, 1);
@@ -1364,9 +1364,9 @@ int psb_cmdbuf_raster(struct drm_file *priv,
 
 	if (fence) {
 #ifdef PSB_WAIT_FOR_RASTER_COMPLETION
-		drm_fence_object_wait(fence, 1, 1, fence->type);
+		psb_drm_fence_object_wait(fence, 1, 1, fence->type);
 #endif
-		drm_fence_usage_deref_unlocked(&fence);
+		psb_drm_fence_usage_deref_unlocked(&fence);
 	}
 
 	mutex_unlock(&dev_priv->reset_mutex);

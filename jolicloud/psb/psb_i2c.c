@@ -38,6 +38,8 @@
 
 #define I2C_HW_B_INTELFB 0x010021; /* intel framebuffer driver */
 
+#define I2C_HW_B_INTELFB 0x010021; /* intel framebuffer driver */
+
 /*
  * Intel GPIO access functions
  */

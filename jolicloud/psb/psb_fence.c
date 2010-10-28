@@ -56,7 +56,7 @@ static void psb_poll_ta(struct drm_device *dev, uint32_t waiting_types)
 		if (flags == 0)
 			sequence = seq->sequence;
 		else if (sequence != seq->sequence) {
-			drm_fence_handler(dev, PSB_ENGINE_TA,
+			psb_drm_fence_handler(dev, PSB_ENGINE_TA,
 					  sequence, flags, 0);
 			sequence = seq->sequence;
 			flags = 0;
@@ -81,7 +81,7 @@ static void psb_poll_ta(struct drm_device *dev, uint32_t waiting_types)
 	}
 
 	if (flags) {
-		drm_fence_handler(dev, PSB_ENGINE_TA, sequence, flags, 0);
+		psb_drm_fence_handler(dev, PSB_ENGINE_TA, sequence, flags, 0);
 	}
 }
 
@@ -103,7 +103,7 @@ static void psb_poll_other(struct drm_device *dev, uint32_t fence_class,
 		else
 			sequence = dev_priv->comm[fence_class << 4];
 
-		drm_fence_handler(dev, fence_class, sequence,
+		psb_drm_fence_handler(dev, fence_class, sequence,
 				  DRM_FENCE_TYPE_EXE, 0);
 
 		switch (fence_class) {
@@ -161,7 +161,7 @@ void psb_fence_error(struct drm_device *dev,
 
 	BUG_ON(fence_class >= PSB_NUM_ENGINES);
 	write_lock_irqsave(&fm->lock, irq_flags);
-	drm_fence_handler(dev, fence_class, sequence, type, error);
+	psb_drm_fence_handler(dev, fence_class, sequence, type, error);
 	write_unlock_irqrestore(&fm->lock, irq_flags);
 }
 
@@ -252,14 +252,14 @@ static int psb_fence_wait(struct drm_fence_object *fence,
 	unsigned long timeout = DRM_HZ *
 	    ((fence->fence_class == PSB_ENGINE_TA) ? 30 : 3);
 
-	drm_fence_object_flush(fence, mask);
+	psb_drm_fence_object_flush(fence, mask);
 	if (interruptible)
 		ret = wait_event_interruptible_timeout
-		    (fc->fence_queue, drm_fence_object_signaled(fence, mask),
+		    (fc->fence_queue, psb_drm_fence_object_signaled(fence, mask),
 		     timeout);
 	else
 		ret = wait_event_timeout
-		    (fc->fence_queue, drm_fence_object_signaled(fence, mask),
+		    (fc->fence_queue, psb_drm_fence_object_signaled(fence, mask),
 		     timeout);
 
 	if (unlikely(ret == -ERESTARTSYS))

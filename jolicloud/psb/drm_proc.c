@@ -469,7 +469,7 @@ static int drm__objects_info(char *buf, char **start, off_t offset, int request,
 		DRM_PROC_PRINT("Buffer objects are not supported by this driver.\n");
 	}
 
-	drm_query_memctl(&used_mem, &used_emer, &low_mem, &high_mem, &emer_mem);
+	psb_drm_query_memctl(&used_mem, &used_emer, &low_mem, &high_mem, &emer_mem);
 
 	if (used_mem > 16*PAGE_SIZE) {
 		DRM_PROC_PRINT("Used object memory is %lu pages.\n",

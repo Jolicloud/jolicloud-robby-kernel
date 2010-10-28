@@ -143,7 +143,7 @@ int drm_mem_info (char *buf, char **start, off_t offset,
 	return ret;
 }
 
-void *drm_alloc (size_t size, int area) {
+void *psb_drm_alloc (size_t size, int area) {
 	void *pt;
 
 	if (!size) {
@@ -164,29 +164,29 @@ void *drm_alloc (size_t size, int area) {
 	return pt;
 }
 
-void *drm_calloc (size_t nmemb, size_t size, int area) {
+void *psb_drm_calloc (size_t nmemb, size_t size, int area) {
 	void *addr;
 
-	addr = drm_alloc (nmemb * size, area);
+	addr = psb_drm_alloc (nmemb * size, area);
 	if (addr != NULL)
 		memset((void *)addr, 0, size * nmemb);
 
 	return addr;
 }
 
-void *drm_realloc (void *oldpt, size_t oldsize, size_t size, int area) {
+void *psb_drm_realloc (void *oldpt, size_t oldsize, size_t size, int area) {
 	void *pt;
 
-	if (!(pt = drm_alloc (size, area)))
+	if (!(pt = psb_drm_alloc (size, area)))
 		return NULL;
 	if (oldpt && oldsize) {
 		memcpy(pt, oldpt, oldsize);
-		drm_free (oldpt, oldsize, area);
+		psb_drm_free (oldpt, oldsize, area);
 	}
 	return pt;
 }
 
-void drm_free (void *pt, size_t size, int area) {
+void psb_drm_free (void *pt, size_t size, int area) {
 	int alloc_count;
 	int free_count;
 
@@ -336,7 +336,7 @@ int drm_bind_agp (DRM_AGP_MEM * handle, unsigned int start) {
 		return retcode;
 	}
 
-	if (!(retcode = drm_agp_bind_memory (handle, start))) {
+	if (!(retcode = psb_drm_agp_bind_memory (handle, start))) {
 		spin_lock(&drm_mem_lock);
 		++drm_mem_stats[DRM_MEM_BOUNDAGP].succeed_count;
 		drm_mem_stats[DRM_MEM_BOUNDAGP].bytes_allocated

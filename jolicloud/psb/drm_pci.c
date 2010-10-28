@@ -47,7 +47,7 @@
 /**
  * \brief Allocate a PCI consistent memory block, for DMA.
  */
-drm_dma_handle_t *drm_pci_alloc(struct drm_device * dev, size_t size, size_t align,
+drm_dma_handle_t *psb_drm_pci_alloc(struct drm_device * dev, size_t size, size_t align,
 				dma_addr_t maxaddr)
 {
 	drm_dma_handle_t *dmah;
@@ -116,7 +116,7 @@ drm_dma_handle_t *drm_pci_alloc(struct drm_device * dev, size_t size, size_t ali
 
 	return dmah;
 }
-EXPORT_SYMBOL(drm_pci_alloc);
+EXPORT_SYMBOL(psb_drm_pci_alloc);
 
 /**
  * \brief Free a PCI consistent memory block without freeing its descriptor.
@@ -167,11 +167,11 @@ void __drm_pci_free(struct drm_device *dev, drm_dma_handle_t *dmah)
 /**
  * \brief Free a PCI consistent memory block
  */
-void drm_pci_free(struct drm_device *dev, drm_dma_handle_t *dmah)
+void psb_drm_pci_free(struct drm_device *dev, drm_dma_handle_t *dmah)
 {
 	__drm_pci_free(dev, dmah);
 	kfree(dmah);
 }
-EXPORT_SYMBOL(drm_pci_free);
+EXPORT_SYMBOL(psb_drm_pci_free);
 
 /*@}*/

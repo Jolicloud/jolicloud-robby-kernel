@@ -41,7 +41,7 @@ static inline uint32_t psb_gtt_mask_pte(uint32_t pfn, int type)
 
 struct psb_gtt *psb_gtt_alloc(struct drm_device *dev)
 {
-	struct psb_gtt *tmp = drm_calloc(1, sizeof(*tmp), DRM_MEM_DRIVER);
+	struct psb_gtt *tmp = psb_drm_calloc(1, sizeof(*tmp), DRM_MEM_DRIVER);
 
 	if (!tmp)
 		return NULL;
@@ -70,7 +70,7 @@ void psb_gtt_takedown(struct psb_gtt *pg, int free)
 		(void)PSB_RVDC32(PSB_PGETBL_CTL);
 	}
 	if (free)
-		drm_free(pg, sizeof(*pg), DRM_MEM_DRIVER);
+		psb_drm_free(pg, sizeof(*pg), DRM_MEM_DRIVER);
 }
 
 int psb_gtt_init(struct psb_gtt *pg, int resume)

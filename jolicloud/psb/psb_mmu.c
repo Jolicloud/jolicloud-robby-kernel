@@ -189,7 +189,7 @@ void psb_mmu_set_pd_context(struct psb_mmu_pd *pd, int hw_context)
 	uint32_t offset = (hw_context == 0) ? PSB_CR_BIF_DIR_LIST_BASE0 :
 	    PSB_CR_BIF_DIR_LIST_BASE1 + hw_context * 4;
 
-	drm_ttm_cache_flush();
+	psb_drm_ttm_cache_flush();
 	down_write(&pd->driver->sem);
 	psb_iowrite32(pd->driver, (page_to_pfn(pd->p) << PAGE_SHIFT), offset);
 	wmb();
@@ -543,7 +543,7 @@ void psb_mmu_mirror_gtt(struct psb_mmu_pd *pd,
 		gtt_start += PAGE_SIZE;
 	}
 
-	drm_ttm_cache_flush();
+	psb_drm_ttm_cache_flush();
 	kunmap_atomic(v, KM_USER0);
 	spin_unlock(&driver->lock);
 
@@ -657,7 +657,7 @@ static void psb_mmu_flush_ptes(struct psb_mmu_pd *pd, unsigned long address,
 	unsigned long clflush_mask = pd->driver->clflush_mask;
 
 	if (!pd->driver->has_clflush) {
-		drm_ttm_cache_flush();
+		psb_drm_ttm_cache_flush();
 		return;
 	}
 
@@ -695,7 +695,7 @@ static void psb_mmu_flush_ptes(struct psb_mmu_pd *pd, unsigned long address,
 			       uint32_t num_pages, uint32_t desired_tile_stride,
 			       uint32_t hw_tile_stride)
 {
-	drm_ttm_cache_flush();
+	psb_drm_ttm_cache_flush();
 }
 #endif
 

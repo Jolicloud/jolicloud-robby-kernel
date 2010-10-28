@@ -79,7 +79,7 @@ int drm_rmdraw(struct drm_device *dev, void *data, struct drm_file *file_priv)
 
 	spin_lock_irqsave(&dev->drw_lock, irqflags);
 
-	drm_free(drm_get_drawable_info(dev, draw->handle),
+	psb_drm_free(psb_drm_get_drawable_info(dev, draw->handle),
 		 sizeof(struct drm_drawable_info), DRM_MEM_BUFS);
 
 	idr_remove(&dev->drw_idr, draw->handle);
@@ -99,12 +99,12 @@ int drm_update_drawable_info(struct drm_device *dev, void *data, struct drm_file
 
 	info = idr_find(&dev->drw_idr, update->handle);
 	if (!info) {
-		info = drm_calloc(1, sizeof(*info), DRM_MEM_BUFS);
+		info = psb_drm_calloc(1, sizeof(*info), DRM_MEM_BUFS);
 		if (!info)
 			return -ENOMEM;
 		if (IS_ERR(idr_replace(&dev->drw_idr, info, update->handle))) {
 			DRM_ERROR("No such drawable %d\n", update->handle);
-			drm_free(info, sizeof(*info), DRM_MEM_BUFS);
+			psb_drm_free(info, sizeof(*info), DRM_MEM_BUFS);
 			return -EINVAL;
 		}
 	}
@@ -112,7 +112,7 @@ int drm_update_drawable_info(struct drm_device *dev, void *data, struct drm_file
 	switch (update->type) {
 	case DRM_DRAWABLE_CLIPRECTS:
 		if (update->num != info->num_rects) {
-			rects = drm_alloc(update->num * sizeof(struct drm_clip_rect),
+			rects = psb_drm_alloc(update->num * sizeof(struct drm_clip_rect),
 					 DRM_MEM_BUFS);
 		} else
 			rects = info->rects;
@@ -136,7 +136,7 @@ int drm_update_drawable_info(struct drm_device *dev, void *data, struct drm_file
 		spin_lock_irqsave(&dev->drw_lock, irqflags);
 
 		if (rects != info->rects) {
-			drm_free(info->rects, info->num_rects *
+			psb_drm_free(info->rects, info->num_rects *
 				 sizeof(struct drm_clip_rect), DRM_MEM_BUFS);
 		}
 
@@ -157,7 +157,7 @@ int drm_update_drawable_info(struct drm_device *dev, void *data, struct drm_file
 
 error:
 	if (rects != info->rects)
-		drm_free(rects, update->num * sizeof(struct drm_clip_rect),
+		psb_drm_free(rects, update->num * sizeof(struct drm_clip_rect),
 			 DRM_MEM_BUFS);
 
 	return err;
@@ -166,20 +166,20 @@ error:
 /**
  * Caller must hold the drawable spinlock!
  */
-struct drm_drawable_info *drm_get_drawable_info(struct drm_device *dev, drm_drawable_t id)
+struct drm_drawable_info *psb_drm_get_drawable_info(struct drm_device *dev, drm_drawable_t id)
 {
 	return idr_find(&dev->drw_idr, id);
 }
-EXPORT_SYMBOL(drm_get_drawable_info);
+EXPORT_SYMBOL(psb_drm_get_drawable_info);
 
 static int drm_drawable_free(int idr, void *p, void *data)
 {
 	struct drm_drawable_info *info = p;
 
 	if (info) {
-		drm_free(info->rects, info->num_rects *
+		psb_drm_free(info->rects, info->num_rects *
 			 sizeof(struct drm_clip_rect), DRM_MEM_BUFS);
-		drm_free(info, sizeof(*info), DRM_MEM_BUFS);
+		psb_drm_free(info, sizeof(*info), DRM_MEM_BUFS);
 	}
 
 	return 0;

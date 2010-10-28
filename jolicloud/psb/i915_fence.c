@@ -94,7 +94,7 @@ static void i915_fence_poll(struct drm_device *dev, uint32_t fence_class,
 			flush_flags = dev_priv->flush_flags;
 			flush_sequence = dev_priv->flush_sequence;
 			dev_priv->flush_pending = 0;
-			drm_fence_handler(dev, 0, flush_sequence, flush_flags, 0);
+			psb_drm_fence_handler(dev, 0, flush_sequence, flush_flags, 0);
 		}
 	}		
 
@@ -107,7 +107,7 @@ static void i915_fence_poll(struct drm_device *dev, uint32_t fence_class,
 
 		if (sequence != dev_priv->reported_sequence ||
 		    !dev_priv->reported_sequence_valid) {
-			drm_fence_handler(dev, 0, sequence, 
+			psb_drm_fence_handler(dev, 0, sequence, 
 					  DRM_FENCE_TYPE_EXE, 0);
 			dev_priv->reported_sequence = sequence;
 			dev_priv->reported_sequence_valid = 1;
@@ -139,7 +139,7 @@ static void i915_fence_poll(struct drm_device *dev, uint32_t fence_class,
 			flush_flags = dev_priv->flush_flags;
 			flush_sequence = dev_priv->flush_sequence;
 			dev_priv->flush_pending = 0;
-			drm_fence_handler(dev, 0, flush_sequence, flush_flags, 0);
+			psb_drm_fence_handler(dev, 0, flush_sequence, flush_flags, 0);
 		}
 	}
 }
@@ -186,14 +186,14 @@ static int i915_fence_wait(struct drm_fence_object *fence,
 	int ret;
 	unsigned long  _end = jiffies + 3 * DRM_HZ;
 
-	drm_fence_object_flush(fence, mask);
+	psb_drm_fence_object_flush(fence, mask);
 	if (likely(interruptible))
 		ret = wait_event_interruptible_timeout
-			(fc->fence_queue, drm_fence_object_signaled(fence, DRM_FENCE_TYPE_EXE), 
+			(fc->fence_queue, psb_drm_fence_object_signaled(fence, DRM_FENCE_TYPE_EXE), 
 			 3 * DRM_HZ);
 	else 
 		ret = wait_event_timeout
-			(fc->fence_queue, drm_fence_object_signaled(fence, DRM_FENCE_TYPE_EXE), 
+			(fc->fence_queue, psb_drm_fence_object_signaled(fence, DRM_FENCE_TYPE_EXE), 
 			 3 * DRM_HZ);
 
 	if (unlikely(ret == -ERESTARTSYS))
@@ -203,7 +203,7 @@ static int i915_fence_wait(struct drm_fence_object *fence,
 		return -EBUSY;
 
 	if (likely(mask == DRM_FENCE_TYPE_EXE || 
-		   drm_fence_object_signaled(fence, mask))) 
+		   psb_drm_fence_object_signaled(fence, mask))) 
 		return 0;
 
 	/*
@@ -218,7 +218,7 @@ static int i915_fence_wait(struct drm_fence_object *fence,
 		msleep(100);
 		dev_priv->flush_pending = 0;
 		write_lock_irqsave(&fm->lock, irq_flags);
-		drm_fence_handler(dev, fence->fence_class, 
+		psb_drm_fence_handler(dev, fence->fence_class, 
 				  fence->sequence, fence->type, 0);
 		write_unlock_irqrestore(&fm->lock, irq_flags);
 	}
@@ -227,7 +227,7 @@ static int i915_fence_wait(struct drm_fence_object *fence,
 	 * Poll for sync flush completion.
 	 */
 
-	return drm_fence_wait_polling(fence, lazy, interruptible, mask, _end);
+	return psb_drm_fence_wait_polling(fence, lazy, interruptible, mask, _end);
 }
 
 static uint32_t i915_fence_needed_flush(struct drm_fence_object *fence)

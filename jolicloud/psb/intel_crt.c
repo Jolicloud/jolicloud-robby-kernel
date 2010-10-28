@@ -220,11 +220,11 @@ void intel_crt_init(struct drm_device *dev)
 	struct drm_output *output;
 	struct intel_output *intel_output;
 
-	output = drm_output_create(dev, &intel_crt_output_funcs, "VGA");
+	output = psb_drm_output_create(dev, &intel_crt_output_funcs, "VGA");
 
 	intel_output = kmalloc(sizeof(struct intel_output), GFP_KERNEL);
 	if (!intel_output) {
-		drm_output_destroy(output);
+		psb_drm_output_destroy(output);
 		return;
 	}
 	/* Set up the DDC bus. */

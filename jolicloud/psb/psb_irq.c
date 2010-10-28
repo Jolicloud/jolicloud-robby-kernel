@@ -97,7 +97,7 @@ static void psb_vdc_interrupt(struct drm_device *dev, uint32_t vdc_stat)
 
 	if (wake) {
 		DRM_WAKEUP(&dev->vbl_queue);
-		drm_vbl_send_signals(dev);
+		psb_drm_vbl_send_signals(dev);
 	}
 }
 

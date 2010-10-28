@@ -173,7 +173,7 @@ struct edid {
 	u8 checksum;
 } __attribute__((packed));
 
-extern unsigned char *drm_ddc_read(struct i2c_adapter *adapter);
-extern int drm_get_acpi_edid(char *method, char *edid, ssize_t length);
+extern unsigned char *psb_drm_ddc_read(struct i2c_adapter *adapter);
+extern int psb_drm_get_acpi_edid(char *method, char *edid, ssize_t length);
 
 #endif /* __DRM_EDID_H__ */

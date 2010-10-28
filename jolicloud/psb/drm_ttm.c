@@ -35,7 +35,7 @@ static void drm_ttm_ipi_handler(void *null)
 	flush_agp_cache();
 }
 
-void drm_ttm_cache_flush(void)
+void psb_drm_ttm_cache_flush(void)
 {
   #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27))
   if (on_each_cpu(drm_ttm_ipi_handler, NULL, 1) != 0) 
@@ -44,7 +44,7 @@ void drm_ttm_cache_flush(void)
   #endif
 		DRM_ERROR("Timed out waiting for drm cache flush.\n");
 }
-EXPORT_SYMBOL(drm_ttm_cache_flush);
+EXPORT_SYMBOL(psb_drm_ttm_cache_flush);
 
 /*
  * Use kmalloc if possible. Otherwise fall back to vmalloc.
@@ -56,7 +56,7 @@ static void ttm_alloc_pages(struct drm_ttm *ttm)
 	ttm->pages = NULL;
 
 	if (size <= PAGE_SIZE)
-		ttm->pages = drm_calloc(1, size, DRM_MEM_TTM);
+		ttm->pages = psb_drm_calloc(1, size, DRM_MEM_TTM);
 
 	if (!ttm->pages) {
 		ttm->pages = vmalloc_user(size);
@@ -73,7 +73,7 @@ static void ttm_free_pages(struct drm_ttm *ttm)
 		vfree(ttm->pages);
 		ttm->page_flags &= ~DRM_TTM_PAGE_VMALLOC;
 	} else {
-		drm_free(ttm->pages, size, DRM_MEM_TTM);
+		psb_drm_free(ttm->pages, size, DRM_MEM_TTM);
 	}
 	ttm->pages = NULL;
 }
@@ -106,7 +106,7 @@ static int drm_set_caching(struct drm_ttm *ttm, int noncached)
 		return 0;
 
 	if (noncached)
-		drm_ttm_cache_flush();
+		psb_drm_ttm_cache_flush();
 
 	for (i = 0; i < ttm->num_pages; ++i) {
 		cur_page = ttm->pages + i;
@@ -215,7 +215,7 @@ int drm_destroy_ttm(struct drm_ttm *ttm)
 	return 0;
 }
 
-struct page *drm_ttm_get_page(struct drm_ttm *ttm, int index)
+struct page *psb_drm_ttm_get_page(struct drm_ttm *ttm, int index)
 {
 	struct page *p;
 	struct drm_buffer_manager *bm = &ttm->dev->bm;
@@ -230,7 +230,7 @@ struct page *drm_ttm_get_page(struct drm_ttm *ttm, int index)
 	}
 	return p;
 }
-EXPORT_SYMBOL(drm_ttm_get_page);
+EXPORT_SYMBOL(psb_drm_ttm_get_page);
 
 int drm_ttm_set_user(struct drm_ttm *ttm,
 		     struct task_struct *tsk,
@@ -279,7 +279,7 @@ int drm_ttm_populate(struct drm_ttm *ttm)
 
 	be = ttm->be;
 	for (i = 0; i < ttm->num_pages; ++i) {
-		page = drm_ttm_get_page(ttm, i);
+		page = psb_drm_ttm_get_page(ttm, i);
 		if (!page)
 			return -ENOMEM;
 	}
@@ -324,7 +324,7 @@ struct drm_ttm *drm_ttm_init(struct drm_device *dev, unsigned long size)
 	if (!bo_driver)
 		return NULL;
 
-	ttm = drm_calloc(1, sizeof(*ttm), DRM_MEM_TTM);
+	ttm = psb_drm_calloc(1, sizeof(*ttm), DRM_MEM_TTM);
 	if (!ttm)
 		return NULL;
 
@@ -392,7 +392,7 @@ void drm_ttm_unbind(struct drm_ttm *ttm)
 	drm_ttm_fixup_caching(ttm);
 }
 
-int drm_bind_ttm(struct drm_ttm *ttm, struct drm_bo_mem_reg *bo_mem)
+int psb_drm_bind_ttm(struct drm_ttm *ttm, struct drm_bo_mem_reg *bo_mem)
 {
 	struct drm_bo_driver *bo_driver = ttm->dev->driver->bo_driver;
 	int ret = 0;
@@ -427,4 +427,4 @@ int drm_bind_ttm(struct drm_ttm *ttm, struct drm_bo_mem_reg *bo_mem)
 		ttm->page_flags |= DRM_TTM_PAGE_USER_DIRTY;
 	return 0;
 }
-EXPORT_SYMBOL(drm_bind_ttm);
+EXPORT_SYMBOL(psb_drm_bind_ttm);

@@ -434,7 +434,7 @@ static void intel_sdvo_write_cmd(struct drm_output *output, u8 cmd,
 	struct intel_sdvo_priv *sdvo_priv = intel_output->dev_priv;
 	int i;
 
-        if (drm_debug) {
+        if (psb_drm_debug) {
                 DRM_DEBUG("%s: W: %02X ", SDVO_NAME(sdvo_priv), cmd);
                 for (i = 0; i < args_len; i++)
                         printk("%02X ", ((u8 *)args)[i]);
@@ -487,7 +487,7 @@ static u8 intel_sdvo_read_response(struct drm_output *output, void *response,
 		/* read the return status */
 		intel_sdvo_read_byte(output, SDVO_I2C_CMD_STATUS, &status);
 
-	        if (drm_debug) {
+	        if (psb_drm_debug) {
 			DRM_DEBUG("%s: R: ", SDVO_NAME(sdvo_priv));
        			for (i = 0; i < response_len; i++)
                         	printk("%02X ", ((u8 *)response)[i]);
@@ -2923,7 +2923,7 @@ void i830_sdvo_tv_settiming(struct drm_crtc *crtc, struct drm_display_mode * mod
 
     print_Pll("chosen", &clock);
 	DRM_DEBUG("Mode for pipe %c:\n", pipe == 0 ? 'A' : 'B');
-	drm_mode_debug_printmodeline(dev, mode);	
+	psb_drm_mode_debug_printmodeline(dev, mode);	
 	DRM_DEBUG("Modeline %d:\"%s\" %d %d %d %d %d %d %d %d\n",
 		  mode->mode_id, mode->name, mode->crtc_htotal, mode->crtc_hdisplay,
 		  mode->crtc_hblank_end, mode->crtc_hblank_start,
@@ -3025,7 +3025,7 @@ static void intel_sdvo_mode_set(struct drm_output *output,
 	if (!i830_tv_mode_check_support(output, mode)) {
 	    DRM_DEBUG("mode setting failed, use the forced mode\n");
 	    mode = &tv_modes[0].mode_entry;
-		drm_mode_set_crtcinfo(mode, 0);
+		psb_drm_mode_set_crtcinfo(mode, 0);
 	}
     }	
     save_mode = mode;
@@ -3595,8 +3595,8 @@ static enum drm_output_status intel_sdvo_detect(struct drm_output *output)
 
 	if(output->name && (strcmp(output->name,deviceName) != 0)){
 	    DRM_DEBUG("change the output name to %s\n", deviceName);
-	    if (!drm_output_rename(output, deviceName)) {
-		drm_output_destroy(output);
+	    if (!psb_drm_output_rename(output, deviceName)) {
+		psb_drm_output_destroy(output);
 		return output_status_disconnected;
 	    }
 
@@ -3628,9 +3628,9 @@ static int i830_sdvo_get_tvmode_from_table(struct drm_output *output)
 		((sdvo_priv->TVMode == TVMODE_SDTV) && /*sdtv mode list */
 		(tv_modes[i].dwSupportedSDTVvss & TVSTANDARD_SDTV_ALL))) {
 			struct drm_display_mode *newmode;
-			newmode = drm_mode_duplicate(dev, &tv_modes[i].mode_entry);		
-			drm_mode_set_crtcinfo(newmode,0);
-			drm_mode_probed_add(output, newmode);
+			newmode = psb_drm_mode_duplicate(dev, &tv_modes[i].mode_entry);		
+			psb_drm_mode_set_crtcinfo(newmode,0);
+			psb_drm_mode_probed_add(output, newmode);
 			modes++;
 		}
 
@@ -3763,13 +3763,13 @@ void intel_sdvo_init(struct drm_device *dev, int output_device)
 		}
 	}
 
-	output = drm_output_create(dev, &intel_sdvo_output_funcs, NULL);
+	output = psb_drm_output_create(dev, &intel_sdvo_output_funcs, NULL);
 	if (!output)
 		return;
 
 	intel_output = kcalloc(sizeof(struct intel_output)+sizeof(struct intel_sdvo_priv), 1, GFP_KERNEL);
 	if (!intel_output) {
-		drm_output_destroy(output);
+		psb_drm_output_destroy(output);
 		return;
 	}
 
@@ -3786,7 +3786,7 @@ void intel_sdvo_init(struct drm_device *dev, int output_device)
 		i2cbus = intel_i2c_create(dev, GPIOE, "SDVOCTRL_E for SDVOC");
 
 	if (i2cbus == NULL) {
-		drm_output_destroy(output);
+		psb_drm_output_destroy(output);
 		return;
 	}
 
@@ -3811,7 +3811,7 @@ void intel_sdvo_init(struct drm_device *dev, int output_device)
 		if (!intel_sdvo_read_byte(output, i, &ch[i])) {
 			DRM_DEBUG("No SDVO device found on SDVO%c\n",
 				  output_device == SDVOB ? 'B' : 'C');
-			drm_output_destroy(output);
+			psb_drm_output_destroy(output);
 			return;
 		}
 	} 
@@ -3869,8 +3869,8 @@ void intel_sdvo_init(struct drm_device *dev, int output_device)
 		sdvo_priv->ActiveDevice = SDVO_DEVICE_NONE;
 		strcpy(name, name_prefix);
 		strcat(name, name_suffix);
-		if (!drm_output_rename(output, name)) {
-			drm_output_destroy(output);
+		if (!psb_drm_output_rename(output, name)) {
+			psb_drm_output_destroy(output);
 			return;
         	}
 		return;
@@ -3992,8 +3992,8 @@ void intel_sdvo_init(struct drm_device *dev, int output_device)
         
         strcpy(name, name_prefix);
         strcat(name, name_suffix);
-        if (!drm_output_rename(output, name)) {
-            drm_output_destroy(output);
+        if (!psb_drm_output_rename(output, name)) {
+            psb_drm_output_destroy(output);
             return;
         }
     } else {
@@ -4005,8 +4005,8 @@ void intel_sdvo_init(struct drm_device *dev, int output_device)
         sdvo_priv->ActiveDevice = SDVO_DEVICE_NONE;
         strcpy(name, name_prefix);
         strcat(name, name_suffix);
-        if (!drm_output_rename(output, name)) {
-            drm_output_destroy(output);
+        if (!psb_drm_output_rename(output, name)) {
+            psb_drm_output_destroy(output);
             return;
         }
 

@@ -35,7 +35,7 @@
 
 struct drm_ttm_backend *i915_create_ttm_backend_entry(struct drm_device *dev)
 {
-	return drm_agp_init_ttm(dev);
+	return psb_drm_agp_init_ttm(dev);
 }
 
 int i915_fence_types(struct drm_buffer_object *bo,
@@ -179,7 +179,7 @@ static int i915_move_blit(struct drm_buffer_object * bo,
 
 	i915_emit_mi_flush(bo->dev, MI_READ_FLUSH | MI_EXE_FLUSH);
 
-	return drm_bo_move_accel_cleanup(bo, evict, no_wait, 0,
+	return psb_drm_bo_move_accel_cleanup(bo, evict, no_wait, 0,
 					 DRM_FENCE_TYPE_EXE |
 					 DRM_I915_FENCE_TYPE_RW,
 					 DRM_I915_FENCE_FLAG_FLUSHED, new_mem);
@@ -202,11 +202,11 @@ static int i915_move_flip(struct drm_buffer_object * bo,
 	tmp_mem.mask = DRM_BO_FLAG_MEM_TT |
 	    DRM_BO_FLAG_CACHED | DRM_BO_FLAG_FORCE_CACHING;
 
-	ret = drm_bo_mem_space(bo, &tmp_mem, no_wait);
+	ret = psb_drm_bo_mem_space(bo, &tmp_mem, no_wait);
 	if (ret)
 		return ret;
 
-	ret = drm_bind_ttm(bo->ttm, &tmp_mem);
+	ret = psb_drm_bind_ttm(bo->ttm, &tmp_mem);
 	if (ret)
 		goto out_cleanup;
 
@@ -214,12 +214,12 @@ static int i915_move_flip(struct drm_buffer_object * bo,
 	if (ret)
 		goto out_cleanup;
 
-	ret = drm_bo_move_ttm(bo, evict, no_wait, new_mem);
+	ret = psb_drm_bo_move_ttm(bo, evict, no_wait, new_mem);
 out_cleanup:
 	if (tmp_mem.mm_node) {
 		mutex_lock(&dev->struct_mutex);
 		if (tmp_mem.mm_node != bo->pinned_node)
-			drm_mm_put_block(tmp_mem.mm_node);
+			psb_drm_mm_put_block(tmp_mem.mm_node);
 		tmp_mem.mm_node = NULL;
 		mutex_unlock(&dev->struct_mutex);
 	}
@@ -241,13 +241,13 @@ int i915_move(struct drm_buffer_object *bo,
 	struct drm_bo_mem_reg *old_mem = &bo->mem;
 
 	if (old_mem->mem_type == DRM_BO_MEM_LOCAL) {
-		return drm_bo_move_memcpy(bo, evict, no_wait, new_mem);
+		return psb_drm_bo_move_memcpy(bo, evict, no_wait, new_mem);
 	} else if (new_mem->mem_type == DRM_BO_MEM_LOCAL) {
 		if (0) /*i915_move_flip(bo, evict, no_wait, new_mem)*/
-			return drm_bo_move_memcpy(bo, evict, no_wait, new_mem);
+			return psb_drm_bo_move_memcpy(bo, evict, no_wait, new_mem);
 	} else {
 		if (0) /*i915_move_blit(bo, evict, no_wait, new_mem)*/
-			return drm_bo_move_memcpy(bo, evict, no_wait, new_mem);
+			return psb_drm_bo_move_memcpy(bo, evict, no_wait, new_mem);
 	}
 	return 0;
 }
@@ -281,6 +281,6 @@ void i915_flush_ttm(struct drm_ttm *ttm)
 
 	DRM_MEMORYBARRIER();
 	for (i = ttm->num_pages-1; i >= 0; i--)
-		drm_cache_flush_page(drm_ttm_get_page(ttm, i));
+		drm_cache_flush_page(psb_drm_ttm_get_page(ttm, i));
 	DRM_MEMORYBARRIER();
 }

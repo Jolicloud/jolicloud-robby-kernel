@@ -545,20 +545,20 @@ static struct drm_driver driver = {
 	.irq_postinstall = i915_driver_irq_postinstall,
 	.irq_uninstall = i915_driver_irq_uninstall,
 	.irq_handler = i915_driver_irq_handler,
-	.reclaim_buffers = drm_core_reclaim_buffers,
-	.get_map_ofs = drm_core_get_map_ofs,
-	.get_reg_ofs = drm_core_get_reg_ofs,
-	.fb_probe = intelfb_probe,
-	.fb_remove = intelfb_remove,
+	.reclaim_buffers = psb_drm_core_reclaim_buffers,
+	.get_map_ofs = psb_drm_core_get_map_ofs,
+	.get_reg_ofs = psb_drm_core_get_reg_ofs,
+	.fb_probe = psb_intelfb_probe,
+	.fb_remove = psb_intelfb_remove,
 	.ioctls = i915_ioctls,
 	.fops = {
 		.owner = THIS_MODULE,
-		.open = drm_open,
-		.release = drm_release,
-		.ioctl = drm_ioctl,
-		.mmap = drm_mmap,
-		.poll = drm_poll,
-		.fasync = drm_fasync,
+		.open = psb_drm_open,
+		.release = psb_drm_release,
+		.ioctl = psb_drm_ioctl,
+		.mmap = psb_drm_mmap,
+		.poll = psb_drm_poll,
+		.fasync = psb_drm_fasync,
 #if defined(CONFIG_COMPAT) && LINUX_VERSION_CODE > KERNEL_VERSION(2,6,9)
 		.compat_ioctl = i915_compat_ioctl,
 #endif
@@ -567,7 +567,7 @@ static struct drm_driver driver = {
 		.name = DRIVER_NAME,
 		.id_table = pciidlist,
 		.probe = probe,
-		.remove = __devexit_p(drm_cleanup_pci),
+		.remove = __devexit_p(psb_drm_cleanup_pci),
 		},
 #ifdef I915_HAVE_FENCE
 	.fence_driver = &i915_fence_driver,
@@ -585,18 +585,18 @@ static struct drm_driver driver = {
 
 static int probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
-	return drm_get_dev(pdev, ent, &driver);
+	return psb_drm_get_dev(pdev, ent, &driver);
 }
 
 static int __init i915_init(void)
 {
 	driver.num_ioctls = i915_max_ioctl;
-	return drm_init(&driver, pciidlist);
+	return psb_drm_init(&driver, pciidlist);
 }
 
 static void __exit i915_exit(void)
 {
-	drm_exit(&driver);
+	psb_drm_exit(&driver);
 }
 
 module_init(i915_init);

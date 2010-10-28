@@ -301,7 +301,7 @@ int psb_emit_2d_copy_blit(struct drm_device *dev,
 
 void psb_init_2d(struct drm_psb_private *dev_priv)
 {
-	dev_priv->sequence_lock = SPIN_LOCK_UNLOCKED;
+	spin_lock_init(&dev_priv->sequence_lock);
 	psb_reset(dev_priv, 1);
 	dev_priv->mmu_2d_offset = dev_priv->pg->gatt_start;
 	PSB_WSGX32(dev_priv->mmu_2d_offset, PSB_CR_BIF_TWOD_REQ_BASE);
@@ -367,7 +367,7 @@ static void psb_dereference_buffers_locked(struct psb_buflist_item *buffers,
 					   unsigned num_buffers)
 {
 	while (num_buffers--)
-		drm_bo_usage_deref_locked(&((buffers++)->bo));
+		psb_drm_bo_usage_deref_locked(&((buffers++)->bo));
 
 }
 
@@ -446,7 +446,7 @@ static int psb_validate_buffer_list(struct drm_file *file_priv,
 
 		item->ret = 0;
 		item->data = (void *)__user data;
-		ret = drm_bo_handle_validate(file_priv,
+		ret = psb_drm_bo_handle_validate(file_priv,
 					     req->bo_req.handle,
 					     fence_class,
 					     req->bo_req.flags,
@@ -536,8 +536,8 @@ psb_submit_copy_cmdbuf(struct drm_device *dev,
 		psb_2d_lock(dev_priv);
 
 	do {
-		cmd_next = drm_bo_offset_end(cmd_offset, cmd_end);
-		ret = drm_bo_kmap(cmd_buffer, cmd_offset >> PAGE_SHIFT,
+		cmd_next = psb_drm_bo_offset_end(cmd_offset, cmd_end);
+		ret = psb_drm_bo_kmap(cmd_buffer, cmd_offset >> PAGE_SHIFT,
 				  1, &cmd_kmap);
 
 		if (ret)
@@ -564,7 +564,7 @@ psb_submit_copy_cmdbuf(struct drm_device *dev,
 		default:
 			ret = -EINVAL;
 		}
-		drm_bo_kunmap(&cmd_kmap);
+		psb_drm_bo_kunmap(&cmd_kmap);
 		if (ret)
 			break;
 	} while (cmd_offset = cmd_next, cmd_offset != cmd_end);
@@ -578,7 +578,7 @@ psb_submit_copy_cmdbuf(struct drm_device *dev,
 static void psb_clear_dstbuf_cache(struct psb_dstbuf_cache *dst_cache)
 {
 	if (dst_cache->dst_page) {
-		drm_bo_kunmap(&dst_cache->dst_kmap);
+		psb_drm_bo_kunmap(&dst_cache->dst_kmap);
 		dst_cache->dst_page = NULL;
 	}
 	dst_cache->dst_buf = NULL;
@@ -605,14 +605,14 @@ static int psb_update_dstbuf_cache(struct psb_dstbuf_cache *dst_cache,
 		return -EINVAL;
 	}
 
-	if (!drm_bo_same_page(dst_cache->dst_offset, dst_offset) ||
+	if (!psb_drm_bo_same_page(dst_cache->dst_offset, dst_offset) ||
 	    NULL == dst_cache->dst_page) {
 		if (NULL != dst_cache->dst_page) {
-			drm_bo_kunmap(&dst_cache->dst_kmap);
+			psb_drm_bo_kunmap(&dst_cache->dst_kmap);
 			dst_cache->dst_page = NULL;
 		}
 
-		ret = drm_bo_kmap(dst_cache->dst_buf, dst_offset >> PAGE_SHIFT,
+		ret = psb_drm_bo_kmap(dst_cache->dst_buf, dst_offset >> PAGE_SHIFT,
 				  1, &dst_cache->dst_kmap);
 		if (ret) {
 			DRM_ERROR("Could not map destination buffer for "
@@ -840,7 +840,7 @@ static int psb_fixup_relocs(struct drm_file *file_priv,
 	memset(&reloc_kmap, 0, sizeof(reloc_kmap));
 
 	mutex_lock(&dev->struct_mutex);
-	reloc_buffer = drm_lookup_buffer_object(file_priv, reloc_handle, 1);
+	reloc_buffer = psb_drm_lookup_buffer_object(file_priv, reloc_handle, 1);
 	mutex_unlock(&dev->struct_mutex);
 	if (!reloc_buffer)
 		goto out;
@@ -872,7 +872,7 @@ static int psb_fixup_relocs(struct drm_file *file_priv,
 		goto out;
 	}
 
-	ret = drm_bo_kmap(reloc_buffer, reloc_first_page,
+	ret = psb_drm_bo_kmap(reloc_buffer, reloc_first_page,
 			  reloc_num_pages, &reloc_kmap);
 
 	if (ret) {
@@ -899,7 +899,7 @@ static int psb_fixup_relocs(struct drm_file *file_priv,
 	}
 
       out1:
-	drm_bo_kunmap(&reloc_kmap);
+	psb_drm_bo_kunmap(&reloc_kmap);
       out:
 	if (registered) {
 		spin_lock(&dev_priv->reloc_lock);
@@ -910,7 +910,7 @@ static int psb_fixup_relocs(struct drm_file *file_priv,
 
 	psb_clear_dstbuf_cache(&dst_cache);
 	if (reloc_buffer)
-		drm_bo_usage_deref_unlocked(&reloc_buffer);
+		psb_drm_bo_usage_deref_unlocked(&reloc_buffer);
 	return ret;
 }
 
@@ -955,7 +955,7 @@ static int psb_cmdbuf_2d(struct drm_file *priv,
 
 	mutex_lock(&cmd_buffer->mutex);
 	if (cmd_buffer->fence != NULL)
-		drm_fence_usage_deref_unlocked(&cmd_buffer->fence);
+		psb_drm_fence_usage_deref_unlocked(&cmd_buffer->fence);
 	mutex_unlock(&cmd_buffer->mutex);
 out_unlock:
 	mutex_unlock(&dev_priv->reset_mutex);
@@ -972,7 +972,7 @@ static int psb_dump_page(struct drm_buffer_object *bo,
 	int ret;
 	unsigned int i;
 
-	ret = drm_bo_kmap(bo, page_offset, 1, &kmobj);
+	ret = psb_drm_bo_kmap(bo, page_offset, 1, &kmobj);
 	if (ret)
 		return ret;
 
@@ -980,7 +980,7 @@ static int psb_dump_page(struct drm_buffer_object *bo,
 	for (i = 0; i < num; ++i)
 		PSB_DEBUG_GENERAL("0x%04x: 0x%08x\n", i, *p++);
 
-	drm_bo_kunmap(&kmobj);
+	psb_drm_bo_kunmap(&kmobj);
 	return 0;
 }
 #endif
@@ -1030,7 +1030,7 @@ void psb_fence_or_sync(struct drm_file *priv,
 	int ret;
 	struct drm_fence_object *fence;
 
-	ret = drm_fence_buffer_objects(dev, NULL, arg->fence_flags,
+	ret = psb_drm_fence_buffer_objects(dev, NULL, arg->fence_flags,
 				       NULL, &fence);
 
 	if (ret) {
@@ -1053,7 +1053,7 @@ void psb_fence_or_sync(struct drm_file *priv,
 			fence_arg->error = ret;
 		}
 
-		drm_putback_buffer_objects(dev);
+		psb_drm_putback_buffer_objects(dev);
 		if (fence_p)
 			*fence_p = NULL;
 		return;
@@ -1061,11 +1061,11 @@ void psb_fence_or_sync(struct drm_file *priv,
 
 	if (!(arg->fence_flags & DRM_FENCE_FLAG_NO_USER)) {
 
-		ret = drm_fence_add_user_object(priv, fence,
+		ret = psb_drm_fence_add_user_object(priv, fence,
 						arg->fence_flags &
 						DRM_FENCE_FLAG_SHAREABLE);
 		if (!ret)
-			drm_fence_fill_arg(fence, fence_arg);
+			psb_drm_fence_fill_arg(fence, fence_arg);
 		else {
 			/*
 			 * Fence user object creation failed.
@@ -1075,8 +1075,8 @@ void psb_fence_or_sync(struct drm_file *priv,
 			 * to indicate engine "sufficiently" idle.
 			 */
 
-			(void)drm_fence_object_wait(fence, 0, 1, fence->type);
-			drm_fence_usage_deref_unlocked(&fence);
+			(void)psb_drm_fence_object_wait(fence, 0, 1, fence->type);
+			psb_drm_fence_usage_deref_unlocked(&fence);
 			fence_arg->handle = ~0;
 			fence_arg->error = ret;
 		}
@@ -1085,7 +1085,7 @@ void psb_fence_or_sync(struct drm_file *priv,
 	if (fence_p)
 		*fence_p = fence;
 	else if (fence)
-		drm_fence_usage_deref_unlocked(&fence);
+		psb_drm_fence_usage_deref_unlocked(&fence);
 }
 
 int psb_handle_copyback(struct drm_device *dev,
@@ -1105,8 +1105,8 @@ int psb_handle_copyback(struct drm_device *dev,
 	 */
 
 	if (ret) {
-		drm_regs_fence(&dev_priv->use_manager, NULL);
-		drm_putback_buffer_objects(dev);
+		psb_drm_regs_fence(&dev_priv->use_manager, NULL);
+		psb_drm_putback_buffer_objects(dev);
 	}
 
 	if (ret != -EAGAIN) {
@@ -1115,7 +1115,7 @@ int psb_handle_copyback(struct drm_device *dev,
 			arg.d.rep.ret = item->ret;
 			bo = item->bo;
 			mutex_lock(&bo->mutex);
-			drm_bo_fill_rep_arg(bo, &arg.d.rep.bo_info);
+			psb_drm_bo_fill_rep_arg(bo, &arg.d.rep.bo_info);
 			mutex_unlock(&bo->mutex);
 			if (copy_to_user(item->data, &arg, sizeof(arg)))
 				err = -EFAULT;
@@ -1148,10 +1148,10 @@ static int psb_cmdbuf_video(struct drm_file *priv,
 	if (ret)
 		return ret;
 
-	drm_fence_usage_deref_unlocked(&fence);
+	psb_drm_fence_usage_deref_unlocked(&fence);
 	mutex_lock(&cmd_buffer->mutex);
 	if (cmd_buffer->fence != NULL)
-		drm_fence_usage_deref_unlocked(&cmd_buffer->fence);
+		psb_drm_fence_usage_deref_unlocked(&cmd_buffer->fence);
 	mutex_unlock(&cmd_buffer->mutex);
 	return 0;
 }
@@ -1191,7 +1191,7 @@ int psb_feedback_buf(struct drm_file *file_priv,
 		return -EINVAL;
 	}
 
-	ret = drm_bo_handle_validate(file_priv,
+	ret = psb_drm_bo_handle_validate(file_priv,
 				     handle,
 				     PSB_ENGINE_TA,
 				     DRM_BO_FLAG_MEM_LOCAL |
@@ -1218,7 +1218,7 @@ int psb_feedback_buf(struct drm_file *file_priv,
 		goto out_unref;
 	}
 
-	page = drm_ttm_get_page(bo->ttm, page_no);
+	page = psb_drm_ttm_get_page(bo->ttm, page_no);
 	if (!page) {
 		ret = -ENOMEM;
 		goto out_unref;
@@ -1230,7 +1230,7 @@ int psb_feedback_buf(struct drm_file *file_priv,
 	return 0;
 
       out_unref:
-	drm_bo_usage_deref_unlocked(&bo);
+	psb_drm_bo_usage_deref_unlocked(&bo);
 	return ret;
 }
 
@@ -1255,7 +1255,7 @@ int psb_cmdbuf_ioctl(struct drm_device *dev, void *data,
 	if (!dev_priv)
 		return -EINVAL;
 
-	ret = drm_bo_read_lock(&dev->bm.bm_lock, 1);
+	ret = psb_drm_bo_read_lock(&dev->bm.bm_lock, 1);
 	if (ret)
 		return ret;
 
@@ -1263,14 +1263,14 @@ int psb_cmdbuf_ioctl(struct drm_device *dev, void *data,
 
 	ret = mutex_lock_interruptible(&dev_priv->cmdbuf_mutex);
 	if (ret) {
-		drm_bo_read_unlock(&dev->bm.bm_lock);
+		psb_drm_bo_read_unlock(&dev->bm.bm_lock);
 		return -EAGAIN;
 	}
 	if (unlikely(dev_priv->buffers == NULL)) {
 		dev_priv->buffers = vmalloc(PSB_NUM_VALIDATE_BUFFERS *
 					    sizeof(*dev_priv->buffers));
 		if (dev_priv->buffers == NULL) {
-			drm_bo_read_unlock(&dev->bm.bm_lock);
+			psb_drm_bo_read_unlock(&dev->bm.bm_lock);
 			return -ENOMEM;
 		}
 	}
@@ -1293,7 +1293,7 @@ int psb_cmdbuf_ioctl(struct drm_device *dev, void *data,
 		goto out_err0;
 
 	mutex_lock(&dev->struct_mutex);
-	cmd_buffer = drm_lookup_buffer_object(file_priv, arg->cmdbuf_handle, 1);
+	cmd_buffer = psb_drm_lookup_buffer_object(file_priv, arg->cmdbuf_handle, 1);
 	mutex_unlock(&dev->struct_mutex);
 	if (!cmd_buffer) {
 		ret = -EINVAL;
@@ -1327,7 +1327,7 @@ int psb_cmdbuf_ioctl(struct drm_device *dev, void *data,
 		} else {
 			mutex_lock(&dev->struct_mutex);
 			ta_buffer =
-			    drm_lookup_buffer_object(file_priv,
+			    psb_drm_lookup_buffer_object(file_priv,
 						     arg->ta_handle, 1);
 			mutex_unlock(&dev->struct_mutex);
 			if (!ta_buffer) {
@@ -1344,7 +1344,7 @@ int psb_cmdbuf_ioctl(struct drm_device *dev, void *data,
 			} else {
 				mutex_lock(&dev->struct_mutex);
 				oom_buffer =
-				    drm_lookup_buffer_object(file_priv,
+				    psb_drm_lookup_buffer_object(file_priv,
 							     arg->oom_handle,
 							     1);
 				mutex_unlock(&dev->struct_mutex);
@@ -1439,16 +1439,16 @@ int psb_cmdbuf_ioctl(struct drm_device *dev, void *data,
 	if (pool)
 		psb_scene_pool_unref_devlocked(&pool);
 	if (cmd_buffer)
-		drm_bo_usage_deref_locked(&cmd_buffer);
+		psb_drm_bo_usage_deref_locked(&cmd_buffer);
 	if (ta_buffer)
-		drm_bo_usage_deref_locked(&ta_buffer);
+		psb_drm_bo_usage_deref_locked(&ta_buffer);
 	if (oom_buffer)
-		drm_bo_usage_deref_locked(&oom_buffer);
+		psb_drm_bo_usage_deref_locked(&oom_buffer);
 
 	psb_dereference_buffers_locked(dev_priv->buffers, num_buffers);
 	mutex_unlock(&dev->struct_mutex);
 	mutex_unlock(&dev_priv->cmdbuf_mutex);
 
-	drm_bo_read_unlock(&dev->bm.bm_lock);
+	psb_drm_bo_read_unlock(&dev->bm.bm_lock);
 	return ret;
 }

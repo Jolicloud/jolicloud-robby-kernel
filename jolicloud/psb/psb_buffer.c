@@ -215,7 +215,7 @@ static int psb_move_blit(struct drm_buffer_object *bo,
 			      new_mem->mm_node->start << PAGE_SHIFT,
 			      new_mem->num_pages, dir);
 
-	return drm_bo_move_accel_cleanup(bo, evict, no_wait, 0,
+	return psb_drm_bo_move_accel_cleanup(bo, evict, no_wait, 0,
 					 DRM_FENCE_TYPE_EXE, 0, new_mem);
 }
 
@@ -235,22 +235,22 @@ static int psb_move_flip(struct drm_buffer_object *bo,
 	tmp_mem.mm_node = NULL;
 	tmp_mem.mask = DRM_BO_FLAG_MEM_TT;
 
-	ret = drm_bo_mem_space(bo, &tmp_mem, no_wait);
+	ret = psb_drm_bo_mem_space(bo, &tmp_mem, no_wait);
 	if (ret)
 		return ret;
-	ret = drm_bind_ttm(bo->ttm, &tmp_mem);
+	ret = psb_drm_bind_ttm(bo->ttm, &tmp_mem);
 	if (ret)
 		goto out_cleanup;
 	ret = psb_move_blit(bo, 1, no_wait, &tmp_mem);
 	if (ret)
 		goto out_cleanup;
 
-	ret = drm_bo_move_ttm(bo, evict, no_wait, new_mem);
+	ret = psb_drm_bo_move_ttm(bo, evict, no_wait, new_mem);
       out_cleanup:
 	if (tmp_mem.mm_node) {
 		mutex_lock(&dev->struct_mutex);
 		if (tmp_mem.mm_node != bo->pinned_node)
-			drm_mm_put_block(tmp_mem.mm_node);
+			psb_drm_mm_put_block(tmp_mem.mm_node);
 		tmp_mem.mm_node = NULL;
 		mutex_unlock(&dev->struct_mutex);
 	}
@@ -263,13 +263,13 @@ int psb_move(struct drm_buffer_object *bo,
 	struct drm_bo_mem_reg *old_mem = &bo->mem;
 
 	if (old_mem->mem_type == DRM_BO_MEM_LOCAL) {
-		return drm_bo_move_memcpy(bo, evict, no_wait, new_mem);
+		return psb_drm_bo_move_memcpy(bo, evict, no_wait, new_mem);
 	} else if (new_mem->mem_type == DRM_BO_MEM_LOCAL) {
 		if (psb_move_flip(bo, evict, no_wait, new_mem))
-			return drm_bo_move_memcpy(bo, evict, no_wait, new_mem);
+			return psb_drm_bo_move_memcpy(bo, evict, no_wait, new_mem);
 	} else {
 		if (psb_move_blit(bo, evict, no_wait, new_mem))
-			return drm_bo_move_memcpy(bo, evict, no_wait, new_mem);
+			return psb_drm_bo_move_memcpy(bo, evict, no_wait, new_mem);
 	}
 	return 0;
 }
@@ -387,7 +387,7 @@ static void drm_psb_tbe_destroy(struct drm_ttm_backend *backend)
 	    container_of(backend, struct drm_psb_ttm_backend, base);
 
 	if (backend)
-		drm_free(psb_be, sizeof(*psb_be), DRM_MEM_TTM);
+		psb_drm_free(psb_be, sizeof(*psb_be), DRM_MEM_TTM);
 }
 
 static struct drm_ttm_backend_func psb_ttm_backend = {
@@ -403,7 +403,7 @@ struct drm_ttm_backend *drm_psb_tbe_init(struct drm_device *dev)
 {
 	struct drm_psb_ttm_backend *psb_be;
 
-	psb_be = drm_calloc(1, sizeof(*psb_be), DRM_MEM_TTM);
+	psb_be = psb_drm_calloc(1, sizeof(*psb_be), DRM_MEM_TTM);
 	if (!psb_be)
 		return NULL;
 	psb_be->pages = NULL;

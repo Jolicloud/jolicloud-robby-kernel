@@ -632,8 +632,8 @@ extern void psb_gtt_takedown(struct psb_gtt *pg, int free);
 /*
  * psb_fb.c
  */
-extern int psbfb_probe(struct drm_device *dev, struct drm_crtc *crtc);
-extern int psbfb_remove(struct drm_device *dev, struct drm_crtc *crtc);
+extern int psb_psbfb_probe(struct drm_device *dev, struct drm_crtc *crtc);
+extern int psb_psbfb_remove(struct drm_device *dev, struct drm_crtc *crtc);
 extern int psbfb_kms_off_ioctl(struct drm_device *dev, void *data,
 			       struct drm_file *file_priv);
 extern int psbfb_kms_on_ioctl(struct drm_device *dev, void *data,
@@ -782,7 +782,7 @@ extern void psb_resume_ta_2d_idle(struct drm_psb_private *dev_priv);
 #define PSB_D_TMP    (1 << 5)
 #define PSB_D_RELOC   (1 << 6)
 
-extern int drm_psb_debug;
+extern int psb_drm_psb_debug;
 extern int drm_psb_no_fb;
 extern int drm_psb_disable_vsync;
 extern int drm_psb_detear;
@@ -807,7 +807,7 @@ extern int drm_psb_detear;
 #if DRM_DEBUG_CODE
 #define PSB_DEBUG(_flag, _fmt, _arg...)					\
 	do {								\
-	  if (unlikely((_flag) & drm_psb_debug))			\
+	  if (unlikely((_flag) & psb_drm_psb_debug))			\
 			printk(KERN_DEBUG				\
 			       "[psb:0x%02x:%s] " _fmt , _flag,	\
 			       __FUNCTION__ , ##_arg);			\

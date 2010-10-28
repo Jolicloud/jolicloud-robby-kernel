@@ -47,7 +47,7 @@ int drm_dma_setup(struct drm_device *dev)
 {
 	int i;
 
-	dev->dma = drm_alloc(sizeof(*dev->dma), DRM_MEM_DRIVER);
+	dev->dma = psb_drm_alloc(sizeof(*dev->dma), DRM_MEM_DRIVER);
 	if (!dev->dma)
 		return -ENOMEM;
 
@@ -85,39 +85,39 @@ void drm_dma_takedown(struct drm_device *dev)
 				  dma->bufs[i].seg_count);
 			for (j = 0; j < dma->bufs[i].seg_count; j++) {
 				if (dma->bufs[i].seglist[j]) {
-					drm_pci_free(dev, dma->bufs[i].seglist[j]);
+					psb_drm_pci_free(dev, dma->bufs[i].seglist[j]);
 				}
 			}
-			drm_free(dma->bufs[i].seglist,
+			psb_drm_free(dma->bufs[i].seglist,
 				 dma->bufs[i].seg_count
 				 * sizeof(*dma->bufs[0].seglist), DRM_MEM_SEGS);
 		}
 		if (dma->bufs[i].buf_count) {
 			for (j = 0; j < dma->bufs[i].buf_count; j++) {
 				if (dma->bufs[i].buflist[j].dev_private) {
-					drm_free(dma->bufs[i].buflist[j].
+					psb_drm_free(dma->bufs[i].buflist[j].
 						 dev_private,
 						 dma->bufs[i].buflist[j].
 						 dev_priv_size, DRM_MEM_BUFS);
 				}
 			}
-			drm_free(dma->bufs[i].buflist,
+			psb_drm_free(dma->bufs[i].buflist,
 				 dma->bufs[i].buf_count *
 				 sizeof(*dma->bufs[0].buflist), DRM_MEM_BUFS);
 		}
 	}
 
 	if (dma->buflist) {
-		drm_free(dma->buflist,
+		psb_drm_free(dma->buflist,
 			 dma->buf_count * sizeof(*dma->buflist), DRM_MEM_BUFS);
 	}
 
 	if (dma->pagelist) {
-		drm_free(dma->pagelist,
+		psb_drm_free(dma->pagelist,
 			 dma->page_count * sizeof(*dma->pagelist),
 			 DRM_MEM_PAGES);
 	}
-	drm_free(dev->dma, sizeof(*dev->dma), DRM_MEM_DRIVER);
+	psb_drm_free(dev->dma, sizeof(*dev->dma), DRM_MEM_DRIVER);
 	dev->dma = NULL;
 }
 
@@ -152,7 +152,7 @@ void drm_free_buffer(struct drm_device *dev, struct drm_buf *buf)
  *
  * Frees each buffer associated with \p file_priv not already on the hardware.
  */
-void drm_core_reclaim_buffers(struct drm_device *dev,
+void psb_drm_core_reclaim_buffers(struct drm_device *dev,
 			      struct drm_file *file_priv)
 {
 	struct drm_device_dma *dma = dev->dma;
@@ -176,4 +176,4 @@ void drm_core_reclaim_buffers(struct drm_device *dev,
 		}
 	}
 }
-EXPORT_SYMBOL(drm_core_reclaim_buffers);
+EXPORT_SYMBOL(psb_drm_core_reclaim_buffers);

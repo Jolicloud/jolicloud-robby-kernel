@@ -1,5 +1,5 @@
 /**
- * \file drm_ioctl.c
+ * \file psb_drm_ioctl.c
  * IOCTL processing for DRM
  *
  * \author Rickard E. (Rik) Faith <faith@valinux.com>
@@ -90,7 +90,7 @@ int drm_setunique(struct drm_device *dev, void *data,
 		return -EINVAL;
 
 	dev->unique_len = u->unique_len;
-	dev->unique = drm_alloc(u->unique_len + 1, DRM_MEM_DRIVER);
+	dev->unique = psb_drm_alloc(u->unique_len + 1, DRM_MEM_DRIVER);
 	if (!dev->unique)
 		return -ENOMEM;
 	if (copy_from_user(dev->unique, u->unique, dev->unique_len))
@@ -98,7 +98,7 @@ int drm_setunique(struct drm_device *dev, void *data,
 
 	dev->unique[dev->unique_len] = '\0';
 
-	dev->devname = drm_alloc(strlen(dev->driver->pci_driver.name) + strlen(dev->unique) + 2,
+	dev->devname = psb_drm_alloc(strlen(dev->driver->pci_driver.name) + strlen(dev->unique) + 2,
 				 DRM_MEM_DRIVER);
 	if (!dev->devname)
 		return -ENOMEM;
@@ -130,7 +130,7 @@ static int drm_set_busid(struct drm_device * dev)
 		return -EBUSY;
 
 	dev->unique_len = 40;
-	dev->unique = drm_alloc(dev->unique_len + 1, DRM_MEM_DRIVER);
+	dev->unique = psb_drm_alloc(dev->unique_len + 1, DRM_MEM_DRIVER);
 	if (dev->unique == NULL)
 		return -ENOMEM;
 
@@ -142,7 +142,7 @@ static int drm_set_busid(struct drm_device * dev)
 	if (len > dev->unique_len)
 		DRM_ERROR("buffer overflow");
 
-	dev->devname = drm_alloc(strlen(dev->driver->pci_driver.name) + dev->unique_len + 2,
+	dev->devname = psb_drm_alloc(strlen(dev->driver->pci_driver.name) + dev->unique_len + 2,
 				 DRM_MEM_DRIVER);
 	if (dev->devname == NULL)
 		return -ENOMEM;

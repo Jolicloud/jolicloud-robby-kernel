@@ -185,13 +185,13 @@ int drm_lastclose(struct drm_device * dev)
 	DRM_DEBUG("driver lastclose completed\n");
 
 	if (dev->unique) {
-		drm_free(dev->unique, strlen(dev->unique) + 1, DRM_MEM_DRIVER);
+		psb_drm_free(dev->unique, strlen(dev->unique) + 1, DRM_MEM_DRIVER);
 		dev->unique = NULL;
 		dev->unique_len = 0;
 	}
 
 	if (dev->irq_enabled)
-		drm_irq_uninstall(dev);
+		psb_drm_irq_uninstall(dev);
 
 	/* Free drawable information memory */
 	mutex_lock(&dev->struct_mutex);
@@ -200,7 +200,7 @@ int drm_lastclose(struct drm_device * dev)
 	del_timer(&dev->timer);
 
 	if (dev->unique) {
-		drm_free(dev->unique, strlen(dev->unique) + 1, DRM_MEM_DRIVER);
+		psb_drm_free(dev->unique, strlen(dev->unique) + 1, DRM_MEM_DRIVER);
 		dev->unique = NULL;
 		dev->unique_len = 0;
 	}
@@ -209,7 +209,7 @@ int drm_lastclose(struct drm_device * dev)
 		list_for_each_entry_safe(pt, next, &dev->magicfree, head) {
 			list_del(&pt->head);
 			drm_ht_remove_item(&dev->magiclist, &pt->hash_item);
-			drm_free(pt, sizeof(*pt), DRM_MEM_MAGIC);
+			psb_drm_free(pt, sizeof(*pt), DRM_MEM_MAGIC);
 		}
 		drm_ht_remove(&dev->magiclist);
 	}
@@ -225,30 +225,30 @@ int drm_lastclose(struct drm_device * dev)
 			if (entry->bound)
 				drm_unbind_agp(entry->memory);
 			drm_free_agp(entry->memory, entry->pages);
-			drm_free(entry, sizeof(*entry), DRM_MEM_AGPLISTS);
+			psb_drm_free(entry, sizeof(*entry), DRM_MEM_AGPLISTS);
 		}
 		INIT_LIST_HEAD(&dev->agp->memory);
 
 		if (dev->agp->acquired)
-			drm_agp_release(dev);
+			psb_drm_agp_release(dev);
 
 		dev->agp->acquired = 0;
 		dev->agp->enabled = 0;
 	}
 	if (drm_core_check_feature(dev, DRIVER_SG) && dev->sg) {
-		drm_sg_cleanup(dev->sg);
+		psb_drm_sg_cleanup(dev->sg);
 		dev->sg = NULL;
 	}
 
 	/* Clear vma list (only built for debugging) */
 	list_for_each_entry_safe(vma, vma_temp, &dev->vmalist, head) {
 		list_del(&vma->head);
-		drm_free(vma, sizeof(*vma), DRM_MEM_VMAS);
+		psb_drm_free(vma, sizeof(*vma), DRM_MEM_VMAS);
 	}
 
 	list_for_each_entry_safe(r_list, list_t, &dev->maplist, head) {
 		if (!(r_list->map->flags & _DRM_DRIVER)) {
-			drm_rmmap_locked(dev, r_list->map);
+			psb_drm_rmmap_locked(dev, r_list->map);
 			r_list = NULL;
 		}
 	}
@@ -257,13 +257,13 @@ int drm_lastclose(struct drm_device * dev)
 		for (i = 0; i < dev->queue_count; i++) {
 
 			if (dev->queuelist[i]) {
-				drm_free(dev->queuelist[i],
+				psb_drm_free(dev->queuelist[i],
 					 sizeof(*dev->queuelist[0]),
 					 DRM_MEM_QUEUES);
 				dev->queuelist[i] = NULL;
 			}
 		}
-		drm_free(dev->queuelist,
+		psb_drm_free(dev->queuelist,
 			 dev->queue_slots * sizeof(*dev->queuelist),
 			 DRM_MEM_QUEUES);
 		dev->queuelist = NULL;
@@ -285,7 +285,7 @@ int drm_lastclose(struct drm_device * dev)
 	return 0;
 }
 
-void drm_cleanup_pci(struct pci_dev *pdev)
+void psb_drm_cleanup_pci(struct pci_dev *pdev)
 {
 	struct drm_device *dev = pci_get_drvdata(pdev);
 
@@ -294,7 +294,7 @@ void drm_cleanup_pci(struct pci_dev *pdev)
 	if (dev)
 		drm_cleanup(dev);
 }
-EXPORT_SYMBOL(drm_cleanup_pci);
+EXPORT_SYMBOL(psb_drm_cleanup_pci);
 
 /**
  * Module initialization. Called via init_module at module load time, or via
@@ -309,7 +309,7 @@ EXPORT_SYMBOL(drm_cleanup_pci);
  * Expands the \c DRIVER_PREINIT and \c DRIVER_POST_INIT macros before and
  * after the initialization for driver customization.
  */
-int drm_init(struct drm_driver *driver,
+int psb_drm_init(struct drm_driver *driver,
 		       struct pci_device_id *pciidlist)
 {
 	struct pci_dev *pdev;
@@ -364,7 +364,7 @@ int drm_init(struct drm_driver *driver,
 				}
 				/* stealth mode requires a manual probe */
 				pci_dev_get(pdev);
-				if ((rc = drm_get_dev(pdev, &pciidlist[i], driver))) {
+				if ((rc = psb_drm_get_dev(pdev, &pciidlist[i], driver))) {
 					pci_dev_put(pdev);
 					return rc;
 				}
@@ -374,14 +374,14 @@ int drm_init(struct drm_driver *driver,
 	}
 	return 0;
 }
-EXPORT_SYMBOL(drm_init);
+EXPORT_SYMBOL(psb_drm_init);
 
 /**
  * Called via cleanup_module() at module unload time.
  *
  * Cleans up all DRM device, calling drm_lastclose().
  *
- * \sa drm_init
+ * \sa psb_drm_init
  */
 static void drm_cleanup(struct drm_device * dev)
 {
@@ -407,15 +407,15 @@ static void drm_cleanup(struct drm_device * dev)
 	if (dev->driver->unload)
 		dev->driver->unload(dev);
         
-	drm_bo_driver_finish(dev);
+	psb_drm_bo_driver_finish(dev);
 	drm_fence_manager_takedown(dev);
 
 	drm_ht_remove(&dev->map_hash);
-	drm_mm_takedown(&dev->offset_manager);
+	psb_drm_mm_takedown(&dev->offset_manager);
 	drm_ht_remove(&dev->object_hash);
 
 	if (drm_core_has_AGP(dev) && dev->agp) {
-		drm_free(dev->agp, sizeof(*dev->agp), DRM_MEM_AGPLISTS);
+		psb_drm_free(dev->agp, sizeof(*dev->agp), DRM_MEM_AGPLISTS);
 		dev->agp = NULL;
 	}
 
@@ -427,7 +427,7 @@ static void drm_cleanup(struct drm_device * dev)
 		DRM_ERROR("Cannot unload module\n");
 }
 
-void drm_exit(struct drm_driver *driver)
+void psb_drm_exit(struct drm_driver *driver)
 {
 	int i;
 	struct drm_device *dev = NULL;
@@ -458,7 +458,7 @@ void drm_exit(struct drm_driver *driver)
 #endif
 	DRM_INFO("Module unloaded\n");
 }
-EXPORT_SYMBOL(drm_exit);
+EXPORT_SYMBOL(psb_drm_exit);
 
 /** File operations structure */
 static const struct file_operations drm_stub_fops = {
@@ -500,7 +500,7 @@ static int __init drm_core_init(void)
 	ret = -ENOMEM;
 	drm_cards_limit =
 	    (drm_cards_limit < DRM_MAX_MINOR + 1 ? drm_cards_limit : DRM_MAX_MINOR + 1);
-	drm_heads = drm_calloc(drm_cards_limit, sizeof(*drm_heads), DRM_MEM_STUB);
+	drm_heads = psb_drm_calloc(drm_cards_limit, sizeof(*drm_heads), DRM_MEM_STUB);
 	if (!drm_heads)
 		goto err_p1;
 
@@ -531,7 +531,7 @@ err_p3:
 	drm_sysfs_destroy();
 err_p2:
 	unregister_chrdev(DRM_MAJOR, "drm");
-	drm_free(drm_heads, sizeof(*drm_heads) * drm_cards_limit, DRM_MEM_STUB);
+	psb_drm_free(drm_heads, sizeof(*drm_heads) * drm_cards_limit, DRM_MEM_STUB);
 err_p1:
 	return ret;
 }
@@ -543,7 +543,7 @@ static void __exit drm_core_exit(void)
 
 	unregister_chrdev(DRM_MAJOR, "drm");
 
-	drm_free(drm_heads, sizeof(*drm_heads) * drm_cards_limit, DRM_MEM_STUB);
+	psb_drm_free(drm_heads, sizeof(*drm_heads) * drm_cards_limit, DRM_MEM_STUB);
 }
 
 module_init(drm_core_init);
@@ -593,14 +593,14 @@ static int drm_version(struct drm_device *dev, void *data,
  * byte stack buffer to store the ioctl arguments in kernel space.  Should we
  * ever need much larger ioctl arguments, we may need to allocate memory.
  */
-int drm_ioctl(struct inode *inode, struct file *filp,
+int psb_drm_ioctl(struct inode *inode, struct file *filp,
 	      unsigned int cmd, unsigned long arg)
 {
-	return drm_unlocked_ioctl(filp, cmd, arg);
+	return psb_drm_unlocked_ioctl(filp, cmd, arg);
 }
-EXPORT_SYMBOL(drm_ioctl);
+EXPORT_SYMBOL(psb_drm_ioctl);
 
-long drm_unlocked_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+long psb_drm_unlocked_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct drm_file *file_priv = filp->private_data;
 	struct drm_device *dev = file_priv->head->dev;
@@ -678,9 +678,9 @@ err_i1:
 		DRM_DEBUG("ret = %d\n", retcode);
 	return retcode;
 }
-EXPORT_SYMBOL(drm_unlocked_ioctl);
+EXPORT_SYMBOL(psb_drm_unlocked_ioctl);
 
-drm_local_map_t *drm_getsarea(struct drm_device *dev)
+drm_local_map_t *psb_drm_getsarea(struct drm_device *dev)
 {
 	struct drm_map_list *entry;
 
@@ -692,4 +692,4 @@ drm_local_map_t *drm_getsarea(struct drm_device *dev)
 	}
 	return NULL;
 }
-EXPORT_SYMBOL(drm_getsarea);
+EXPORT_SYMBOL(psb_drm_getsarea);

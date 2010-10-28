@@ -145,7 +145,7 @@ static int drm_do_vm_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 		 * Get the page, inc the use count, and return it
 		 */
 		offset = (baddr - agpmem->bound) >> PAGE_SHIFT;
- 		page = agpmem->memory->pages[offset];
+		page = virt_to_page(__va(agpmem->memory->pages[offset]));
 		get_page(page);
 		vmf->page = page;
 
@@ -227,7 +227,7 @@ static void drm_vm_shm_close(struct vm_area_struct *vma)
 			found_maps++;
 		if (pt->vma == vma) {
 			list_del(&pt->head);
-			drm_free(pt, sizeof(*pt), DRM_MEM_VMAS);
+			psb_drm_free(pt, sizeof(*pt), DRM_MEM_VMAS);
 		}
 	}
 	/* We were the only map that was found */
@@ -272,7 +272,7 @@ static void drm_vm_shm_close(struct vm_area_struct *vma)
 				BUG_ON(1);
 				break;
 			}
-			drm_free(map, sizeof(*map), DRM_MEM_MAPS);
+			psb_drm_free(map, sizeof(*map), DRM_MEM_MAPS);
 		}
 	}
 	mutex_unlock(&dev->struct_mutex);
@@ -411,7 +411,7 @@ static void drm_vm_open_locked(struct vm_area_struct *vma)
 		  vma->vm_start, vma->vm_end - vma->vm_start);
 	atomic_inc(&dev->vma_count);
 
-	vma_entry = drm_alloc(sizeof(*vma_entry), DRM_MEM_VMAS);
+	vma_entry = psb_drm_alloc(sizeof(*vma_entry), DRM_MEM_VMAS);
 	if (vma_entry) {
 		vma_entry->vma = vma;
 		vma_entry->pid = current->pid;
@@ -451,7 +451,7 @@ static void drm_vm_close(struct vm_area_struct *vma)
 	list_for_each_entry_safe(pt, temp, &dev->vmalist, head) {
 		if (pt->vma == vma) {
 			list_del(&pt->head);
-			drm_free(pt, sizeof(*pt), DRM_MEM_VMAS);
+			psb_drm_free(pt, sizeof(*pt), DRM_MEM_VMAS);
 			break;
 		}
 	}
@@ -509,13 +509,13 @@ static int drm_mmap_dma(struct file *filp, struct vm_area_struct *vma)
 	return 0;
 }
 
-unsigned long drm_core_get_map_ofs(struct drm_map * map)
+unsigned long psb_drm_core_get_map_ofs(struct drm_map * map)
 {
 	return map->offset;
 }
-EXPORT_SYMBOL(drm_core_get_map_ofs);
+EXPORT_SYMBOL(psb_drm_core_get_map_ofs);
 
-unsigned long drm_core_get_reg_ofs(struct drm_device *dev)
+unsigned long psb_drm_core_get_reg_ofs(struct drm_device *dev)
 {
 #ifdef __alpha__
 	return dev->hose->dense_mem_base - dev->hose->mem_space->start;
@@ -523,7 +523,7 @@ unsigned long drm_core_get_reg_ofs(struct drm_device *dev)
 	return 0;
 #endif
 }
-EXPORT_SYMBOL(drm_core_get_reg_ofs);
+EXPORT_SYMBOL(psb_drm_core_get_reg_ofs);
 
 /**
  * mmap DMA memory.
@@ -659,7 +659,7 @@ static int drm_mmap_locked(struct file *filp, struct vm_area_struct *vma)
 	return 0;
 }
 
-int drm_mmap(struct file *filp, struct vm_area_struct *vma)
+int psb_drm_mmap(struct file *filp, struct vm_area_struct *vma)
 {
 	struct drm_file *priv = filp->private_data;
 	struct drm_device *dev = priv->head->dev;
@@ -671,7 +671,7 @@ int drm_mmap(struct file *filp, struct vm_area_struct *vma)
 
 	return ret;
 }
-EXPORT_SYMBOL(drm_mmap);
+EXPORT_SYMBOL(psb_drm_mmap);
 
 /**
  * buffer object vm functions.
@@ -720,17 +720,17 @@ int drm_bo_vm_fault(struct vm_area_struct *vma,
 		return VM_FAULT_SIGBUS;
 
 	dev = bo->dev;
-	err = drm_bo_read_lock(&dev->bm.bm_lock, 1);
+	err = psb_drm_bo_read_lock(&dev->bm.bm_lock, 1);
 	if (err)
 		return VM_FAULT_NOPAGE;
 
 	err = mutex_lock_interruptible(&bo->mutex);
 	if (err) {
-		drm_bo_read_unlock(&dev->bm.bm_lock);
+		psb_drm_bo_read_unlock(&dev->bm.bm_lock);
 		return VM_FAULT_NOPAGE;
 	}
 
-	err = drm_bo_wait(bo, 0, 0, 0);
+	err = psb_drm_bo_wait(bo, 0, 0, 0);
 	if (err) {
 		ret = (err != -EAGAIN) ? VM_FAULT_SIGBUS : VM_FAULT_NOPAGE;
 		goto out_unlock;
@@ -771,7 +771,7 @@ int drm_bo_vm_fault(struct vm_area_struct *vma,
 		ttm = bo->ttm;
 
 		drm_ttm_fixup_caching(ttm);
-		page = drm_ttm_get_page(ttm, page_offset);
+		page = psb_drm_ttm_get_page(ttm, page_offset);
 		if (!page) {
 			ret = VM_FAULT_OOM;
 			goto out_unlock;
@@ -799,7 +799,7 @@ int drm_bo_vm_fault(struct vm_area_struct *vma,
 			pfn = ((bus_base + bus_offset) >> PAGE_SHIFT) 
 				+ page_offset;
 		} else {
-			page = drm_ttm_get_page(ttm, page_offset);
+			page = psb_drm_ttm_get_page(ttm, page_offset);
 			if (!page)
 				break;
 			pfn = page_to_pfn(page);
@@ -809,11 +809,11 @@ int drm_bo_vm_fault(struct vm_area_struct *vma,
 	}
 out_unlock:
 	mutex_unlock(&bo->mutex);
-	drm_bo_read_unlock(&dev->bm.bm_lock);
+	psb_drm_bo_read_unlock(&dev->bm.bm_lock);
 	return ret;
 }
 
-int drm_bo_vm_nopfn(struct vm_area_struct *vma,
+int psb_drm_bo_vm_nopfn(struct vm_area_struct *vma,
 			      struct vm_fault *vmf )
 {
 	struct drm_buffer_object *bo = (struct drm_buffer_object *) vma->vm_private_data;
@@ -835,17 +835,17 @@ int drm_bo_vm_nopfn(struct vm_area_struct *vma,
 		return VM_FAULT_SIGBUS;
 
 	dev = bo->dev;
-	err = drm_bo_read_lock(&dev->bm.bm_lock, 1);
+	err = psb_drm_bo_read_lock(&dev->bm.bm_lock, 1);
 	if (err)
 		return VM_FAULT_NOPAGE;
 
 	err = mutex_lock_interruptible(&bo->mutex);
 	if (err) {
-		drm_bo_read_unlock(&dev->bm.bm_lock);
+		psb_drm_bo_read_unlock(&dev->bm.bm_lock);
 		return VM_FAULT_NOPAGE;
 	}
 
-	err = drm_bo_wait(bo, 0, 0, 0);
+	err = psb_drm_bo_wait(bo, 0, 0, 0);
 	if (err) {
 		ret = (err != -EAGAIN) ? VM_FAULT_SIGBUS : VM_FAULT_NOPAGE;
 		goto out_unlock;
@@ -886,7 +886,7 @@ int drm_bo_vm_nopfn(struct vm_area_struct *vma,
 		ttm = bo->ttm;
 
 		drm_ttm_fixup_caching(ttm);
-		page = drm_ttm_get_page(ttm, page_offset);
+		page = psb_drm_ttm_get_page(ttm, page_offset);
 		if (!page) {
 			ret = VM_FAULT_OOM;
 			goto out_unlock;
@@ -914,7 +914,7 @@ int drm_bo_vm_nopfn(struct vm_area_struct *vma,
 			pfn = ((bus_base + bus_offset) >> PAGE_SHIFT) 
 				+ page_offset;
 		} else {
-			page = drm_ttm_get_page(ttm, page_offset);
+			page = psb_drm_ttm_get_page(ttm, page_offset);
 			if (!page)
 				break;
 			pfn = page_to_pfn(page);
@@ -924,12 +924,12 @@ int drm_bo_vm_nopfn(struct vm_area_struct *vma,
 	}
 out_unlock:
 	mutex_unlock(&bo->mutex);
-	drm_bo_read_unlock(&dev->bm.bm_lock);
+	psb_drm_bo_read_unlock(&dev->bm.bm_lock);
 	return ret;
 }
 
 #else
-unsigned long drm_bo_vm_nopfn(struct vm_area_struct *vma,
+unsigned long psb_drm_bo_vm_nopfn(struct vm_area_struct *vma,
 			      unsigned long address)
 {
 	struct drm_buffer_object *bo = (struct drm_buffer_object *) vma->vm_private_data;
@@ -949,17 +949,17 @@ unsigned long drm_bo_vm_nopfn(struct vm_area_struct *vma,
 		return NOPFN_SIGBUS;
 
 	dev = bo->dev;
-	err = drm_bo_read_lock(&dev->bm.bm_lock, 1);
+	err = psb_drm_bo_read_lock(&dev->bm.bm_lock, 1);
 	if (err)
 		return NOPFN_REFAULT;
 
 	err = mutex_lock_interruptible(&bo->mutex);
 	if (err) {
-		drm_bo_read_unlock(&dev->bm.bm_lock);
+		psb_drm_bo_read_unlock(&dev->bm.bm_lock);
 		return NOPFN_REFAULT;
 	}
 
-	err = drm_bo_wait(bo, 0, 0, 0);
+	err = psb_drm_bo_wait(bo, 0, 0, 0);
 	if (err) {
 		ret = (err != -EAGAIN) ? NOPFN_SIGBUS : NOPFN_REFAULT;
 		goto out_unlock;
@@ -1000,7 +1000,7 @@ unsigned long drm_bo_vm_nopfn(struct vm_area_struct *vma,
 		ttm = bo->ttm;
 
 		drm_ttm_fixup_caching(ttm);
-		page = drm_ttm_get_page(ttm, page_offset);
+		page = psb_drm_ttm_get_page(ttm, page_offset);
 		if (!page) {
 			ret = NOPFN_OOM;
 			goto out_unlock;
@@ -1028,7 +1028,7 @@ unsigned long drm_bo_vm_nopfn(struct vm_area_struct *vma,
 			pfn = ((bus_base + bus_offset) >> PAGE_SHIFT) 
 				+ page_offset;
 		} else {
-			page = drm_ttm_get_page(ttm, page_offset);
+			page = psb_drm_ttm_get_page(ttm, page_offset);
 			if (!page)
 				break;
 			pfn = page_to_pfn(page);
@@ -1038,12 +1038,12 @@ unsigned long drm_bo_vm_nopfn(struct vm_area_struct *vma,
 	}
 out_unlock:
 	mutex_unlock(&bo->mutex);
-	drm_bo_read_unlock(&dev->bm.bm_lock);
+	psb_drm_bo_read_unlock(&dev->bm.bm_lock);
 	return ret;
 }
 #endif
 
-EXPORT_SYMBOL(drm_bo_vm_nopfn);
+EXPORT_SYMBOL(psb_drm_bo_vm_nopfn);
 #endif
    
    static void drm_bo_vm_open_locked(struct vm_area_struct *vma)
@@ -1090,7 +1090,7 @@ EXPORT_SYMBOL(drm_bo_vm_nopfn);
    #ifdef DRM_ODD_MM_COMPAT
    		drm_bo_delete_vma(bo, vma);
    #endif
-   		drm_bo_usage_deref_locked((struct drm_buffer_object **)
+   		psb_drm_bo_usage_deref_locked((struct drm_buffer_object **)
    					  &vma->vm_private_data);
    		mutex_unlock(&dev->struct_mutex);
    	}
@@ -1102,10 +1102,10 @@ EXPORT_SYMBOL(drm_bo_vm_nopfn);
            .fault = drm_bo_vm_fault,
    #else
    #ifdef DRM_FULL_MM_COMPAT
-           .nopfn = drm_bo_vm_nopfn,
+           .nopfn = psb_drm_bo_vm_nopfn,
    #else
    #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,19))
-           .nopfn = drm_bo_vm_nopfn,
+           .nopfn = psb_drm_bo_vm_nopfn,
    #else
    	.nopage = drm_bo_vm_nopage,
    #endif

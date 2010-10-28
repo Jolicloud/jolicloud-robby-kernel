@@ -106,7 +106,7 @@ struct drm_crtc *drm_crtc_from_fb(struct drm_device *dev,
 }
 
 /**
- * drm_framebuffer_create - create a new framebuffer object
+ * psb_drm_framebuffer_create - create a new framebuffer object
  * @dev: DRM device
  *
  * LOCKING:
@@ -117,7 +117,7 @@ struct drm_crtc *drm_crtc_from_fb(struct drm_device *dev,
  * RETURNS:
  * Pointer to new framebuffer or NULL on error.
  */
-struct drm_framebuffer *drm_framebuffer_create(struct drm_device *dev)
+struct drm_framebuffer *psb_drm_framebuffer_create(struct drm_device *dev)
 {
 	struct drm_framebuffer *fb;
 
@@ -139,10 +139,10 @@ struct drm_framebuffer *drm_framebuffer_create(struct drm_device *dev)
 
 	return fb;
 }
-EXPORT_SYMBOL(drm_framebuffer_create);
+EXPORT_SYMBOL(psb_drm_framebuffer_create);
 
 /**
- * drm_framebuffer_destroy - remove a framebuffer object
+ * psb_drm_framebuffer_destroy - remove a framebuffer object
  * @fb: framebuffer to remove
  *
  * LOCKING:
@@ -151,7 +151,7 @@ EXPORT_SYMBOL(drm_framebuffer_create);
  * Scans all the CRTCs in @dev's mode_config.  If they're using @fb, removes
  * it, setting it to NULL.
  */
-void drm_framebuffer_destroy(struct drm_framebuffer *fb)
+void psb_drm_framebuffer_destroy(struct drm_framebuffer *fb)
 {
 	struct drm_device *dev = fb->dev;
 	struct drm_crtc *crtc;
@@ -168,10 +168,10 @@ void drm_framebuffer_destroy(struct drm_framebuffer *fb)
 
 	kfree(fb);
 }
-EXPORT_SYMBOL(drm_framebuffer_destroy);
+EXPORT_SYMBOL(psb_drm_framebuffer_destroy);
 
 /**
- * drm_crtc_create - create a new CRTC object
+ * psb_drm_crtc_create - create a new CRTC object
  * @dev: DRM device
  * @funcs: callbacks for the new CRTC
  *
@@ -183,7 +183,7 @@ EXPORT_SYMBOL(drm_framebuffer_destroy);
  * RETURNS:
  * Pointer to new CRTC object or NULL on error.
  */
-struct drm_crtc *drm_crtc_create(struct drm_device *dev,
+struct drm_crtc *psb_drm_crtc_create(struct drm_device *dev,
 				 const struct drm_crtc_funcs *funcs)
 {
 	struct drm_crtc *crtc;
@@ -202,10 +202,10 @@ struct drm_crtc *drm_crtc_create(struct drm_device *dev,
 
 	return crtc;
 }
-EXPORT_SYMBOL(drm_crtc_create);
+EXPORT_SYMBOL(psb_drm_crtc_create);
 
 /**
- * drm_crtc_destroy - remove a CRTC object
+ * psb_drm_crtc_destroy - remove a CRTC object
  * @crtc: CRTC to remove
  *
  * LOCKING:
@@ -214,7 +214,7 @@ EXPORT_SYMBOL(drm_crtc_create);
  * Cleanup @crtc.  Calls @crtc's cleanup function, then removes @crtc from
  * its associated DRM device's mode_config.  Frees it afterwards.
  */
-void drm_crtc_destroy(struct drm_crtc *crtc)
+void psb_drm_crtc_destroy(struct drm_crtc *crtc)
 {
 	struct drm_device *dev = crtc->dev;
 
@@ -226,10 +226,10 @@ void drm_crtc_destroy(struct drm_crtc *crtc)
 	dev->mode_config.num_crtc--;
 	kfree(crtc);
 }
-EXPORT_SYMBOL(drm_crtc_destroy);
+EXPORT_SYMBOL(psb_drm_crtc_destroy);
 
 /**
- * drm_crtc_in_use - check if a given CRTC is in a mode_config
+ * psb_drm_crtc_in_use - check if a given CRTC is in a mode_config
  * @crtc: CRTC to check
  *
  * LOCKING:
@@ -240,7 +240,7 @@ EXPORT_SYMBOL(drm_crtc_destroy);
  * RETURNS:
  * True if @crtc is part of the mode_config, false otherwise.
  */
-bool drm_crtc_in_use(struct drm_crtc *crtc)
+bool psb_drm_crtc_in_use(struct drm_crtc *crtc)
 {
 	struct drm_output *output;
 	struct drm_device *dev = crtc->dev;
@@ -250,7 +250,7 @@ bool drm_crtc_in_use(struct drm_crtc *crtc)
 			return true;
 	return false;
 }
-EXPORT_SYMBOL(drm_crtc_in_use);
+EXPORT_SYMBOL(psb_drm_crtc_in_use);
 
 /*
  * Detailed mode info for a standard 640x480@60Hz monitor
@@ -262,7 +262,7 @@ static struct drm_display_mode std_mode[] = {
 };
 
 /**
- * drm_crtc_probe_output_modes - get complete set of display modes
+ * psb_drm_crtc_probe_output_modes - get complete set of display modes
  * @dev: DRM device
  * @maxX: max width for modes
  * @maxY: max height for modes
@@ -280,7 +280,7 @@ static struct drm_display_mode std_mode[] = {
  *
  * FIXME: take into account monitor limits
  */
-void drm_crtc_probe_output_modes(struct drm_device *dev, int maxX, int maxY)
+void psb_drm_crtc_probe_output_modes(struct drm_device *dev, int maxX, int maxY)
 {
 	struct drm_output *output;
 	struct drm_display_mode *mode, *t;
@@ -309,7 +309,7 @@ void drm_crtc_probe_output_modes(struct drm_device *dev, int maxX, int maxY)
 		}
 
 		if (maxX && maxY)
-			drm_mode_validate_size(dev, &output->modes, maxX,
+			psb_drm_mode_validate_size(dev, &output->modes, maxX,
 					       maxY, 0);
 		list_for_each_entry_safe(mode, t, &output->modes, head) {
 			if (mode->status == MODE_OK)
@@ -329,8 +329,8 @@ void drm_crtc_probe_output_modes(struct drm_device *dev, int maxX, int maxY)
 			 * here and bailed in the past, now we add a standard
 			 * 640x480@60Hz mode and carry on.
 			 */
-			stdmode = drm_mode_duplicate(dev, &std_mode[0]);
-			drm_mode_probed_add(output, stdmode);
+			stdmode = psb_drm_mode_duplicate(dev, &std_mode[0]);
+			psb_drm_mode_probed_add(output, stdmode);
 			drm_mode_list_concat(&output->probed_modes,
 					     &output->modes);
 
@@ -342,17 +342,17 @@ void drm_crtc_probe_output_modes(struct drm_device *dev, int maxX, int maxY)
 
 		DRM_DEBUG("Probed modes for %s\n", output->name);
 		list_for_each_entry_safe(mode, t, &output->modes, head) {
-			mode->vrefresh = drm_mode_vrefresh(mode);
+			mode->vrefresh = psb_drm_mode_vrefresh(mode);
 
-			drm_mode_set_crtcinfo(mode, CRTC_INTERLACE_HALVE_V);
-			drm_mode_debug_printmodeline(dev, mode);
+			psb_drm_mode_set_crtcinfo(mode, CRTC_INTERLACE_HALVE_V);
+			psb_drm_mode_debug_printmodeline(dev, mode);
 		}
 	}
 }
-EXPORT_SYMBOL(drm_crtc_probe_output_modes);
+EXPORT_SYMBOL(psb_drm_crtc_probe_output_modes);
 
 /**
- * drm_crtc_set_mode - set a mode
+ * psb_drm_crtc_set_mode - set a mode
  * @crtc: CRTC to program
  * @mode: mode to use
  * @x: width of mode
@@ -367,7 +367,7 @@ EXPORT_SYMBOL(drm_crtc_probe_output_modes);
  * RETURNS:
  * True if the mode was set successfully, or false otherwise.
  */
-bool drm_crtc_set_mode(struct drm_crtc *crtc, struct drm_display_mode *mode,
+bool psb_drm_crtc_set_mode(struct drm_crtc *crtc, struct drm_display_mode *mode,
 		       int x, int y)
 {
 	struct drm_device *dev = crtc->dev;
@@ -377,9 +377,9 @@ bool drm_crtc_set_mode(struct drm_crtc *crtc, struct drm_display_mode *mode,
 	bool ret = false;
 	struct drm_output *output;
 
-	adjusted_mode = drm_mode_duplicate(dev, mode);
+	adjusted_mode = psb_drm_mode_duplicate(dev, mode);
 
-	crtc->enabled = drm_crtc_in_use(crtc);
+	crtc->enabled = psb_drm_crtc_in_use(crtc);
 
 	if (!crtc->enabled) {
 		return true;
@@ -462,7 +462,7 @@ bool drm_crtc_set_mode(struct drm_crtc *crtc, struct drm_display_mode *mode,
 	}
 	
 	/* XXX free adjustedmode */
-	drm_mode_destroy(dev, adjusted_mode);
+	psb_drm_mode_destroy(dev, adjusted_mode);
 	ret = TRUE;
 	/* TODO */
 //	if (scrn->pScreen)
@@ -480,10 +480,10 @@ done:
 	
 	return ret;
 }
-EXPORT_SYMBOL(drm_crtc_set_mode);
+EXPORT_SYMBOL(psb_drm_crtc_set_mode);
 
 /**
- * drm_disable_unused_functions - disable unused objects
+ * psb_drm_disable_unused_functions - disable unused objects
  * @dev: DRM device
  *
  * LOCKING:
@@ -492,7 +492,7 @@ EXPORT_SYMBOL(drm_crtc_set_mode);
  * If an output or CRTC isn't part of @dev's mode_config, it can be disabled
  * by calling its dpms function, which should power it off.
  */
-void drm_disable_unused_functions(struct drm_device *dev)
+void psb_drm_disable_unused_functions(struct drm_device *dev)
 {
 	struct drm_output *output;
 	struct drm_crtc *crtc;
@@ -507,10 +507,10 @@ void drm_disable_unused_functions(struct drm_device *dev)
 			crtc->funcs->dpms(crtc, DPMSModeOff);
 	}
 }
-EXPORT_SYMBOL(drm_disable_unused_functions);
+EXPORT_SYMBOL(psb_drm_disable_unused_functions);
 
 /**
- * drm_mode_probed_add - add a mode to the specified output's probed mode list
+ * psb_drm_mode_probed_add - add a mode to the specified output's probed mode list
  * @output: output the new mode
  * @mode: mode data
  *
@@ -519,15 +519,15 @@ EXPORT_SYMBOL(drm_disable_unused_functions);
  * 
  * Add @mode to @output's mode list for later use.
  */
-void drm_mode_probed_add(struct drm_output *output,
+void psb_drm_mode_probed_add(struct drm_output *output,
 			 struct drm_display_mode *mode)
 {
 	list_add(&mode->head, &output->probed_modes);
 }
-EXPORT_SYMBOL(drm_mode_probed_add);
+EXPORT_SYMBOL(psb_drm_mode_probed_add);
 
 /**
- * drm_mode_remove - remove and free a mode
+ * psb_drm_mode_remove - remove and free a mode
  * @output: output list to modify
  * @mode: mode to remove
  *
@@ -536,15 +536,15 @@ EXPORT_SYMBOL(drm_mode_probed_add);
  * 
  * Remove @mode from @output's mode list, then free it.
  */
-void drm_mode_remove(struct drm_output *output, struct drm_display_mode *mode)
+void psb_drm_mode_remove(struct drm_output *output, struct drm_display_mode *mode)
 {
 	list_del(&mode->head);
 	kfree(mode);
 }
-EXPORT_SYMBOL(drm_mode_remove);
+EXPORT_SYMBOL(psb_drm_mode_remove);
 
 /**
- * drm_output_create - create a new output
+ * psb_drm_output_create - create a new output
  * @dev: DRM device
  * @funcs: callbacks for this output
  * @name: user visible name of the output
@@ -558,7 +558,7 @@ EXPORT_SYMBOL(drm_mode_remove);
  * RETURNS:
  * Pointer to the new output or NULL on error.
  */
-struct drm_output *drm_output_create(struct drm_device *dev,
+struct drm_output *psb_drm_output_create(struct drm_device *dev,
 				     const struct drm_output_funcs *funcs,
 				     const char *name)
 {
@@ -590,10 +590,10 @@ struct drm_output *drm_output_create(struct drm_device *dev,
 	return output;
 
 }
-EXPORT_SYMBOL(drm_output_create);
+EXPORT_SYMBOL(psb_drm_output_create);
 
 /**
- * drm_output_destroy - remove an output
+ * psb_drm_output_destroy - remove an output
  * @output: output to remove
  *
  * LOCKING:
@@ -602,7 +602,7 @@ EXPORT_SYMBOL(drm_output_create);
  * Call @output's cleanup function, then remove the output from the DRM
  * mode_config after freeing @output's modes.
  */
-void drm_output_destroy(struct drm_output *output)
+void psb_drm_output_destroy(struct drm_output *output)
 {
 	struct drm_device *dev = output->dev;
 	struct drm_display_mode *mode, *t;
@@ -611,10 +611,10 @@ void drm_output_destroy(struct drm_output *output)
 		(*output->funcs->cleanup)(output);
 
 	list_for_each_entry_safe(mode, t, &output->probed_modes, head)
-		drm_mode_remove(output, mode);
+		psb_drm_mode_remove(output, mode);
 
 	list_for_each_entry_safe(mode, t, &output->modes, head)
-		drm_mode_remove(output, mode);
+		psb_drm_mode_remove(output, mode);
 
 	mutex_lock(&dev->mode_config.mutex);
 	drm_idr_put(dev, output->id);
@@ -622,10 +622,10 @@ void drm_output_destroy(struct drm_output *output)
 	mutex_unlock(&dev->mode_config.mutex);
 	kfree(output);
 }
-EXPORT_SYMBOL(drm_output_destroy);
+EXPORT_SYMBOL(psb_drm_output_destroy);
 
 /**
- * drm_output_rename - rename an output
+ * psb_drm_output_rename - rename an output
  * @output: output to rename
  * @name: new user visible name
  *
@@ -637,7 +637,7 @@ EXPORT_SYMBOL(drm_output_destroy);
  * RETURNS:
  * True if the name was changed, false otherwise.
  */
-bool drm_output_rename(struct drm_output *output, const char *name)
+bool psb_drm_output_rename(struct drm_output *output, const char *name)
 {
 	if (!name)
 		return false;
@@ -652,10 +652,10 @@ bool drm_output_rename(struct drm_output *output, const char *name)
 
 	return TRUE;
 }
-EXPORT_SYMBOL(drm_output_rename);
+EXPORT_SYMBOL(psb_drm_output_rename);
 
 /**
- * drm_mode_create - create a new display mode
+ * psb_drm_mode_create - create a new display mode
  * @dev: DRM device
  *
  * LOCKING:
@@ -666,7 +666,7 @@ EXPORT_SYMBOL(drm_output_rename);
  * RETURNS:
  * Pointer to new mode on success, NULL on error.
  */
-struct drm_display_mode *drm_mode_create(struct drm_device *dev)
+struct drm_display_mode *psb_drm_mode_create(struct drm_device *dev)
 {
 	struct drm_display_mode *nmode;
 
@@ -677,10 +677,10 @@ struct drm_display_mode *drm_mode_create(struct drm_device *dev)
 	nmode->mode_id = drm_idr_get(dev, nmode);
 	return nmode;
 }
-EXPORT_SYMBOL(drm_mode_create);
+EXPORT_SYMBOL(psb_drm_mode_create);
 
 /**
- * drm_mode_destroy - remove a mode
+ * psb_drm_mode_destroy - remove a mode
  * @dev: DRM device
  * @mode: mode to remove
  *
@@ -689,16 +689,16 @@ EXPORT_SYMBOL(drm_mode_create);
  *
  * Free @mode's unique identifier, then free it.
  */
-void drm_mode_destroy(struct drm_device *dev, struct drm_display_mode *mode)
+void psb_drm_mode_destroy(struct drm_device *dev, struct drm_display_mode *mode)
 {
 	drm_idr_put(dev, mode->mode_id);
 
 	kfree(mode);
 }
-EXPORT_SYMBOL(drm_mode_destroy);
+EXPORT_SYMBOL(psb_drm_mode_destroy);
 
 /**
- * drm_mode_config_init - initialize DRM mode_configuration structure
+ * psb_drm_mode_config_init - initialize DRM mode_configuration structure
  * @dev: DRM device
  *
  * LOCKING:
@@ -707,7 +707,7 @@ EXPORT_SYMBOL(drm_mode_destroy);
  * Initialize @dev's mode_config structure, used for tracking the graphics
  * configuration of @dev.
  */
-void drm_mode_config_init(struct drm_device *dev)
+void psb_drm_mode_config_init(struct drm_device *dev)
 {
 	mutex_init(&dev->mode_config.mutex);
 	INIT_LIST_HEAD(&dev->mode_config.fb_list);
@@ -717,7 +717,7 @@ void drm_mode_config_init(struct drm_device *dev)
 	INIT_LIST_HEAD(&dev->mode_config.usermode_list);
 	idr_init(&dev->mode_config.crtc_idr);
 }
-EXPORT_SYMBOL(drm_mode_config_init);
+EXPORT_SYMBOL(psb_drm_mode_config_init);
 
 /**
  * drm_get_buffer_object - find the buffer object for a given handle
@@ -763,21 +763,21 @@ out_err:
 	return ret;
 }
 
-char drm_init_mode[32];
-int drm_init_xres;
-int drm_init_yres;
-EXPORT_SYMBOL(drm_init_mode);
-EXPORT_SYMBOL(drm_init_xres);
-EXPORT_SYMBOL(drm_init_yres);
+char psb_drm_init_mode[32];
+int psb_drm_init_xres;
+int psb_drm_init_yres;
+EXPORT_SYMBOL(psb_drm_init_mode);
+EXPORT_SYMBOL(psb_drm_init_xres);
+EXPORT_SYMBOL(psb_drm_init_yres);
 
 /**
- * drm_pick_crtcs - pick crtcs for output devices
+ * psb_drm_pick_crtcs - pick crtcs for output devices
  * @dev: DRM device
  *
  * LOCKING:
  * Caller must hold mode config lock.
  */
-static void drm_pick_crtcs (struct drm_device *dev)
+static void psb_drm_pick_crtcs (struct drm_device *dev)
 {
 	int c, o, assigned;
 	struct drm_output *output, *output_equal;
@@ -805,9 +805,9 @@ static void drm_pick_crtcs (struct drm_device *dev)
 
 		des_mode = NULL;
 		list_for_each_entry(des_mode, &output->modes, head) {
-			if (/* !strcmp(des_mode->name, drm_init_mode) ||  */
-			    des_mode->hdisplay==drm_init_xres
-			    && des_mode->vdisplay==drm_init_yres) {
+			if (/* !strcmp(des_mode->name, psb_drm_init_mode) ||  */
+			    des_mode->hdisplay==psb_drm_init_xres
+			    && des_mode->vdisplay==psb_drm_init_yres) {
 				des_mode->type |= DRM_MODE_TYPE_USERPREF;
 				break;
 			}
@@ -861,7 +861,7 @@ static void drm_pick_crtcs (struct drm_device *dev)
 
 				list_for_each_entry(modes, &output->modes, head) {
 					list_for_each_entry(modes_equal, &output_equal->modes, head) {
-						if (drm_mode_equal (modes, modes_equal)) {
+						if (psb_drm_mode_equal (modes, modes_equal)) {
 							if ((output->possible_clones & output_equal->possible_clones) && (output_equal->crtc == crtc)) {
 								printk("Cloning %s (0x%lx) to %s (0x%lx)\n",output->name,output->possible_clones,output_equal->name,output_equal->possible_clones);
 								assigned = 0;
@@ -887,10 +887,10 @@ clone:
     		}
 	}
 }
-EXPORT_SYMBOL(drm_pick_crtcs);
+EXPORT_SYMBOL(psb_drm_pick_crtcs);
 
 /**
- * drm_initial_config - setup a sane initial output configuration
+ * psb_drm_initial_config - setup a sane initial output configuration
  * @dev: DRM device
  * @can_grow: this configuration is growable
  *
@@ -904,7 +904,7 @@ EXPORT_SYMBOL(drm_pick_crtcs);
  * RETURNS:
  * Zero if everything went ok, nonzero otherwise.
  */
-bool drm_initial_config(struct drm_device *dev, bool can_grow)
+bool psb_drm_initial_config(struct drm_device *dev, bool can_grow)
 {
 	struct drm_output *output;
 	struct drm_crtc *crtc;
@@ -912,9 +912,9 @@ bool drm_initial_config(struct drm_device *dev, bool can_grow)
 
 	mutex_lock(&dev->mode_config.mutex);
 
-	drm_crtc_probe_output_modes(dev, 2048, 2048);
+	psb_drm_crtc_probe_output_modes(dev, 2048, 2048);
 
-	drm_pick_crtcs(dev);
+	psb_drm_pick_crtcs(dev);
 
 	list_for_each_entry(crtc, &dev->mode_config.crtc_list, head) {
 
@@ -940,18 +940,18 @@ bool drm_initial_config(struct drm_device *dev, bool can_grow)
 
 		/* and needs an attached fb */
 		if (output->crtc->fb)
-			drm_crtc_set_mode(output->crtc, output->crtc->desired_mode, 0, 0);
+			psb_drm_crtc_set_mode(output->crtc, output->crtc->desired_mode, 0, 0);
 	}
 
-	drm_disable_unused_functions(dev);
+	psb_drm_disable_unused_functions(dev);
 
 	mutex_unlock(&dev->mode_config.mutex);
 	return ret;
 }
-EXPORT_SYMBOL(drm_initial_config);
+EXPORT_SYMBOL(psb_drm_initial_config);
 
 /**
- * drm_mode_config_cleanup - free up DRM mode_config info
+ * psb_drm_mode_config_cleanup - free up DRM mode_config info
  * @dev: DRM device
  *
  * LOCKING:
@@ -962,7 +962,7 @@ EXPORT_SYMBOL(drm_initial_config);
  *
  * FIXME: cleanup any dangling user buffer objects too
  */
-void drm_mode_config_cleanup(struct drm_device *dev)
+void psb_drm_mode_config_cleanup(struct drm_device *dev)
 {
 	struct drm_output *output, *ot;
 	struct drm_crtc *crtc, *ct;
@@ -971,30 +971,30 @@ void drm_mode_config_cleanup(struct drm_device *dev)
 	struct drm_property *property, *pt;
 
 	list_for_each_entry_safe(output, ot, &dev->mode_config.output_list, head) {
-		drm_output_destroy(output);
+		psb_drm_output_destroy(output);
 	}
 
 	list_for_each_entry_safe(property, pt, &dev->mode_config.property_list, head) {
-		drm_property_destroy(dev, property);
+		psb_drm_property_destroy(dev, property);
 	}
 
 	list_for_each_entry_safe(mode, mt, &dev->mode_config.usermode_list, head) {
-		drm_mode_destroy(dev, mode);
+		psb_drm_mode_destroy(dev, mode);
 	}
 
 	list_for_each_entry_safe(fb, fbt, &dev->mode_config.fb_list, head) {
 		if (fb->bo->type != drm_bo_type_kernel)
-			drm_framebuffer_destroy(fb);
+			psb_drm_framebuffer_destroy(fb);
 		else
 			dev->driver->fb_remove(dev, drm_crtc_from_fb(dev, fb));
 	}
 
 	list_for_each_entry_safe(crtc, ct, &dev->mode_config.crtc_list, head) {
-		drm_crtc_destroy(crtc);
+		psb_drm_crtc_destroy(crtc);
 	}
 
 }
-EXPORT_SYMBOL(drm_mode_config_cleanup);
+EXPORT_SYMBOL(psb_drm_mode_config_cleanup);
 
 /**
  * drm_crtc_set_config - set a new config from userspace
@@ -1058,8 +1058,8 @@ int drm_crtc_set_config(struct drm_crtc *crtc, struct drm_mode_crtc *crtc_info, 
 		crtc->enabled = (new_mode != NULL);
 		if (new_mode != NULL) {
 			DRM_DEBUG("attempting to set mode from userspace\n");
-			drm_mode_debug_printmodeline(dev, new_mode);
-			if (!drm_crtc_set_mode(crtc, new_mode, crtc_info->x,
+			psb_drm_mode_debug_printmodeline(dev, new_mode);
+			if (!psb_drm_crtc_set_mode(crtc, new_mode, crtc_info->x,
 					       crtc_info->y)) {
 				crtc->enabled = save_enabled;
 				count = 0;
@@ -1072,7 +1072,7 @@ int drm_crtc_set_config(struct drm_crtc *crtc, struct drm_mode_crtc *crtc_info, 
 			crtc->desired_y = crtc_info->y;
 			crtc->desired_mode = new_mode;
 		}
-		drm_disable_unused_functions(dev);
+		psb_drm_disable_unused_functions(dev);
 	}
 	kfree(save_crtcs);
 	return 0;
@@ -1198,7 +1198,7 @@ int drm_mode_getresources(struct drm_device *dev,
 
 	if (card_res->count_modes == 0) {
 		DRM_DEBUG("probing modes %dx%d\n", dev->mode_config.max_width, dev->mode_config.max_height);
-		drm_crtc_probe_output_modes(dev, dev->mode_config.max_width, dev->mode_config.max_height);
+		psb_drm_crtc_probe_output_modes(dev, dev->mode_config.max_width, dev->mode_config.max_height);
 		mode_count = 0;
 		list_for_each_entry(output, &dev->mode_config.output_list, head) {
 			list_for_each(lh, &output->modes)
@@ -1497,7 +1497,7 @@ int drm_mode_setcrtc(struct drm_device *dev,
 					    head) {
 				list_for_each_entry(mode, &output->modes,
 						    head) {
-					drm_mode_debug_printmodeline(dev, 
+					psb_drm_mode_debug_printmodeline(dev, 
 								     mode);
 				}
 			}
@@ -1601,7 +1601,7 @@ int drm_mode_addfb(struct drm_device *dev,
 	/* TODO check buffer is sufficently large */
 	/* TODO setup destructor callback */
 
-	fb = drm_framebuffer_create(dev);
+	fb = psb_drm_framebuffer_create(dev);
 	if (!fb) {
 		ret = -EINVAL;
 		goto out;
@@ -1669,7 +1669,7 @@ int drm_mode_rmfb(struct drm_device *dev,
 	/* TODO unhock the destructor from the buffer object */
 
 	if (fb->bo->type != drm_bo_type_kernel)
-		drm_framebuffer_destroy(fb);
+		psb_drm_framebuffer_destroy(fb);
 	else
 		dev->driver->fb_remove(dev, drm_crtc_from_fb(dev, fb));
 
@@ -1746,7 +1746,7 @@ void drm_fb_release(struct file *filp)
 	list_for_each_entry_safe(fb, tfb, &priv->fbs, filp_head) {
 		list_del(&fb->filp_head);
 		if (fb->bo->type != drm_bo_type_kernel)
-			drm_framebuffer_destroy(fb);
+			psb_drm_framebuffer_destroy(fb);
 		else
 			dev->driver->fb_remove(dev, drm_crtc_from_fb(dev, fb));
 	}
@@ -1756,30 +1756,30 @@ void drm_fb_release(struct file *filp)
 /*
  *
  */
-void drm_mode_addmode(struct drm_device *dev, struct drm_display_mode *user_mode)
+void psb_drm_mode_addmode(struct drm_device *dev, struct drm_display_mode *user_mode)
 {
 	user_mode->type |= DRM_MODE_TYPE_USERDEF;
 
 	user_mode->output_count = 0;
 	list_add(&user_mode->head, &dev->mode_config.usermode_list);
 }
-EXPORT_SYMBOL(drm_mode_addmode);
+EXPORT_SYMBOL(psb_drm_mode_addmode);
 
-int drm_mode_rmmode(struct drm_device *dev, struct drm_display_mode *mode)
+int psb_drm_mode_rmmode(struct drm_device *dev, struct drm_display_mode *mode)
 {
 	struct drm_display_mode *t;
 	int ret = -EINVAL;
 	list_for_each_entry(t, &dev->mode_config.usermode_list, head) {
 		if (t == mode) {
 			list_del(&mode->head);
-			drm_mode_destroy(dev, mode);
+			psb_drm_mode_destroy(dev, mode);
 			ret = 0;
 			break;
 		}
 	}
 	return ret;
 }
-EXPORT_SYMBOL(drm_mode_rmmode);
+EXPORT_SYMBOL(psb_drm_mode_rmmode);
 
 static int drm_mode_attachmode(struct drm_device *dev,
 			       struct drm_output *output,
@@ -1802,7 +1802,7 @@ static int drm_mode_attachmode(struct drm_device *dev,
 	return ret;
 }
 
-int drm_mode_attachmode_crtc(struct drm_device *dev, struct drm_crtc *crtc,
+int psb_drm_mode_attachmode_crtc(struct drm_device *dev, struct drm_crtc *crtc,
 			     struct drm_display_mode *mode)
 {
 	struct drm_output *output;
@@ -1812,7 +1812,7 @@ int drm_mode_attachmode_crtc(struct drm_device *dev, struct drm_crtc *crtc,
 			drm_mode_attachmode(dev, output, mode);
 	}
 }
-EXPORT_SYMBOL(drm_mode_attachmode_crtc);
+EXPORT_SYMBOL(psb_drm_mode_attachmode_crtc);
 
 static int drm_mode_detachmode(struct drm_device *dev,
 			       struct drm_output *output,
@@ -1835,7 +1835,7 @@ static int drm_mode_detachmode(struct drm_device *dev,
 	return ret;
 }
 
-int drm_mode_detachmode_crtc(struct drm_device *dev, struct drm_display_mode *mode)
+int psb_drm_mode_detachmode_crtc(struct drm_device *dev, struct drm_display_mode *mode)
 {
 	struct drm_output *output;
 
@@ -1844,7 +1844,7 @@ int drm_mode_detachmode_crtc(struct drm_device *dev, struct drm_display_mode *mo
 	}
 	return 0;
 }
-EXPORT_SYMBOL(drm_mode_detachmode_crtc);
+EXPORT_SYMBOL(psb_drm_mode_detachmode_crtc);
 
 /**
  * drm_fb_addmode - adds a user defined mode
@@ -1869,7 +1869,7 @@ int drm_mode_addmode_ioctl(struct drm_device *dev,
 	int ret = 0;
 
 	mutex_lock(&dev->mode_config.mutex);
-	user_mode = drm_mode_create(dev);
+	user_mode = psb_drm_mode_create(dev);
 	if (!user_mode) {
 		ret = -ENOMEM;
 		goto out;
@@ -1877,7 +1877,7 @@ int drm_mode_addmode_ioctl(struct drm_device *dev,
 
 	drm_crtc_convert_umode(user_mode, new_mode);
 
-	drm_mode_addmode(dev, user_mode);
+	psb_drm_mode_addmode(dev, user_mode);
 	new_mode->id = user_mode->mode_id;
 
 out:
@@ -1920,7 +1920,7 @@ int drm_mode_rmmode_ioctl(struct drm_device *dev,
 		goto out;
 	}
 
-	ret = drm_mode_rmmode(dev, mode);
+	ret = psb_drm_mode_rmmode(dev, mode);
 
 out:
 	mutex_unlock(&dev->mode_config.mutex);
@@ -2010,7 +2010,7 @@ out:
 	return ret;
 }
 
-struct drm_property *drm_property_create(struct drm_device *dev, int flags,
+struct drm_property *psb_drm_property_create(struct drm_device *dev, int flags,
 					 const char *name, int num_values)
 {
 	struct drm_property *property = NULL;
@@ -2037,9 +2037,9 @@ fail:
 	kfree(property);
 	return NULL;
 }
-EXPORT_SYMBOL(drm_property_create);
+EXPORT_SYMBOL(psb_drm_property_create);
 
-int drm_property_add_enum(struct drm_property *property, int index,
+int psb_drm_property_add_enum(struct drm_property *property, int index,
 			  uint32_t value, const char *name)
 {
 	struct drm_property_enum *prop_enum;
@@ -2069,9 +2069,9 @@ int drm_property_add_enum(struct drm_property *property, int index,
 	list_add_tail(&prop_enum->head, &property->enum_list);
 	return 0;
 }
-EXPORT_SYMBOL(drm_property_add_enum);
+EXPORT_SYMBOL(psb_drm_property_add_enum);
 
-void drm_property_destroy(struct drm_device *dev, struct drm_property *property)
+void psb_drm_property_destroy(struct drm_device *dev, struct drm_property *property)
 {
 	struct drm_property_enum *prop_enum, *pt;
 
@@ -2085,10 +2085,10 @@ void drm_property_destroy(struct drm_device *dev, struct drm_property *property)
 	list_del(&property->head);
 	kfree(property);	
 }
-EXPORT_SYMBOL(drm_property_destroy);
+EXPORT_SYMBOL(psb_drm_property_destroy);
 
 
-int drm_output_attach_property(struct drm_output *output,
+int psb_drm_output_attach_property(struct drm_output *output,
 			       struct drm_property *property, int init_val)
 {
 	int i;
@@ -2105,7 +2105,7 @@ int drm_output_attach_property(struct drm_output *output,
 		return -EINVAL;
 	return 0;
 }
-EXPORT_SYMBOL(drm_output_attach_property);
+EXPORT_SYMBOL(psb_drm_output_attach_property);
 
 int drm_mode_getproperty_ioctl(struct drm_device *dev,
 			       void *data, struct drm_file *file_priv)

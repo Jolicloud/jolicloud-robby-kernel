@@ -51,9 +51,9 @@ int intel_ddc_get_modes(struct drm_output *output)
 	struct edid *edid;
 	int ret = 0;
 
-	edid = drm_get_edid(output, &intel_output->ddc_bus->adapter);
+	edid = psb_drm_get_edid(output, &intel_output->ddc_bus->adapter);
 	if (edid) {
-		ret = drm_add_edid_modes(output, edid);
+		ret = psb_drm_add_edid_modes(output, edid);
 		kfree(edid);
 	}
 	return ret;

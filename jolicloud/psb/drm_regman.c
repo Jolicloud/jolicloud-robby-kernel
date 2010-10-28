@@ -34,7 +34,7 @@
  * Allocate a compatible register and put it on the unfenced list.
  */
 
-int drm_regs_alloc(struct drm_reg_manager *manager,
+int psb_drm_regs_alloc(struct drm_reg_manager *manager,
 		   const void *data,
 		   uint32_t fence_class,
 		   uint32_t fence_type,
@@ -92,12 +92,12 @@ int drm_regs_alloc(struct drm_reg_manager *manager,
 
 	list_for_each_entry_safe(entry, next_entry, &manager->lru, head) {
 		BUG_ON(!entry->fence);
-		ret = drm_fence_object_wait(entry->fence, 0, !interruptible,
+		ret = psb_drm_fence_object_wait(entry->fence, 0, !interruptible,
 					    entry->fence_type);
 		if (ret)
 			return ret;
 
-		drm_fence_usage_deref_unlocked(&entry->fence);
+		psb_drm_fence_usage_deref_unlocked(&entry->fence);
 		list_del(&entry->head);
 		entry->new_fence_type = fence_type;
 		list_add_tail(&entry->head, &manager->unfenced);
@@ -113,9 +113,9 @@ out:
 	*reg = entry;
 	return 0;
 }
-EXPORT_SYMBOL(drm_regs_alloc);
+EXPORT_SYMBOL(psb_drm_regs_alloc);
 
-void drm_regs_fence(struct drm_reg_manager *manager,
+void psb_drm_regs_fence(struct drm_reg_manager *manager,
 		    struct drm_fence_object *fence)
 {
 	struct drm_reg *entry;
@@ -144,8 +144,8 @@ void drm_regs_fence(struct drm_reg_manager *manager,
 					 head) {
 			list_del(&entry->head);
 			if (entry->fence)
-				drm_fence_usage_deref_unlocked(&entry->fence);
-			drm_fence_reference_unlocked(&entry->fence, fence);
+				psb_drm_fence_usage_deref_unlocked(&entry->fence);
+			psb_drm_fence_reference_unlocked(&entry->fence, fence);
 
 			entry->fence_type = entry->new_fence_type;
 			BUG_ON((entry->fence_type & fence->type) !=
@@ -155,14 +155,14 @@ void drm_regs_fence(struct drm_reg_manager *manager,
 		}
 	}
 }
-EXPORT_SYMBOL(drm_regs_fence);
+EXPORT_SYMBOL(psb_drm_regs_fence);
 
-void drm_regs_free(struct drm_reg_manager *manager)
+void psb_drm_regs_free(struct drm_reg_manager *manager)
 {
 	struct drm_reg *entry;
 	struct drm_reg *next_entry;
 
-	drm_regs_fence(manager, NULL);
+	psb_drm_regs_fence(manager, NULL);
 
 	list_for_each_entry_safe(entry, next_entry, &manager->free, head) {
 		list_del(&entry->head);
@@ -171,23 +171,23 @@ void drm_regs_free(struct drm_reg_manager *manager)
 
 	list_for_each_entry_safe(entry, next_entry, &manager->lru, head) {
 
-		(void)drm_fence_object_wait(entry->fence, 1, 1,
+		(void)psb_drm_fence_object_wait(entry->fence, 1, 1,
 					    entry->fence_type);
 		list_del(&entry->head);
-		drm_fence_usage_deref_unlocked(&entry->fence);
+		psb_drm_fence_usage_deref_unlocked(&entry->fence);
 		manager->reg_destroy(entry);
 	}
 }
-EXPORT_SYMBOL(drm_regs_free);
+EXPORT_SYMBOL(psb_drm_regs_free);
 
-void drm_regs_add(struct drm_reg_manager *manager, struct drm_reg *reg)
+void psb_drm_regs_add(struct drm_reg_manager *manager, struct drm_reg *reg)
 {
 	reg->fence = NULL;
 	list_add_tail(&reg->head, &manager->free);
 }
-EXPORT_SYMBOL(drm_regs_add);
+EXPORT_SYMBOL(psb_drm_regs_add);
 
-void drm_regs_init(struct drm_reg_manager *manager,
+void psb_drm_regs_init(struct drm_reg_manager *manager,
 		   int (*reg_reusable) (const struct drm_reg *, const void *),
 		   void (*reg_destroy) (struct drm_reg *))
 {
@@ -197,4 +197,4 @@ void drm_regs_init(struct drm_reg_manager *manager,
 	manager->reg_reusable = reg_reusable;
 	manager->reg_destroy = reg_destroy;
 }
-EXPORT_SYMBOL(drm_regs_init);
+EXPORT_SYMBOL(psb_drm_regs_init);

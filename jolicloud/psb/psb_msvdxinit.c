@@ -408,7 +408,7 @@ out:
 static void
 psb_free_ccb (struct drm_buffer_object **ccb)
 {
-  drm_bo_usage_deref_unlocked (ccb);
+  psb_drm_bo_usage_deref_unlocked (ccb);
   *ccb = NULL;
 }
 
@@ -461,7 +461,7 @@ psb_allocate_ccb (struct drm_device *dev,
   struct drm_bo_kmap_obj tmp_kmap;
   int is_iomem;
 
-  ret = drm_buffer_object_create (dev, size,
+  ret = psb_drm_buffer_object_create (dev, size,
 				  drm_bo_type_kernel,
 				  DRM_BO_FLAG_READ |
 				  DRM_PSB_FLAG_MEM_KERNEL |
@@ -474,17 +474,17 @@ psb_allocate_ccb (struct drm_device *dev,
       return 1;
     }
 
-  ret = drm_bo_kmap (*ccb, 0, (*ccb)->num_pages, &tmp_kmap);
+  ret = psb_drm_bo_kmap (*ccb, 0, (*ccb)->num_pages, &tmp_kmap);
   if (ret)
     {
-      PSB_DEBUG_GENERAL ("drm_bo_kmap failed ret: %d\n", ret);
-      drm_bo_usage_deref_unlocked (ccb);
+      PSB_DEBUG_GENERAL ("psb_drm_bo_kmap failed ret: %d\n", ret);
+      psb_drm_bo_usage_deref_unlocked (ccb);
       *ccb = NULL;
       return 1;
     }
 
   memset (drm_bmo_virtual (&tmp_kmap, &is_iomem), 0, size);
-  drm_bo_kunmap (&tmp_kmap);
+  psb_drm_bo_kunmap (&tmp_kmap);
 
   *base_addr = (*ccb)->offset;
   return 0;

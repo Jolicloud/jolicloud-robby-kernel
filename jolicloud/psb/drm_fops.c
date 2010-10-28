@@ -58,7 +58,7 @@ static int drm_setup(struct drm_device * dev)
 
 	/* prebuild the SAREA */
 	sareapage = max(SAREA_MAX, PAGE_SIZE);
-	i = drm_addmap(dev, 0, sareapage, _DRM_SHM, _DRM_CONTAINS_LOCK, &map);
+	i = psb_drm_addmap(dev, 0, sareapage, _DRM_SHM, _DRM_CONTAINS_LOCK, &map);
 	if (i != 0)
 		return i;
 
@@ -125,7 +125,7 @@ static int drm_setup(struct drm_device * dev)
  * increments the device open count. If the open count was previous at zero,
  * i.e., it's the first that the device is open, then calls setup().
  */
-int drm_open(struct inode *inode, struct file *filp)
+int psb_drm_open(struct inode *inode, struct file *filp)
 {
 	struct drm_device *dev = NULL;
 	int minor = iminor(inode);
@@ -162,7 +162,7 @@ out:
 
 	return retcode;
 }
-EXPORT_SYMBOL(drm_open);
+EXPORT_SYMBOL(psb_drm_open);
 
 /**
  * File \c open operation.
@@ -245,14 +245,15 @@ static int drm_open_helper(struct inode *inode, struct file *filp,
 
 	DRM_DEBUG("pid = %d, minor = %d\n", current->pid, minor);
 
-	priv = drm_alloc(sizeof(*priv), DRM_MEM_FILES);
+	priv = psb_drm_alloc(sizeof(*priv), DRM_MEM_FILES);
 	if (!priv)
 		return -ENOMEM;
 
 	memset(priv, 0, sizeof(*priv));
 	filp->private_data = priv;
 	priv->filp = filp;
-	priv->uid = current->cred->euid;
+/*	priv->uid = current->loginuid; */
+	priv->uid = current_euid();
 	priv->pid = current->pid;
 	priv->minor = minor;
 	priv->head = drm_heads[minor];
@@ -312,13 +313,13 @@ static int drm_open_helper(struct inode *inode, struct file *filp,
 
 	return 0;
       out_free:
-	drm_free(priv, sizeof(*priv), DRM_MEM_FILES);
+	psb_drm_free(priv, sizeof(*priv), DRM_MEM_FILES);
 	filp->private_data = NULL;
 	return ret;
 }
 
 /** No-op. */
-int drm_fasync(int fd, struct file *filp, int on)
+int psb_drm_fasync(int fd, struct file *filp, int on)
 {
 	struct drm_file *priv = filp->private_data;
 	struct drm_device *dev = priv->head->dev;
@@ -331,7 +332,7 @@ int drm_fasync(int fd, struct file *filp, int on)
 		return retcode;
 	return 0;
 }
-EXPORT_SYMBOL(drm_fasync);
+EXPORT_SYMBOL(psb_drm_fasync);
 
 static void drm_object_release(struct file *filp)
 {
@@ -345,14 +346,14 @@ static void drm_object_release(struct file *filp)
 	 * list_for_each() here, as the struct_mutex may be temporarily
 	 * released by the remove_() functions, and thus the lists may be
 	 * altered.
-	 * Also, a drm_remove_ref_object() will not remove it
+	 * Also, a psb_drm_remove_ref_object() will not remove it
 	 * from the list unless its refcount is 1.
 	 */
 
 	head = &priv->refd_objects;
 	while (head->next != head) {
 		ref_object = list_entry(head->next, struct drm_ref_object, list);
-		drm_remove_ref_object(priv, ref_object);
+		psb_drm_remove_ref_object(priv, ref_object);
 		head = &priv->refd_objects;
 	}
 
@@ -372,7 +373,7 @@ static void drm_object_release(struct file *filp)
  * data from its list and free it. Decreases the open count and if it reaches
  * zero calls drm_lastclose().
  */
-int drm_release(struct inode *inode, struct file *filp)
+int psb_drm_release(struct inode *inode, struct file *filp)
 {
 	struct drm_file *file_priv = filp->private_data;
 	struct drm_device *dev = file_priv->head->dev;
@@ -386,7 +387,7 @@ int drm_release(struct inode *inode, struct file *filp)
 		dev->driver->preclose(dev, file_priv);
 
 	/* ========================================================
-	 * Begin inline drm_release
+	 * Begin inline psb_drm_release
 	 */
 
 	DRM_DEBUG("pid = %d, device = 0x%lx, open_count = %d\n",
@@ -394,13 +395,13 @@ int drm_release(struct inode *inode, struct file *filp)
 		  dev->open_count);
 
 	if (dev->driver->reclaim_buffers_locked && dev->lock.hw_lock) {
-		if (drm_i_have_hw_lock(dev, file_priv)) {
+		if (psb_drm_i_have_hw_lock(dev, file_priv)) {
 			dev->driver->reclaim_buffers_locked(dev, file_priv);
 		} else {
 			unsigned long _end=jiffies + 3*DRM_HZ;
 			int locked = 0;
 
-			drm_idlelock_take(&dev->lock);
+			psb_drm_idlelock_take(&dev->lock);
 
 			/*
 			 * Wait for a while.
@@ -422,19 +423,19 @@ int drm_release(struct inode *inode, struct file *filp)
 			}
 
 			dev->driver->reclaim_buffers_locked(dev, file_priv);
-			drm_idlelock_release(&dev->lock);
+			psb_drm_idlelock_release(&dev->lock);
 		}
 	}
 
 	if (dev->driver->reclaim_buffers_idlelocked && dev->lock.hw_lock) {
 
-		drm_idlelock_take(&dev->lock);
+		psb_drm_idlelock_take(&dev->lock);
 		dev->driver->reclaim_buffers_idlelocked(dev, file_priv);
-		drm_idlelock_release(&dev->lock);
+		psb_drm_idlelock_release(&dev->lock);
 
 	}
 
-	if (drm_i_have_hw_lock(dev, file_priv)) {
+	if (psb_drm_i_have_hw_lock(dev, file_priv)) {
 		DRM_DEBUG("File %p released, freeing lock for context %d\n",
 			  filp, _DRM_LOCKING_CONTEXT(dev->lock.hw_lock->lock));
 
@@ -448,7 +449,7 @@ int drm_release(struct inode *inode, struct file *filp)
 		dev->driver->reclaim_buffers(dev, file_priv);
 	}
 
-	drm_fasync(-1, filp, 0);
+	psb_drm_fasync(-1, filp, 0);
 
 	mutex_lock(&dev->ctxlist_mutex);
 
@@ -465,7 +466,7 @@ int drm_release(struct inode *inode, struct file *filp)
 				drm_ctxbitmap_free(dev, pos->handle);
 
 				list_del(&pos->head);
-				drm_free(pos, sizeof(*pos), DRM_MEM_CTXLIST);
+				psb_drm_free(pos, sizeof(*pos), DRM_MEM_CTXLIST);
 				--dev->ctx_count;
 			}
 		}
@@ -486,10 +487,10 @@ int drm_release(struct inode *inode, struct file *filp)
 
 	if (dev->driver->postclose)
 		dev->driver->postclose(dev, file_priv);
-	drm_free(file_priv, sizeof(*file_priv), DRM_MEM_FILES);
+	psb_drm_free(file_priv, sizeof(*file_priv), DRM_MEM_FILES);
 
 	/* ========================================================
-	 * End inline drm_release
+	 * End inline psb_drm_release
 	 */
 
 	atomic_inc(&dev->counts[_DRM_STAT_CLOSES]);
@@ -512,7 +513,7 @@ int drm_release(struct inode *inode, struct file *filp)
 
 	return retcode;
 }
-EXPORT_SYMBOL(drm_release);
+EXPORT_SYMBOL(psb_drm_release);
 
 /** No-op. */
 /* This is to deal with older X servers that believe 0 means data is
@@ -523,9 +524,9 @@ EXPORT_SYMBOL(drm_release);
  * http://freedesktop.org/bugzilla/show_bug.cgi?id=1505 if you try
  * to return the correct response.
  */
-unsigned int drm_poll(struct file *filp, struct poll_table_struct *wait)
+unsigned int psb_drm_poll(struct file *filp, struct poll_table_struct *wait)
 {
 	/* return (POLLIN | POLLOUT | POLLRDNORM | POLLWRNORM); */
 	return 0;
 }
-EXPORT_SYMBOL(drm_poll);
+EXPORT_SYMBOL(psb_drm_poll);

@@ -44,24 +44,24 @@ struct drm_owner_item {
 	struct list_head mem_blocks;
 };
 
-void drm_sman_takedown(struct drm_sman * sman)
+void psb_drm_sman_takedown(struct drm_sman * sman)
 {
 	drm_ht_remove(&sman->user_hash_tab);
 	drm_ht_remove(&sman->owner_hash_tab);
 	if (sman->mm)
-		drm_free(sman->mm, sman->num_managers * sizeof(*sman->mm),
+		psb_drm_free(sman->mm, sman->num_managers * sizeof(*sman->mm),
 			 DRM_MEM_MM);
 }
 
-EXPORT_SYMBOL(drm_sman_takedown);
+EXPORT_SYMBOL(psb_drm_sman_takedown);
 
 int
-drm_sman_init(struct drm_sman * sman, unsigned int num_managers,
+psb_drm_sman_init(struct drm_sman * sman, unsigned int num_managers,
 	      unsigned int user_order, unsigned int owner_order)
 {
 	int ret = 0;
 
-	sman->mm = (struct drm_sman_mm *) drm_calloc(num_managers, sizeof(*sman->mm),
+	sman->mm = (struct drm_sman_mm *) psb_drm_calloc(num_managers, sizeof(*sman->mm),
 						DRM_MEM_MM);
 	if (!sman->mm) {
 		ret = -ENOMEM;
@@ -78,12 +78,12 @@ drm_sman_init(struct drm_sman * sman, unsigned int num_managers,
 
 	drm_ht_remove(&sman->owner_hash_tab);
 out1:
-	drm_free(sman->mm, num_managers * sizeof(*sman->mm), DRM_MEM_MM);
+	psb_drm_free(sman->mm, num_managers * sizeof(*sman->mm), DRM_MEM_MM);
 out:
 	return ret;
 }
 
-EXPORT_SYMBOL(drm_sman_init);
+EXPORT_SYMBOL(psb_drm_sman_init);
 
 static void *drm_sman_mm_allocate(void *private, unsigned long size,
 				  unsigned alignment)
@@ -103,14 +103,14 @@ static void drm_sman_mm_free(void *private, void *ref)
 {
 	struct drm_mm_node *node = (struct drm_mm_node *) ref;
 
-	drm_mm_put_block(node);
+	psb_drm_mm_put_block(node);
 }
 
 static void drm_sman_mm_destroy(void *private)
 {
 	struct drm_mm *mm = (struct drm_mm *) private;
-	drm_mm_takedown(mm);
-	drm_free(mm, sizeof(*mm), DRM_MEM_MM);
+	psb_drm_mm_takedown(mm);
+	psb_drm_free(mm, sizeof(*mm), DRM_MEM_MM);
 }
 
 static unsigned long drm_sman_mm_offset(void *private, void *ref)
@@ -120,7 +120,7 @@ static unsigned long drm_sman_mm_offset(void *private, void *ref)
 }
 
 int
-drm_sman_set_range(struct drm_sman * sman, unsigned int manager,
+psb_drm_sman_set_range(struct drm_sman * sman, unsigned int manager,
 		   unsigned long start, unsigned long size)
 {
 	struct drm_sman_mm *sman_mm;
@@ -130,15 +130,15 @@ drm_sman_set_range(struct drm_sman * sman, unsigned int manager,
 	BUG_ON(manager >= sman->num_managers);
 
 	sman_mm = &sman->mm[manager];
-	mm = drm_calloc(1, sizeof(*mm), DRM_MEM_MM);
+	mm = psb_drm_calloc(1, sizeof(*mm), DRM_MEM_MM);
 	if (!mm) {
 		return -ENOMEM;
 	}
 	sman_mm->private = mm;
-	ret = drm_mm_init(mm, start, size);
+	ret = psb_drm_mm_init(mm, start, size);
 
 	if (ret) {
-		drm_free(mm, sizeof(*mm), DRM_MEM_MM);
+		psb_drm_free(mm, sizeof(*mm), DRM_MEM_MM);
 		return ret;
 	}
 
@@ -150,10 +150,10 @@ drm_sman_set_range(struct drm_sman * sman, unsigned int manager,
 	return 0;
 }
 
-EXPORT_SYMBOL(drm_sman_set_range);
+EXPORT_SYMBOL(psb_drm_sman_set_range);
 
 int
-drm_sman_set_manager(struct drm_sman * sman, unsigned int manager,
+psb_drm_sman_set_manager(struct drm_sman * sman, unsigned int manager,
 		     struct drm_sman_mm * allocator)
 {
 	BUG_ON(manager >= sman->num_managers);
@@ -161,7 +161,7 @@ drm_sman_set_manager(struct drm_sman * sman, unsigned int manager,
 
 	return 0;
 }
-EXPORT_SYMBOL(drm_sman_set_manager);
+EXPORT_SYMBOL(psb_drm_sman_set_manager);
 
 static struct drm_owner_item *drm_sman_get_owner_item(struct drm_sman * sman,
 						 unsigned long owner)
@@ -176,7 +176,7 @@ static struct drm_owner_item *drm_sman_get_owner_item(struct drm_sman * sman,
 				      owner_hash);
 	}
 
-	owner_item = drm_calloc(1, sizeof(*owner_item), DRM_MEM_MM);
+	owner_item = psb_drm_calloc(1, sizeof(*owner_item), DRM_MEM_MM);
 	if (!owner_item)
 		goto out;
 
@@ -189,12 +189,12 @@ static struct drm_owner_item *drm_sman_get_owner_item(struct drm_sman * sman,
 	return owner_item;
 
 out1:
-	drm_free(owner_item, sizeof(*owner_item), DRM_MEM_MM);
+	psb_drm_free(owner_item, sizeof(*owner_item), DRM_MEM_MM);
 out:
 	return NULL;
 }
 
-struct drm_memblock_item *drm_sman_alloc(struct drm_sman *sman, unsigned int manager,
+struct drm_memblock_item *psb_drm_sman_alloc(struct drm_sman *sman, unsigned int manager,
 				    unsigned long size, unsigned alignment,
 				    unsigned long owner)
 {
@@ -212,7 +212,7 @@ struct drm_memblock_item *drm_sman_alloc(struct drm_sman *sman, unsigned int man
 		return NULL;
 	}
 
-	memblock = drm_calloc(1, sizeof(*memblock), DRM_MEM_MM);
+	memblock = psb_drm_calloc(1, sizeof(*memblock), DRM_MEM_MM);
 
 	if (!memblock)
 		goto out;
@@ -237,14 +237,14 @@ struct drm_memblock_item *drm_sman_alloc(struct drm_sman *sman, unsigned int man
 out2:
 	drm_ht_remove_item(&sman->user_hash_tab, &memblock->user_hash);
 out1:
-	drm_free(memblock, sizeof(*memblock), DRM_MEM_MM);
+	psb_drm_free(memblock, sizeof(*memblock), DRM_MEM_MM);
 out:
 	sman_mm->free(sman_mm->private, tmp);
 
 	return NULL;
 }
 
-EXPORT_SYMBOL(drm_sman_alloc);
+EXPORT_SYMBOL(psb_drm_sman_alloc);
 
 static void drm_sman_free(struct drm_memblock_item *item)
 {
@@ -253,10 +253,10 @@ static void drm_sman_free(struct drm_memblock_item *item)
 	list_del(&item->owner_list);
 	drm_ht_remove_item(&sman->user_hash_tab, &item->user_hash);
 	item->mm->free(item->mm->private, item->mm_info);
-	drm_free(item, sizeof(*item), DRM_MEM_MM);
+	psb_drm_free(item, sizeof(*item), DRM_MEM_MM);
 }
 
-int drm_sman_free_key(struct drm_sman *sman, unsigned int key)
+int psb_drm_sman_free_key(struct drm_sman *sman, unsigned int key)
 {
 	struct drm_hash_item *hash_item;
 	struct drm_memblock_item *memblock_item;
@@ -270,17 +270,17 @@ int drm_sman_free_key(struct drm_sman *sman, unsigned int key)
 	return 0;
 }
 
-EXPORT_SYMBOL(drm_sman_free_key);
+EXPORT_SYMBOL(psb_drm_sman_free_key);
 
 static void drm_sman_remove_owner(struct drm_sman *sman,
 				  struct drm_owner_item *owner_item)
 {
 	list_del(&owner_item->sman_list);
 	drm_ht_remove_item(&sman->owner_hash_tab, &owner_item->owner_hash);
-	drm_free(owner_item, sizeof(*owner_item), DRM_MEM_MM);
+	psb_drm_free(owner_item, sizeof(*owner_item), DRM_MEM_MM);
 }
 
-int drm_sman_owner_clean(struct drm_sman *sman, unsigned long owner)
+int psb_drm_sman_owner_clean(struct drm_sman *sman, unsigned long owner)
 {
 
 	struct drm_hash_item *hash_item;
@@ -299,7 +299,7 @@ int drm_sman_owner_clean(struct drm_sman *sman, unsigned long owner)
 	return 0;
 }
 
-EXPORT_SYMBOL(drm_sman_owner_clean);
+EXPORT_SYMBOL(psb_drm_sman_owner_clean);
 
 static void drm_sman_do_owner_cleanup(struct drm_sman *sman,
 				      struct drm_owner_item *owner_item)
@@ -313,7 +313,7 @@ static void drm_sman_do_owner_cleanup(struct drm_sman *sman,
 	drm_sman_remove_owner(sman, owner_item);
 }
 
-void drm_sman_owner_cleanup(struct drm_sman *sman, unsigned long owner)
+void psb_drm_sman_owner_cleanup(struct drm_sman *sman, unsigned long owner)
 {
 
 	struct drm_hash_item *hash_item;
@@ -328,9 +328,9 @@ void drm_sman_owner_cleanup(struct drm_sman *sman, unsigned long owner)
 	drm_sman_do_owner_cleanup(sman, owner_item);
 }
 
-EXPORT_SYMBOL(drm_sman_owner_cleanup);
+EXPORT_SYMBOL(psb_drm_sman_owner_cleanup);
 
-void drm_sman_cleanup(struct drm_sman *sman)
+void psb_drm_sman_cleanup(struct drm_sman *sman)
 {
 	struct drm_owner_item *entry, *next;
 	unsigned int i;
@@ -350,4 +350,4 @@ void drm_sman_cleanup(struct drm_sman *sman)
 	}
 }
 
-EXPORT_SYMBOL(drm_sman_cleanup);
+EXPORT_SYMBOL(psb_drm_sman_cleanup);

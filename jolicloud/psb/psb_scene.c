@@ -34,7 +34,7 @@ void psb_clear_scene_atomic(struct psb_scene *scene)
 	void *v;
 
 	for (i = 0; i < scene->clear_num_pages; ++i) {
-		page = drm_ttm_get_page(scene->hw_data->ttm,
+		page = psb_drm_ttm_get_page(scene->hw_data->ttm,
 					scene->clear_p_start + i);
 		if (in_irq())
 			v = kmap_atomic(page, KM_IRQ0);
@@ -56,7 +56,7 @@ int psb_clear_scene(struct psb_scene *scene)
 	int is_iomem;
 	void *addr;
 
-	int ret = drm_bo_kmap(scene->hw_data, scene->clear_p_start,
+	int ret = psb_drm_bo_kmap(scene->hw_data, scene->clear_p_start,
 			      scene->clear_num_pages, &bmo);
 
 	PSB_DEBUG_RENDER("Scene clear\n");
@@ -66,7 +66,7 @@ int psb_clear_scene(struct psb_scene *scene)
 	addr = drm_bmo_virtual(&bmo, &is_iomem);
 	BUG_ON(is_iomem);
 	memset(addr, 0, scene->clear_num_pages << PAGE_SHIFT);
-	drm_bo_kunmap(&bmo);
+	psb_drm_bo_kunmap(&bmo);
 
 	return 0;
 }
@@ -77,8 +77,8 @@ static void psb_destroy_scene_devlocked(struct psb_scene *scene)
 		return;
 
 	PSB_DEBUG_RENDER("Scene destroy\n");
-	drm_bo_usage_deref_locked(&scene->hw_data);
-	drm_free(scene, sizeof(*scene), DRM_MEM_DRIVER);
+	psb_drm_bo_usage_deref_locked(&scene->hw_data);
+	psb_drm_free(scene, sizeof(*scene), DRM_MEM_DRIVER);
 }
 
 void psb_scene_unref_devlocked(struct psb_scene **scene)
@@ -112,7 +112,7 @@ static struct psb_scene *psb_alloc_scene(struct drm_device *dev,
 
 	PSB_DEBUG_RENDER("Alloc scene w %u h %u\n", w, h);
 
-	scene = drm_calloc(1, sizeof(*scene), DRM_MEM_DRIVER);
+	scene = psb_drm_calloc(1, sizeof(*scene), DRM_MEM_DRIVER);
 
 	if (!scene) {
 		DRM_ERROR("Out of memory allocating scene object.\n");
@@ -133,7 +133,7 @@ static struct psb_scene *psb_alloc_scene(struct drm_device *dev,
 	if (ret)
 		goto out_err;
 
-	ret = drm_buffer_object_create(dev, bo_size, drm_bo_type_kernel,
+	ret = psb_drm_buffer_object_create(dev, bo_size, drm_bo_type_kernel,
 				       DRM_PSB_FLAG_MEM_MMU |
 				       DRM_BO_FLAG_READ |
 				       DRM_BO_FLAG_CACHED |
@@ -146,7 +146,7 @@ static struct psb_scene *psb_alloc_scene(struct drm_device *dev,
 
 	return scene;
       out_err:
-	drm_free(scene, sizeof(*scene), DRM_MEM_DRIVER);
+	psb_drm_free(scene, sizeof(*scene), DRM_MEM_DRIVER);
 	return NULL;
 }
 
@@ -218,7 +218,7 @@ int psb_validate_scene_pool(struct psb_scene_pool *pool, uint64_t flags,
 		spin_unlock_irqrestore(&scheduler->lock, irq_flags);
 		PSB_DEBUG_RENDER("Waiting to clear scene memory.\n");
 		mutex_lock(&scene->hw_data->mutex);
-		ret = drm_bo_wait(scene->hw_data, 0, 0, 0);
+		ret = psb_drm_bo_wait(scene->hw_data, 0, 0, 0);
 		mutex_unlock(&scene->hw_data->mutex);
 		if (ret)
 			return ret;
@@ -232,15 +232,15 @@ int psb_validate_scene_pool(struct psb_scene_pool *pool, uint64_t flags,
 	}
 	spin_unlock_irqrestore(&scheduler->lock, irq_flags);
 
-	ret = drm_bo_do_validate(scene->hw_data, flags, mask, hint,
+	ret = psb_drm_bo_do_validate(scene->hw_data, flags, mask, hint,
 				 PSB_ENGINE_TA, 0, NULL);
 	if (ret)
 		return ret;
-	ret = drm_bo_do_validate(dev_priv->ta_mem->hw_data, 0, 0, 0,
+	ret = psb_drm_bo_do_validate(dev_priv->ta_mem->hw_data, 0, 0, 0,
 				 PSB_ENGINE_TA, 0, NULL);
 	if (ret)
 		return ret;
-	ret = drm_bo_do_validate(dev_priv->ta_mem->ta_memory, 0, 0, 0,
+	ret = psb_drm_bo_do_validate(dev_priv->ta_mem->ta_memory, 0, 0, 0,
 				 PSB_ENGINE_TA, 0, NULL);
 	if (ret)
 		return ret;
@@ -299,7 +299,7 @@ static void psb_scene_pool_destroy_devlocked(struct psb_scene_pool *pool)
 		if (pool->scenes[i])
 			psb_scene_unref_devlocked(&pool->scenes[i]);
 	}
-	drm_free(pool, sizeof(*pool), DRM_MEM_DRIVER);
+	psb_drm_free(pool, sizeof(*pool), DRM_MEM_DRIVER);
 }
 
 void psb_scene_pool_unref_devlocked(struct psb_scene_pool **pool)
@@ -341,14 +341,14 @@ struct psb_scene_pool *psb_scene_pool_lookup_devlocked(struct drm_file *priv,
 	struct drm_user_object *uo;
 	struct psb_scene_pool *pool;
 
-	uo = drm_lookup_user_object(priv, handle);
+	uo = psb_drm_lookup_user_object(priv, handle);
 	if (!uo || (uo->type != PSB_USER_OBJECT_SCENE_POOL)) {
 		DRM_ERROR("Could not find scene pool object 0x%08x\n", handle);
 		return NULL;
 	}
 
 	if (check_owner && priv != uo->owner) {
-		if (!drm_lookup_ref_object(priv, uo, _DRM_REF_USE))
+		if (!psb_drm_lookup_ref_object(priv, uo, _DRM_REF_USE))
 			return NULL;
 	}
 
@@ -366,7 +366,7 @@ struct psb_scene_pool *psb_scene_pool_alloc(struct drm_file *priv,
 	int ret;
 
 	PSB_DEBUG_RENDER("Scene pool alloc\n");
-	pool = drm_calloc(1, sizeof(*pool), DRM_MEM_DRIVER);
+	pool = psb_drm_calloc(1, sizeof(*pool), DRM_MEM_DRIVER);
 	if (!pool) {
 		DRM_ERROR("Out of memory allocating scene pool object.\n");
 		return NULL;
@@ -377,7 +377,7 @@ struct psb_scene_pool *psb_scene_pool_alloc(struct drm_file *priv,
 	pool->num_scenes = num_scenes;
 
 	mutex_lock(&dev->struct_mutex);
-	ret = drm_add_user_object(priv, &pool->user, shareable);
+	ret = psb_drm_add_user_object(priv, &pool->user, shareable);
 	if (ret)
 		goto out_err;
 
@@ -387,7 +387,7 @@ struct psb_scene_pool *psb_scene_pool_alloc(struct drm_file *priv,
 	mutex_unlock(&dev->struct_mutex);
 	return pool;
       out_err:
-	drm_free(pool, sizeof(*pool), DRM_MEM_DRIVER);
+	psb_drm_free(pool, sizeof(*pool), DRM_MEM_DRIVER);
 	return NULL;
 }
 
@@ -400,9 +400,9 @@ static void psb_destroy_ta_mem_devlocked(struct psb_ta_mem *ta_mem)
 	if (!ta_mem)
 		return;
 
-	drm_bo_usage_deref_locked(&ta_mem->hw_data);
-	drm_bo_usage_deref_locked(&ta_mem->ta_memory);
-	drm_free(ta_mem, sizeof(*ta_mem), DRM_MEM_DRIVER);
+	psb_drm_bo_usage_deref_locked(&ta_mem->hw_data);
+	psb_drm_bo_usage_deref_locked(&ta_mem->ta_memory);
+	psb_drm_free(ta_mem, sizeof(*ta_mem), DRM_MEM_DRIVER);
 }
 
 void psb_ta_mem_unref_devlocked(struct psb_ta_mem **ta_mem)
@@ -438,7 +438,7 @@ struct psb_ta_mem *psb_alloc_ta_mem(struct drm_device *dev, uint32_t pages)
 
 	INIT_LIST_HEAD(&buf.head);
 
-	ta_mem = drm_calloc(1, sizeof(*ta_mem), DRM_MEM_DRIVER);
+	ta_mem = psb_drm_calloc(1, sizeof(*ta_mem), DRM_MEM_DRIVER);
 
 	if (!ta_mem) {
 		DRM_ERROR("Out of memory allocating parameter memory.\n");
@@ -461,7 +461,7 @@ struct psb_ta_mem *psb_alloc_ta_mem(struct drm_device *dev, uint32_t pages)
 
 	bo_size = pages * PAGE_SIZE;
 	ta_mem->dev = dev;
-	ret = drm_buffer_object_create(dev, bo_size, drm_bo_type_kernel,
+	ret = psb_drm_buffer_object_create(dev, bo_size, drm_bo_type_kernel,
 				       DRM_PSB_FLAG_MEM_MMU | DRM_BO_FLAG_READ |
 				       DRM_BO_FLAG_WRITE |
 				       PSB_BO_FLAG_SCENE,
@@ -471,7 +471,7 @@ struct psb_ta_mem *psb_alloc_ta_mem(struct drm_device *dev, uint32_t pages)
 		goto out_err0;
 
 	ret =
-	    drm_buffer_object_create(dev, pages << PAGE_SHIFT,
+	    psb_drm_buffer_object_create(dev, pages << PAGE_SHIFT,
 				     drm_bo_type_kernel,
 				     DRM_PSB_FLAG_MEM_RASTGEOM |
 				     DRM_BO_FLAG_READ |
@@ -486,9 +486,9 @@ struct psb_ta_mem *psb_alloc_ta_mem(struct drm_device *dev, uint32_t pages)
 	ta_mem->ref_count = 1;
 	return ta_mem;
       out_err1:
-	drm_bo_usage_deref_unlocked(&ta_mem->hw_data);
+	psb_drm_bo_usage_deref_unlocked(&ta_mem->hw_data);
       out_err0:
-	drm_free(ta_mem, sizeof(*ta_mem), DRM_MEM_DRIVER);
+	psb_drm_free(ta_mem, sizeof(*ta_mem), DRM_MEM_DRIVER);
 	return NULL;
 }
 
@@ -504,7 +504,7 @@ int drm_psb_scene_unref_ioctl(struct drm_device *dev,
 	if (!scene->handle_valid)
 		goto out_unlock;
 
-	uo = drm_lookup_user_object(file_priv, scene->handle);
+	uo = psb_drm_lookup_user_object(file_priv, scene->handle);
 	if (!uo) {
 		ret = -EINVAL;
 		goto out_unlock;
@@ -521,9 +521,9 @@ int drm_psb_scene_unref_ioctl(struct drm_device *dev,
 	}
 
 	scene->handle_valid = 0;
-	ro = drm_lookup_ref_object(file_priv, uo, _DRM_REF_USE);
+	ro = psb_drm_lookup_ref_object(file_priv, uo, _DRM_REF_USE);
 	BUG_ON(!ro);
-	drm_remove_ref_object(file_priv, ro);
+	psb_drm_remove_ref_object(file_priv, ro);
 
       out_unlock:
 	mutex_unlock(&dev->struct_mutex);

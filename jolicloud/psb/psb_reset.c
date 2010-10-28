@@ -192,7 +192,7 @@ void psb_msvdx_flush_cmd_queue(struct drm_device *dev)
 				DRM_FENCE_TYPE_EXE, DRM_CMD_HANG);
 		list_del(list);
 		kfree(msvdx_cmd->cmd);
-		drm_free(msvdx_cmd, sizeof(struct psb_msvdx_cmd_queue),
+		psb_drm_free(msvdx_cmd, sizeof(struct psb_msvdx_cmd_queue),
 			 DRM_MEM_DRIVER);
 	}
 }
@@ -352,7 +352,7 @@ void psb_watchdog_init(struct drm_psb_private *dev_priv)
 	struct timer_list *wt = &dev_priv->watchdog_timer;
 	unsigned long irq_flags;
 
-	dev_priv->watchdog_lock = SPIN_LOCK_UNLOCKED;
+	spin_lock_init(&dev_priv->watchdog_lock);
 	spin_lock_irqsave(&dev_priv->watchdog_lock, irq_flags);
 	init_timer(wt);
 	INIT_WORK(&dev_priv->watchdog_wq, &psb_reset_wq);

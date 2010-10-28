@@ -82,7 +82,7 @@ static int drm_mm_create_tail_node(struct drm_mm *mm,
 	struct drm_mm_node *child;
 
 	child = (struct drm_mm_node *)
-		drm_alloc(sizeof(*child), DRM_MEM_MM);
+		psb_drm_alloc(sizeof(*child), DRM_MEM_MM);
 	if (!child)
 		return -ENOMEM;
 
@@ -118,7 +118,7 @@ static struct drm_mm_node *drm_mm_split_at_start(struct drm_mm_node *parent,
 	struct drm_mm_node *child;
 
 	child = (struct drm_mm_node *)
-		drm_alloc(sizeof(*child), DRM_MEM_MM);
+		psb_drm_alloc(sizeof(*child), DRM_MEM_MM);
 	if (!child)
 		return NULL;
 
@@ -163,7 +163,7 @@ struct drm_mm_node *drm_mm_get_block(struct drm_mm_node * parent,
 	}
 
 	if (align_splitoff)
-		drm_mm_put_block(align_splitoff);
+		psb_drm_mm_put_block(align_splitoff);
 
 	return child;
 }
@@ -173,7 +173,7 @@ struct drm_mm_node *drm_mm_get_block(struct drm_mm_node * parent,
  * Otherwise add to the free stack.
  */
 
-void drm_mm_put_block(struct drm_mm_node * cur)
+void psb_drm_mm_put_block(struct drm_mm_node * cur)
 {
 
 	struct drm_mm *mm = cur->mm;
@@ -198,7 +198,7 @@ void drm_mm_put_block(struct drm_mm_node * cur)
 				prev_node->size += next_node->size;
 				list_del(&next_node->ml_entry);
 				list_del(&next_node->fl_entry);
-				drm_free(next_node, sizeof(*next_node),
+				psb_drm_free(next_node, sizeof(*next_node),
 					     DRM_MEM_MM);
 			} else {
 				next_node->size += cur->size;
@@ -212,10 +212,10 @@ void drm_mm_put_block(struct drm_mm_node * cur)
 		list_add(&cur->fl_entry, &mm->fl_entry);
 	} else {
 		list_del(&cur->ml_entry);
-		drm_free(cur, sizeof(*cur), DRM_MEM_MM);
+		psb_drm_free(cur, sizeof(*cur), DRM_MEM_MM);
 	}
 }
-EXPORT_SYMBOL(drm_mm_put_block);
+EXPORT_SYMBOL(psb_drm_mm_put_block);
 
 struct drm_mm_node *drm_mm_search_free(const struct drm_mm * mm,
 				  unsigned long size,
@@ -265,7 +265,7 @@ int drm_mm_clean(struct drm_mm * mm)
 	return (head->next->next == head);
 }
 
-int drm_mm_init(struct drm_mm * mm, unsigned long start, unsigned long size)
+int psb_drm_mm_init(struct drm_mm * mm, unsigned long start, unsigned long size)
 {
 	INIT_LIST_HEAD(&mm->ml_entry);
 	INIT_LIST_HEAD(&mm->fl_entry);
@@ -273,9 +273,9 @@ int drm_mm_init(struct drm_mm * mm, unsigned long start, unsigned long size)
 	return drm_mm_create_tail_node(mm, start, size);
 }
 
-EXPORT_SYMBOL(drm_mm_init);
+EXPORT_SYMBOL(psb_drm_mm_init);
 
-void drm_mm_takedown(struct drm_mm * mm)
+void psb_drm_mm_takedown(struct drm_mm * mm)
 {
 	struct list_head *bnode = mm->fl_entry.next;
 	struct drm_mm_node *entry;
@@ -290,7 +290,7 @@ void drm_mm_takedown(struct drm_mm * mm)
 
 	list_del(&entry->fl_entry);
 	list_del(&entry->ml_entry);
-	drm_free(entry, sizeof(*entry), DRM_MEM_MM);
+	psb_drm_free(entry, sizeof(*entry), DRM_MEM_MM);
 }
 
-EXPORT_SYMBOL(drm_mm_takedown);
+EXPORT_SYMBOL(psb_drm_mm_takedown);

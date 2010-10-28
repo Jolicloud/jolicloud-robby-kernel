@@ -99,7 +99,7 @@ int psb_grab_use_base(struct drm_psb_private *dev_priv,
 	struct drm_reg *reg;
 	struct psb_use_reg *use_reg;
 
-	ret = drm_regs_alloc(&dev_priv->use_manager,
+	ret = psb_drm_regs_alloc(&dev_priv->use_manager,
 			     (const void *)&use_data,
 			     fence_class,
 			     fence_type, interruptible, no_wait, &reg);
@@ -127,7 +127,7 @@ static void psb_use_reg_destroy(struct drm_reg *reg)
 	PSB_WSGX32(PSB_ALPL(0, _PSB_CUC_BASE_ADDR),
 		   PSB_CR_USE_CODE_BASE(use_reg->reg_seq));
 
-	drm_free(use_reg, sizeof(*use_reg), DRM_MEM_DRIVER);
+	psb_drm_free(use_reg, sizeof(*use_reg), DRM_MEM_DRIVER);
 }
 
 int psb_init_use_base(struct drm_psb_private *dev_priv,
@@ -139,11 +139,11 @@ int psb_init_use_base(struct drm_psb_private *dev_priv,
 
 	mutex_lock(&dev_priv->cmdbuf_mutex);
 
-	drm_regs_init(&dev_priv->use_manager,
+	psb_drm_regs_init(&dev_priv->use_manager,
 		      &psb_use_reg_reusable, &psb_use_reg_destroy);
 
 	for (i = reg_start; i < reg_start + reg_num; ++i) {
-		use_reg = drm_calloc(1, sizeof(*use_reg), DRM_MEM_DRIVER);
+		use_reg = psb_drm_calloc(1, sizeof(*use_reg), DRM_MEM_DRIVER);
 		if (!use_reg) {
 			ret = -ENOMEM;
 			goto out;
@@ -158,7 +158,7 @@ int psb_init_use_base(struct drm_psb_private *dev_priv,
 			   (use_reg->data_master << _PSB_CUC_BASE_DM_SHIFT),
 			   PSB_CR_USE_CODE_BASE(use_reg->reg_seq));
 
-		drm_regs_add(&dev_priv->use_manager, &use_reg->reg);
+		psb_drm_regs_add(&dev_priv->use_manager, &use_reg->reg);
 	}
       out:
 	mutex_unlock(&dev_priv->cmdbuf_mutex);
@@ -170,6 +170,6 @@ int psb_init_use_base(struct drm_psb_private *dev_priv,
 void psb_takedown_use_base(struct drm_psb_private *dev_priv)
 {
 	mutex_lock(&dev_priv->cmdbuf_mutex);
-	drm_regs_free(&dev_priv->use_manager);
+	psb_drm_regs_free(&dev_priv->use_manager);
 	mutex_unlock(&dev_priv->cmdbuf_mutex);
 }

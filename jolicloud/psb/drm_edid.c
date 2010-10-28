@@ -2,7 +2,7 @@
  * Copyright (c) 2007 Intel Corporation
  *   Jesse Barnes <jesse.barnes@intel.com>
  *
- * DDC probing routines (drm_ddc_read & drm_do_probe_ddc_edid) originally from
+ * DDC probing routines (psb_drm_ddc_read & drm_do_probe_ddc_edid) originally from
  * FB layer.
  *   Copyright (C) 2006 Dennis Munsie <dmunsie@cecropia.com>
  */
@@ -15,7 +15,7 @@
 /* Valid EDID header has these bytes */
 static u8 edid_header[] = { 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00 };
 
-int drm_get_acpi_edid(char *method, char *edid, ssize_t length)
+int psb_drm_get_acpi_edid(char *method, char *edid, ssize_t length)
 {
 	int status;
 	struct acpi_buffer buffer = { ACPI_ALLOCATE_BUFFER, NULL };
@@ -39,14 +39,14 @@ int drm_get_acpi_edid(char *method, char *edid, ssize_t length)
 	if (obj && obj->type == ACPI_TYPE_BUFFER)
 		memcpy(edid, obj->buffer.pointer, obj->buffer.length);
 	else {
-		printk(KERN_ERR "Invalid _DDC data\n");
+		printk(KERN_ERR "ACPI: " "Invalid _DDC data\n");
 		status = -EFAULT;
 		kfree(obj);
 	}
 
 	return status;
 }
-EXPORT_SYMBOL(drm_get_acpi_edid);
+EXPORT_SYMBOL(psb_drm_get_acpi_edid);
 
 /**
  * edid_valid - sanity check EDID data
@@ -100,7 +100,7 @@ struct drm_display_mode *drm_mode_std(struct drm_device *dev,
 	struct drm_display_mode *mode;
 	int hsize = t->hsize * 8 + 248, vsize;
 
-	mode = drm_mode_create(dev);
+	mode = psb_drm_mode_create(dev);
 	if (!mode)
 		return NULL;
 
@@ -113,7 +113,7 @@ struct drm_display_mode *drm_mode_std(struct drm_device *dev,
 	else
 		vsize = (hsize * 9) / 16;
 
-	drm_mode_set_name(mode);
+	psb_drm_mode_set_name(mode);
 
 	return mode;
 }
@@ -143,7 +143,7 @@ struct drm_display_mode *drm_mode_detailed(struct drm_device *dev,
 		return NULL;
 	}
 
-	mode = drm_mode_create(dev);
+	mode = psb_drm_mode_create(dev);
 	if (!mode)
 		return NULL;
 
@@ -166,7 +166,7 @@ struct drm_display_mode *drm_mode_detailed(struct drm_device *dev,
 		 pt->vsync_pulse_width_lo);
 	mode->vtotal = mode->vdisplay + ((pt->vblank_hi << 8) | pt->vblank_lo);
 
-	drm_mode_set_name(mode);
+	psb_drm_mode_set_name(mode);
 
 	if (pt->interlaced)
 		mode->flags |= V_INTERLACE;
@@ -256,8 +256,8 @@ static int add_established_modes(struct drm_output *output, struct edid *edid)
 	for (i = 0; i <= EDID_EST_TIMINGS; i++)
 		if (est_bits & (1<<i)) {
 			struct drm_display_mode *newmode;
-			newmode = drm_mode_duplicate(dev, &edid_est_modes[i]);
-			drm_mode_probed_add(output, newmode);
+			newmode = psb_drm_mode_duplicate(dev, &edid_est_modes[i]);
+			psb_drm_mode_probed_add(output, newmode);
 			modes++;
 		}
 
@@ -285,7 +285,7 @@ static int add_standard_modes(struct drm_output *output, struct edid *edid)
 			continue;
 
 		newmode = drm_mode_std(dev, &edid->standard_timings[i]);
-		drm_mode_probed_add(output, newmode);
+		psb_drm_mode_probed_add(output, newmode);
 		modes++;
 	}
 
@@ -321,7 +321,7 @@ static int add_detailed_info(struct drm_output *output, struct edid *edid)
 			/* First detailed mode is preferred */
 			if (i == 0 && edid->preferred_timing)
 				newmode->type |= DRM_MODE_TYPE_PREFERRED;
-			drm_mode_probed_add(output, newmode);
+			psb_drm_mode_probed_add(output, newmode);
 				     
 			modes++;
 			continue;
@@ -348,7 +348,7 @@ static int add_detailed_info(struct drm_output *output, struct edid *edid)
 
 				std = &data->data.timings[j];
 				newmode = drm_mode_std(dev, std);
-				drm_mode_probed_add(output, newmode);
+				psb_drm_mode_probed_add(output, newmode);
 				modes++;
 			}
 			break;
@@ -393,7 +393,7 @@ static unsigned char *drm_do_probe_ddc_edid(struct i2c_adapter *adapter)
 	return NULL;
 }
 
-unsigned char *drm_ddc_read(struct i2c_adapter *adapter)
+unsigned char *psb_drm_ddc_read(struct i2c_adapter *adapter)
 {
 	struct i2c_algo_bit_data *algo_data = adapter->algo_data;
 	unsigned char *edid = NULL;
@@ -460,10 +460,10 @@ unsigned char *drm_ddc_read(struct i2c_adapter *adapter)
 
 	return edid;
 }
-EXPORT_SYMBOL(drm_ddc_read);
+EXPORT_SYMBOL(psb_drm_ddc_read);
 
 /**
- * drm_get_edid - get EDID data, if available
+ * psb_drm_get_edid - get EDID data, if available
  * @output: output we're probing
  * @adapter: i2c adapter to use for DDC
  *
@@ -471,12 +471,12 @@ EXPORT_SYMBOL(drm_ddc_read);
  * 
  * Return edid data or NULL if we couldn't find any.
  */
-struct edid *drm_get_edid(struct drm_output *output,
+struct edid *psb_drm_get_edid(struct drm_output *output,
 			  struct i2c_adapter *adapter)
 {
 	struct edid *edid;
 
-	edid = (struct edid *)drm_ddc_read(adapter);
+	edid = (struct edid *)psb_drm_ddc_read(adapter);
 	if (!edid) {
 		dev_warn(&output->dev->pdev->dev, "%s: no EDID data\n",
 			 output->name);
@@ -490,10 +490,10 @@ struct edid *drm_get_edid(struct drm_output *output,
 	}
 	return edid;
 }
-EXPORT_SYMBOL(drm_get_edid);
+EXPORT_SYMBOL(psb_drm_get_edid);
 
 /**
- * drm_add_edid_modes - add modes from EDID data, if available
+ * psb_drm_add_edid_modes - add modes from EDID data, if available
  * @output: output we're probing
  * @edid: edid data
  *
@@ -501,7 +501,7 @@ EXPORT_SYMBOL(drm_get_edid);
  *
  * Return number of modes added or 0 if we couldn't find any.
  */
-int drm_add_edid_modes(struct drm_output *output, struct edid *edid)
+int psb_drm_add_edid_modes(struct drm_output *output, struct edid *edid)
 {
 	int num_modes = 0;
 
@@ -518,4 +518,4 @@ int drm_add_edid_modes(struct drm_output *output, struct edid *edid)
 	num_modes += add_detailed_info(output, edid);
 	return num_modes;
 }
-EXPORT_SYMBOL(drm_add_edid_modes);
+EXPORT_SYMBOL(psb_drm_add_edid_modes);

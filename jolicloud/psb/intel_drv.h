@@ -76,8 +76,8 @@ extern struct drm_display_mode *intel_crtc_mode_get(struct drm_device *dev,
 extern void intel_wait_for_vblank(struct drm_device *dev);
 extern struct drm_crtc *intel_get_crtc_from_pipe(struct drm_device *dev, int pipe);
 
-extern int intelfb_probe(struct drm_device *dev, struct drm_crtc *crtc);
-extern int intelfb_remove(struct drm_device *dev, struct drm_crtc *crtc);
+extern int psb_intelfb_probe(struct drm_device *dev, struct drm_crtc *crtc);
+extern int psb_intelfb_remove(struct drm_device *dev, struct drm_crtc *crtc);
 
 extern void intel_modeset_init(struct drm_device *dev);
 extern void intel_modeset_cleanup(struct drm_device *dev);

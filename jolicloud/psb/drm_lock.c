@@ -342,7 +342,7 @@ static int drm_notifier(void *priv)
  * having to worry about starvation.
  */
 
-void drm_idlelock_take(struct drm_lock_data *lock_data)
+void psb_drm_idlelock_take(struct drm_lock_data *lock_data)
 {
 	int ret = 0;
 
@@ -359,9 +359,9 @@ void drm_idlelock_take(struct drm_lock_data *lock_data)
 	}
 	spin_unlock(&lock_data->spinlock);
 }
-EXPORT_SYMBOL(drm_idlelock_take);
+EXPORT_SYMBOL(psb_drm_idlelock_take);
 
-void drm_idlelock_release(struct drm_lock_data *lock_data)
+void psb_drm_idlelock_release(struct drm_lock_data *lock_data)
 {
 	unsigned int old, prev;
 	volatile unsigned int *lock = &lock_data->hw_lock->lock;
@@ -379,10 +379,10 @@ void drm_idlelock_release(struct drm_lock_data *lock_data)
 	}
 	spin_unlock(&lock_data->spinlock);
 }
-EXPORT_SYMBOL(drm_idlelock_release);
+EXPORT_SYMBOL(psb_drm_idlelock_release);
 
 
-int drm_i_have_hw_lock(struct drm_device *dev, struct drm_file *file_priv)
+int psb_drm_i_have_hw_lock(struct drm_device *dev, struct drm_file *file_priv)
 {
 
 	return (file_priv->lock_count && dev->lock.hw_lock &&
@@ -390,4 +390,4 @@ int drm_i_have_hw_lock(struct drm_device *dev, struct drm_file *file_priv)
 		dev->lock.file_priv == file_priv);
 }
 
-EXPORT_SYMBOL(drm_i_have_hw_lock);
+EXPORT_SYMBOL(psb_drm_i_have_hw_lock);
