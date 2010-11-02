@@ -1,5 +1,5 @@
 # This Makefile is automatically generated; do not edit
-# Generated on 'builder75' on Thu Apr 22 09:18:24 PDT 2010
+# Generated on 'builder101' on Fri Oct 8 13:22:42 PDT 2010
 
 # to use this file, rename or delete the default Makefile, then rename or
 # link this file to Makefile. then type 'make'
@@ -65,7 +65,7 @@ obj-m := $(MODULE_NAME).o
 #
 
 EXTRA_CFLAGS += -I$(src)
-EXTRA_CFLAGS += -Wall -Wimplicit -Wreturn-type -Wswitch -Wformat -Wchar-subscripts -Wparentheses -Wpointer-arith -Wno-multichar -Werror -fno-defer-pop -MD $(DEFINES) $(INCLUDES) -Wsign-compare -Wno-cast-qual -Wno-error
+EXTRA_CFLAGS += -Wall -MD $(DEFINES) $(INCLUDES) -Wsign-compare -Wno-cast-qual -Wno-error
 
 #
 # We rely on these two definitions below; if they aren't set, we set them to
@@ -140,35 +140,40 @@ MODULE_OBJECT := $(MODULE_NAME).ko
 # NVIDIA specific CFLAGS and #define's.
 #
 
-EXTRA_CFLAGS += -D__KERNEL__ -DMODULE -DNVRM -DNV_VERSION_STRING=\"195.36.24\" -UDEBUG -U_DEBUG -DNDEBUG
+EXTRA_CFLAGS += -D__KERNEL__ -DMODULE -DNVRM -DNV_VERSION_STRING=\"260.19.12\" -UDEBUG -U_DEBUG -DNDEBUG
 
 
 COMPILE_TESTS = \
- remap_page_range \
- remap_pfn_range \
- vmap \
- agp_backend_acquire \
- set_pages_uc \
- change_page_attr \
- i2c_adapter \
- pci_get_class \
- pm_message_t \
- irq_handler_t \
- pci_choose_state \
- vm_insert_page \
- acpi_device_ops \
- acpi_device_id \
- acquire_console_sem \
- kmem_cache_create \
- on_each_cpu \
- smp_call_function \
- vmm_support \
- acpi_evaluate_integer \
- ioremap_wc \
- proc_dir_entry \
- INIT_WORK \
- acpi_walk_namespace \
- agp_memory
+	remap_page_range \
+	remap_pfn_range \
+	vmap \
+	agp_backend_acquire \
+	set_pages_uc \
+	change_page_attr \
+	i2c_adapter \
+	pci_get_class \
+	pm_message_t \
+	irq_handler_t \
+	pci_choose_state \
+	vm_insert_page \
+	acpi_device_ops \
+	acpi_device_id \
+	acquire_console_sem \
+	kmem_cache_create \
+	on_each_cpu \
+	smp_call_function \
+	vmm_support \
+	acpi_evaluate_integer \
+	ioremap_wc \
+	proc_dir_entry \
+	INIT_WORK \
+	acpi_walk_namespace \
+	agp_memory \
+	scatterlist \
+	pci_domain_nr \
+	pci_dma_mapping_error \
+	file_operations \
+	sg_init_table
 
 #
 # Miscellaneous NVIDIA kernel module build support targets. They are needed
@@ -181,7 +186,7 @@ $(obj)/nv-kernel.o: $(src)/nv-kernel.o.uu
 $(obj)/$(VERSION_HEADER):
 	@echo \#define NV_COMPILER \"`$(CC) -v 2>&1 | tail -n 1`\" > $@
 
-$(obj)/conftest.h:
+$(obj)/conftest.h: $(src)/conftest.sh
 	@if ! $(CONFTEST) compile_tests $(COMPILE_TESTS); then exit 1; fi
 
 $(obj)/patches.h:
