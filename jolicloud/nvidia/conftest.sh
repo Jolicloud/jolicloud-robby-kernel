@@ -712,7 +712,7 @@ compile_test() {
             if [ -f conftest$$.o ]; then
                 rm -f conftest$$.o
                 echo "#define NV_KMEM_CACHE_CREATE_PRESENT" >> conftest.h
-                echo "#define NV_KMEM_CACHE_CREATE_ARGUMENT_COUNT 6 " >> conftest.h
+                echo "#define NV_KMEM_CACHE_CREATE_ARGUMENT_COUNT 6" >> conftest.h
                 return
             fi
 
@@ -728,7 +728,7 @@ compile_test() {
             if [ -f conftest$$.o ]; then
                 rm -f conftest$$.o
                 echo "#define NV_KMEM_CACHE_CREATE_PRESENT" >> conftest.h
-                echo "#define NV_KMEM_CACHE_CREATE_ARGUMENT_COUNT 5 " >> conftest.h
+                echo "#define NV_KMEM_CACHE_CREATE_ARGUMENT_COUNT 5" >> conftest.h
                 return
             else
                 echo "#error kmem_cache_create() conftest failed!" >> conftest.h
@@ -769,7 +769,7 @@ compile_test() {
             if [ -f conftest$$.o ]; then
                 rm -f conftest$$.o
                 echo "#define NV_SMP_CALL_FUNCTION_PRESENT" >> conftest.h
-                echo "#define NV_SMP_CALL_FUNCTION_ARGUMENT_COUNT 4 " >> conftest.h
+                echo "#define NV_SMP_CALL_FUNCTION_ARGUMENT_COUNT 4" >> conftest.h
                 return
             fi
 
@@ -785,7 +785,7 @@ compile_test() {
             if [ -f conftest$$.o ]; then
                 rm -f conftest$$.o
                 echo "#define NV_SMP_CALL_FUNCTION_PRESENT" >> conftest.h
-                echo "#define NV_SMP_CALL_FUNCTION_ARGUMENT_COUNT 3 " >> conftest.h
+                echo "#define NV_SMP_CALL_FUNCTION_ARGUMENT_COUNT 3" >> conftest.h
                 return
             else
                 echo "#error smp_call_function() conftest failed!" >> conftest.h
@@ -826,7 +826,7 @@ compile_test() {
             if [ -f conftest$$.o ]; then
                 rm -f conftest$$.o
                 echo "#define NV_ON_EACH_CPU_PRESENT" >> conftest.h
-                echo "#define NV_ON_EACH_CPU_ARGUMENT_COUNT 4 " >> conftest.h
+                echo "#define NV_ON_EACH_CPU_ARGUMENT_COUNT 4" >> conftest.h
                 return
             fi
 
@@ -842,7 +842,7 @@ compile_test() {
             if [ -f conftest$$.o ]; then
                 rm -f conftest$$.o
                 echo "#define NV_ON_EACH_CPU_PRESENT" >> conftest.h
-                echo "#define NV_ON_EACH_CPU_ARGUMENT_COUNT 3 " >> conftest.h
+                echo "#define NV_ON_EACH_CPU_ARGUMENT_COUNT 3" >> conftest.h
                 return
             else
                 echo "#error on_each_cpu() conftest failed!" >> conftest.h
@@ -942,7 +942,7 @@ compile_test() {
             if [ -f conftest$$.o ]; then
                 rm -f conftest$$.o
                 echo "#define NV_ACPI_WALK_NAMESPACE_PRESENT" >> conftest.h
-                echo "#define NV_ACPI_WALK_NAMESPACE_ARGUMENT_COUNT 7 " >> conftest.h
+                echo "#define NV_ACPI_WALK_NAMESPACE_ARGUMENT_COUNT 7" >> conftest.h
                 return
             fi
 
@@ -958,7 +958,7 @@ compile_test() {
             if [ -f conftest$$.o ]; then
                 rm -f conftest$$.o
                 echo "#define NV_ACPI_WALK_NAMESPACE_PRESENT" >> conftest.h
-                echo "#define NV_ACPI_WALK_NAMESPACE_ARGUMENT_COUNT 6 " >> conftest.h
+                echo "#define NV_ACPI_WALK_NAMESPACE_ARGUMENT_COUNT 6" >> conftest.h
                 return
             else
                 echo "#error acpi_walk_namespace() conftest failed!" >> conftest.h
@@ -972,7 +972,7 @@ compile_test() {
             echo "$CONFTEST_PREAMBLE
             #include <asm/io.h>
             void conftest_ioremap_wc(void) {
-                ioremap_wc(NULL);
+                ioremap_wc();
             }" > conftest$$.c
 
             $CC $CFLAGS -c conftest$$.c > /dev/null 2>&1
@@ -1014,16 +1014,30 @@ compile_test() {
 
       INIT_WORK)
             #
-            # Determine how many arguments INIT_WORK() macro
+            # Determine how many arguments the INIT_WORK() macro
             # takes.
             #
+            echo "$CONFTEST_PREAMBLE
+            #include <linux/workqueue.h>
+            void conftest_INIT_WORK(void) {
+                INIT_WORK();
+            }" > conftest$$.c
+
+            $CC $CFLAGS -c conftest$$.c > /dev/null 2>&1
+            rm -f conftest$$.c
+
+            if [ -f conftest$$.o ]; then
+                echo "#undef NV_INIT_WORK_PRESENT" >> conftest.h
+                rm -f conftest$$.o
+                return
+            fi
+
             echo "$CONFTEST_PREAMBLE
             #include <linux/workqueue.h>
             void conftest_INIT_WORK(void) {
                 INIT_WORK((struct work_struct *)NULL, NULL, NULL);
             }" > conftest$$.c
 
-            #$CC $CFLAGS -c conftest$$.c > /dev/null 2>&1
             $CC $CFLAGS -c conftest$$.c > /dev/null 2>&1
             rm -f conftest$$.c
 
@@ -1054,6 +1068,47 @@ compile_test() {
             fi
         ;;
 
+      pci_dma_mapping_error)
+            #
+            # Determine how many arguments pci_dma_mapping_error()
+            # takes.
+            #
+            echo "$CONFTEST_PREAMBLE
+            #include <linux/pci.h>
+            int conftest_pci_dma_mapping_error(void) {
+                return pci_dma_mapping_error(NULL, 0);
+            }" > conftest$$.c
+
+            $CC $CFLAGS -c conftest$$.c > /dev/null 2>&1
+            rm -f conftest$$.c
+
+            if [ -f conftest$$.o ]; then
+                echo "#define NV_PCI_DMA_MAPPING_ERROR_PRESENT" >> conftest.h
+                echo "#define NV_PCI_DMA_MAPPING_ERROR_ARGUMENT_COUNT 2" >> conftest.h
+                rm -f conftest$$.o
+                return
+            fi
+
+            echo "$CONFTEST_PREAMBLE
+            #include <linux/pci.h>
+            int conftest_pci_dma_mapping_error(void) {
+                return pci_dma_mapping_error(0);
+            }" > conftest$$.c
+
+            $CC $CFLAGS -c conftest$$.c > /dev/null 2>&1
+            rm -f conftest$$.c
+
+            if [ -f conftest$$.o ]; then
+                echo "#define NV_PCI_DMA_MAPPING_ERROR_PRESENT" >> conftest.h
+                echo "#define NV_PCI_DMA_MAPPING_ERROR_ARGUMENT_COUNT 1" >> conftest.h
+                rm -f conftest$$.o
+                return
+            else
+                echo "#error pci_dma_mapping_error() conftest failed!" >> conftest.h
+                return
+            fi
+        ;;
+
         agp_memory)
             #
             # Determine if the 'agp_memory' structure has
@@ -1075,6 +1130,150 @@ compile_test() {
                 return
             else
                 echo "#undef NV_AGP_MEMORY_HAS_PAGES" >> conftest.h
+                return
+            fi
+        ;;
+
+        scatterlist)
+            #
+            # Determine if the 'scatterlist' structure has
+            # a 'page_link' member.
+            #
+            echo "$CONFTEST_PREAMBLE
+            #include <linux/types.h>
+            #include <linux/scatterlist.h>
+            int conftest_scatterlist(void) {
+                return offsetof(struct scatterlist, page_link);
+            }" > conftest$$.c
+
+            $CC $CFLAGS -c conftest$$.c > /dev/null 2>&1
+            rm -f conftest$$.c
+
+            if [ -f conftest$$.o ]; then
+                echo "#undef NV_SCATTERLIST_HAS_PAGE" >> conftest.h
+                rm -f conftest$$.o
+                return
+            else
+                echo "#define NV_SCATTERLIST_HAS_PAGE" >> conftest.h
+                return
+            fi
+        ;;
+
+        pci_domain_nr)
+            #
+            # Determine if the pci_domain_nr() function is present.
+            #
+            echo "$CONFTEST_PREAMBLE
+            #include <linux/types.h>
+            #include <linux/pci.h>
+            int conftest_pci_domain_nr(struct pci_dev *dev) {
+                return pci_domain_nr();
+            }" > conftest$$.c
+
+            $CC $CFLAGS -c conftest$$.c > /dev/null 2>&1
+            rm -f conftest$$.c
+
+            if [ -f conftest$$.o ]; then
+                echo "#undef NV_PCI_DOMAIN_NR_PRESENT" >> conftest.h
+                rm -f conftest$$.o
+                return
+            else
+                echo "#define NV_PCI_DOMAIN_NR_PRESENT" >> conftest.h
+                return
+            fi
+        ;;
+
+        file_operations)
+            #
+            # Determine if the 'file_operations' structure has
+            # 'ioctl', 'unlocked_ioctl' and 'compat_ioctl' fields.
+            #
+            echo "$CONFTEST_PREAMBLE
+            #include <linux/fs.h>
+            int conftest_file_operations(void) {
+                return offsetof(struct file_operations, ioctl);
+            }" > conftest$$.c
+
+            $CC $CFLAGS -c conftest$$.c > /dev/null 2>&1
+            rm -f conftest$$.c
+
+            if [ -f conftest$$.o ]; then
+                echo "#define NV_FILE_OPERATIONS_HAS_IOCTL" >> conftest.h
+                rm -f conftest$$.o
+            else
+                echo "#undef NV_FILE_OPERATIONS_HAS_IOCTL" >> conftest.h
+            fi
+
+            echo "$CONFTEST_PREAMBLE
+            #include <linux/fs.h>
+            int conftest_file_operations(void) {
+                return offsetof(struct file_operations, unlocked_ioctl);
+            }" > conftest$$.c
+
+            $CC $CFLAGS -c conftest$$.c > /dev/null 2>&1
+            rm -f conftest$$.c
+
+            if [ -f conftest$$.o ]; then
+                echo "#define NV_FILE_OPERATIONS_HAS_UNLOCKED_IOCTL" >> conftest.h
+                rm -f conftest$$.o
+            else
+                echo "#undef NV_FILE_OPERATIONS_HAS_UNLOCKED_IOCTL" >> conftest.h
+            fi
+
+            echo "$CONFTEST_PREAMBLE
+            #include <linux/fs.h>
+            int conftest_file_operations(void) {
+                return offsetof(struct file_operations, compat_ioctl);
+            }" > conftest$$.c
+
+            $CC $CFLAGS -c conftest$$.c > /dev/null 2>&1
+            rm -f conftest$$.c
+
+            if [ -f conftest$$.o ]; then
+                echo "#define NV_FILE_OPERATIONS_HAS_COMPAT_IOCTL" >> conftest.h
+                rm -f conftest$$.o
+            else
+                echo "#undef NV_FILE_OPERATIONS_HAS_COMPAT_IOCTL" >> conftest.h
+            fi
+        ;;
+
+        sg_init_table)
+            #
+            # Determine if the sg_init_table() function is present.
+            #
+            echo "$CONFTEST_PREAMBLE
+            #include <linux/scatterlist.h>
+            void conftest_sg_init_table(struct scatterlist *sgl,
+                    unsigned int nents) {
+            }" > conftest$$.c
+
+            $CC $CFLAGS -c conftest$$.c #> /dev/null 2>&1
+            rm -f conftest$$.c
+
+            if [ ! -f conftest$$.o ]; then
+                echo "#undef NV_SG_INIT_TABLE_PRESENT" >> conftest.h
+                return
+
+            fi
+            rm -f conftest$$.o
+
+            echo "$CONFTEST_PREAMBLE
+            #include <linux/types.h>
+            #include <linux/scatterlist.h>
+            void conftest_sg_init_table(struct scatterlist *sgl,
+                    unsigned int nents) {
+                sg_init_table();
+            }" > conftest$$.c
+
+            $CC $CFLAGS -c conftest$$.c > /dev/null 2>&1
+            rm -f conftest$$.c
+
+            if [ -f conftest$$.o ]; then
+                echo "#undef NV_SG_INIT_TABLE_PRESENT" >> conftest.h
+                rm -f conftest$$.o
+                return
+            else
+                echo "#define NV_SG_INIT_TABLE_PRESENT" >> conftest.h
                 return
             fi
         ;;

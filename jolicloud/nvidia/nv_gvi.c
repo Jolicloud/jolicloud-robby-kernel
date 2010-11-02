@@ -28,33 +28,25 @@ irqreturn_t nv_gvi_kern_isr(
 {
     nv_linux_state_t *nvl = (void *) arg;
     nv_state_t *nv = NV_STATE_PTR(nvl);
-    U032 need_to_run_bottom_half = 0;
+    NvU32 need_to_run_bottom_half = 0;
     BOOL ret = TRUE;
 
     ret = rm_gvi_isr(nvl->isr_sp, nv, &need_to_run_bottom_half);
     if (need_to_run_bottom_half && !(nv->flags & NV_FLAG_GVI_IN_SUSPEND))
     {
-        NV_TASKQUEUE_SCHEDULE(&nvl->work);
+        NV_TASKQUEUE_SCHEDULE(&nvl->work.task);
     }
 
     return IRQ_RETVAL(ret);
 }
 
 void nv_gvi_kern_bh(
-#if defined(KERNEL_2_4) || (NV_INIT_WORK_ARGUMENT_COUNT == 3)
-    void *data
-#else
-    struct work_struct *work
-#endif
+    NV_TASKQUEUE_DATA_T *data
 )
 {
     nv_state_t *nv;
-    nv_linux_state_t *nvl;
-#if defined(KERNEL_2_4) || (NV_INIT_WORK_ARGUMENT_COUNT == 3)
-    nvl = (nv_linux_state_t *)data;
-#else
-    nvl = container_of(work, nv_linux_state_t, work);
-#endif
+    nv_work_t *work = NV_TASKQUEUE_UNPACK_DATA(data);
+    nv_linux_state_t *nvl = (nv_linux_state_t *)work->data;
     nv  = NV_STATE_PTR(nvl);
 
     rm_gvi_bh(nvl->isr_bh_sp, nv);

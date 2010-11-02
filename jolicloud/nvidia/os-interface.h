@@ -77,7 +77,7 @@ RM_STATUS   NV_API_CALL  os_memcpy_from_user         (void *, const void *, NvU3
 RM_STATUS   NV_API_CALL  os_memcpy_to_user           (void *, const void *, NvU32);
 void*       NV_API_CALL  os_mem_set                  (void *, NvU8, NvU32);
 NvS32       NV_API_CALL  os_mem_cmp                  (const NvU8 *, const NvU8 *, NvU32);
-void*       NV_API_CALL  os_pci_init_handle          (NvU8, NvU8, NvU8, NvU16 *, NvU16 *);
+void*       NV_API_CALL  os_pci_init_handle          (NvU32, NvU8, NvU8, NvU8, NvU16 *, NvU16 *);
 NvU8        NV_API_CALL  os_pci_read_byte            (void *, NvU8);
 NvU16       NV_API_CALL  os_pci_read_word            (void *, NvU8);
 NvU32       NV_API_CALL  os_pci_read_dword           (void *, NvU8);
@@ -117,7 +117,8 @@ RM_STATUS   NV_API_CALL  os_schedule                 (void);
 NvU64       NV_API_CALL  os_acquire_spinlock         (void *);
 void        NV_API_CALL  os_release_spinlock         (void *, NvU64);
 RM_STATUS   NV_API_CALL  os_get_address_space_info   (NvU64 *, NvU64 *, NvU64 *, NvU64 *);
-
+RM_STATUS   NV_API_CALL  os_queue_work_item          (void *);
+RM_STATUS   NV_API_CALL  os_flush_work_queue         (void);
 void        NV_API_CALL  os_register_compatible_ioctl    (NvU32, NvU32);
 void        NV_API_CALL  os_unregister_compatible_ioctl  (NvU32, NvU32);
 

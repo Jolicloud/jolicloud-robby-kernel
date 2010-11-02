@@ -102,8 +102,10 @@ static inline void nv_unlock_page(nv_pte_t *page_ptr)
 
 /* track how much memory has been remapped through the iommu/swiotlb */
 
+#if defined(NV_NEED_REMAP_CHECK)
 extern unsigned int nv_remap_count;
 extern unsigned int nv_remap_limit;
+#endif
 
 static inline int nv_map_sg(struct pci_dev *dev, struct scatterlist *sg)
 {
@@ -136,31 +138,30 @@ static inline int nv_sg_map_buffer(
     unsigned int        num_pages
 )
 {
-    int force_remap = FALSE;
     struct scatterlist *sg_ptr = &page_list[0]->sg_list;
+    struct scatterlist sg_tmp;
     unsigned int i;
     static int count = 0;
 
+    NV_SG_INIT_TABLE(sg_ptr, 1);
+
+#if defined(NV_SCATTERLIST_HAS_PAGE)
     sg_ptr->page = virt_to_page(base);
+#else
+    sg_ptr->page_link = virt_to_page(base);
+#endif
     sg_ptr->offset = (unsigned long)base & ~PAGE_MASK;
     sg_ptr->length  = num_pages * PAGE_SIZE;
 
-#if defined(DEBUG) && !defined(KERNEL_2_4)
-    /*
-     * XXX If the user specifically requested that the IOMMU
-     * be used, then override the address range check below
-     * and unconditionally call nv_map_sg() to remap the page(s).
-     */
-    force_remap = force_iommu;
-#endif
-
-    if (!force_remap && 
-        ((virt_to_phys(base) + sg_ptr->length - 1) & ~dev->dma_mask) == 0)
+#if !defined(NV_INTEL_IOMMU)
+    if (((virt_to_phys(base) + sg_ptr->length - 1) & ~dev->dma_mask) == 0)
     {
         sg_ptr->dma_address = virt_to_phys(base);
         goto done;
     }
+#endif
 
+#if defined(NV_NEED_REMAP_CHECK)
     if ((nv_remap_count + sg_ptr->length) > nv_remap_limit)
     {
         if (count < NV_MAX_RECURRING_WARNING_MESSAGES)
@@ -178,6 +179,7 @@ static inline int nv_sg_map_buffer(
         }
         return 1;
     }
+#endif
 
     i = NV_MAP_SG_MAX_RETRIES;
     do {
@@ -186,11 +188,15 @@ static inline int nv_sg_map_buffer(
 
         if (sg_ptr->dma_address & ~PAGE_MASK)
         {
-            struct scatterlist sg_tmp;
             nv_unmap_sg(dev, sg_ptr);
 
-            memset(&sg_tmp, 0, sizeof(struct scatterlist));
+            NV_SG_INIT_TABLE(&sg_tmp, 1);
+
+#if defined(NV_SCATTERLIST_HAS_PAGE)
             sg_tmp.page = sg_ptr->page;
+#else
+            sg_tmp.page_link = sg_ptr->page_link;
+#endif
             sg_tmp.offset = sg_ptr->offset;
             sg_tmp.length = 2048;
 
@@ -215,8 +221,10 @@ static inline int nv_sg_map_buffer(
         return -1;
     }
 
+#if defined(NV_NEED_REMAP_CHECK)
     if (sg_ptr->dma_address != virt_to_phys(base))
         nv_remap_count += sg_ptr->length;
+#endif
 
     // this is a bit of a hack to make contiguous allocations easier to handle
     // nv_sg_load below relies on the page_ptr addresses being filed in, as 
@@ -283,7 +291,9 @@ static inline void nv_sg_unmap_buffer(
     {
         nv_unmap_sg(dev, sg_ptr);
         page_ptr->dma_addr = 0;
+#if defined(NV_NEED_REMAP_CHECK)
         nv_remap_count -= sg_ptr->length;
+#endif
     }
 }
 #endif  /* NV_SG_MAP_BUFFERS */

@@ -411,8 +411,8 @@
  * Possible values:
  *
  * ~0 = use the NVIDIA driver's default logic (default)
- *  0 = enable use of change_page_attr(), etc.
- *  1 = disable use of change_page_attr(), etc.
+ *  1 = enable use of change_page_attr(), etc.
+ *  0 = disable use of change_page_attr(), etc.
  *
  * By default, the NVIDIA driver will attempt to auto-detect if it can
  * safely use the change_page_attr() and other kernel interfaces to modify

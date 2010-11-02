@@ -112,8 +112,18 @@
 #include <asm/ioctl32.h>            /* sys_ioctl() (ioctl32)            */
 #endif
 
+#if !defined(NV_FILE_OPERATIONS_HAS_IOCTL) && \
+  !defined(NV_FILE_OPERATIONS_HAS_UNLOCKED_IOCTL)
+#error "struct file_operations compile test likely failed!"
+#endif
+
 #if defined(CONFIG_VGA_ARB)
 #include <linux/vgaarb.h>
+#endif
+
+#if defined(NV_VM_INSERT_PAGE_PRESENT)
+#include <linux/pagemap.h>
+#include <linux/dma-mapping.h>
 #endif
 
 #include <linux/spinlock.h>
@@ -205,12 +215,28 @@ extern int nv_pat_mode;
 #endif
 #endif
 
+#if defined(NV_PCI_DMA_MAPPING_ERROR_PRESENT)
+#if (NV_PCI_DMA_MAPPING_ERROR_ARGUMENT_COUNT == 2)
+#define NV_PCI_DMA_MAPPING_ERROR(dev, addr) \
+    pci_dma_mapping_error(dev, addr)
+#elif (NV_PCI_DMA_MAPPING_ERROR_ARGUMENT_COUNT == 1)
+#define NV_PCI_DMA_MAPPING_ERROR(dev, addr) \
+    pci_dma_mapping_error(addr)
+#else
+#error "NV_PCI_DMA_MAPPING_ERROR_ARGUMENT_COUNT value unrecognized!"
+#endif
+#elif defined(NV_VM_INSERT_PAGE_PRESENT)
+#error "NV_PCI_DMA_MAPPING_ERROR() undefined!"
+#endif
+
 #if defined(KERNEL_2_4) || \
     (NV_ACPI_WALK_NAMESPACE_ARGUMENT_COUNT == 6)
 #define NV_ACPI_WALK_NAMESPACE(type, args...) acpi_walk_namespace(type, args)
 #elif (NV_ACPI_WALK_NAMESPACE_ARGUMENT_COUNT == 7)
-#define NV_ACPI_WALK_NAMESPACE(type, args...) \
-    acpi_walk_namespace(type, args, NULL)
+#define NV_ACPI_WALK_NAMESPACE(type, start_object, max_depth, \
+        user_function, args...) \
+    acpi_walk_namespace(type, start_object, max_depth, \
+            user_function, NULL, args)
 #else
 #error "NV_ACPI_WALK_NAMESPACE_ARGUMENT_COUNT value unrecognized!"
 #endif
@@ -334,13 +360,27 @@ int nv_acpi_uninit (void);
 #define NV_MAX_RECURRING_WARNING_MESSAGES 10
 
 /* add support for iommu.
- * on x86_64 platforms, this uses the gart to remap pages that are > 32-bits
- * to < 32-bits.
+ * On the x86-64 platform, the driver may need to remap system
+ * memory pages via AMD K8/Intel VT-d IOMMUs if a given
+ * GPUs addressing capabilities are limited such that it can
+ * not access the original page directly. Examples of this
+ * are legacy PCI-E devices.
  */
-#if defined(NVCPU_X86_64) && !defined(GFP_DMA32)
+#if (defined(NVCPU_X86_64) && !defined(GFP_DMA32)) || defined(CONFIG_DMAR)
 #define NV_SG_MAP_BUFFERS 1
 extern int nv_swiotlb;
+
+#if defined(CONFIG_DMAR)
+#define NV_INTEL_IOMMU 1
+#else
+/*
+ * Limit use of IOMMU/SWIOTLB space to 60 MB, leaving 4 MB for the rest of 
+ * the system (assuming a 64 MB IOMMU/SWIOTLB).
+ * This is not required if Intel VT-d IOMMU is used to remap pages. 
+ */
+#define NV_NEED_REMAP_CHECK 1
 #define NV_REMAP_LIMIT_DEFAULT  (60 * 1024 * 1024)
+#endif
 #endif
 
 /* add support for software i/o tlb support.
@@ -370,6 +410,13 @@ extern int nv_swiotlb;
         (dma_addr) = __pa((dma_addr))
 #else
 #define NV_FIXUP_SWIOTLB_VIRT_ADDR_BUG(dma_addr)
+#endif
+
+#if defined(NV_SG_INIT_TABLE_PRESENT)
+#define NV_SG_INIT_TABLE(sgl, nents) sg_init_table(sgl, nents)
+#else
+#define NV_SG_INIT_TABLE(sgl, nents) \
+    memset(sgl, 0, (sizeof(*(sgl)) * (nents)));
 #endif
 
 #ifndef NVWATCH
@@ -857,6 +904,11 @@ static inline int nv_execute_on_all_cpus(void (*func)(void *info), void *info)
      (NV_PCI_RESOURCE_SIZE(dev, bar) != 0))
 #endif
 
+#if defined(NV_PCI_DOMAIN_NR_PRESENT)
+#define NV_PCI_DOMAIN_NUMBER(dev)     (NvU32)pci_domain_nr(dev->bus)
+#else
+#define NV_PCI_DOMAIN_NUMBER(dev)     (0)
+#endif
 #define NV_PCI_BUS_NUMBER(dev)        (dev)->bus->number
 #define NV_PCI_DEVFN(dev)             (dev)->devfn
 #define NV_PCI_SLOT_NUMBER(dev)       PCI_SLOT(NV_PCI_DEVFN(dev))
@@ -864,12 +916,13 @@ static inline int nv_execute_on_all_cpus(void (*func)(void *info), void *info)
 #if defined(NV_PCI_GET_CLASS_PRESENT)
 #define NV_PCI_DEV_PUT(dev)                    pci_dev_put(dev)
 #define NV_PCI_GET_DEVICE(vendor,device,from)  pci_get_device(vendor,device,from)
-#define NV_PCI_GET_SLOT(bus,devfn)                                       \
+#define NV_PCI_GET_SLOT(domain,bus,devfn)                                       \
    ({                                                                    \
         struct pci_dev *__dev = NULL;                                    \
         while ((__dev = pci_get_device(PCI_ANY_ID, PCI_ANY_ID, __dev)))  \
         {                                                                \
-            if (NV_PCI_BUS_NUMBER(__dev) == bus                          \
+            if (NV_PCI_DOMAIN_NUMBER(__dev) == domain                    \
+                    && NV_PCI_BUS_NUMBER(__dev) == bus                   \
                     && NV_PCI_DEVFN(__dev) == devfn) break;              \
         }                                                                \
         __dev;                                                           \
@@ -878,24 +931,24 @@ static inline int nv_execute_on_all_cpus(void (*func)(void *info), void *info)
 #else
 #define NV_PCI_DEV_PUT(dev)
 #define NV_PCI_GET_DEVICE(vendor,device,from)  pci_find_device(vendor,device,from)
-#define NV_PCI_GET_SLOT(bus,devfn)             pci_find_slot(bus,devfn)
+#define NV_PCI_GET_SLOT(domain,bus,devfn)      pci_find_slot(bus,devfn)
 #define NV_PCI_GET_CLASS(class,from)           pci_find_class(class,from)
 #endif
 
 #define NV_PRINT_AT(nv_debug_level,at)                                                   \
     {                                                                                    \
         nv_printf(nv_debug_level,                                                        \
-            "NVRM: VM: %s: 0x%p, %d page(s), count = %d, flags = 0x%08x, 0x%p, 0x%p\n",  \
-            __FUNCTION__, at, at->num_pages, NV_ATOMIC_READ(at->usage_count),            \
+            "NVRM: VM: %s:%d: 0x%p, %d page(s), count = %d, flags = 0x%08x, 0x%p, 0x%p\n",       \
+            __FUNCTION__, __LINE__, at, at->num_pages, NV_ATOMIC_READ(at->usage_count),  \
             at->flags, at->key_mapping, at->page_table);                                 \
     }
 
-#define NV_PRINT_VMA(nv_debug_level,vma)                                            \
-    {                                                                               \
-        nv_printf(nv_debug_level,                                                   \
-            "NVRM: VM: %s: 0x%lx - 0x%lx, 0x%08x bytes @ 0x%016llx, 0x%p, 0x%p\n",  \
-            __FUNCTION__, vma->vm_start, vma->vm_end, NV_VMA_SIZE(vma),             \
-            NV_VMA_OFFSET(vma), NV_VMA_PRIVATE(vma), NV_VMA_FILE(vma));             \
+#define NV_PRINT_VMA(nv_debug_level,vma)                                                 \
+    {                                                                                    \
+        nv_printf(nv_debug_level,                                                        \
+            "NVRM: VM: %s:%d: 0x%lx - 0x%lx, 0x%08x bytes @ 0x%016llx, 0x%p, 0x%p\n",    \
+            __FUNCTION__, __LINE__, vma->vm_start, vma->vm_end, NV_VMA_SIZE(vma),        \
+            NV_VMA_OFFSET(vma), NV_VMA_PRIVATE(vma), NV_VMA_FILE(vma));                  \
     }
 
 /*
@@ -1215,19 +1268,28 @@ static inline NvU32 nv_alloc_init_flags(int cached, int agp, int contig)
 }
 
 #if defined(KERNEL_2_4)
-typedef struct tq_struct nv_taskqueue_t;
+typedef struct tq_struct nv_task_t;
 #else
-typedef struct work_struct nv_taskqueue_t;
+typedef struct work_struct nv_task_t;
 #endif
+
+typedef struct nv_work_s {
+    nv_task_t task;
+    void *data;
+} nv_work_t;
 
 #if defined(KERNEL_2_4)
 #define NV_TASKQUEUE_SCHEDULE(work) schedule_task(work)
-#define NV_TASKQUEUE_FLUSH() flush_scheduled_tasks();
+#define NV_TASKQUEUE_FLUSH()                           \
+    flush_scheduled_tasks();
 #define NV_TASKQUEUE_INIT(tq,handler,data) \
   INIT_TQUEUE(tq, handler, data)
-#else
+#define NV_TASKQUEUE_DATA_T void
+#define NV_TASKQUEUE_UNPACK_DATA(tq) (nv_work_t *)(tq)
+#else /* KERNEL_2_6 */
 #define NV_TASKQUEUE_SCHEDULE(work) schedule_work(work)
-#define NV_TASKQUEUE_FLUSH() flush_scheduled_work();
+#define NV_TASKQUEUE_FLUSH()                           \
+    flush_scheduled_work();
 #if (NV_INIT_WORK_ARGUMENT_COUNT == 2)
 #define NV_TASKQUEUE_INIT(tq,handler,data)             \
     {                                                  \
@@ -1235,6 +1297,9 @@ typedef struct work_struct nv_taskqueue_t;
             __WORK_INITIALIZER(*(tq), handler);        \
         *(tq) = __work;                                \
     }
+#define NV_TASKQUEUE_DATA_T nv_task_t
+#define NV_TASKQUEUE_UNPACK_DATA(tq)                   \
+    container_of((tq), nv_work_t, task)
 #elif (NV_INIT_WORK_ARGUMENT_COUNT == 3)
 #define NV_TASKQUEUE_INIT(tq,handler,data)             \
     {                                                  \
@@ -1242,6 +1307,8 @@ typedef struct work_struct nv_taskqueue_t;
             __WORK_INITIALIZER(*(tq), handler, data);  \
         *(tq) = __work;                                \
     }
+#define NV_TASKQUEUE_DATA_T void
+#define NV_TASKQUEUE_UNPACK_DATA(tq) (nv_work_t *)(tq)
 #else
 #error "NV_INIT_WORK_ARGUMENT_COUNT value unrecognized!"
 #endif
@@ -1265,15 +1332,10 @@ typedef struct nv_linux_state_s {
 
     /* keep track of any pending bottom halfes */
     struct tasklet_struct tasklet;
-    nv_taskqueue_t work;
+    nv_work_t work;
 
     /* get a timer callback every second */
     struct timer_list rc_timer;
-
-    /* per-device locking mechanism for access to core rm */
-    nv_spinlock_t rm_lock;
-    int rm_lock_cpu;
-    int rm_lock_count;
 
     /* lock for linux-specific data, not used by core rm */
     struct semaphore ldata_lock;
@@ -1463,21 +1525,6 @@ extern NvU64 __nv_supported_pte_mask;
 #define local_bh_enable()
 #define local_bh_disable()
 #endif /* NV_NO_LOCAL_BH_ENABLE */
-
-#if defined(DEBUG)
-#define NV_ASSERT(message, condition)                               \
-do                                                                  \
-{                                                                   \
-    if (!(condition))                                               \
-    {                                                               \
-        nv_printf(NV_DBG_ERRORS, "NVRM: ASSERT: %s\n", message);    \
-        os_dbg_breakpoint();                                        \
-    }                                                               \
-}                                                                   \
-while (0)
-#else
-#define NV_ASSERT(message, condition)
-#endif /* DEBUG */
 
 int nv_verify_page_mappings(nv_pte_t *, unsigned int);
 

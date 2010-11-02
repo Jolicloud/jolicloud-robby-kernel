@@ -23,7 +23,7 @@ static void parse_option_string(nv_stack_t *sp)
     char *ptr, *mod;
     char *token;
     char *name, *value;
-    U032 data;
+    NvU32 data;
 
     if (NVreg_RegistryDwords != NULL)
     {
@@ -53,7 +53,7 @@ static void parse_option_string(nv_stack_t *sp)
             if (strsep(&token, "=") != NULL)
                 continue;
 
-            data = (U032)simple_strtoul(value, NULL, 0);
+            data = (NvU32)simple_strtoul(value, NULL, 0);
 
             for (i = 0; (entry = &nv_parms[i])->name != NULL; i++)
             {

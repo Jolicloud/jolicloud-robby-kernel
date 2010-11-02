@@ -21,19 +21,14 @@ static int         nv_acpi_add             (struct acpi_device *);
 static int         nv_acpi_remove          (struct acpi_device *, int);
 static void        nv_acpi_event           (acpi_handle, u32, void *);
 static acpi_status nv_acpi_find_methods    (acpi_handle, u32, void *, void **);
-static RM_STATUS   nv_acpi_nvif_method     (U032, U032, void *, U016, U032 *, void *, U016 *);
+static RM_STATUS   nv_acpi_nvif_method     (NvU32, NvU32, void *, NvU16, NvU32 *, void *, NvU16 *);
 
-static RM_STATUS   nv_acpi_wmmx_method     (U032, U008 *, U016 *);
-static RM_STATUS   nv_acpi_mxmi_method     (U008 *, U016 *);
-static RM_STATUS   nv_acpi_mxms_method     (U008 *, U016 *);
+static RM_STATUS   nv_acpi_wmmx_method     (NvU32, NvU8 *, NvU16 *);
+static RM_STATUS   nv_acpi_mxmi_method     (NvU8 *, NvU16 *);
+static RM_STATUS   nv_acpi_mxms_method     (NvU8 *, NvU16 *);
 
 #if defined(NV_ACPI_DEVICE_OPS_HAS_MATCH)
 static int         nv_acpi_match           (struct acpi_device *, struct acpi_driver *);
-#endif
-
-#ifdef DEBUG
-static void        nv_acpi_dump_device     (acpi_handle);
-static acpi_status nv_acpi_walk_callback   (acpi_handle, u32, void *, void **);
 #endif
 
 #if defined(ACPI_VIDEO_HID) && defined(NV_ACPI_DEVICE_ID_HAS_DRIVER_DATA) 
@@ -51,7 +46,6 @@ static const struct acpi_device_id nv_video_device_ids[] = {
 
 static struct acpi_driver *nv_acpi_driver;
 static acpi_handle nvif_handle = NULL;
-static acpi_handle dsm_handle  = NULL;
 static acpi_handle nvif_parent_gpu_handle  = NULL;
 static acpi_handle wmmx_handle = NULL;
 static acpi_handle mxmi_handle = NULL;
@@ -529,7 +523,7 @@ static void nv_uninstall_notifier(struct acpi_device *device, acpi_notify_handle
  * store NVIF, _DSM and WMMX handle if found. 
  */
 
-void NV_API_CALL nv_acpi_methods_init(U032 *handlesPresent)
+void NV_API_CALL nv_acpi_methods_init(NvU32 *handlesPresent)
 {
     struct acpi_device *device = NULL;
     RM_STATUS rmStatus;
@@ -572,8 +566,6 @@ void NV_API_CALL nv_acpi_methods_init(U032 *handlesPresent)
         } while (0);
     }
 
-    if (dsm_handle)
-        *handlesPresent = *handlesPresent | NV_ACPI_DSM_HANDLE_PRESENT;
     if (wmmx_handle)
         *handlesPresent = *handlesPresent | NV_ACPI_WMMX_HANDLE_PRESENT;
     if (mxmi_handle)
@@ -614,11 +606,6 @@ acpi_status nv_acpi_find_methods(
         mxms_handle = method_handle;
     }
 
-    // if (!acpi_get_handle(handle, "_DSM", &method_handle))
-    // {
-    //     dsm_handle = method_handle;
-    // }
-
     return 0;
 }
 
@@ -627,7 +614,6 @@ void NV_API_CALL nv_acpi_methods_uninit(void)
     struct acpi_device *device = NULL;
 
     nvif_handle = NULL;
-    dsm_handle  = NULL;
     wmmx_handle = NULL;
     mxmi_handle = NULL;
     mxms_handle = NULL;
@@ -644,14 +630,14 @@ void NV_API_CALL nv_acpi_methods_uninit(void)
 }
 
 RM_STATUS NV_API_CALL nv_acpi_method(
-    U032 acpi_method,
-    U032 function,
-    U032 subFunction,
-    void *inParams,
-    U016 inParamSize,
-    U032 *outStatus,
-    void *outData,
-    U016 *outDataSize
+    NvU32 acpi_method,
+    NvU32 function,
+    NvU32 subFunction,
+    void  *inParams,
+    NvU16 inParamSize,
+    NvU32 *outStatus,
+    void  *outData,
+    NvU16 *outDataSize
 )
 {
     RM_STATUS status;
@@ -690,8 +676,8 @@ RM_STATUS NV_API_CALL nv_acpi_method(
  * This function executes an MXMI ACPI method.
  */
 static RM_STATUS nv_acpi_mxmi_method(
-    U008 *pInOut,
-    U016 *pSize
+    NvU8  *pInOut,
+    NvU16 *pSize
 )
 {
     acpi_status status;
@@ -712,7 +698,7 @@ static RM_STATUS nv_acpi_mxmi_method(
 
     if (*pSize == 0)
     {
-        *pSize = sizeof(U008);
+        *pSize = sizeof(NvU8);
         return RM_ERR_BUFFER_TOO_SMALL;
     }
 
@@ -730,7 +716,7 @@ static RM_STATUS nv_acpi_mxmi_method(
 
     mxmi_params[1].buffer.type    = ACPI_TYPE_BUFFER;
     mxmi_params[1].buffer.pointer = pInOut;
-    mxmi_params[1].buffer.length  = sizeof(U008);
+    mxmi_params[1].buffer.length  = sizeof(NvU8);
 
     input.count = 2;
     input.pointer = mxmi_params;
@@ -762,8 +748,8 @@ static RM_STATUS nv_acpi_mxmi_method(
  * This function executes an MXMS ACPI method.
  */
 static RM_STATUS nv_acpi_mxms_method(
-    U008 *pInOut,
-    U016 *pSize
+    NvU8  *pInOut,
+    NvU16 *pSize
 )
 {
     acpi_status status;
@@ -784,7 +770,7 @@ static RM_STATUS nv_acpi_mxms_method(
 
     if (*pSize == 0)
     {
-        *pSize = sizeof(U008);
+        *pSize = sizeof(NvU8);
         return RM_ERR_BUFFER_TOO_SMALL;
     }
 
@@ -802,7 +788,7 @@ static RM_STATUS nv_acpi_mxms_method(
 
     mxms_params[1].buffer.type    = ACPI_TYPE_BUFFER;
     mxms_params[1].buffer.pointer = pInOut;
-    mxms_params[1].buffer.length  = sizeof(U008);
+    mxms_params[1].buffer.length  = sizeof(NvU8);
 
     input.count = 2;
     input.pointer = mxms_params;
@@ -844,13 +830,13 @@ static RM_STATUS nv_acpi_mxms_method(
  * This function executes an NVIF ACPI method.
  */
 static RM_STATUS nv_acpi_nvif_method(
-    U032 function, 
-    U032 subFunction, 
-    void *inParams, 
-    U016 inParamSize, 
-    U032 *outStatus, 
-    void *outData, 
-    U016 *outDataSize
+    NvU32 function, 
+    NvU32 subFunction, 
+    void  *inParams, 
+    NvU16 inParamSize, 
+    NvU32 *outStatus, 
+    void  *outData, 
+    NvU16 *outDataSize
 )
 {
     acpi_status status;
@@ -858,8 +844,8 @@ static RM_STATUS nv_acpi_nvif_method(
     struct acpi_buffer output = { ACPI_ALLOCATE_BUFFER, NULL };
     union acpi_object *nvif = NULL;
     union acpi_object nvif_params[3];
-    U016 localOutDataSize; 
-    U008 localInParams[8];
+    NvU16 localOutDataSize; 
+    NvU8  localInParams[8];
 
     if (!nvif_handle)
         return RM_ERR_NOT_SUPPORTED;
@@ -947,14 +933,15 @@ static RM_STATUS nv_acpi_nvif_method(
  * This function executes a _DSM ACPI method.
  */
 RM_STATUS NV_API_CALL nv_acpi_dsm_method(
-    U008 *pAcpiDsmGuid,
-    U032 acpiDsmRev,
-    U032 acpiDsmSubFunction,
-    void *pInParams,
-    U016 inParamSize,
-    U032 *outStatus,
-    void *pOutData,
-    U016 *pSize
+    nv_state_t *nv,
+    NvU8  *pAcpiDsmGuid,
+    NvU32 acpiDsmRev,
+    NvU32 acpiDsmSubFunction,
+    void  *pInParams,
+    NvU16 inParamSize,
+    NvU32 *outStatus,
+    void  *pOutData,
+    NvU16 *pSize
 )
 {
     acpi_status status;
@@ -962,9 +949,13 @@ RM_STATUS NV_API_CALL nv_acpi_dsm_method(
     union acpi_object *dsm = NULL;
     struct acpi_buffer output = { ACPI_ALLOCATE_BUFFER, NULL };
     union acpi_object dsm_params[4];
-    U008 argument3[4]; /* For all DSM sub functions, input size is 4 */
-
-    if (!dsm_handle)
+    NvU8 argument3[4]; /* For all DSM sub functions, input size is 4 */
+    acpi_handle dev_handle  = NULL;
+#ifdef DEVICE_ACPI_HANDLE
+    nv_linux_state_t *nvl = NV_GET_NVL_FROM_NV_STATE(nv); 
+    dev_handle = DEVICE_ACPI_HANDLE(&nvl->dev->dev);
+#endif
+    if (!dev_handle)
         return RM_ERR_NOT_SUPPORTED;
 
     if ((!pInParams) || (inParamSize != 4) || (!pOutData) || (!pSize))
@@ -972,7 +963,7 @@ RM_STATUS NV_API_CALL nv_acpi_dsm_method(
         nv_printf(DBG_LEVEL_INFO,
                   "NVRM: nv_acpi_dsm_method: Guid (first 4 bytes) %04x DSM subfunction=0x%x,"
                   " invalid argument(s)!\n",
-                  (U032) *pAcpiDsmGuid,
+                  (NvU32) *pAcpiDsmGuid,
                   acpiDsmSubFunction);
         return RM_ERR_INVALID_ARGUMENT;
     }
@@ -983,7 +974,7 @@ RM_STATUS NV_API_CALL nv_acpi_dsm_method(
         nv_printf(NV_DBG_ERRORS,
                   "NVRM: nv_acpi_dsm_method: Guid (first 4 bytes) %04x DSM subfunction=0x%x,"
                   " invalid context!\n",
-                  (U032) *pAcpiDsmGuid,
+                  (NvU32) *pAcpiDsmGuid,
                   acpiDsmSubFunction);
 #endif
         return RM_ERR_NOT_SUPPORTED;
@@ -1014,13 +1005,13 @@ RM_STATUS NV_API_CALL nv_acpi_dsm_method(
     input.count = 4;
     input.pointer = dsm_params;
 
-    status = acpi_evaluate_object(dsm_handle, NULL, &input, &output);
+    status = acpi_evaluate_object(dev_handle, "_DSM", &input, &output);
     if (ACPI_FAILURE(status))
     {
         nv_printf(NV_DBG_INFO,
                   "NVRM: nv_acpi_dsm_method: failed to get"
                   " Guid (first 4 bytes) %04x DSM subfunction 0x%x data, status 0x%x!\n",
-                  (U032) *pAcpiDsmGuid,
+                  (NvU32) *pAcpiDsmGuid,
                   acpiDsmSubFunction,
                   status);
         return RM_ERROR;
@@ -1071,7 +1062,7 @@ RM_STATUS NV_API_CALL nv_acpi_dsm_method(
             nv_printf(NV_DBG_INFO,
                     "NVRM: nv_acpi_dsm_method: Guid (first 4 bytes) %04x DSM subfunction 0x%x"
                     " data invalid!\n",
-                    (U032) *pAcpiDsmGuid,
+                    (NvU32) *pAcpiDsmGuid,
                     acpiDsmSubFunction);
             return RM_ERROR;
         }
@@ -1081,12 +1072,130 @@ RM_STATUS NV_API_CALL nv_acpi_dsm_method(
 }
 
 /*
+ * This function executes a _DDC ACPI method.
+ */
+RM_STATUS NV_API_CALL nv_acpi_ddc_method(
+    nv_state_t *nv,
+    void *pEdidBuffer,
+    NvU32 *pSize
+)
+{
+    acpi_status status;
+    struct acpi_device *device = NULL;
+    struct acpi_buffer output = { ACPI_ALLOCATE_BUFFER, NULL };
+    union acpi_object *ddc;
+    union acpi_object ddc_arg0 = { ACPI_TYPE_INTEGER };
+    struct acpi_object_list input = { 1, &ddc_arg0 };
+    struct list_head *node, *next;
+    nv_acpi_integer_t device_id = 0;
+    NvU32 i;
+    acpi_handle dev_handle  = NULL;
+    acpi_handle lcd_dev_handle  = NULL;
+#ifdef DEVICE_ACPI_HANDLE
+    nv_linux_state_t *nvl = NV_GET_NVL_FROM_NV_STATE(nv); 
+    dev_handle = DEVICE_ACPI_HANDLE(&nvl->dev->dev);
+#else
+        return RM_ERR_NOT_SUPPORTED;
+#endif
+    if (!dev_handle)
+        return RM_ERR_INVALID_ARGUMENT;
+
+    status = acpi_bus_get_device(dev_handle, &device);
+
+    if (ACPI_FAILURE(status) || !device)
+        return RM_ERR_INVALID_ARGUMENT;
+
+    if (!NV_MAY_SLEEP())
+    {
+#if defined(DEBUG)
+        nv_printf(NV_DBG_ERRORS,
+                  "NVRM: %s: invalid context!\n",
+                  __FUNCTION__);
+#endif
+        return RM_ERR_NOT_SUPPORTED;
+    }
+
+    list_for_each_safe(node, next, &device->children) 
+    {
+        struct acpi_device *dev =
+            list_entry(node, struct acpi_device, node);
+
+        if (!dev)
+            continue;
+
+        status = acpi_evaluate_integer(dev->handle, "_ADR", NULL, &device_id);
+        if (ACPI_FAILURE(status))
+            /* Couldnt query device_id for this device */
+            continue;
+
+        device_id = (device_id & 0xffff);
+
+        if ((device_id == 0x0110) || (device_id == 0x0118) || (device_id == 0x0400)) /* Only for an LCD*/
+        {
+            lcd_dev_handle = dev->handle;
+            nv_printf(NV_DBG_INFO, "NVRM: %s Found LCD: %x\n", __FUNCTION__, device_id);
+            break;
+        }
+
+    }
+
+    if (lcd_dev_handle == NULL)
+    {
+        nv_printf(NV_DBG_INFO, "NVRM: %s LCD not found\n", __FUNCTION__);
+        return RM_ERROR;
+    }
+
+    // 
+    // As per ACPI Spec 3.0:
+    // ARG0 = 0x1 for 128 bytes edid buffer
+    // ARG0 = 0x2 for 256 bytes edid buffer
+    // 
+    for (i = 1; i <= 2; i++)
+    {
+
+        ddc_arg0.integer.value = i;
+        status = acpi_evaluate_object(lcd_dev_handle, "_DDC", &input, &output);
+        if (ACPI_SUCCESS(status))
+            break;
+    }
+
+    if (ACPI_FAILURE(status))
+    {
+        nv_printf(NV_DBG_INFO,
+                  "NVRM: %s: failed status: %08x \n",
+                  __FUNCTION__,
+                  status);
+        return RM_ERROR;
+    }
+    else
+    {
+        ddc = output.pointer;
+
+        if (ddc && (ddc->type == ACPI_TYPE_BUFFER) && (ddc->buffer.length > 0))
+        {
+            if (ddc->buffer.length <= *pSize)
+            {
+                *pSize = NV_MIN(*pSize, ddc->buffer.length);
+                memcpy(pEdidBuffer, ddc->buffer.pointer, *pSize);
+            } 
+            else
+            {
+                return RM_ERR_BUFFER_TOO_SMALL;
+            }
+        }
+    }
+ 
+    return RM_OK;             
+}
+
+
+/*
  * This function executes a WMMX ACPI method.
  */
 static RM_STATUS  nv_acpi_wmmx_method(
-    U032 arg2,
-    U008 *outData,
-    U016 *outDataSize
+    NvU32 arg2,
+    NvU8  *outData,
+    NvU16 *outDataSize
 )
 {
     acpi_status status;
@@ -1155,78 +1264,6 @@ static RM_STATUS  nv_acpi_wmmx_method(
 
     return RM_OK;
 }
-    
-#ifdef DEBUG
-#define NV_ACPI_NAME_BUFFER_LENGTH 1024
-
-/*
- * utility function, not normally used except for debugging.
- */
-acpi_status nv_acpi_walk_callback(
-    acpi_handle handle,
-    u32 nest_level,
-    void *acpi_name,
-    void **dummy2
-)
-{
-    acpi_status status;
-    struct acpi_buffer result_buffer;
-    char *name = acpi_name;
-
-    result_buffer.length = NV_ACPI_NAME_BUFFER_LENGTH;
-    result_buffer.pointer = acpi_name;
-    
-    status = acpi_get_name(handle, ACPI_SINGLE_NAME, &result_buffer);
-
-    if (ACPI_SUCCESS(status))
-    {
-        nv_printf(NV_DBG_ERRORS,
-            "NVRM: nv_acpi_walk_callback: level: %d, name: %s\n", nest_level, name);
-    }
-
-    return 0;
-}
-
-/*
- * utility function, not normally used except for debugging.
- */
-static void nv_acpi_dump_device(acpi_handle handle)
-{
-    acpi_status status;
-    struct acpi_buffer result_buffer;
-    void *acpi_name;
-
-    if (os_alloc_mem(&acpi_name, NV_ACPI_NAME_BUFFER_LENGTH) != RM_OK)
-    {
-        nv_printf(NV_DBG_ERRORS,
-            "NVRM: nv_acpi_dump_device: failed to allocate ACPI name buffer!\n");
-        return;
-    }
-
-    result_buffer.length = NV_ACPI_NAME_BUFFER_LENGTH;
-    result_buffer.pointer = acpi_name;
-
-    status = acpi_get_name(handle, ACPI_SINGLE_NAME, &result_buffer);
-
-    if (ACPI_SUCCESS(status))
-    {
-        nv_printf(NV_DBG_ERRORS,
-            "NVRM: nv_acpi_dump_device: Preparing to print namespace for %s\n",
-            (char *)acpi_name);
-    }
-    else
-    {
-        nv_printf(NV_DBG_ERRORS,
-            "NVRM: nv_acpi_dump_device: Preparing to print namespace for "
-            "NAMESPACE INVALID\n");
-    }
-
-    NV_ACPI_WALK_NAMESPACE(ACPI_TYPE_ANY, handle,
-                        1, nv_acpi_walk_callback, acpi_name, NULL);
-
-    os_free_mem(acpi_name);
-}
-#endif // DEBUG
 
 #else // NV_LINUX_ACPI_EVENTS_SUPPORTED
 
@@ -1240,7 +1277,7 @@ int nv_acpi_uninit(void)
     return 0;
 }
 
-void NV_API_CALL nv_acpi_methods_init(U032 *handlePresent)
+void NV_API_CALL nv_acpi_methods_init(NvU32 *handlePresent)
 {
     *handlePresent = 0;
 }
@@ -1251,28 +1288,38 @@ void NV_API_CALL nv_acpi_methods_uninit(void)
 }
 
 RM_STATUS NV_API_CALL nv_acpi_method(
-    U032 acpi_method,
-    U032 function,
-    U032 subFunction,
-    void *inParams,
-    U016 inParamSize,
-    U032 *outStatus,
-    void *outData,
-    U016 *outDataSize
+    NvU32 acpi_method,
+    NvU32 function,
+    NvU32 subFunction,
+    void  *inParams,
+    NvU16 inParamSize,
+    NvU32 *outStatus,
+    void  *outData,
+    NvU16 *outDataSize
 )
 {
     return RM_ERR_NOT_SUPPORTED;
 }
 
 RM_STATUS NV_API_CALL nv_acpi_dsm_method(
-    U008 *pAcpiDsmGuid,
-    U032 acpiDsmRev,
-    U032 acpiDsmSubFunction,
-    void *pInParams,
-    U016 inParamSize,
-    U032 *outStatus,
-    void *pOutData,
-    U016 *pSize
+    nv_state_t *nv,
+    NvU8  *pAcpiDsmGuid,
+    NvU32 acpiDsmRev,
+    NvU32 acpiDsmSubFunction,
+    void  *pInParams,
+    NvU16 inParamSize,
+    NvU32 *outStatus,
+    void  *pOutData,
+    NvU16 *pSize
+)
+{
+    return RM_ERR_NOT_SUPPORTED;
+}
+
+RM_STATUS NV_API_CALL nv_acpi_ddc_method(
+    nv_state_t *nv,
+    void *pEdidBuffer,
+    NvU32 *pSize
 )
 {
     return RM_ERR_NOT_SUPPORTED;

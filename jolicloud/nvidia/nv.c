@@ -8,7 +8,6 @@
  * _NVRM_COPYRIGHT_END_
  */
 
-
 #include "nv-misc.h"
 #include "os-interface.h"
 #include "nv-linux.h"
@@ -17,6 +16,13 @@
 #include "nv-vm.h"
 #include "nv-reg.h"
 #include "rmil.h"
+
+#if defined(MODULE_LICENSE)
+MODULE_LICENSE("NVIDIA");
+#endif
+#if defined(MODULE_INFO)
+MODULE_INFO(supported, "external");
+#endif
 
 #ifdef MODULE_ALIAS_CHARDEV_MAJOR
 MODULE_ALIAS_CHARDEV_MAJOR(NV_MAJOR_DEVICE_NUMBER);
@@ -33,8 +39,8 @@ extern int i2c_del_adapter (struct i2c_adapter *) __attribute__ ((weak));
  * our global state; one per device
  */
 
-static U032 num_nv_devices = 0;
-static U032 num_probed_nv_devices = 0;
+static NvU32 num_nv_devices = 0;
+static NvU32 num_probed_nv_devices = 0;
 
 nv_linux_state_t *nv_linux_devices;
 EXPORT_SYMBOL(nv_linux_devices);
@@ -129,8 +135,10 @@ static const char *__mmconfig_warning = \
 
 #if defined(NV_SG_MAP_BUFFERS)
 int nv_swiotlb = 0;
+#if defined(NV_NEED_REMAP_CHECK)
 unsigned int nv_remap_count;
 unsigned int nv_remap_limit;
+#endif
 #endif
 
 int nv_update_memory_types = 1;
@@ -181,7 +189,7 @@ verify_pci_bars(
     void        *dev_handle
 )
 {
-    U032 bar, bar_hi, bar_lo;
+    NvU32 bar, bar_hi, bar_lo;
 
     //
     // If an MMCONFIG specific failure was detected, skip the
@@ -313,8 +321,10 @@ static void nv_lock_init_locks(nv_state_t *nv);
  ***/
 
 /* nv_kern_* functions, driver interfaces called by the Linux kernel */
+#ifndef NV_USER_MAP
 static void   nv_kern_vma_open(struct vm_area_struct *);
 static void   nv_kern_vma_release(struct vm_area_struct *);
+#endif /* NV_USER_MAP */
 
 int           nv_kern_open(struct inode *, struct file *);
 int           nv_kern_close(struct inode *, struct file *);
@@ -345,7 +355,6 @@ static int    nv_kern_read_text_file(char *, char **, off_t off, int, int *, voi
 
 int           nv_kern_ctl_open(struct inode *, struct file *);
 int           nv_kern_ctl_close(struct inode *, struct file *);
-unsigned int  nv_kern_ctl_poll(struct file *, poll_table *);
 
 int nv_kern_probe(struct pci_dev *, const struct pci_device_id *);
 int nv_kern_smu_probe(struct pci_dev *);
@@ -414,16 +423,18 @@ static struct pci_driver nv_pci_driver = {
 static struct file_operations nv_fops = {
     .owner     = THIS_MODULE,
     .poll      = nv_kern_poll,
+#if defined(NV_FILE_OPERATIONS_HAS_IOCTL)
     .ioctl     = nv_kern_ioctl,
-#if defined(HAVE_UNLOCKED_IOCTL)
+#endif
+#if defined(NV_FILE_OPERATIONS_HAS_UNLOCKED_IOCTL)
     .unlocked_ioctl = nv_kern_unlocked_ioctl,
 #endif
-#if defined(NVCPU_X86_64) && defined(HAVE_COMPAT_IOCTL)
+#if defined(NVCPU_X86_64) && defined(NV_FILE_OPERATIONS_HAS_COMPAT_IOCTL)
     .compat_ioctl = nv_kern_compat_ioctl,
 #endif
 #ifndef NV_USER_MAP
     .mmap      = nv_kern_mmap,
-#endif /* NV_USER_MAP */
+#endif
     .open      = nv_kern_open,
     .release   = nv_kern_close,
 };
@@ -436,14 +447,14 @@ extern const char *pNVRM_ID;
 
 #if defined(VM_CHECKER)
 /* kernel virtual memory usage/allocation information */
-U032 vm_usage = 0;
+NvU32 vm_usage = 0;
 struct mem_track_t *vm_list = NULL;
 nv_spinlock_t vm_lock;
 #endif
 
 #if defined(KM_CHECKER)
 /* kernel logical memory usage/allocation information */
-U032 km_usage = 0;
+NvU32 km_usage = 0;
 struct mem_track_t *km_list = NULL;
 nv_spinlock_t km_lock;
 #endif
@@ -567,7 +578,9 @@ static struct pci_dev* nvos_get_agp_device_by_class(unsigned int class)
         slot = NV_PCI_SLOT_NUMBER(dev);
         for (func = 0; func < 8; func++) {
             fn = PCI_DEVFN(slot, func);
-            fdev = NV_PCI_GET_SLOT(NV_PCI_BUS_NUMBER(dev), fn);
+            fdev = NV_PCI_GET_SLOT(NV_PCI_DOMAIN_NUMBER(dev),
+                                   NV_PCI_BUS_NUMBER(dev),
+                                   fn);
             if (!fdev)
                 continue;
             if (nv_find_pci_capability(fdev, PCI_CAP_ID_AGP))
@@ -590,7 +603,8 @@ static struct pci_dev* nv_get_pci_device(nv_state_t *nv)
     dev = NV_PCI_GET_DEVICE(nv->vendor_id, nv->device_id, NULL);
     while (dev) {
         if (NV_PCI_SLOT_NUMBER(dev) == nv->slot
-                && NV_PCI_BUS_NUMBER(dev) == nv->bus)
+                && NV_PCI_BUS_NUMBER(dev) == nv->bus
+                && (NvU32)NV_PCI_DOMAIN_NUMBER(dev) == nv->domain)
             return dev;
         dev = NV_PCI_GET_DEVICE(nv->vendor_id, nv->device_id, dev);
     }
@@ -602,7 +616,7 @@ static void nvos_proc_create(void)
 {
 #ifdef CONFIG_PROC_FS
     struct pci_dev *dev;
-    U032 i = 0;
+    NvU32 i = 0;
     char name[6];
 
     struct proc_dir_entry *entry;
@@ -935,7 +949,7 @@ static inline void __nv_enable_caches(unsigned long cr4)
 static int __determine_pat_mode()
 {
     unsigned int pat1, pat2, i;
-    U008 PAT_WC_index;
+    NvU8 PAT_WC_index;
 
     if (!test_bit(X86_FEATURE_PAT,
             (volatile unsigned long *)&boot_cpu_data.x86_capability))
@@ -1378,7 +1392,7 @@ static struct notifier_block nv_hotcpu_nfb = {
 static int __init nvidia_init_module(void)
 {
     int rc, disable_pat = 0;
-    U032 count, data, i;
+    NvU32 count, data, i;
     nv_state_t *nv = NV_STATE_PTR(&nv_ctl_device);
     nv_stack_t *sp = NULL;
     nv_linux_state_t *nvl;
@@ -1447,13 +1461,14 @@ static int __init nvidia_init_module(void)
             "NVRM: The NVIDIA probe routine was not called for %d device(s).\n",
             count - num_probed_nv_devices);
         nv_printf(NV_DBG_ERRORS,
-            "NVRM: This can occur when a driver such as rivafb, nvidiafb or\n"
-            "NVRM: rivatv was loaded and obtained ownership of the NVIDIA\n"
-            "NVRM: device(s).\n");
+            "NVRM: This can occur when a driver such as nouveau, rivafb,\n"
+            "NVRM: nvidiafb, or rivatv was loaded and obtained ownership of\n"
+            "NVRM: the NVIDIA device(s).\n");
         nv_printf(NV_DBG_ERRORS,
-            "NVRM: Try unloading the rivafb, nvidiafb or rivatv kernel module\n"
-            "NVRM: (and/or reconfigure your kernel without rivafb/nvidiafb\n"
-            "NVRM: support), then try loading the NVIDIA kernel module again.\n");
+            "NVRM: Try unloading the conflicting kernel module (and/or\n"
+            "NVRM: reconfigure your kernel without the conflicting\n"
+            "NVRM: driver(s)), then try loading the NVIDIA kernel module\n"
+            "NVRM: again.\n");
     }
 
     if (num_probed_nv_devices == 0)
@@ -1534,7 +1549,7 @@ static int __init nvidia_init_module(void)
         goto failed;
     }
 
-#if defined(NV_SG_MAP_BUFFERS)
+#if defined(NV_SG_MAP_BUFFERS) && defined(NV_NEED_REMAP_CHECK)
     rm_read_registry_dword(sp, nv, "NVreg", "RemapLimit", &nv_remap_limit);
 
     // allow an override, but use default if no override
@@ -1548,7 +1563,7 @@ static int __init nvidia_init_module(void)
 #if defined(NVCPU_X86_64) || (defined(NVCPU_X86) && defined(CONFIG_X86_PAE))
     if (boot_cpu_has(X86_FEATURE_NX))
     {
-        U032 __eax, __edx;
+        NvU32 __eax, __edx;
         rdmsr(MSR_EFER, __eax, __edx);
         if ((__eax & EFER_NX) != 0)
             __nv_supported_pte_mask |= _PAGE_NX;
@@ -1607,8 +1622,8 @@ static int __init nvidia_init_module(void)
     }
 #endif /* defined(NV_CHANGE_PAGE_ATTR_BUG_PRESENT) */
 
-#if defined(NVCPU_X86_64) && defined(CONFIG_IA32_EMULATION) && !defined(HAVE_COMPAT_IOCTL)
-    /* Register ioctl()'s for 32-bit clients */
+#if defined(NVCPU_X86_64) && defined(CONFIG_IA32_EMULATION) && \
+  !defined(NV_FILE_OPERATIONS_HAS_COMPAT_IOCTL)
     rm_register_compatible_ioctls(sp);
 #endif
 
@@ -1744,6 +1759,17 @@ static void __exit nvidia_exit_module(void)
 
     nv_printf(NV_DBG_INFO, "NVRM: nvidia_exit_module\n");
 
+    for (nvl = nv_linux_devices; nvl != NULL;  nvl = nvl->next)
+    {
+        nv = NV_STATE_PTR(nvl);
+
+        if (nv->flags & NV_FLAG_PERSISTENT_SW_STATE)
+        {
+            rm_disable_gpu_state_persistence(sp, nv);
+            NV_SHUTDOWN_ADAPTER(sp, nv, nvl);
+        }
+    }
+
     if ((dev = (struct pci_dev *)(nv_smu->handle)) != NULL) 
     {
         rm_shutdown_smu(sp, nv_smu);
@@ -1808,6 +1834,16 @@ static void __exit nvidia_exit_module(void)
                 NV_PRINT_AT(NV_DBG_ERRORS, at);
                 /* nv_free_pages() will free this 'at' */
                 next = at->next;
+#ifdef NV_USER_MAP
+                if (NV_ATOMIC_READ(at->usage_count) < 1) {
+                    nv_printf(NV_DBG_INFO,
+                              "NVRM: %s:%d alloc object 0x%p reference count is too small",
+                              __FUNCTION__,
+                              __LINE__,
+                              at);
+                    NV_ATOMIC_SET(at->usage_count,1);
+                }
+#endif /* NV_USER_MAP */
                 nv_free_pages(nv, at->num_pages,
                               NV_ALLOC_MAPPING_AGP(at->flags),
                               NV_ALLOC_MAPPING_CONTIG(at->flags),
@@ -1824,8 +1860,8 @@ static void __exit nvidia_exit_module(void)
     // Shutdown the resource manager
     rm_shutdown_rm(sp);
 
-#if defined(NVCPU_X86_64) && defined(CONFIG_IA32_EMULATION) && !defined(HAVE_COMPAT_IOCTL)
-    /* Unregister ioctl()'s for 32-bit clients */
+#if defined(NVCPU_X86_64) && defined(CONFIG_IA32_EMULATION) && \
+  !defined(NV_FILE_OPERATIONS_HAS_COMPAT_IOCTL)
     rm_unregister_compatible_ioctls(sp);
 #endif
 
@@ -1854,7 +1890,7 @@ static void __exit nvidia_exit_module(void)
             "NVRM: final KM memory usage: 0x%x bytes\n", km_usage);
     }
 #endif
-#if defined(NV_SG_MAP_BUFFERS)
+#if defined(NV_SG_MAP_BUFFERS) && defined(NV_NEED_REMAP_CHECK)
     if (nv_remap_count != 0)
     {
         nv_printf(NV_DBG_ERRORS,
@@ -1873,6 +1909,7 @@ module_init(nvidia_init_module);
 module_exit(nvidia_exit_module);
 
 
+#ifndef NV_USER_MAP
 /*
  * The 'struct vm_operations' open() callback is called by the Linux
  * kernel when the parent VMA is split or copied, close() when the
@@ -1996,6 +2033,7 @@ struct vm_operations_struct nv_vm_ops = {
     .nopage = nv_kern_vma_nopage,
 #endif
 };
+#endif /* NV_USER_MAP */
 
 static nv_file_private_t *
 nv_alloc_file_private(void)
@@ -2044,12 +2082,12 @@ int nv_kern_open(
 {
     nv_state_t *nv = NULL;
     nv_linux_state_t *nvl = NULL;
-    U032 devnum;
+    NvU32 devnum;
     int rc = 0;
     nv_file_private_t *nvfp = NULL;
     nv_stack_t *sp = NULL;
 #if defined(NV_LINUX_PCIE_MSI_SUPPORTED)
-    U032 msi_config = 0;
+    NvU32 msi_config = 0;
 #endif
 
     nv_printf(NV_DBG_INFO, "NVRM: nv_kern_open...\n");
@@ -2157,24 +2195,29 @@ int nv_kern_open(
 #if defined(NV_LINUX_PCIE_MSI_SUPPORTED)
         if (!NV_IS_GVI_DEVICE(nv))
         {
-            rm_read_registry_dword(sp, nv, "NVreg", NV_REG_ENABLE_MSI, &msi_config);
-            if ((msi_config == 1) && 
-                (nv_find_pci_capability(nvl->dev, PCI_CAP_ID_MSI)))
+            if (!(nv->flags & NV_FLAG_PERSISTENT_SW_STATE))
             {
-                rc = pci_enable_msi(nvl->dev);
-                if (rc == 0)
+                rm_read_registry_dword(sp, nv, "NVreg", NV_REG_ENABLE_MSI,
+                                       &msi_config);
+                if ((msi_config == 1) && 
+                        (nv_find_pci_capability(nvl->dev, PCI_CAP_ID_MSI)))
                 {
-                    nv->interrupt_line = nvl->dev->irq;
-                    nv->flags |= NV_FLAG_USES_MSI;
-                }
-                else
-                {
-                    nv->flags &= ~NV_FLAG_USES_MSI;              
-                    nv_printf(NV_DBG_ERRORS, "NVRM: failed to enable MSI, \n");
-                    nv_printf(NV_DBG_ERRORS, "using PCI-E virtual-wire interrupts!\n");
+                    rc = pci_enable_msi(nvl->dev);
+                    if (rc == 0)
+                    {
+                        nv->interrupt_line = nvl->dev->irq;
+                        nv->flags |= NV_FLAG_USES_MSI;
+                    }
+                    else
+                    {
+                        nv->flags &= ~NV_FLAG_USES_MSI;
+                        nv_printf(NV_DBG_ERRORS,
+                                  "NVRM: failed to enable MSI, \n"
+                                  "using PCI-E virtual-wire interrupts!\n");
+                    }
                 }
             }
-         }
+        }
 #endif
 
         if (NV_IS_GVI_DEVICE(nv))
@@ -2183,15 +2226,21 @@ int nv_kern_open(
                              IRQF_SHARED, "nvidia", (void *)nvl);
             if (rc == 0)
             {
-                NV_TASKQUEUE_INIT(&nvl->work, nv_gvi_kern_bh, nvl);
+                nvl->work.data = (void *)nvl;
+                NV_TASKQUEUE_INIT(&nvl->work.task, nv_gvi_kern_bh,
+                                  (void *)&nvl->work);
                 rm_init_gvi_device(sp, nv);
                 goto done;
             }
         }
         else
         {
-            rc = request_irq(nv->interrupt_line, nv_kern_isr, IRQF_SHARED,
-                    "nvidia", (void *)nvl);
+            rc = 0;
+            if (!(nv->flags & NV_FLAG_PERSISTENT_SW_STATE))
+            {
+                rc = request_irq(nv->interrupt_line, nv_kern_isr, IRQF_SHARED,
+                        "nvidia", (void *)nvl);
+            }
         }
         if (rc != 0)
         {
@@ -2219,23 +2268,27 @@ int nv_kern_open(
         }
 #endif
 
-        if (!rm_init_adapter(sp, nv))
+        if (!(nv->flags & NV_FLAG_PERSISTENT_SW_STATE))
         {
-            free_irq(nv->interrupt_line, (void *) nvl);
-            nv_printf(NV_DBG_ERRORS, "NVRM: rm_init_adapter(%d) failed\n", devnum);
-            rc = -EIO;
-            goto failed;
-        }
+            if (!rm_init_adapter(sp, nv))
+            {
+                free_irq(nv->interrupt_line, (void *) nvl);
+                nv_printf(NV_DBG_ERRORS, "NVRM: rm_init_adapter(%d) failed\n",
+                          devnum);
+                rc = -EIO;
+                goto failed;
+            }
 
 #ifdef NV_USE_TASKLET_INIT
-        tasklet_init(&nvl->tasklet,
-                     nv_kern_isr_bh,
-                     (unsigned long) nv);
+            tasklet_init(&nvl->tasklet,
+                    nv_kern_isr_bh,
+                         (unsigned long) nv);
 #else /* NV_USE_TASKLET_INIT */
-        nvl->tasklet.func = nv_kern_isr_bh;
-        nvl->tasklet.data = (unsigned long) nv;
-        tasklet_enable(&nvl->tasklet);
+            nvl->tasklet.func = nv_kern_isr_bh;
+            nvl->tasklet.data = (unsigned long) nv;
+            tasklet_enable(&nvl->tasklet);
 #endif /* NV_USE_TASKLET_INIT */
+        }
 
 #if defined(NV_XEN_SUPPORT_OLD_STYLE_KERNEL)
         if ((nvl->dev->dma_mask <= 0xffffffff) &&
@@ -2290,7 +2343,6 @@ failed2:
     return rc;
 }
 
-
 /*
 ** nv_kern_close
 **
@@ -2317,9 +2369,9 @@ int nv_kern_close(
     nv_printf(NV_DBG_INFO, "NVRM: nv_kern_close on device %d\n",
         NV_DEVICE_NUMBER(inode));
 
-    rm_free_unused_clients(sp, nv, (void *)file);
+    rm_free_unused_clients(sp, nv, NV_FILE_REFERENCE(file));
 
-    NV_RELEASE_USERMAP_LIST(nv);
+    NV_RELEASE_USERMAP_LIST(nv,nvfp);
 
     down(&nvl->at_lock);
     if (nvl->alloc_queue != NULL)
@@ -2329,7 +2381,7 @@ int nv_kern_close(
         {
             /* nv_free_pages() will free this 'at' */
             next = at->next;
-            if ((NV_ATOMIC_READ(at->usage_count) == 0) && (at->file == file))
+            if ((NV_ATOMIC_READ(at->usage_count) == 0) && (at->file == NV_FILE_REFERENCE(file)))
             {
                 NV_ATOMIC_INC(at->usage_count);
                 up(&nvl->at_lock);
@@ -2359,7 +2411,10 @@ int nv_kern_close(
         }
         else
         {
-            NV_SHUTDOWN_ADAPTER(sp, nv, nvl);
+            if (!(nv->flags & NV_FLAG_PERSISTENT_SW_STATE))
+            {
+                NV_SHUTDOWN_ADAPTER(sp, nv, nvl);
+            }
         }
 
         NV_KMEM_CACHE_FREE_STACK(nvl->timer_sp);
@@ -2368,10 +2423,11 @@ int nv_kern_close(
         NV_KMEM_CACHE_FREE_STACK(nvl->isr_sp);
 
         /*
-         * Make sure we free all memory tied to this device. Memory freed here
-         * has been leaked by the core RM, warn accordingly.
+         * If software state persistence is not enabled, make sure we free 
+         * all memory tied to this device. Memory freed here has been leaked
+         * by the core RM, warn accordingly.
          */
-        if (nvl->alloc_queue)
+        if (nvl->alloc_queue && !(nv->flags & NV_FLAG_PERSISTENT_SW_STATE))
         {
             nv_alloc_t *at = nvl->alloc_queue, *next;
             while (at)
@@ -2379,6 +2435,16 @@ int nv_kern_close(
                 NV_PRINT_AT(NV_DBG_ERRORS, at);
                 /* nv_free_pages() will free this 'at' */
                 next = at->next;
+#ifdef NV_USER_MAP
+                if (NV_ATOMIC_READ(at->usage_count) < 1) {
+                    nv_printf(NV_DBG_INFO,
+                              "NVRM: %s:%d alloc object 0x%p reference count is too small",
+                              __FUNCTION__,
+                              __LINE__,
+                              at);
+                    NV_ATOMIC_SET(at->usage_count,1);
+                }
+#endif /* NV_USER_MAP */
                 nv_free_pages(nv, at->num_pages,
                               NV_ALLOC_MAPPING_AGP(at->flags),
                               NV_ALLOC_MAPPING_CONTIG(at->flags),
@@ -2489,7 +2555,9 @@ int nv_encode_caching(
     }
     return 0;
 }
+#endif /* NV_NO_CACHE_ENCODING */
 
+#ifndef NV_USER_MAP
 int nv_kern_mmap(
     struct file  *file,
     struct vm_area_struct *vma
@@ -2502,7 +2570,10 @@ int nv_kern_mmap(
     nv_file_private_t *nvfp = NV_GET_FILE_PRIVATE(file);
     int status = 0;
     nv_stack_t *sp = NULL;
-    
+
+    if (nv->flags & NV_FLAG_CONTROL)
+        return -ENODEV;
+
     NV_PRINT_VMA(NV_DBG_MEMINFO, vma);
 
     down(&nvfp->sp_lock);
@@ -2583,28 +2654,6 @@ int nv_kern_mmap(
                 status = -ENXIO;
                 goto done;
             }
-        }
-
-        if (NV_IO_REMAP_PAGE_RANGE(vma->vm_start, NV_VMA_OFFSET(vma),
-                    NV_VMA_SIZE(vma), vma->vm_page_prot))
-        {
-            status = -EAGAIN;
-            goto done;
-        }
-
-        // mark it as IO so that we don't dump it on core dump
-        vma->vm_flags |= VM_IO;
-    }
-
-    /* NV bc space */
-    else if (IS_BC_OFFSET(nv, NV_VMA_OFFSET(vma), NV_VMA_SIZE(vma)))
-    {
-        if (nv_encode_caching(&vma->vm_page_prot,
-                              NV_MEMORY_WRITECOMBINED,
-                              NV_MEMORY_TYPE_FRAMEBUFFER))
-        {
-            status = -ENXIO;
-            goto done;
         }
 
         if (NV_IO_REMAP_PAGE_RANGE(vma->vm_start, NV_VMA_OFFSET(vma),
@@ -2769,13 +2818,13 @@ int nv_kern_mmap(
 #endif
     }
 
-    NV_VMA_FILE(vma) = file;
+    NV_VMA_FILE(vma) = NV_FILE_REFERENCE(file);
 
 done:
     up(&nvfp->sp_lock);
     return status;
 }
-#endif /* NV_NO_CACHE_ENCODING */
+#endif /* NV_USER_MAP */
 
 
 unsigned int nv_kern_poll(
@@ -2963,10 +3012,12 @@ int nv_kern_ioctl(
                 if (tnv->device_id)
                 {
                     ci->flags = NV_IOCTL_CARD_INFO_FLAG_PRESENT;
+                    ci->domain = tnv->domain;
                     ci->bus = tnv->bus;
                     ci->slot = tnv->slot;
                     ci->vendor_id = tnv->vendor_id;
                     ci->device_id = tnv->device_id;
+                    ci->gpu_id = tnv->gpu_id;
                     ci->interrupt_line = tnv->interrupt_line;
                     ci->reg_address = tnv->regs->address;
                     ci->reg_size = tnv->regs->size;
@@ -2989,7 +3040,7 @@ int nv_kern_ioctl(
         }
         
         default:
-            status = rm_ioctl(sp, nv, file, arg_cmd, arg_copy)
+            status = rm_ioctl(sp, nv, NV_FILE_REFERENCE(file), arg_cmd, arg_copy)
                         ? 0 : -EINVAL;
             break;
     }
@@ -3041,7 +3092,7 @@ irqreturn_t nv_kern_isr(
 {
     nv_linux_state_t *nvl = (void *) arg;
     nv_state_t *nv = NV_STATE_PTR(nvl);
-    U032 need_to_run_bottom_half = 0;
+    NvU32 need_to_run_bottom_half = 0;
     BOOL ret;
 
     ret = rm_isr(nvl->isr_sp, nv, &need_to_run_bottom_half);
@@ -3227,11 +3278,13 @@ int nv_kern_ctl_close(
     }
     up(&nvl->ldata_lock);
 
-    rm_free_unused_clients(sp, nv, (void *)file);
+    rm_free_unused_clients(sp, nv, NV_FILE_REFERENCE(file));
 
-    if (NV_GET_FILE_PRIVATE(file) != NULL)
+    if (nvfp != NULL)
     {
-        nv_free_file_private(NV_GET_FILE_PRIVATE(file));
+        NV_RELEASE_USERMAP_LIST(nv,nvfp);
+
+        nv_free_file_private(nvfp);
         NV_SET_FILE_PRIVATE(file, NULL);
     }
 
@@ -3243,7 +3296,7 @@ int nv_kern_ctl_close(
 
 void   NV_API_CALL  nv_set_dma_address_size(
     nv_state_t  *nv,
-    U032        phys_addr_bits
+    NvU32       phys_addr_bits
 )
 {
     nv_linux_state_t    *nvl = NV_GET_NVL_FROM_NV_STATE(nv);
@@ -3268,8 +3321,8 @@ nv_kern_read_cardinfo(char *page, char **start, off_t off,
     struct pci_dev *dev;
     char *type, *fmt, tmpstr[NV_DEVICE_NAME_LENGTH];
     int len = 0, status;
-    U032 vbios_rev1, vbios_rev2, vbios_rev3, vbios_rev4, vbios_rev5;
-    U032 fpga_rev1, fpga_rev2, fpga_rev3;
+    NvU32 vbios_rev1, vbios_rev2, vbios_rev3, vbios_rev4, vbios_rev5;
+    NvU32 fpga_rev1, fpga_rev2, fpga_rev3;
     nv_stack_t *sp = NULL;
 
     nv_state_t *nv;
@@ -3297,12 +3350,13 @@ nv_kern_read_cardinfo(char *page, char **start, off_t off,
     }
     else
     {
-        if (rm_get_device_name(sp, nv, dev->device, NV_DEVICE_NAME_LENGTH,
-                               tmpstr) != RM_OK) {
+        if (rm_get_device_name(sp, nv, dev->device, dev->subsystem_vendor,
+                    dev->subsystem_device, NV_DEVICE_NAME_LENGTH,
+                    tmpstr) != RM_OK) {
             strcpy (tmpstr, "Unknown");
         }
     }
-    
+
     len += sprintf(page+len, "Model: \t\t %s\n", tmpstr);
     len += sprintf(page+len, "IRQ:   \t\t %d\n", nv->interrupt_line);
 
@@ -3345,8 +3399,8 @@ nv_kern_read_cardinfo(char *page, char **start, off_t off,
     len += sprintf(page+len, "DMA Size: \t %d bits\n",
      nv_count_bits(dev->dma_mask));
     len += sprintf(page+len, "DMA Mask: \t 0x%llx\n", dev->dma_mask);
-    len += sprintf(page+len, "Bus Location: \t %02x.%02x.%x\n",
-                   nv->bus, nv->slot, PCI_FUNC(dev->devfn));
+    len += sprintf(page+len, "Bus Location: \t %04x:%02x.%02x.%x\n",
+                   nv->domain, nv->bus, nv->slot, PCI_FUNC(dev->devfn));
 #ifdef DEBUG
     do
     {
@@ -3564,12 +3618,12 @@ nv_kern_read_text_file(char *page, char **start, off_t off,
 #if defined(NV_VMAP_PRESENT)
 static unsigned long 
 nv_map_guest_pages(nv_alloc_t *at,
-                   U032 address,
-                   U032 page_count,
-                   U032 page_idx)
+                   NvU32 address,
+                   NvU32 page_count,
+                   NvU32 page_idx)
 {
     struct page **pages;
-    U032 j;
+    NvU32 j;
     unsigned long virt_addr;
 
     NV_KMALLOC(pages, sizeof(struct page *) * page_count);
@@ -3595,9 +3649,9 @@ nv_map_guest_pages(nv_alloc_t *at,
 RM_STATUS NV_API_CALL
 nv_alias_pages(
     nv_state_t *nv,
-    U032 page_cnt,
-    U032 contiguous,
-    U032 cache_type,
+    NvU32 page_cnt,
+    NvU32 contiguous,
+    NvU32 cache_type,
     NvU64 guest_id,
     NvU64 *pte_array,
     void **priv_data
@@ -3605,7 +3659,7 @@ nv_alias_pages(
 {
     nv_alloc_t *at;
     nv_linux_state_t *nvl = NV_GET_NVL_FROM_NV_STATE(nv);
-    U032 i=0;
+    NvU32 i=0;
     nv_pte_t *page_ptr = NULL;
     
     page_cnt = RM_PAGES_TO_OS_PAGES(page_cnt);
@@ -3647,6 +3701,7 @@ nv_alias_pages(
 
     *priv_data = at;
     NV_ATOMIC_INC(at->usage_count);
+    NV_PRINT_AT(NV_DBG_MEMINFO, at);
 
     return RM_OK;
 }
@@ -3678,13 +3733,13 @@ nv_guest_pfn_list(nv_state_t  *nv,
 void* NV_API_CALL nv_alloc_kernel_mapping(
     nv_state_t *nv,
     NvU64 address,
-    U032 size,
+    NvU32 size,
     void **priv_data
 )
 {
     nv_alloc_t *at;
     nv_linux_state_t *nvl = NV_GET_NVL_FROM_NV_STATE(nv);
-    U032 i, offset, page_idx=0;
+    NvU32 i, offset, page_idx=0;
 
     down(&nvl->at_lock);
     at = nvl_find_alloc(nvl, address, NV_ALLOC_TYPE_PCI);
@@ -3740,7 +3795,7 @@ void* NV_API_CALL nv_alloc_kernel_mapping(
     else
     {
 #if defined(NV_VMAP_PRESENT)
-        U032 j, page_count;
+        NvU32 j, page_count;
         unsigned long virt_addr;
         struct page **pages;
 
@@ -3807,7 +3862,7 @@ int NV_API_CALL nv_free_kernel_mapping(
 {
 #if defined(NV_VMAP_PRESENT)
     unsigned long virt_addr;
-    U032 page_count;
+    NvU32 page_count;
 
     virt_addr = (unsigned long)address & PAGE_MASK;
 
@@ -3815,20 +3870,17 @@ int NV_API_CALL nv_free_kernel_mapping(
     {
         NV_IOUNMAP((void *)virt_addr, (unsigned long)priv_data * PAGE_SIZE);
     }
-    else
+    else if (priv_data != NULL)
     {
-        if (virt_addr >= VMALLOC_START && virt_addr < VMALLOC_END)
+        page_count = (unsigned long)priv_data;
+        if (page_count == 0)
         {
-            page_count = (unsigned long)priv_data;
-            if (page_count == 0)
-            {
-                nv_printf(NV_DBG_ERRORS,
-                          "NVRM: nv_free_kernel_mapping(): invalid page count!\n");
-                return RM_ERROR;
-            }
-            
-            NV_VUNMAP(virt_addr, page_count);
+            nv_printf(NV_DBG_ERRORS,
+                  "NVRM: nv_free_kernel_mapping(): invalid page count!\n");
+            return RM_ERROR;
         }
+
+        NV_VUNMAP(virt_addr, page_count);
     }
 #endif
     return RM_OK;
@@ -3935,10 +3987,10 @@ NvU64 NV_API_CALL nv_get_kern_user_address(NvU64 address)
 
 RM_STATUS NV_API_CALL nv_alloc_pages(
     nv_state_t *nv,
-    U032 page_count,
-    U032 agp_memory,
-    U032 contiguous,
-    U032 cache_type,
+    NvU32 page_count,
+    NvU32 agp_memory,
+    NvU32 contiguous,
+    NvU32 cache_type,
     NvU64 *pte_array,
     void **priv_data
 )
@@ -3947,7 +3999,7 @@ RM_STATUS NV_API_CALL nv_alloc_pages(
     RM_STATUS rm_status = RM_ERR_NO_FREE_MEM;
     nv_linux_state_t *nvl = NV_GET_NVL_FROM_NV_STATE(nv);
     nv_stack_t *sp = NULL;
-    U032 i, memory_type;
+    NvU32 i, memory_type;
 
     nv_printf(NV_DBG_MEMINFO, "NVRM: VM: nv_alloc_pages: %d pages\n", page_count);
     nv_printf(NV_DBG_MEMINFO, "NVRM: VM:    agp %d  contig %d  cache_type %d\n",
@@ -3975,7 +4027,7 @@ RM_STATUS NV_API_CALL nv_alloc_pages(
 
     if (agp_memory)
     {
-        U032 offset;
+        NvU32 offset;
 
         if (!NV_AGP_ENABLED(nv))
         {
@@ -4047,10 +4099,10 @@ failed:
 
 RM_STATUS NV_API_CALL nv_free_pages(
     nv_state_t *nv,
-    U032 page_count,
-    U032 agp_memory,
-    U032 contiguous,
-    U032 cache_type,
+    NvU32 page_count,
+    NvU32 agp_memory,
+    NvU32 contiguous,
+    NvU32 cache_type,
     void *priv_data
 )
 {
@@ -4123,14 +4175,6 @@ failed:
     return rmStatus;
 }
 
-NvU64 NV_API_CALL nv_dma_to_mmap_token(
-    nv_state_t *nv,
-    NvU64 address
-)
-{
-    return address;
-}
-
 static void nv_lock_init_locks
 ( 
     nv_state_t *nv
@@ -4139,8 +4183,6 @@ static void nv_lock_init_locks
     nv_linux_state_t *nvl;
     nvl = NV_GET_NVL_FROM_NV_STATE(nv);
 
-    NV_SPIN_LOCK_INIT(&nvl->rm_lock);
-
     NV_INIT_MUTEX(&nvl->ldata_lock);
     NV_INIT_MUTEX(&nvl->at_lock);
 #ifdef NV_USER_MAP
@@ -4148,63 +4190,16 @@ static void nv_lock_init_locks
 #endif /* NV_USER_MAP */
 
     NV_ATOMIC_SET(nvl->usage_count, 0);
-
-    nvl->rm_lock_cpu = -1;
-    nvl->rm_lock_count = 0;
 }
 
-void NV_API_CALL nv_lock_rm(
-    nv_state_t *nv
-)
-{
-    nv_linux_state_t *nvl;
-    int cpu;
-
-    nvl = NV_GET_NVL_FROM_NV_STATE(nv);
-    cpu = get_cpu();
-
-    if (nvl->rm_lock_cpu == cpu)
-    {
-        nvl->rm_lock_count++;
-        put_cpu();
-        return;
-    }
-
-    put_cpu();
-    NV_SPIN_UNLOCK_WAIT(&nvl->rm_lock);
-    NV_SPIN_LOCK_IRQ(&nvl->rm_lock);
-
-    nvl->rm_lock_cpu = smp_processor_id();
-    nvl->rm_lock_count = 1;
-}
-
-void NV_API_CALL nv_unlock_rm(
-    nv_state_t *nv
-)
-{
-    nv_linux_state_t *nvl;
-    nvl = NV_GET_NVL_FROM_NV_STATE(nv);
-
-    if (--nvl->rm_lock_count)
-        return;
-
-    nvl->rm_lock_cpu = -1;
-    NV_SPIN_UNLOCK_IRQ(&nvl->rm_lock);
-}
-
-/*
-** post the event
-*/
- 
 void NV_API_CALL nv_post_event(
     nv_state_t *nv,
     nv_event_t *event,
-    U032        handle,
-    U032        index
+    NvU32       handle,
+    NvU32       index
 )
 {
-    struct file *file = (struct file *) event->file;
-    nv_file_private_t *nvfp = NV_GET_FILE_PRIVATE(file);
+    nv_file_private_t *nvfp = NV_GET_VOID_FILE_PRIVATE(event->file);
     unsigned long eflags;
     nvidia_event_t *nvet;
 
@@ -4241,11 +4236,10 @@ int NV_API_CALL nv_get_event(
     nv_state_t *nv,
     void *void_file,
     nv_event_t *event,
-    U032 *more_events
+    NvU32 *more_events
 )
 {
-    struct file *file = (struct file *) void_file;
-    nv_file_private_t *nvfp = NV_GET_FILE_PRIVATE(file);
+    nv_file_private_t *nvfp = NV_GET_VOID_FILE_PRIVATE(void_file);
     nvidia_event_t *nvet;
     unsigned long eflags;
 
@@ -4269,7 +4263,7 @@ int NV_API_CALL nv_get_event(
     if (more_events)
         *more_events = (nvfp->event_head != NULL);
 
-    nv_printf(NV_DBG_EVENTINFO, "NVRM: returning event: 0x%x\n", event);
+    nv_printf(NV_DBG_EVENTINFO, "NVRM: returning event: 0x%p\n", event);
     nv_printf(NV_DBG_EVENTINFO, "NVRM:     hParent: 0x%x\n", event->hParent);
     nv_printf(NV_DBG_EVENTINFO, "NVRM:     hObject: 0x%x\n", event->hObject);
     nv_printf(NV_DBG_EVENTINFO, "NVRM:     file:    0x%p\n", event->file);
@@ -4284,10 +4278,10 @@ int NV_API_CALL nv_get_event(
 
 
 RM_STATUS NV_API_CALL nv_agp_init(
-    nv_state_t  *nv,
-    void       **phys_start,
-    void        *agp_limit,
-    U032         config
+    nv_state_t *nv,
+    NvU64      *phys_start,
+    NvU64      *agp_limit,
+    NvU32       config
 )
 {
 #if !defined(NV_XEN_SUPPORT_OLD_STYLE_KERNEL)
@@ -4414,7 +4408,7 @@ RM_STATUS NV_API_CALL nv_agp_init(
             return RM_ERR_NO_FREE_MEM;
         }
 
-        status = rm_init_agp(sp, nv);
+        status = rm_init_agp(sp, nv, NULL, NULL);
         if (status == RM_OK)
         {
             nv->agp_config = NVOS_AGP_CONFIG_NVAGP;
@@ -4587,8 +4581,8 @@ nv_kern_probe
              (dev->class != (PCI_CLASS_DISPLAY_3D << 8))) ||
             rm_is_legacy_device(sp, dev->device, FALSE))
         {
-            nv_printf(NV_DBG_ERRORS, "NVRM: ignoring the legacy GPU %02x:%02x.%x\n",
-                      NV_PCI_BUS_NUMBER(dev), NV_PCI_SLOT_NUMBER(dev),
+            nv_printf(NV_DBG_ERRORS, "NVRM: ignoring the legacy GPU %04x:%02x:%02x.%x\n",
+                      NV_PCI_DOMAIN_NUMBER(dev), NV_PCI_BUS_NUMBER(dev), NV_PCI_SLOT_NUMBER(dev),
                       PCI_FUNC(dev->devfn));
             goto failed;
         }
@@ -4621,7 +4615,7 @@ nv_kern_probe
                 ((NV_PCI_RESOURCE_START(dev, i) >> PAGE_SHIFT) > 0xfffffULL))
             {
                 struct pci_dev *bridge = dev->bus->self;
-                U032 base_upper, limit_upper;
+                NvU32 base_upper, limit_upper;
 
                 pci_read_config_dword(bridge, PCI_PREF_BASE_UPPER32,
                         &base_upper);
@@ -4647,9 +4641,10 @@ nv_kern_probe
         }
         nv_printf(NV_DBG_ERRORS,
             "NVRM: This PCI I/O region assigned to your NVIDIA device is invalid:\n"
-            "NVRM: BAR%d is %dM @ 0x%llx (PCI:%04x:%02x.%x)\n", i,
+            "NVRM: BAR%d is %dM @ 0x%llx (PCI:%04x:%02x:%02x.%x)\n", i,
             (NV_PCI_RESOURCE_SIZE(dev, i) >> 20),
             (NvU64)NV_PCI_RESOURCE_START(dev, i),
+            NV_PCI_DOMAIN_NUMBER(dev),
             NV_PCI_BUS_NUMBER(dev), NV_PCI_SLOT_NUMBER(dev), PCI_FUNC(dev->devfn));
 #if defined(NVCPU_X86)
         if ((NV_PCI_RESOURCE_FLAGS(dev, i) & PCI_BASE_ADDRESS_MEM_TYPE_64) &&
@@ -4722,6 +4717,7 @@ nv_kern_probe
     nv->device_id     = dev->device;
     nv->subsystem_id  = dev->subsystem_device;
     nv->os_state      = (void *) nvl;
+    nv->domain        = NV_PCI_DOMAIN_NUMBER(dev);
     nv->bus           = NV_PCI_BUS_NUMBER(dev);
     nv->slot          = NV_PCI_SLOT_NUMBER(dev);
     nv->handle        = dev;
@@ -4749,6 +4745,9 @@ nv_kern_probe
     pci_set_master(dev);
 
 #if defined(CONFIG_VGA_ARB)
+#if defined(VGA_DEFAULT_DEVICE)
+    vga_tryget(VGA_DEFAULT_DEVICE, VGA_RSRC_LEGACY_MASK);
+#endif
     vga_set_legacy_decoding(dev, VGA_RSRC_NONE);
 #endif
 
@@ -4773,13 +4772,13 @@ nv_kern_probe
         if (rm_is_supported_device(sp, nv) != RM_OK)
         {
             nv_printf(NV_DBG_ERRORS,
-                "NVRM: The NVIDIA GPU %02x:%02x.%x (PCI ID: %04x:%04x) installed\n"
+                "NVRM: The NVIDIA GPU %04x:%02x:%02x.%x (PCI ID: %04x:%04x) installed\n"
                 "NVRM: in this system is not supported by the %s NVIDIA Linux\n"
                 "NVRM: graphics driver release.  Please see 'Appendix A -\n"
                 "NVRM: Supported NVIDIA GPU Products' in this release's README,\n"
                 "NVRM: available on the Linux graphics driver download page at\n"
                 "NVRM: www.nvidia.com.\n",
-                nv->bus, nv->slot, PCI_FUNC(dev->devfn), nv->vendor_id, nv->device_id,
+                nv->domain, nv->bus, nv->slot, PCI_FUNC(dev->devfn), nv->vendor_id, nv->device_id,
                 NV_VERSION_STRING);
             goto err_not_supported;
         }
@@ -4798,13 +4797,13 @@ nv_kern_probe
     }
 
     nv_printf(NV_DBG_INFO,
-            "NVRM: PCI:%02x:%02x.%x (%04x:%04x): BAR0 @ 0x%llx (%lluMB)\n",
-            nv->bus, nv->slot, PCI_FUNC(dev->devfn),
+            "NVRM: PCI:%04x:%02x:%02x.%x (%04x:%04x): BAR0 @ 0x%llx (%lluMB)\n",
+            nv->domain, nv->bus, nv->slot, PCI_FUNC(dev->devfn),
             nv->vendor_id, nv->device_id, nv->regs->address,
             (nv->regs->size >> 20));
     nv_printf(NV_DBG_INFO,
-            "NVRM: PCI:%02x:%02x.%x (%04x:%04x): BAR1 @ 0x%llx (%lluMB)\n",
-            nv->bus, nv->slot, PCI_FUNC(dev->devfn),
+            "NVRM: PCI:%04x:%02x:%02x.%x (%04x:%04x): BAR1 @ 0x%llx (%lluMB)\n",
+            nv->domain, nv->bus, nv->slot, PCI_FUNC(dev->devfn),
             nv->vendor_id, nv->device_id, nv->fb->address,
             (nv->fb->size >> 20));
 
@@ -4856,9 +4855,9 @@ nv_kern_smu_probe
         (dev->class != (PCI_CLASS_PROCESSOR_CO << 8)) ||
         (dev->device != NV_PCI_DEVICE_ID_SMU))  
     {
-        nv_printf(NV_DBG_INFO, "NVRM: ignoring the SMU %02x:%02x.%x\n",
-                  NV_PCI_BUS_NUMBER(dev), NV_PCI_SLOT_NUMBER(dev),
-                  PCI_FUNC(dev->devfn));
+        nv_printf(NV_DBG_INFO, "NVRM: ignoring the SMU %04x:%02x:%02x.%x\n",
+                  NV_PCI_DOMAIN_NUMBER(dev), NV_PCI_BUS_NUMBER(dev),
+                  NV_PCI_SLOT_NUMBER(dev), PCI_FUNC(dev->devfn));
         goto failed;
     }
 
@@ -4884,9 +4883,10 @@ nv_kern_smu_probe
     {
         nv_printf(NV_DBG_INFO,
             "NVRM: This PCI I/O region assigned to the SMU device is invalid:\n"
-            "NVRM: BAR0 is %dM @ 0x%08x (PCI:%04x:%02x.%x)\n", 
+            "NVRM: BAR0 is %dM @ 0x%08x (PCI:%04x:%02x:%02x.%x)\n", 
             NV_PCI_RESOURCE_SIZE(dev, 0) >> 20, NV_PCI_RESOURCE_START(dev, 0),
-            NV_PCI_BUS_NUMBER(dev), NV_PCI_SLOT_NUMBER(dev), PCI_FUNC(dev->devfn));
+            NV_PCI_DOMAIN_NUMBER(dev), NV_PCI_BUS_NUMBER(dev),
+            NV_PCI_SLOT_NUMBER(dev), PCI_FUNC(dev->devfn));
         goto failed;
     }
 
@@ -4908,6 +4908,7 @@ nv_kern_smu_probe
 
     nv->vendor_id     = dev->vendor;
     nv->device_id     = dev->device;
+    nv->domain        = NV_PCI_DOMAIN_NUMBER(dev);
     nv->bus           = NV_PCI_BUS_NUMBER(dev);
     nv->slot          = NV_PCI_SLOT_NUMBER(dev);
     nv->handle        = dev;
@@ -4922,8 +4923,8 @@ nv_kern_smu_probe
 
     nv->regs = &nv->bar0;
 
-    nv_printf(NV_DBG_INFO, "NVRM: %02x:%02x.%x %04x:%04x - 0x%08x [size=%dK]\n",
-            nv->bus, nv->slot, PCI_FUNC(dev->devfn),
+    nv_printf(NV_DBG_INFO, "NVRM: %04x:%02x:%02x.%x %04x:%04x - 0x%08x [size=%dK]\n",
+            nv->domain, nv->bus, nv->slot, PCI_FUNC(dev->devfn),
             nv->vendor_id, nv->device_id, nv->regs->address,
             nv->regs->size / (1024));
 
@@ -5141,8 +5142,9 @@ static int nv_kern_smu_resume(void)
 #endif /* defined(NV_PM_SUPPORT_DEVICE_DRIVER_MODEL) */
 
 void* NV_API_CALL nv_get_adapter_state(
-    U016 bus,
-    U016 slot
+    NvU32 domain,
+    NvU16 bus,
+    NvU16 slot
 )
 {
     nv_linux_state_t *nvl;
@@ -5150,7 +5152,7 @@ void* NV_API_CALL nv_get_adapter_state(
     for (nvl = nv_linux_devices; nvl != NULL;  nvl = nvl->next)
     {
         nv_state_t *nv = NV_STATE_PTR(nvl);
-        if (nv->bus == bus && nv->slot == slot)
+        if (nv->domain == domain && nv->bus == bus && nv->slot == slot)
             return (void *) nv;
     }
 
@@ -5175,3 +5177,105 @@ void* NV_API_CALL nv_get_smu_state(void)
     return nv_smu;
 }
 
+RM_STATUS NV_API_CALL nv_lock_user_pages(
+    nv_state_t *nv,
+    void       *address,
+    NvU64       page_count,
+    NvU64      *pte_array,
+    void      **private
+)
+{
+#if defined(NV_VM_INSERT_PAGE_PRESENT)
+    RM_STATUS rmStatus;
+    struct mm_struct *mm = current->mm;
+    struct page **user_pages;
+    nv_linux_state_t *nvl = NV_GET_NVL_FROM_NV_STATE(nv);
+    struct pci_dev *dev = nvl->dev;
+    NvU32 i, j, pinned;
+    NvBool write = 1, force = 0;
+
+    if (!NV_MAY_SLEEP())
+    {
+        nv_printf(NV_DBG_ERRORS,
+            "NVRM: os_lock_user_memory(): invalid context!\n");
+        return RM_ERR_NOT_SUPPORTED;
+    }
+
+    rmStatus = os_alloc_mem((void **)&user_pages,
+            (page_count * sizeof(*user_pages)));
+    if (rmStatus != RM_OK)
+    {
+        nv_printf(NV_DBG_ERRORS,
+                "NVRM: failed to allocate page table!\n");
+        return rmStatus;
+    }
+
+    down_read(&mm->mmap_sem);
+    pinned = get_user_pages(current, mm, (unsigned long)address,
+            page_count, write, force, user_pages, NULL);
+    up_read(&mm->mmap_sem);
+
+    if (pinned < page_count)
+    {
+        for (i = 0; i < pinned; i++)
+            page_cache_release(user_pages[i]);
+        os_free_mem(user_pages);
+        return RM_ERR_INVALID_ADDRESS;
+    }
+
+    for (i = 0; i < page_count; i++)
+    {
+        pte_array[i] = pci_map_page(dev, user_pages[i], 0,
+                PAGE_SIZE,
+                PCI_DMA_BIDIRECTIONAL);
+        if (NV_PCI_DMA_MAPPING_ERROR(dev, pte_array[i]))
+        {
+            nv_printf(NV_DBG_ERRORS,
+                    "NVRM: failed to create a DMA mapping!\n");
+            for (j = 0; j < i; j++)
+            {
+                pci_unmap_page(dev, pte_array[j],
+                        PAGE_SIZE, PCI_DMA_BIDIRECTIONAL);
+                page_cache_release(user_pages[j]);
+            }
+            os_free_mem(user_pages);
+            return RM_ERR_OPERATING_SYSTEM;
+        }
+    }
+
+    *private = user_pages;
+    return RM_OK;
+#else
+    return RM_ERR_NOT_SUPPORTED;
+#endif
+}
+
+RM_STATUS NV_API_CALL nv_unlock_user_pages(
+    nv_state_t *nv,
+    NvU64       page_count,
+    NvU64      *pte_array,
+    void       *private
+)
+{
+#if defined(NV_VM_INSERT_PAGE_PRESENT)
+    NvBool write = 1;
+    nv_linux_state_t *nvl = NV_GET_NVL_FROM_NV_STATE(nv);
+    struct pci_dev *dev = nvl->dev;
+    struct page **user_pages = private;
+    NvU32 i;
+
+    for (i = 0; i < page_count; i++)
+    {
+        pci_unmap_page(dev, pte_array[i],
+                PAGE_SIZE, PCI_DMA_BIDIRECTIONAL);
+        if (write)
+            set_page_dirty_lock(user_pages[i]);
+        page_cache_release(user_pages[i]);
+    }
+
+    os_free_mem(user_pages);
+    return RM_OK;
+#else
+    return RM_ERR_NOT_SUPPORTED;
+#endif
+}

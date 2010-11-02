@@ -41,16 +41,16 @@ static int nv_i2c_algo_master_xfer(struct i2c_adapter *adap, struct i2c_msg msgs
         else if (msgs[i].flags & I2C_M_RD)
         {
             rmStatus = rm_i2c_read_buffer(sp, nv, (void *)adap,
-                                          (U008)(msgs[i].addr & 0x7f),
-                                          (U032)(msgs[i].len & 0xffffUL),
-                                          (U008 *)msgs[i].buf);
+                                          (NvU8)(msgs[i].addr & 0x7f),
+                                          (NvU32)(msgs[i].len & 0xffffUL),
+                                          (NvU8 *)msgs[i].buf);
         }
         else
         {
             rmStatus = rm_i2c_write_buffer(sp, nv, (void *)adap,
-                                           (U008)(msgs[i].addr & 0x7f),
-                                           (U032)(msgs[i].len & 0xffffUL), 
-                                           (U008 *)msgs[i].buf);
+                                           (NvU8)(msgs[i].addr & 0x7f),
+                                           (NvU32)(msgs[i].len & 0xffffUL), 
+                                           (NvU8 *)msgs[i].buf);
         }
     }
 
@@ -85,7 +85,7 @@ static int nv_i2c_algo_smbus_xfer(
     {
         case I2C_SMBUS_QUICK:
             rmStatus = rm_i2c_smbus_write_quick(sp, nv, (void *)adap,
-                                                (U008)(addr & 0x7f),
+                                                (NvU8)(addr & 0x7f),
                                                 (read_write == I2C_SMBUS_READ));
             break;
 
@@ -93,17 +93,17 @@ static int nv_i2c_algo_smbus_xfer(
             if (read_write == I2C_SMBUS_READ)
             {
                 rmStatus = rm_i2c_read_buffer(sp, nv, (void *)adap,
-                                              (U008)(addr & 0x7f),
+                                              (NvU8)(addr & 0x7f),
                                               1, /* single byte transfer */
-                                              (U008 *)&data->byte);
+                                              (NvU8 *)&data->byte);
             }
             else
             {
                 u8 data = command;
                 rmStatus = rm_i2c_write_buffer(sp, nv, (void *)adap,
-                                               (U008)(addr & 0x7f),
+                                               (NvU8)(addr & 0x7f),
                                                1, /* single byte transfer */
-                                               (U008 *)&data);
+                                               (NvU8 *)&data);
             }
             break;
 
@@ -111,18 +111,18 @@ static int nv_i2c_algo_smbus_xfer(
             if (read_write == I2C_SMBUS_READ)
             {
                 rmStatus = rm_i2c_smbus_read_buffer(sp, nv, (void *)adap,
-                                                    (U008)(addr & 0x7f),
-                                                    (U008)command,
+                                                    (NvU8)(addr & 0x7f),
+                                                    (NvU8)command,
                                                     1, /* single byte transfer */
-                                                    (U008 *)&data->byte);
+                                                    (NvU8 *)&data->byte);
             }
             else
             {
                 rmStatus = rm_i2c_smbus_write_buffer(sp, nv, (void *)adap,
-                                                     (U008)(addr & 0x7f),
-                                                     (U008)command,
+                                                     (NvU8)(addr & 0x7f),
+                                                     (NvU8)command,
                                                      1, /* single byte transfer */
-                                                     (U008 *)&data->byte);
+                                                     (NvU8 *)&data->byte);
             }
             break;
 
@@ -130,12 +130,12 @@ static int nv_i2c_algo_smbus_xfer(
             if (read_write == I2C_SMBUS_READ)
             {
                 rmStatus = rm_i2c_smbus_read_buffer(sp, nv, (void *)adap,
-                                                    (U008)(addr & 0x7f),
-                                                    (U008)command,
+                                                    (NvU8)(addr & 0x7f),
+                                                    (NvU8)command,
                                                     2, /* single word transfer */
-                                                    (U008 *)&data->block[1]);
-                data->word = ((U016)data->block[1]) |
-                             ((U016)data->block[2] << 8);
+                                                    (NvU8 *)&data->block[1]);
+                data->word = ((NvU16)data->block[1]) |
+                             ((NvU16)data->block[2] << 8);
             }
             else
             {
@@ -143,10 +143,10 @@ static int nv_i2c_algo_smbus_xfer(
                 data->block[1] = (word & 0xff);
                 data->block[2] = (word >> 8);
                 rmStatus = rm_i2c_smbus_write_buffer(sp, nv, (void *)adap,
-                                                     (U008)(addr & 0x7f),
-                                                     (U008)command,
+                                                     (NvU8)(addr & 0x7f),
+                                                     (NvU8)command,
                                                      2, /* single word transfer */
-                                                     (U008 *)&data->block[1]);
+                                                     (NvU8 *)&data->block[1]);
             }
             break;
 
@@ -256,7 +256,7 @@ struct i2c_adapter nv_i2c_adapter_prototype = {
 #define I2C_NAME_SIZE 32
 #endif
 
-void* NV_API_CALL nv_i2c_add_adapter(nv_state_t *nv, U032 port)
+void* NV_API_CALL nv_i2c_add_adapter(nv_state_t *nv, NvU32 port)
 {
     RM_STATUS rmStatus;
     nv_linux_state_t *nvl = NV_GET_NVL_FROM_NV_STATE(nv);
@@ -338,7 +338,7 @@ BOOL NV_API_CALL nv_i2c_del_adapter(nv_state_t *nv, void *data)
     return FALSE;
 }
 
-void* NV_API_CALL nv_i2c_add_adapter(nv_state_t *nv, U032 port)
+void* NV_API_CALL nv_i2c_add_adapter(nv_state_t *nv, NvU32 port)
 {
     return NULL;
 }

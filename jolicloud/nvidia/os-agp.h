@@ -15,7 +15,7 @@
 #include "nv-misc.h"
 #include "nv-linux.h"
 
-RM_STATUS  KernInitAGP        (nv_stack_t *, nv_state_t *, void **, NvU32 *);
+RM_STATUS  KernInitAGP        (nv_stack_t *, nv_state_t *, NvU64 *, NvU64 *);
 RM_STATUS  KernTeardownAGP    (nv_stack_t *, nv_state_t *);
 RM_STATUS  KernAllocAGPPages  (nv_stack_t *, nv_state_t *, NvU32, void **, NvU32 *);
 RM_STATUS  KernFreeAGPPages   (nv_stack_t *, nv_state_t *, void *);

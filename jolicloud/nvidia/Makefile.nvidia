@@ -1,16 +1,16 @@
 # This Makefile is automatically generated; do not edit
-# Generated on 'builder75' on Thu Apr 22 09:18:24 PDT 2010
+# Generated on 'builder101' on Fri Oct 8 13:22:42 PDT 2010
 
 MODULE_NAME := nvidia
 
 LINUX_MODULE=nv-linux.o
-DEFINES=-D__KERNEL__ -DMODULE -D_LOOSE_KERNEL_NAMES -DNVRM -DNV_VERSION_STRING=\"195.36.24\"
+DEFINES=-D__KERNEL__ -DMODULE -D_LOOSE_KERNEL_NAMES -DNVRM -DNV_VERSION_STRING=\"260.19.12\"
 INCLUDES=-I.
 
 OBJECTS=nv.o nv_gvi.o nv-vm.o os-agp.o os-interface.o os-registry.o nv-i2c.o nvacpi.o 
-HEADERS=os-agp.h os-interface.h nv-linux.h nv-misc.h nv-memdbg.h nv-reg.h nv-vm.h nv.h rmil.h rmretval.h cpuopsys.h nvtypes.h xapi-sdk.h nvacpitypes.h nvreadme.h nv-xen.h $(VERSION_HDR) conftest.h patches.h
+HEADERS=os-agp.h os-interface.h nv-linux.h nv-misc.h nv-memdbg.h nv-reg.h nv-vm.h nv.h rmil.h rmretval.h cpuopsys.h nvtypes.h xapi-sdk.h g_nvreadme.h $(VERSION_HDR) conftest.h patches.h
 
-CFLAGS=-Wall -Wimplicit -Wreturn-type -Wswitch -Wformat -Wchar-subscripts -Wparentheses -Wpointer-arith -Wno-multichar   -Werror -O -fno-defer-pop -UDEBUG -U_DEBUG -DNDEBUG -MD $(DEFINES) $(INCLUDES) -Wsign-compare -Wno-cast-qual -Wno-error
+CFLAGS=-Wall   -O -UDEBUG -U_DEBUG -DNDEBUG -MD $(DEFINES) $(INCLUDES) -Wsign-compare -Wno-cast-qual -Wno-error
 
 CORE_OBJECTS=nv-kernel.o
 
@@ -56,7 +56,10 @@ COMPILE_TESTS = \
 	i2c_adapter \
 	smp_call_function \
 	acpi_evaluate_integer \
-	proc_dir_entry
+	proc_dir_entry \
+	scatterlist \
+	file_operations \
+	sg_init_table
 
 DEFINES+=$(EXTRA_DEFINES)
 
@@ -100,7 +103,7 @@ $(VERSION_HDR):
 $(LINUX_MODULE): $(OBJECTS)
 	@$(LD) -r -o $@ $(OBJECTS)
 
-conftest.h:
+conftest.h: conftest.sh
 	@if ! $(CONFTEST) compile_tests $(COMPILE_TESTS); then exit; fi
 
 patches.h:

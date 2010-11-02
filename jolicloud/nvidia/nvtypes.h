@@ -1,6 +1,6 @@
  /***************************************************************************\
 |*                                                                           *|
-|*       Copyright 1993-1998 NVIDIA, Corporation.  All rights reserved.      *|
+|*       Copyright 1993-2010 NVIDIA, Corporation.  All rights reserved.      *|
 |*                                                                           *|
 |*     NOTICE TO USER:   The source code  is copyrighted under  U.S. and     *|
 |*     international laws.  Users and possessors of this source code are     *|
@@ -11,7 +11,7 @@
 |*     tion and  internal comments to the code,  notices to the end user     *|
 |*     as follows:                                                           *|
 |*                                                                           *|
-|*       Copyright 1993-1998 NVIDIA, Corporation.  All rights reserved.      *|
+|*       Copyright 1993-2010 NVIDIA, Corporation.  All rights reserved.      *|
 |*                                                                           *|
 |*     NVIDIA, CORPORATION MAKES NO REPRESENTATION ABOUT THE SUITABILITY     *|
 |*     OF  THIS SOURCE  CODE  FOR ANY PURPOSE.  IT IS  PROVIDED  "AS IS"     *|
@@ -126,8 +126,9 @@ typedef          __int64   NvS64; /* 2^-63 to 2^63-1                        */
 #endif
 
 /* Boolean type */
-enum { NV_FALSE = 0, NV_TRUE = 1 };
 typedef NvU8 NvBool;
+#define NV_TRUE           ((NvBool)(0 == 0))
+#define NV_FALSE          ((NvBool)(0 != 0))
 
 /* Macros to extract the low and high parts of a 64-bit unsigned integer */
 /* Also designed to work if someone happens to pass in a 32-bit integer */
@@ -214,18 +215,31 @@ typedef unsigned char *PUCHAR;
 |*                                                                           *|
  \***************************************************************************/
 
-#define NV_S8_MIN       ((NvS8) -128)
-#define NV_S8_MAX       ((NvS8) +127)
-#define NV_U8_MIN       ((NvU8) +0)
-#define NV_U8_MAX       ((NvU8) +255)
-#define NV_S16_MIN      ((NvS16)-32768)
-#define NV_S16_MAX      ((NvS16)+32767)
-#define NV_U16_MIN      ((NvU16)+0)
-#define NV_U16_MAX      ((NvU16)+65535)
-#define NV_S32_MIN      ((NvS32)-2147483648)
-#define NV_S32_MAX      ((NvS32)+2147483647)
-#define NV_U32_MIN      ((NvU32)+0)
-#define NV_U32_MAX      ((NvU32)+4294967295)
+/* Explanation of the current form of these limits:
+ *
+ * - Decimal is used, as hex values are by default positive.
+ * - Casts are not used, as usage in the preprocessor itself (#if) ends poorly.
+ * - The subtraction of 1 for some MIN values is used to get around the fact
+ *   that the C syntax actually treats -x as NEGATE(x) instead of a distinct
+ *   number.  Since 214748648 isn't a valid positive 32-bit signed value, we
+ *   take the largest valid positive signed number, negate it, and subtract 1.
+ */
+#define NV_S8_MIN       (-128)
+#define NV_S8_MAX       (+127)
+#define NV_U8_MIN       (0U)
+#define NV_U8_MAX       (+255U)
+#define NV_S16_MIN      (-32768)
+#define NV_S16_MAX      (+32767)
+#define NV_U16_MIN      (0U)
+#define NV_U16_MAX      (+65535U)
+#define NV_S32_MIN      (-2147483647 - 1)
+#define NV_S32_MAX      (+2147483647)
+#define NV_U32_MIN      (0U)
+#define NV_U32_MAX      (+4294967295U)
+#define NV_S64_MIN      (-9223372036854775807LL - 1LL)
+#define NV_S64_MAX      (+9223372036854775807LL)
+#define NV_U64_MIN      (0ULL)
+#define NV_U64_MAX      (+18446744073709551615ULL)
 
 #if !defined(NV_PTR)
     /* Supports 32bit libraries on Win64
@@ -332,6 +346,112 @@ typedef unsigned char *PUCHAR;
     #endif
 
 #endif  // defined(NV_WINDOWS)
+
+/*!
+ * Fixed-point data types.
+ *
+ * These are all integer types with precision indicated in the naming of the
+ * form: Nv<sign>FXP<num_bits_above_radix>_<num bits below radix>.  The actual
+ * size of the data type is calculated as num_bits_above_radix +
+ * num_bit_below_radix.
+ */
+typedef NvS16                                                       NvSFXP11_5;
+typedef NvS16                                                       NvSFXP4_12;
+typedef NvS16                                                        NvSFXP8_8;
+typedef NvS32                                                      NvSFXP16_16;
+typedef NvS32                                                       NvSFXP24_8;
+
+typedef NvU16                                                       NvUFXP4_12;
+typedef NvU32                                                      NvUFXP16_16;
+
+/*!
+ * Utility macros used in converting between signed integers and fixed-point
+ * notation.
+ * 
+ * - COMMON - These are used by both signed and unsigned.
+ */
+#define NV_TYPES_FXP_INTEGER(x, y)                              ((x)+(y)-1):(y)
+#define NV_TYPES_FXP_FRACTIONAL(x, y)                                 ((y)-1):0
+#define NV_TYPES_FXP_FRACTIONAL_MSB(x, y)                       ((y)-1):((y)-1)
+#define NV_TYPES_FXP_FRACTIONAL_MSB_ONE(x, y)                        0x00000001
+#define NV_TYPES_FXP_FRACTIONAL_MSB_ZERO(x, y)                       0x00000000
+/*!
+ * - UNSIGNED - These are only used for unsigned.
+ */
+#define NV_TYPES_UFXP_INTEGER_MAX(x, y)                         (~(BIT((x))-1))
+#define NV_TYPES_UFXP_INTEGER_MIN(x, y)                                     (0)
+/*!
+ * - SIGNED - These are only used for signed.
+ */
+#define NV_TYPES_SFXP_INTEGER_SIGN(x, y)                ((x)+(y)-1):((x)+(y)-1)
+#define NV_TYPES_SFXP_INTEGER_SIGN_NEGATIVE                          0x00000001
+#define NV_TYPES_SFXP_INTEGER_SIGN_POSITIVE                          0x00000000
+#define NV_TYPES_SFXP_S32_SIGN_EXTENSION(x, y)                           31:(x)
+#define NV_TYPES_SFXP_S32_SIGN_EXTENSION_POSITIVE(x, y)              0x00000000
+#define NV_TYPES_SFXP_S32_SIGN_EXTENSION_NEGATIVE(x, y)         (BIT(32-(x))-1)
+#define NV_TYPES_SFXP_INTEGER_MAX(x, y)                            (BIT((x))-1)
+#define NV_TYPES_SFXP_INTEGER_MIN(x, y)                         (~(BIT((x))-1))
+
+/*!
+ * Conversion macros used for converting between integer and fixed point
+ * representations.  Both signed and unsigned variants.
+ *
+ * Some conversions perform some commonly preformed tasks other than just
+ * bit-shifting:
+ *
+ * - _SCALED:
+ *   For integer -> fixed-point we add handling divisors to represent
+ *   non-integer values.
+ *
+ * - _ROUNDED:
+ *   For fixed-point -> integer we add rounding to integer values. 
+ *
+ * Unsigned:
+ */
+#define NV_TYPES_U32_TO_UFXP_X_Y(x, y, integer)                               \
+    ((NvUFXP##x##_##y) (((NvU32) (integer)) <<                                \
+                        DRF_SHIFT(NV_TYPES_FXP_INTEGER((x), (y)))))
+
+#define NV_TYPES_U32_TO_UFXP_X_Y_SCALED(x, y, integer, scale)                 \
+    ((NvUFXP##x##_##y) (((((NvU32) (integer)) <<                              \
+                             DRF_SHIFT(NV_TYPES_FXP_INTEGER((x), (y)))) +     \
+                         ((scale) / 2)) /                                     \
+                        (scale)))
+
+#define NV_TYPES_UFXP_X_Y_TO_U32(x, y, fxp)                                   \
+    ((NvU32) (DRF_VAL(_TYPES, _FXP, _INTEGER((x), (y)),                       \
+                    ((NvUFXP##x##_##y) (fxp)))))
+
+#define NV_TYPES_UFXP_X_Y_TO_U32_ROUNDED(x, y, fxp)                           \
+    ((NV_TYPES_UFXP_X_Y_TO_U32(x, y, (fxp))) +                                \
+     (DRF_VAL(_TYPES, _FXP, _FRACTIONAL_MSB((x), (y)), (fxp))))
+
+/*!
+ * Signed:
+ */
+#define NV_TYPES_S32_TO_SFXP_X_Y(x, y, integer)                               \
+    ((NvSFXP##x##_##y) (((NvS32) (integer)) <<                                \
+                        DRF_SHIFT(NV_TYPES_FXP_INTEGER((x), (y)))))
+
+#define NV_TYPES_S32_TO_SFXP_X_Y_SCALED(x, y, integer, scale)                 \
+    ((NvSFXP##x##_##y) (((((NvS32) (integer)) <<                              \
+                             DRF_SHIFT(NV_TYPES_FXP_INTEGER((x), (y)))) +     \
+                         ((scale) / 2)) /                                     \
+                        (scale)))
+
+#define NV_TYPES_SFXP_X_Y_TO_S32(x, y, fxp)                                   \
+    ((NvS32) ((DRF_VAL(_TYPES, _FXP, _INTEGER((x), (y)),                      \
+                    ((NvSFXP##x##_##y) (fxp)))) |                             \
+              ((DRF_VAL(_TYPES, _SFXP, _INTEGER_SIGN((x), (y)), (fxp)) ==     \
+                    NV_TYPES_SFXP_INTEGER_SIGN_NEGATIVE) ?                    \
+                DRF_NUM(_TYPES, _SFXP, _S32_SIGN_EXTENSION((x), (y)),         \
+                    NV_TYPES_SFXP_S32_SIGN_EXTENSION_NEGATIVE((x), (y))) :    \
+                DRF_NUM(_TYPES, _SFXP, _S32_SIGN_EXTENSION((x), (y)),         \
+                    NV_TYPES_SFXP_S32_SIGN_EXTENSION_POSITIVE((x), (y))))))
+
+#define NV_TYPES_SFXP_X_Y_TO_S32_ROUNDED(x, y, fxp)                           \
+    ((NV_TYPES_SFXP_X_Y_TO_S32(x, y, (fxp))) +                                \
+     (DRF_VAL(_TYPES, _FXP, _FRACTIONAL_MSB((x), (y)), (fxp))))
 
 
 #include "xapi-sdk.h"       /* XAPIGEN sdk macros for C */

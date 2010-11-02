@@ -26,6 +26,7 @@
 #define XAPI_MAX_FIELD_SIZE XAPI_ENVELOPE_MAX_PAYLOAD_SIZE
 
 #define XAPI_CASE(x)
+#define XAPI_CASE_EMPTY(x) unsigned int : 0        /* hack to safely consume semicolon */
 #define XAPI_SWITCH(x)
 #define XAPI_HIDDEN(x) x
 #define XAPI_FIELD_PTR_AS_VALUE(TYPE, FIELD_NAME) \

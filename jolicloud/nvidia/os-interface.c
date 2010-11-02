@@ -46,16 +46,19 @@ static void ipi_handler(void *info)
 RM_STATUS NV_API_CALL os_raise_smp_barrier(void)
 {
     int ret = 0;
+    if (!NV_MAY_SLEEP())
+    {
+        os_dbg_breakpoint();
+        return RM_ERR_NOT_SUPPORTED;
+    }
 #if defined(CONFIG_SMP)
 #if defined(NV_OS_SMP_BARRIER_DECL)
     if (os_smp_barrier_raised)
         return RM_ERR_INVALID_STATE;
-#else /* NV_OS_SMP_BARRIER_DECL */    
+#else /* NV_OS_SMP_BARRIER_DECL */
     if (atomic_read(&os_smp_barrier) != 0)
         return RM_ERR_INVALID_STATE;
 #endif /* NV_OS_SMP_BARRIER_DECL */
-    if (!NV_MAY_SLEEP())
-        return RM_ERR_NOT_SUPPORTED;
 #if defined(preempt_disable)
     preempt_disable();
 #endif
@@ -109,7 +112,8 @@ typedef struct os_sema_s
     nv_stack_t        *sp;
     struct completion  completion;
     nv_spinlock_t      lock;
-    S032               count;
+    unsigned long      eflags;
+    NvS32              count;
 } os_sema_t;
 
 //
@@ -145,6 +149,7 @@ RM_STATUS NV_API_CALL os_alloc_sema
     os_sema->sp = sp;
     init_completion(&os_sema->completion);
     NV_SPIN_LOCK_INIT(&os_sema->lock);
+    os_sema->eflags = 0;
     os_sema->count = 1;
 
     if (nv_os_smp_barrier_init())
@@ -308,7 +313,7 @@ BOOL NV_API_CALL os_is_administrator(
     return NV_IS_SUSER();
 }
 
-U032 NV_API_CALL os_get_page_size(void)
+NvU32 NV_API_CALL os_get_page_size(void)
 {
     return PAGE_SIZE;
 }
@@ -347,7 +352,7 @@ char* NV_API_CALL os_string_copy(
 RM_STATUS NV_API_CALL os_strncpy_from_user(
     char *dst,
     const char *src,
-    U032 n
+    NvU32 n
 )
 {
 #if defined(NV_NO_PAGE_STRUCT)
@@ -357,21 +362,21 @@ RM_STATUS NV_API_CALL os_strncpy_from_user(
 #endif /* NV_NO_PAGE_STRUCT */
 }
 
-U032 NV_API_CALL os_string_length(
+NvU32 NV_API_CALL os_string_length(
     const char* str
 )
 {
     return strlen(str);
 }
 
-U008* NV_API_CALL os_mem_copy(
-    U008 *dst,
-    const U008 *src,
-    U032 length
+NvU8* NV_API_CALL os_mem_copy(
+    NvU8  *dst,
+    const NvU8 *src,
+    NvU32 length
 )
 {
-    U008 *ret = dst;
-    U032 dwords, bytes;
+    NvU8 *ret = dst;
+    NvU32 dwords, bytes;
     
     if (length < 128) 
         ret = memcpy(dst, src, length);
@@ -402,7 +407,7 @@ U008* NV_API_CALL os_mem_copy(
 RM_STATUS NV_API_CALL os_memcpy_from_user(
     void *dst,
     const void* src,
-    U032 length
+    NvU32 length
 )
 {
     return copy_from_user(dst, src, length) ? RM_ERR_INVALID_POINTER : RM_OK;
@@ -411,7 +416,7 @@ RM_STATUS NV_API_CALL os_memcpy_from_user(
 RM_STATUS NV_API_CALL os_memcpy_to_user(
     void *dst,
     const void* src,
-    U032 length
+    NvU32 length
 )
 {
     return copy_to_user(dst, src, length) ? RM_ERR_INVALID_POINTER : RM_OK;
@@ -419,17 +424,17 @@ RM_STATUS NV_API_CALL os_memcpy_to_user(
 
 void* NV_API_CALL os_mem_set(
     void* dst,
-    U008 c,
-    U032 length
+    NvU8 c,
+    NvU32 length
 )
 {
     return memset(dst, (int)c, length);
 }
 
-S032 NV_API_CALL os_mem_cmp(
-    const U008 *buf0,
-    const U008* buf1,
-    U032 length
+NvS32 NV_API_CALL os_mem_cmp(
+    const NvU8 *buf0,
+    const NvU8* buf1,
+    NvU32 length
 )
 {
     return memcmp(buf0, buf1, length);
@@ -459,7 +464,7 @@ S032 NV_API_CALL os_mem_cmp(
 
 RM_STATUS NV_API_CALL os_alloc_mem(
     void **address,
-    U032 size
+    NvU32 size
 )
 {
 #ifdef NV_NO_PAGE_STRUCT
@@ -552,8 +557,8 @@ void NV_API_CALL os_free_mem(void *address)
 *****************************************************************************/
 
 RM_STATUS NV_API_CALL os_get_current_time(
-    U032 *seconds,
-    U032 *useconds
+    NvU32 *seconds,
+    NvU32 *useconds
 )
 {
     struct timeval tm;
@@ -585,7 +590,7 @@ RM_STATUS NV_API_CALL os_get_current_time(
  * this, we use mdelay() for any full millisecond to be safe.
  */
 
-RM_STATUS NV_API_CALL os_delay_us(U032 MicroSeconds)
+RM_STATUS NV_API_CALL os_delay_us(NvU32 MicroSeconds)
 {
     unsigned long mdelay_safe_msec;
     unsigned long usec;
@@ -626,7 +631,7 @@ RM_STATUS NV_API_CALL os_delay_us(U032 MicroSeconds)
  * remainder will be accounted for with mdelay().
  */
 
-RM_STATUS NV_API_CALL os_delay(U032 MilliSeconds)
+RM_STATUS NV_API_CALL os_delay(NvU32 MilliSeconds)
 {
     unsigned long MicroSeconds;
     unsigned long jiffies;
@@ -703,7 +708,7 @@ RM_STATUS NV_API_CALL os_delay(U032 MilliSeconds)
 
 /* return CPU frequency in MHz */
 #if defined(NVCPU_X86) || defined(NVCPU_X86_64)
-U032 NV_API_CALL os_get_cpu_frequency(void)
+NvU32 NV_API_CALL os_get_cpu_frequency(void)
 {
     NvU64 tsc[2];
     NvU64 tsc_d;
@@ -718,13 +723,18 @@ U032 NV_API_CALL os_get_cpu_frequency(void)
     /* convert from Hz to MHz */
     do_div(tsc_d, 1000000);
 
-    return (U032)tsc_d;
+    return (NvU32)tsc_d;
 }
 #endif
 
-U032 NV_API_CALL os_get_current_process(void)
+
+NvU32 NV_API_CALL os_get_current_process(void)
 {
+#ifdef NV_USER_MAP
+    return nv_user_map_current_process();
+#else /* NV_USER_MAP */
     return current->tgid;
+#endif /* NV_USER_MAP */
 }
 
 RM_STATUS NV_API_CALL os_get_current_thread(NvU64 *threadId)
@@ -745,7 +755,7 @@ RM_STATUS NV_API_CALL os_get_current_thread(NvU64 *threadId)
 
 
 // The current debug display level (default to maximum debug level)
-U032 cur_debuglevel = 0xffffffff;
+NvU32 cur_debuglevel = 0xffffffff;
 
 
 //
@@ -796,7 +806,7 @@ inline void NV_API_CALL out_string(const char *str)
 static char nv_error_string[MAX_ERROR_STRING];
 
 int NV_API_CALL nv_printf(
-    U032 debuglevel,
+    NvU32 debuglevel,
     const char *printf_format,
     ...
   )
@@ -817,7 +827,7 @@ int NV_API_CALL nv_printf(
 }
 
 void NV_API_CALL nv_prints(
-    U032 debuglevel,
+    NvU32 debuglevel,
     const char *string
 )
 {
@@ -884,8 +894,8 @@ void NV_API_CALL nv_os_log(int log_level, const char *fmt, void *ap)
 }
 
 BOOL NV_API_CALL os_pci_device_present(
-    U016 vendor,
-    U016 device
+    NvU16 vendor,
+    NvU16 device
 )
 {
     struct pci_dev *dev;
@@ -906,11 +916,12 @@ BOOL NV_API_CALL os_pci_device_present(
     }
 
 void* NV_API_CALL os_pci_init_handle(
-    U008 bus,
-    U008 slot,
-    U008 function,
-    U016 *vendor,
-    U016 *device
+    NvU32 domain,
+    NvU8  bus,
+    NvU8  slot,
+    NvU8  function,
+    NvU16 *vendor,
+    NvU16 *device
 )
 {
     struct pci_dev *dev;
@@ -925,7 +936,7 @@ void* NV_API_CALL os_pci_init_handle(
 
     if ((function == 0) && (bus != 255 && slot != 255))
     {
-        if ((nv = nv_get_adapter_state(bus, slot)) != NULL)
+        if ((nv = nv_get_adapter_state(domain, bus, slot)) != NULL)
         {
             if (vendor) *vendor = nv->vendor_id;
             if (device) *device = nv->device_id;
@@ -936,7 +947,7 @@ void* NV_API_CALL os_pci_init_handle(
     if (!NV_MAY_SLEEP())
         return NULL;
 
-    dev = NV_PCI_GET_SLOT(bus, devfn);
+    dev = NV_PCI_GET_SLOT(domain, bus, devfn);
     if (dev) {
         if (vendor) *vendor = dev->vendor;
         if (device) *device = dev->device;
@@ -945,34 +956,34 @@ void* NV_API_CALL os_pci_init_handle(
     return (void *) dev;
 }
 
-U008 NV_API_CALL os_pci_read_byte(
+NvU8 NV_API_CALL os_pci_read_byte(
     void *handle,
-    U008 offset
+    NvU8 offset
 )
 {
-    U008 value;
+    NvU8 value;
     VERIFY_HANDLE(handle,-1);
     pci_read_config_byte( (struct pci_dev *) handle, offset, &value);
     return value;
 }
 
-U016 NV_API_CALL os_pci_read_word(
+NvU16 NV_API_CALL os_pci_read_word(
     void *handle,
-    U008 offset
+    NvU8 offset
 )
 {
-    U016 value;
+    NvU16 value;
     VERIFY_HANDLE(handle,-1);
     pci_read_config_word( (struct pci_dev *) handle, offset, &value);
     return value;
 }
 
-U032 NV_API_CALL os_pci_read_dword(
+NvU32 NV_API_CALL os_pci_read_dword(
     void *handle,
-    U008 offset
+    NvU8 offset
 ) 
 {
-    U032 value;
+    NvU32 value;
     VERIFY_HANDLE(handle,-1);
     pci_read_config_dword( (struct pci_dev *) handle, offset, (u32 *) &value);
     return value;
@@ -980,8 +991,8 @@ U032 NV_API_CALL os_pci_read_dword(
 
 void NV_API_CALL os_pci_write_byte(
     void *handle,
-    U008 offset,
-    U008 value
+    NvU8 offset,
+    NvU8 value
 )
 {
     VERIFY_HANDLE(handle,);
@@ -990,8 +1001,8 @@ void NV_API_CALL os_pci_write_byte(
 
 void NV_API_CALL os_pci_write_word(
     void *handle,
-    U008 offset,
-    U016 value
+    NvU8 offset,
+    NvU16 value
 )
 {
     VERIFY_HANDLE(handle,);
@@ -1000,8 +1011,8 @@ void NV_API_CALL os_pci_write_word(
 
 void NV_API_CALL os_pci_write_dword(
     void *handle,
-    U008 offset,
-    U032 value
+    NvU8 offset,
+    NvU32 value
 )
 {
     VERIFY_HANDLE(handle,);
@@ -1009,45 +1020,45 @@ void NV_API_CALL os_pci_write_dword(
 }
 
 void NV_API_CALL os_io_write_byte(
-    U032 address,
-    U008 value
+    NvU32 address,
+    NvU8 value
 )
 {
     outb(value, address);
 }
 
 void NV_API_CALL os_io_write_word(
-    U032 address,
-    U016 value
+    NvU32 address,
+    NvU16 value
 )
 {
     outw(value, address);
 }
 
 void NV_API_CALL os_io_write_dword(
-    U032 address,
-    U032 value
+    NvU32 address,
+    NvU32 value
 )
 {
     outl(value, address);
 }
 
-U008 NV_API_CALL os_io_read_byte(
-    U032 address
+NvU8 NV_API_CALL os_io_read_byte(
+    NvU32 address
 )
 {
     return inb(address);
 }
 
-U016 NV_API_CALL os_io_read_word(
-    U032 address
+NvU16 NV_API_CALL os_io_read_word(
+    NvU32 address
 )
 {
     return inw(address);
 }
 
-U032 NV_API_CALL os_io_read_dword(
-    U032 address
+NvU32 NV_API_CALL os_io_read_dword(
+    NvU32 address
 )
 {
     return inl(address);
@@ -1112,7 +1123,7 @@ int del_wb(NvU64 start, NvU64 size)
 RM_STATUS NV_API_CALL os_set_mem_range(
     NvU64 start,
     NvU64 size,
-    U032 mode
+    NvU32 mode
 )
 {
 #if (defined(CONFIG_MTRR) && (! defined(NV_NO_PAGE_STRUCT)))
@@ -1161,7 +1172,7 @@ RM_STATUS NV_API_CALL os_unset_mem_range(
 void* NV_API_CALL os_map_kernel_space(
     NvU64 start,
     NvU64 size_bytes,
-    U032 mode
+    NvU32 mode
 )
 {
     void *vaddr;
@@ -1243,7 +1254,7 @@ void NV_API_CALL os_flush_cpu_write_combine_buffer()
 // override initial debug level from registry
 void NV_API_CALL os_dbg_init(void)
 {
-    U032 new_debuglevel;
+    NvU32 new_debuglevel;
     nv_stack_t *sp = NULL;
 
     NV_KMEM_CACHE_ALLOC_STACK(sp);
@@ -1258,14 +1269,14 @@ void NV_API_CALL os_dbg_init(void)
                                         "ResmanDebugLevel",
                                         &new_debuglevel))
     {
-        if (new_debuglevel != (U032)~0)
+        if (new_debuglevel != (NvU32)~0)
             cur_debuglevel = new_debuglevel;
     }
 
     NV_KMEM_CACHE_FREE_STACK(sp);
 }
 
-void NV_API_CALL os_dbg_set_level(U032 new_debuglevel)
+void NV_API_CALL os_dbg_set_level(NvU32 new_debuglevel)
 {
     nv_printf(NV_DBG_SETUP, "NVRM: Changing debuglevel from 0x%x to 0x%x\n",
         cur_debuglevel, new_debuglevel);
@@ -1274,9 +1285,6 @@ void NV_API_CALL os_dbg_set_level(U032 new_debuglevel)
 
 RM_STATUS NV_API_CALL os_schedule(void)
 {
-    NV_ASSERT(NV_MAY_SLEEP(), "Attempted to yield the CPU while in atomic"
-                              " or interrupt context");
-
     if (NV_MAY_SLEEP())
     {
         set_current_state(TASK_INTERRUPTIBLE);
@@ -1285,6 +1293,67 @@ RM_STATUS NV_API_CALL os_schedule(void)
     }
     else
     {
+        nv_printf(NV_DBG_ERRORS, "NVRM: os_schedule: Attempted to yield"
+                                 " the CPU while in atomic or interrupt"
+                                 " context\n");
+        return RM_ERR_ILLEGAL_ACTION;
+    }
+}
+
+static void os_execute_work_item(
+    NV_TASKQUEUE_DATA_T *data
+)
+{
+    nv_work_t *work = NV_TASKQUEUE_UNPACK_DATA(data);
+    nv_stack_t *sp = NULL;
+
+    NV_KMEM_CACHE_ALLOC_STACK(sp);
+    if (sp == NULL)
+    {
+        nv_printf(NV_DBG_ERRORS, "NVRM: failed to allocate stack!\n");
+        return;
+    }
+
+    rm_execute_work_item(sp, work->data);
+
+    os_free_mem((void *)work);
+
+    NV_KMEM_CACHE_FREE_STACK(sp);
+}
+
+RM_STATUS NV_API_CALL os_queue_work_item(
+    void *nv_work
+)
+{
+    RM_STATUS status;
+    nv_work_t *work;
+
+    status = os_alloc_mem((void **)&work, sizeof(nv_work_t));
+
+    if (RM_OK != status)
+        return status;
+
+    work->data = nv_work;
+
+    NV_TASKQUEUE_INIT(&work->task, os_execute_work_item,
+                      (void *)work);
+    NV_TASKQUEUE_SCHEDULE(&work->task);
+
+    return RM_OK;
+}
+
+RM_STATUS NV_API_CALL os_flush_work_queue(void)
+{
+    if (NV_MAY_SLEEP())
+    {
+        NV_TASKQUEUE_FLUSH();
+        return RM_OK;
+    }
+    else
+    {
+        nv_printf(NV_DBG_ERRORS,
+                  "NVRM: os_flush_work_queue: attempted to execute passive"
+                  "work from an atomic or interrupt context.\n");
         return RM_ERR_ILLEGAL_ACTION;
     }
 }
@@ -1312,22 +1381,24 @@ void NV_API_CALL os_dbg_breakpoint(void)
 }
 
 
-U032 NV_API_CALL os_get_cpu_count()
+NvU32 NV_API_CALL os_get_cpu_count()
 {
     return NV_NUM_CPUS();
 }
 
-void NV_API_CALL os_register_compatible_ioctl(U032 cmd, U032 size)
+void NV_API_CALL os_register_compatible_ioctl(NvU32 cmd, NvU32 size)
 {
-#if defined(NVCPU_X86_64) && defined(CONFIG_IA32_EMULATION) && !defined(HAVE_COMPAT_IOCTL)
+#if defined(NVCPU_X86_64) && defined(CONFIG_IA32_EMULATION) && \
+  !defined(NV_FILE_OPERATIONS_HAS_COMPAT_IOCTL)
     unsigned int request = _IOWR(NV_IOCTL_MAGIC, cmd, char[size]);
     register_ioctl32_conversion(request, (void *)sys_ioctl);
 #endif
 }
 
-void NV_API_CALL os_unregister_compatible_ioctl(U032 cmd, U032 size)
+void NV_API_CALL os_unregister_compatible_ioctl(NvU32 cmd, NvU32 size)
 {
-#if defined(NVCPU_X86_64) && defined(CONFIG_IA32_EMULATION) && !defined(HAVE_COMPAT_IOCTL)
+#if defined(NVCPU_X86_64) && defined(CONFIG_IA32_EMULATION) && \
+  !defined(NV_FILE_OPERATIONS_HAS_COMPAT_IOCTL)
     unsigned int request = _IOWR(NV_IOCTL_MAGIC, cmd, char[size]);
     unregister_ioctl32_conversion(request);
 #endif
@@ -1347,25 +1418,26 @@ void NV_API_CALL os_dump_stack()
 
 NvU64 NV_API_CALL os_acquire_spinlock(void *pSema)
 {
-    os_sema_t *os_sema;
-    unsigned long oldIrql;
+    os_sema_t *os_sema = (os_sema_t *)pSema;
+    unsigned long eflags;
 
-    os_sema = (os_sema_t *) pSema;
-    NV_SPIN_LOCK_IRQSAVE(&os_sema->lock, oldIrql);
+    NV_SPIN_LOCK_IRQSAVE(&os_sema->lock, eflags);
+    os_sema->eflags = eflags;
 
 #if defined(NVCPU_X86) || defined(NVCPU_X86_64)
-    oldIrql &= X86_EFLAGS_IF;
+    eflags &= X86_EFLAGS_IF;
 #endif
-    return oldIrql;
+    return eflags;
 }
 
 void NV_API_CALL os_release_spinlock(void *pSema, NvU64 oldIrql)
 {
-    os_sema_t *os_sema = (os_sema_t *) pSema;
-    unsigned long old_irq = (unsigned long) oldIrql;
+    os_sema_t *os_sema = (os_sema_t *)pSema;
+    unsigned long eflags;
 
-    os_sema = (os_sema_t *) pSema;
-    NV_SPIN_UNLOCK_IRQRESTORE(&os_sema->lock, old_irq);
+    eflags = os_sema->eflags;
+    os_sema->eflags = 0;
+    NV_SPIN_UNLOCK_IRQRESTORE(&os_sema->lock, eflags);
 }
 
 RM_STATUS NV_API_CALL os_get_address_space_info(

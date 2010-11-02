@@ -69,10 +69,10 @@ const drm_agp_t *drm_agp_p; /* functions */
 #endif /* AGPGART */
 
 RM_STATUS KernInitAGP(
-    nv_stack_t  *sp,
-    nv_state_t  *nv,
-    void       **ap_phys_base,
-    U032        *ap_limit
+    nv_stack_t *sp,
+    nv_state_t *nv,
+    NvU64      *ap_phys_base,
+    NvU64      *ap_limit
 )
 {
 #ifndef AGPGART
@@ -82,12 +82,12 @@ RM_STATUS KernInitAGP(
     nv_linux_state_t *nvl;
     void *bitmap;
     agp_kern_info agp_info;
-    U032 bitmap_size;
+    NvU32 bitmap_size;
 
-    U032 agp_rate    = (8 | 4 | 2 | 1);
-    U032 enable_sba  = 0;
-    U032 enable_fw   = 0;
-    U032 agp_mode    = 0;
+    NvU32 agp_rate    = (8 | 4 | 2 | 1);
+    NvU32 enable_sba  = 0;
+    NvU32 enable_fw   = 0;
+    NvU32 agp_mode    = 0;
 
 #if defined(KERNEL_2_4)
     if (!(drm_agp_p = inter_module_get_request("drm_agp", "agpgart")))
@@ -168,8 +168,8 @@ RM_STATUS KernInitAGP(
     agp_info.mode &= (0xff000000 | agp_mode);
     NV_AGPGART_BACKEND_ENABLE(drm_agp_p, nvl->agp_bridge, agp_info.mode);
 
-    *ap_phys_base = (void *)(NV_UINTPTR_T)agp_info.aper_base;
-    *ap_limit = (agp_info.aper_size << 20) - 1;
+    *ap_phys_base = (unsigned)agp_info.aper_base;
+    *ap_limit = (unsigned)((agp_info.aper_size << 20) - 1);
 
     return RM_OK;
 
@@ -232,9 +232,9 @@ RM_STATUS KernTeardownAGP(
 RM_STATUS KernAllocAGPPages(
     nv_stack_t  *sp,
     nv_state_t  *nv,
-    U032         PageCount,
+    NvU32        PageCount,
     void       **pPriv_data,
-    U032        *Offset
+    NvU32       *Offset
 )
 {
 #ifndef AGPGART

@@ -80,10 +80,12 @@ typedef struct nv_ioctl_xfer
 typedef struct nv_ioctl_card_info
 {
     NvU16    flags;               /* see below                   */
+    NvU32    domain;              /* PCI domain number           */
     NvU8     bus;                 /* bus number (PCI, AGP, etc)  */
     NvU8     slot;                /* card slot                   */
     NvU16    vendor_id;           /* PCI vendor id               */
     NvU16    device_id;
+    NvU32    gpu_id;
     NvU16    interrupt_line;
     NvU64    reg_address    NV_ALIGN_BYTES(8);
     NvU64    reg_size       NV_ALIGN_BYTES(8);
@@ -96,7 +98,6 @@ typedef struct nv_ioctl_card_info
 #define NV_IOCTL_CARD_INFO_BUS_TYPE_PCI_EXPRESS    0x0003
 
 #define NV_IOCTL_CARD_INFO_FLAG_PRESENT       0x0001
-#define NV_IOCTL_CARD_INFO_FLAG_NEED_MSYNC    0x0002
 
 #define SIM_ENV_GPU       0
 #define SIM_ENV_IKOS      1
@@ -154,6 +155,7 @@ typedef struct nv_ioctl_free_os_event
 /* status code */
 typedef struct nv_ioctl_status_code
 {
+    NvU32 domain;
     NvU32 bus;
     NvU32 slot;
     NvU32 status;
@@ -269,11 +271,13 @@ typedef struct
     int    flags;
 
     /* PCI config info */
+    NvU32 domain;
     NvU16 bus;
     NvU16 slot;
     NvU16 vendor_id;
     NvU16 device_id;
     NvU16 subsystem_id;
+    NvU32 gpu_id;
     void *handle;
 
     NvU32 pci_cfg_space[16];
@@ -282,7 +286,7 @@ typedef struct
     nv_aperture_t bars[NV_GPU_NUM_BARS];
     nv_aperture_t *regs;
     nv_aperture_t *fb, ud;
-    nv_aperture_t agp, bc;
+    nv_aperture_t agp;
 
     NvU32  interrupt_line;
 
@@ -305,6 +309,7 @@ typedef struct
 typedef struct
 {
     /* PCI config info */
+    NvU32 domain;
     NvU16 bus;
     NvU16 slot;
     NvU16 vendor_id;
@@ -318,17 +323,18 @@ typedef struct
  * flags
  */
 
-#define NV_FLAG_OPEN            0x0001
-#define NV_FLAG_WAS_POSTED      0x0002
-#define NV_FLAG_CONTROL         0x0004
-#define NV_FLAG_MAP_REGS_EARLY  0x0008
-#define NV_FLAG_USE_BAR0_CFG    0x0010
-#define NV_FLAG_USES_MSI        0x0020
-#define NV_FLAG_S4_AVAILABLE    0x0040
-#define NV_FLAG_PASSTHRU        0x0080
-#define NV_FLAG_GVI_IN_SUSPEND  0x0100
-#define NV_FLAG_GVI             0x0200
-#define NV_FLAG_GVI_INTR_EN     0x0400
+#define NV_FLAG_OPEN                   0x0001
+#define NV_FLAG_WAS_POSTED             0x0002
+#define NV_FLAG_CONTROL                0x0004
+#define NV_FLAG_MAP_REGS_EARLY         0x0008
+#define NV_FLAG_USE_BAR0_CFG           0x0010
+#define NV_FLAG_USES_MSI               0x0020
+#define NV_FLAG_S4_AVAILABLE           0x0040
+#define NV_FLAG_PASSTHRU               0x0080
+#define NV_FLAG_GVI_IN_SUSPEND         0x0100
+#define NV_FLAG_GVI                    0x0200
+#define NV_FLAG_GVI_INTR_EN            0x0400
+#define NV_FLAG_PERSISTENT_SW_STATE    0x0800
 
 #define NV_PM_APM_SUSPEND       0x0001
 #define NV_PM_APM_RESUME        0x0002
@@ -420,11 +426,6 @@ typedef struct
              ((offset) >= (nv)->ud.address) &&                                 \
              (((offset) + ((length)-1)) <= (nv)->ud.address + ((nv)->ud.size-1)))
 
-#define IS_BC_OFFSET(nv, offset, length)                                       \
-             (((nv)->bc.address != 0) && ((nv)->bc.size != 0) &&               \
-             ((offset) >= (nv)->bc.address) &&                                 \
-             (((offset) + ((length)-1)) <= (nv)->bc.address + ((nv)->bc.size-1)))
-
 #define IS_AGP_OFFSET(nv, offset, length)                                      \
              ((NV_AGP_ENABLED(nv)) &&                                          \
              ((offset) >= (nv)->agp.address) &&                                \
@@ -514,17 +515,12 @@ typedef struct
 #endif /* !defined(NV_API_CALL) */
 
 
-NvU64  NV_API_CALL  nv_dma_to_mmap_token         (nv_state_t *, NvU64);
-
 void*  NV_API_CALL  nv_alloc_kernel_mapping      (nv_state_t *, NvU64, NvU32, void **);
 NvS32  NV_API_CALL  nv_free_kernel_mapping       (nv_state_t *, void *, void *, BOOL);
 
 NvU64  NV_API_CALL  nv_get_kern_phys_address     (NvU64);
 NvU64  NV_API_CALL  nv_get_user_phys_address     (NvU64);
-void*  NV_API_CALL  nv_get_adapter_state         (NvU16, NvU16);
-
-void   NV_API_CALL  nv_lock_rm                   (nv_state_t *);
-void   NV_API_CALL  nv_unlock_rm                 (nv_state_t *);
+void*  NV_API_CALL  nv_get_adapter_state         (NvU32, NvU16, NvU16);
 
 void   NV_API_CALL  nv_set_dma_address_size      (nv_state_t *, NvU32 );
 
@@ -533,7 +529,7 @@ RM_STATUS  NV_API_CALL  nv_alloc_pages           (nv_state_t *, NvU32, NvU32, Nv
 RM_STATUS  NV_API_CALL  nv_free_pages            (nv_state_t *, NvU32, NvU32, NvU32, NvU32, void *);
 RM_STATUS  NV_API_CALL  nv_guest_pfn_list        (nv_state_t *, unsigned int, unsigned int, unsigned int, unsigned int*);
 
-RM_STATUS  NV_API_CALL  nv_agp_init              (nv_state_t *, void **, void *, NvU32);
+RM_STATUS  NV_API_CALL  nv_agp_init              (nv_state_t *, NvU64 *, NvU64 *, NvU32);
 RM_STATUS  NV_API_CALL  nv_agp_teardown          (nv_state_t *);
 
 NvS32  NV_API_CALL  nv_start_rc_timer            (nv_state_t *);
@@ -553,16 +549,21 @@ void   NV_API_CALL  nv_acpi_methods_init         (NvU32 *);
 void   NV_API_CALL  nv_acpi_methods_uninit       (void);
 
 RM_STATUS  NV_API_CALL  nv_acpi_method           (NvU32, NvU32, NvU32, void *, NvU16, NvU32 *, void *, NvU16 *);
-RM_STATUS  NV_API_CALL  nv_acpi_dsm_method       (NvU8 *, NvU32, NvU32, void *, NvU16, NvU32 *, void *, NvU16 *);
-void*  NV_API_CALL  nv_get_smu_state             (void); 
+RM_STATUS  NV_API_CALL  nv_acpi_dsm_method       (nv_state_t *, NvU8 *, NvU32, NvU32, void *, NvU16, NvU32 *, void *, NvU16 *);
+RM_STATUS  NV_API_CALL  nv_acpi_ddc_method       (nv_state_t *, void *, NvU32 *);
+void*  NV_API_CALL  nv_get_smu_state             (void);
+RM_STATUS  NV_API_CALL  nv_lock_user_pages       (nv_state_t *, void *, NvU64, NvU64 *, void **);
+RM_STATUS  NV_API_CALL  nv_unlock_user_pages     (nv_state_t *, NvU64, NvU64 *, void *);
 
 #ifdef NV_USER_MAP
 #include "nv-map.h"
 #else /* NV_USER_MAP */
-#define NV_MAP_USER_SPACE(status, nv, va, sz, pr, hclient, hparent, hobject)  do { } while (0)
-#define NV_UNMAP_USER_SPACE(nv, va)  do { } while (0)
-#define NV_UNMAP_OBJECT_USER_SPACE(nv, hclient, hparent, hobject)  do { } while (0)
-#define NV_RELEASE_USERMAP_LIST(nvl) do { } while (0)
+#define NV_MAP_USER_SPACE(nv, file, va, sz, pr, hclient, hparent, hobject)  do { } while (0)
+#define NV_UNMAP_USER_SPACE(nv, file, hclient, hparent, hobject, va)  do { } while (0)
+#define NV_UNMAP_OBJECT_USER_SPACE(nv, file, hclient, hparent, hobject)  do { } while (0)
+#define NV_RELEASE_USERMAP_LIST(nvl,fp) do { } while (0)
+#define NV_FILE_REFERENCE(file_p) ((void *) (file_p))
+#define NV_GET_VOID_FILE_PRIVATE(vfp_p) (NV_GET_FILE_PRIVATE(((struct file * ) (vfp_p))))
 #endif /* NV_USER_MAP */
 
 /*
@@ -590,7 +591,7 @@ NvU32      NV_API_CALL  rm_get_vbios_version     (nv_stack_t *, nv_state_t *, Nv
 void       NV_API_CALL  rm_free_unused_clients   (nv_stack_t *, nv_state_t *, void *);
 
 void       NV_API_CALL  rm_update_agp_config     (nv_stack_t *, nv_state_t *);
-RM_STATUS  NV_API_CALL  rm_init_agp              (nv_stack_t *, nv_state_t *);
+RM_STATUS  NV_API_CALL  rm_init_agp              (nv_stack_t *, nv_state_t *, NvU64 *, NvU64 *);
 RM_STATUS  NV_API_CALL  rm_teardown_agp          (nv_stack_t *, nv_state_t *);
 
 RM_STATUS  NV_API_CALL  rm_alloc_agp_pages       (nv_stack_t *, nv_state_t *, NvU32, void **, NvU32 *);
@@ -607,7 +608,8 @@ RM_STATUS  NV_API_CALL  rm_read_registry_binary  (nv_stack_t *, nv_state_t *, Nv
 RM_STATUS  NV_API_CALL  rm_write_registry_binary (nv_stack_t *, nv_state_t *, NvU8 *, NvU8 *, NvU8 *, NvU32);
 
 RM_STATUS  NV_API_CALL  rm_run_rc_callback       (nv_stack_t *, nv_state_t *);
-RM_STATUS  NV_API_CALL  rm_get_device_name       (nv_stack_t *, nv_state_t *, NvU32, NvU32, NvU8*);
+void       NV_API_CALL  rm_execute_work_item     (nv_stack_t *, void *);
+RM_STATUS  NV_API_CALL  rm_get_device_name       (nv_stack_t *, nv_state_t *, NvU16, NvU16, NvU16, NvU32, NvU8 *);
 
 NvU64      NV_API_CALL  nv_rdtsc                 (void);
 
@@ -634,6 +636,8 @@ RM_STATUS  NV_API_CALL  rm_init_smu               (nv_stack_t *, nv_smu_state_t 
 RM_STATUS  NV_API_CALL  rm_shutdown_smu           (nv_stack_t *, nv_smu_state_t *);
 RM_STATUS  NV_API_CALL  rm_suspend_smu            (nv_stack_t *);
 RM_STATUS  NV_API_CALL  rm_resume_smu             (nv_stack_t *);
+
+void       NV_API_CALL  rm_disable_gpu_state_persistence    (nv_stack_t *sp, nv_state_t *);
 
 #define rm_disable_interrupts(sp) rm_set_interrupts((sp),FALSE)
 #define rm_enable_interrupts(sp)  rm_set_interrupts((sp),TRUE)
