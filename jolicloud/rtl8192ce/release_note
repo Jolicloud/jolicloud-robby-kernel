@@ -1,0 +1,29 @@
+---------------------------------------------------
+Release for rtl8192CE linux driver
+
+---------------------------------------------------------------------------------------------
+Operating system release = Ubuntu 10.04 
+Kernel version = 2.6.33
+Release driver version = 0001.0421.2010
+Release date = 2010-04-21
+Change history =
+	1. First Release for 8192CE.
+
+
+Operating system release = Ubuntu 10.04 
+Kernel version = 2.6.32/2.6.33/2.6.34
+Release driver version = 0002.0510.2010
+Release date = 2010-05-11
+Change history =
+	1. update firmware to FW46.
+	2. Fix Netgear3500N TP low issue.
+	3. Fix Linksys610N TKIP TP low issue.
+	4. Open 11N for broadcom & ralink TKIP.
+	5. Test pass on ubuntu 10.04 2.6.32/2.6.33/2.6.34.
+
+Operating system release = Ubuntu 10.04 
+Kernel version = 2.6.32/2.6.33/2.6.34
+Release driver version = 0002.0628.2010
+Release date = 2010-06-28
+Change history =
+	1.Fix WEP use as group key issue.
