@@ -889,8 +889,8 @@ static int __devinit uvesafb_vbe_init_mode(struct fb_info *info)
 
 	/* fb_find_mode() failed */
 	if (i == 0) {
-		info->var.xres = 640;
-		info->var.yres = 480;
+		info->var.xres = 800;
+		info->var.yres = 600;
 		mode = (struct fb_videomode *)
 				fb_find_best_mode(&info->var, &info->modelist);
 
