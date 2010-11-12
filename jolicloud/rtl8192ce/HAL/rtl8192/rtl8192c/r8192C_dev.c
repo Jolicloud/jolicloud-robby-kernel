@@ -4164,8 +4164,19 @@ rtl8192ce_GPIOChangeRFWorkItemCallBack(struct net_device *dev)
 	PRT_POWER_SAVE_CONTROL		pPSC = (PRT_POWER_SAVE_CONTROL)(&(priv->rtllib->PowerSaveControl));
 	unsigned long flag = 0;
 
-	char *argv[3];
-	static char *RadioPowerPath = "/etc/realtek/RadioPower.sh";
+	static char *dbus_path = "/usr/bin/dbus-send";
+	char *dbus_argv[] = {
+		dbus_path,
+		"--system",
+		"--type=method_call",
+		"--dest=org.freedesktop.NetworkManager",
+		"/org/freedesktop/NetworkManager",
+		"org.freedesktop.DBus.Properties.Set",
+		"string:org.freedesktop.NetworkManager",
+		"string:WirelessEnabled",
+		NULL,
+		NULL
+	};
 	static char *envp[] = {"HOME=/", "TERM=linux", "PATH=/usr/bin:/bin", NULL};
 	
 	if((priv->up_first_time == 1) || (priv->being_init_adapter))
@@ -4316,13 +4327,11 @@ rtl8192ce_GPIOChangeRFWorkItemCallBack(struct net_device *dev)
 
 		{
 			if(priv->bHwRadioOff == true)
-				argv[1] = "RFOFF";
+				dbus_argv[8] = "variant:boolean:false";
 			else
-				argv[1] = "RFON";
+				dbus_argv[8] = "variant:boolean:true";
 
-			argv[0] = RadioPowerPath;
-			argv[2] = NULL;
-			call_usermodehelper(RadioPowerPath,argv,envp,1);
+			call_usermodehelper(dbus_path, dbus_argv, envp, 1);
 		}
 
 #ifdef CONFIG_ASPM_OR_D3

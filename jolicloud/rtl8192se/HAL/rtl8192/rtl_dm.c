@@ -3583,8 +3583,19 @@ extern	void	dm_CheckRfCtrlGPIO(void *data)
 	RT_RF_POWER_STATE	eRfPowerStateToSet;
 	bool bActuallySet = false;
 
-	char *argv[3];
-	static char *RadioPowerPath = "/etc/realtek/RadioPower.sh";
+	static char *dbus_path = "/usr/bin/dbus-send";
+	char *dbus_argv[] = {
+		dbus_path,
+		"--system",
+		"--type=method_call",
+		"--dest=org.freedesktop.NetworkManager",
+		"/org/freedesktop/NetworkManager",
+		"org.freedesktop.DBus.Properties.Set",
+		"string:org.freedesktop.NetworkManager",
+		"string:WirelessEnabled",
+		NULL,
+		NULL
+	};
 	static char *envp[] = {"HOME=/", "TERM=linux", "PATH=/usr/bin:/bin", NULL};
 
 	bActuallySet=false;
@@ -3628,13 +3639,11 @@ extern	void	dm_CheckRfCtrlGPIO(void *data)
 			MgntActSet_RF_State(dev, eRfPowerStateToSet, RF_CHANGE_BY_HW,true);
 			{
 				if(priv->bHwRadioOff == true)
-					argv[1] = "RFOFF";
+					dbus_argv[8] = "variant:boolean:false";
 				else
-					argv[1] = "RFON";
+					dbus_argv[8] = "variant:boolean:true";
 
-				argv[0] = RadioPowerPath;
-				argv[2] = NULL;
-				call_usermodehelper(RadioPowerPath,argv,envp,1);
+				call_usermodehelper(dbus_path, dbus_argv, envp, 1);
 			}
 
 		}
@@ -4008,18 +4017,27 @@ extern void dm_CheckRfCtrlGPIO(void *data)
 			struct wireless_dev *wdev = &priv->rtllib->wdev;
 			wiphy_rfkill_set_hw_state(wdev->wiphy, priv->bHwRadioOff);
 #else
-			char *argv[3];
-			static char *RadioPowerPath = "/etc/realtek/RadioPower.sh";
+			static char *dbus_path = "/usr/bin/dbus-send";
+			char *dbus_argv[] = {
+				dbus_path,
+				"--system",
+				"--type=method_call",
+				"--dest=org.freedesktop.NetworkManager",
+				"/org/freedesktop/NetworkManager",
+				"org.freedesktop.DBus.Properties.Set",
+				"string:org.freedesktop.NetworkManager",
+				"string:WirelessEnabled",
+				NULL,
+				NULL
+			};
 			static char *envp[] = {"HOME=/", "TERM=linux", "PATH=/usr/bin:/bin", NULL};
 
 			if(priv->bHwRadioOff == true)
-				argv[1] = "RFOFF";
+				dbus_argv[8] = "variant:boolean:false";
 			else
-				argv[1] = "RFON";
+				dbus_argv[8] = "variant:boolean:true";
 
-			argv[0] = RadioPowerPath;
-			argv[2] = NULL;
-			call_usermodehelper(RadioPowerPath,argv,envp,1);
+			call_usermodehelper(dbus_path, dbus_argv, envp, 1);
 
 #endif			
 		}
