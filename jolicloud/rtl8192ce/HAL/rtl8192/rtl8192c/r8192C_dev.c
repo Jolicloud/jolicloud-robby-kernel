@@ -4137,6 +4137,40 @@ rtl8192ce_HalRxCheckStuck(struct net_device *dev)
 	return bStuck;
 }
 
+static void
+dbus_wirelessRadioOff_helper(bool radioOff)
+{
+	static char *dbus_path = "/usr/bin/dbus-send";
+	char *dbus_argv[] = {
+		dbus_path,
+		"--system",
+		"--type=method_call",
+		"--dest=org.freedesktop.NetworkManager",
+		"/org/freedesktop/NetworkManager",
+		"org.freedesktop.DBus.Properties.Set",
+		"string:org.freedesktop.NetworkManager",
+		"string:WirelessEnabled",
+		NULL,
+		NULL
+	};
+	static char *envp[] = {"HOME=/", "TERM=linux", "PATH=/usr/bin:/bin", NULL};
+	
+	if ( radioOff )
+		dbus_argv[8] = "variant:boolean:false";
+	else
+		dbus_argv[8] = "variant:boolean:true";
+
+	call_usermodehelper(dbus_path, dbus_argv, envp, 1);
+
+	dbus_argv[7] = "string:WirelessHardwareOverride";
+	if ( radioOff )
+		dbus_argv[8] = "variant:boolean:true";
+	else
+		dbus_argv[8] = "variant:boolean:false";
+
+	call_usermodehelper(dbus_path, dbus_argv, envp, 1);
+}
+
 /*-----------------------------------------------------------------------------
  * Function:	GPIOChangeRFWorkItemCallBack()
  *
@@ -4164,21 +4198,6 @@ rtl8192ce_GPIOChangeRFWorkItemCallBack(struct net_device *dev)
 	PRT_POWER_SAVE_CONTROL		pPSC = (PRT_POWER_SAVE_CONTROL)(&(priv->rtllib->PowerSaveControl));
 	unsigned long flag = 0;
 
-	static char *dbus_path = "/usr/bin/dbus-send";
-	char *dbus_argv[] = {
-		dbus_path,
-		"--system",
-		"--type=method_call",
-		"--dest=org.freedesktop.NetworkManager",
-		"/org/freedesktop/NetworkManager",
-		"org.freedesktop.DBus.Properties.Set",
-		"string:org.freedesktop.NetworkManager",
-		"string:WirelessEnabled",
-		NULL,
-		NULL
-	};
-	static char *envp[] = {"HOME=/", "TERM=linux", "PATH=/usr/bin:/bin", NULL};
-	
 	if((priv->up_first_time == 1) || (priv->being_init_adapter))
 	{
 		;
@@ -4324,15 +4343,7 @@ rtl8192ce_GPIOChangeRFWorkItemCallBack(struct net_device *dev)
 		spin_unlock_irqrestore(&priv->rf_ps_lock,flag);
 		MgntActSet_RF_State(dev, eRfPowerStateToSet, RF_CHANGE_BY_HW,true);
 
-
-		{
-			if(priv->bHwRadioOff == true)
-				dbus_argv[8] = "variant:boolean:false";
-			else
-				dbus_argv[8] = "variant:boolean:true";
-
-			call_usermodehelper(dbus_path, dbus_argv, envp, 1);
-		}
+		dbus_wirelessRadioOff_helper( priv->bHwRadioOff );
 
 #ifdef CONFIG_ASPM_OR_D3
 		if(eRfPowerStateToSet == eRfOff)

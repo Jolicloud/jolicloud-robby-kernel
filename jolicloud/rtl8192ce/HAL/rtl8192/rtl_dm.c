@@ -3545,21 +3545,10 @@ static	void	dm_check_pbc_gpio(struct net_device *dev)
 	
 }
 
-#ifdef RTL8192E 
 
-extern	void	dm_CheckRfCtrlGPIO(void *data)
+static void
+dbus_wirelessRadioOff_helper(bool radioOff)
 {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20))
-       struct r8192_priv *priv = container_of_dwork_rsl(data,struct r8192_priv,gpio_change_rf_wq);
-       struct net_device *dev = priv->rtllib->dev;
-#else
-	struct r8192_priv *priv = rtllib_priv((struct net_device *)data);
-	struct net_device *dev = priv->rtllib->dev;
-#endif
-	u8 tmp1byte;
-	RT_RF_POWER_STATE	eRfPowerStateToSet;
-	bool bActuallySet = false;
-
 	static char *dbus_path = "/usr/bin/dbus-send";
 	char *dbus_argv[] = {
 		dbus_path,
@@ -3574,6 +3563,37 @@ extern	void	dm_CheckRfCtrlGPIO(void *data)
 		NULL
 	};
 	static char *envp[] = {"HOME=/", "TERM=linux", "PATH=/usr/bin:/bin", NULL};
+	
+	if ( radioOff )
+		dbus_argv[8] = "variant:boolean:false";
+	else
+		dbus_argv[8] = "variant:boolean:true";
+
+	call_usermodehelper(dbus_path, dbus_argv, envp, 1);
+
+	dbus_argv[7] = "string:WirelessHardwareOverride";
+	if ( radioOff )
+		dbus_argv[8] = "variant:boolean:true";
+	else
+		dbus_argv[8] = "variant:boolean:false";
+
+	call_usermodehelper(dbus_path, dbus_argv, envp, 1);
+}
+
+#ifdef RTL8192E 
+
+extern	void	dm_CheckRfCtrlGPIO(void *data)
+{
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,20))
+       struct r8192_priv *priv = container_of_dwork_rsl(data,struct r8192_priv,gpio_change_rf_wq);
+       struct net_device *dev = priv->rtllib->dev;
+#else
+	struct r8192_priv *priv = rtllib_priv((struct net_device *)data);
+	struct net_device *dev = priv->rtllib->dev;
+#endif
+	u8 tmp1byte;
+	RT_RF_POWER_STATE	eRfPowerStateToSet;
+	bool bActuallySet = false;
 
 	bActuallySet=false;
 
@@ -3614,14 +3634,8 @@ extern	void	dm_CheckRfCtrlGPIO(void *data)
 			mdelay(1000); 
 			priv->bHwRfOffAction = 1;
 			MgntActSet_RF_State(dev, eRfPowerStateToSet, RF_CHANGE_BY_HW,true);
-			{
-				if(priv->bHwRadioOff == true)
-					dbus_argv[8] = "variant:boolean:false";
-				else
-					dbus_argv[8] = "variant:boolean:true";
 
-				call_usermodehelper(dbus_path, dbus_argv, envp, 1);
-			}
+			dbus_wirelessRadioOff_helper( priv->bHwRadioOff );
 
 		}
 #if 0 
@@ -3994,28 +4008,7 @@ extern void dm_CheckRfCtrlGPIO(void *data)
 			struct wireless_dev *wdev = &priv->rtllib->wdev;
 			wiphy_rfkill_set_hw_state(wdev->wiphy, priv->bHwRadioOff);
 #else
-			static char *dbus_path = "/usr/bin/dbus-send";
-			char *dbus_argv[] = {
-				dbus_path,
-				"--system",
-				"--type=method_call",
-				"--dest=org.freedesktop.NetworkManager",
-				"/org/freedesktop/NetworkManager",
-				"org.freedesktop.DBus.Properties.Set",
-				"string:org.freedesktop.NetworkManager",
-				"string:WirelessEnabled",
-				NULL,
-				NULL
-			};
-			static char *envp[] = {"HOME=/", "TERM=linux", "PATH=/usr/bin:/bin", NULL};
-
-			if(priv->bHwRadioOff == true)
-				dbus_argv[8] = "variant:boolean:false";
-			else
-				dbus_argv[8] = "variant:boolean:true";
-
-			call_usermodehelper(dbus_path, dbus_argv, envp, 1);
-
+			dbus_wirelessRadioOff_helper( priv->bHwRadioOff );
 #endif			
 		}
 
