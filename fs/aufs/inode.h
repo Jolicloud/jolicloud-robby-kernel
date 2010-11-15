@@ -35,9 +35,9 @@ struct vfsmount;
 struct au_hnotify {
 #ifdef CONFIG_AUFS_HNOTIFY
 #ifdef CONFIG_AUFS_HFSNOTIFY
-	struct fsnotify_mark_entry	hn_entry;
-#else
-	struct inotify_watch		hn_watch;
+	/* never use fsnotify_add_vfsmount_mark() */
+	struct fsnotify_mark		hn_mark;
+	int				hn_mark_dead;
 #endif
 	struct inode			*hn_aufs_inode;	/* no get/put */
 #endif
@@ -437,7 +437,7 @@ int au_hnotify(struct inode *h_dir, struct au_hnotify *hnotify, u32 mask,
 int __init au_hnotify_init(void);
 void au_hnotify_fin(void);
 
-/* hinotify.c */
+/* hfsnotify.c */
 extern const struct au_hnotify_op au_hnotify_op;
 
 static inline
