@@ -604,8 +604,8 @@ static void mxc_nand_command(struct mtd_info *mtd, unsigned command,
 	/* Command pre-processing step */
 	switch (command) {
 	case NAND_CMD_RESET:
-		preset(mtd);
 		send_cmd(host, command, false);
+		preset(mtd);
 		break;
 
 	case NAND_CMD_STATUS:

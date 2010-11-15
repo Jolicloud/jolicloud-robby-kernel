@@ -681,8 +681,8 @@ retry:
 	if (!bd_may_claim(bdev, whole, holder))
 		return -EBUSY;
 
-	/* if claiming is already in progress, wait for it to finish */
-	if (whole->bd_claiming) {
+	/* if someone else is claiming, wait for it to finish */
+	if (whole->bd_claiming && whole->bd_claiming != holder) {
 		wait_queue_head_t *wq = bit_waitqueue(&whole->bd_claiming, 0);
 		DEFINE_WAIT(wait);
 
@@ -1339,12 +1339,10 @@ static int __blkdev_get(struct block_device *bdev, fmode_t mode, int for_part)
 	/*
 	 * hooks: /n/, see "layering violations".
 	 */
-	if (!for_part) {
-		ret = devcgroup_inode_permission(bdev->bd_inode, perm);
-		if (ret != 0) {
-			bdput(bdev);
-			return ret;
-		}
+	ret = devcgroup_inode_permission(bdev->bd_inode, perm);
+	if (ret != 0) {
+		bdput(bdev);
+		return ret;
 	}
 
 	lock_kernel();
