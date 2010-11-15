@@ -17216,6 +17216,7 @@ static struct hda_verb alc662_eeepc_ep20_sue_init_verbs[] = {
 };
 
 static struct hda_verb alc663_m51va_init_verbs[] = {
+	{0x12, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_IN},
 	{0x15, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_IN},
 	{0x16, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_IN},
 	{0x21, AC_VERB_SET_PIN_WIDGET_CONTROL, PIN_HP},
@@ -17652,6 +17653,40 @@ static void alc663_m51va_inithook(struct hda_codec *codec)
 	alc_mic_automute(codec);
 }
 
+static void alc272_toshiba_speaker_automute(struct hda_codec *codec)
+{
+	unsigned int present;
+	unsigned char bits;
+
+	present = snd_hda_codec_read(codec, 0x21, 0,
+			AC_VERB_GET_PIN_SENSE, 0)
+			& AC_PINSENSE_PRESENCE;
+	bits = present ? HDA_AMP_MUTE : 0;
+	snd_hda_codec_amp_stereo(codec, 0x17, HDA_OUTPUT, 0,
+				AMP_OUT_MUTE, bits);
+	snd_hda_codec_amp_stereo(codec, 0x17, HDA_OUTPUT, 1,
+				AMP_OUT_MUTE, bits);
+}
+
+static void alc272_toshiba_unsol_event(struct hda_codec *codec,
+		unsigned int res)
+{
+	switch (res >> 26) {
+	case ALC880_HP_EVENT:
+		alc272_toshiba_speaker_automute(codec);
+		break;
+	case ALC880_MIC_EVENT:
+		alc_mic_automute(codec);
+		break;
+	}
+}
+
+static void alc272_toshiba_inithook(struct hda_codec *codec)
+{
+	alc272_toshiba_speaker_automute(codec);
+	alc_mic_automute(codec);
+}
+
 /* ***************** Mode1 ******************************/
 #define alc663_mode1_unsol_event	alc663_m51va_unsol_event
 
@@ -17961,6 +17996,8 @@ static const char *alc662_models[ALC662_MODEL_LAST] = {
 
 static struct snd_pci_quirk alc662_cfg_tbl[] = {
 	SND_PCI_QUIRK(0x1019, 0x9087, "ECS", ALC662_ECS),
+	SND_PCI_QUIRK(0x1025, 0x022c, "Acer JM11_ML", ALC663_ASUS_H13),
+	SND_PCI_QUIRK(0x1025, 0x0244, "Acer JM11_ML", ALC663_ASUS_H13),
 	SND_PCI_QUIRK(0x1028, 0x02d6, "DELL", ALC272_DELL),
 	SND_PCI_QUIRK(0x1028, 0x02f4, "DELL ZM1", ALC272_DELL_ZM1),
 	SND_PCI_QUIRK(0x1043, 0x1000, "ASUS N50Vm", ALC663_ASUS_MODE1),

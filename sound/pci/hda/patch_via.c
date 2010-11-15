@@ -6053,7 +6053,7 @@ static int vt1812_auto_create_analog_input_ctls(struct via_spec *spec,
 						const struct auto_pin_cfg *cfg)
 {
 	static char *labels[] = {
-		"Mic", "Front Mic", "Line", "Front Line", "CD", "Aux", NULL
+		"Front Mic", "Mic", "Line", "Front Line", "CD", "Aux", NULL
 	};
 	struct hda_input_mux *imux = &spec->private_imux[0];
 	int i, err, idx = 0;

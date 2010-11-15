@@ -343,6 +343,8 @@ static int __init drm_core_init(void)
 
 	DRM_INFO("Initialized %s %d.%d.%d %s\n",
 		 CORE_NAME, CORE_MAJOR, CORE_MINOR, CORE_PATCHLEVEL, CORE_DATE);
+	drm_global_init();
+
 	return 0;
 err_p3:
 	drm_sysfs_destroy();
@@ -356,6 +358,7 @@ err_p1:
 
 static void __exit drm_core_exit(void)
 {
+	drm_global_release();
 	remove_proc_entry("dri", NULL);
 	debugfs_remove(drm_debugfs_root);
 	drm_sysfs_destroy();
@@ -423,20 +426,7 @@ static int drm_version(struct drm_device *dev, void *data,
 	return err;
 }
 
-/**
- * Called whenever a process performs an ioctl on /dev/drm.
- *
- * \param inode device inode.
- * \param file_priv DRM file private.
- * \param cmd command.
- * \param arg user argument.
- * \return zero on success or negative number on failure.
- *
- * Looks up the ioctl function in the ::ioctls table, checking for root
- * previleges if so required, and dispatches to the respective function.
- */
-long drm_ioctl(struct file *filp,
-	      unsigned int cmd, unsigned long arg)
+long drm_unlocked_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct drm_file *file_priv = filp->private_data;
 	struct drm_device *dev;
@@ -528,7 +518,25 @@ long drm_ioctl(struct file *filp,
 		DRM_DEBUG("ret = %x\n", retcode);
 	return retcode;
 }
+EXPORT_SYMBOL(drm_unlocked_ioctl);
 
+/**
+ * Called whenever a process performs an ioctl on /dev/drm.
+ *
+ * \param inode device inode.
+ * \param file_priv DRM file private.
+ * \param cmd command.
+ * \param arg user argument.
+ * \return zero on success or negative number on failure.
+ *
+ * Looks up the ioctl function in the ::ioctls table, checking for root
+ * previleges if so required, and dispatches to the respective function.
+ */
+long drm_ioctl(struct file *filp,
+	      unsigned int cmd, unsigned long arg)
+{
+	return drm_unlocked_ioctl(filp, cmd, arg);
+}
 EXPORT_SYMBOL(drm_ioctl);
 
 struct drm_local_map *drm_getsarea(struct drm_device *dev)

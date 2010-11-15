@@ -27,6 +27,7 @@ obj-$(CONFIG_DREAM)		+= dream/
 obj-$(CONFIG_POHMELFS)		+= pohmelfs/
 obj-$(CONFIG_IDE_PHISON)	+= phison/
 obj-$(CONFIG_LINE6_USB)		+= line6/
+#obj-$(CONFIG_DRM_PSB)		+= psb/
 obj-$(CONFIG_USB_SERIAL_QUATECH2)	+= serqt_usb2/
 obj-$(CONFIG_USB_SERIAL_QUATECH_USB2)	+= quatech_usb2/
 obj-$(CONFIG_OCTEON_ETHERNET)	+= octeon/

@@ -1,0 +1,3 @@
+config BROADCOM_4312
+	tristate "Broadcom 4312 Wireless Driver"
+	default m

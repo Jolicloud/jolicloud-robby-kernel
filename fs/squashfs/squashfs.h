@@ -27,6 +27,10 @@
 
 #define WARNING(s, args...)	pr_warning("SQUASHFS: "s, ## args)
 
+#ifndef SQUASHFS_MAGIC
+#define SQUASHFS_MAGIC		0x73717368
+#endif
+
 static inline struct squashfs_inode_info *squashfs_i(struct inode *inode)
 {
 	return list_entry(inode, struct squashfs_inode_info, vfs_inode);

@@ -1,0 +1,1 @@
+obj-$(CONFIG_RTL8192CE) += HAL/rtl8192/

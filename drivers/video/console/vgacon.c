@@ -588,8 +588,12 @@ static void vgacon_init(struct vc_data *c, int init)
 
 	/* Only set the default if the user didn't deliberately override it */
 	if (global_cursor_default == -1)
+#ifdef CONFIG_VGACON_DISABLE_CURSOR
+		global_cursor_default = 0;
+#else
 		global_cursor_default =
 			!(screen_info.flags & VIDEO_FLAGS_NOCURSOR);
+#endif
 }
 
 static void vgacon_deinit(struct vc_data *c)

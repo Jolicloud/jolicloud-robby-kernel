@@ -226,11 +226,27 @@ static struct dmi_system_id acpi_osi_dmi_table[] __initdata = {
 		},
 	},
 	{
+	.callback = dmi_disable_osi_vista,
+	.ident = "Toshiba Satellite L355",
+	.matches = {
+		     DMI_MATCH(DMI_SYS_VENDOR, "TOSHIBA"),
+		     DMI_MATCH(DMI_PRODUCT_VERSION, "Satellite L355"),
+		},
+	},
+	{
 	.callback = dmi_disable_osi_win7,
 	.ident = "ASUS K50IJ",
 	.matches = {
 		     DMI_MATCH(DMI_SYS_VENDOR, "ASUSTeK Computer Inc."),
 		     DMI_MATCH(DMI_PRODUCT_NAME, "K50IJ"),
+		},
+	},
+	{
+	.callback = dmi_disable_osi_vista,
+	.ident = "Toshiba P305D",
+	.matches = {
+		     DMI_MATCH(DMI_SYS_VENDOR, "TOSHIBA"),
+		     DMI_MATCH(DMI_PRODUCT_NAME, "Satellite P305D"),
 		},
 	},
 
@@ -293,6 +309,44 @@ static struct dmi_system_id acpi_osi_dmi_table[] __initdata = {
 		     DMI_MATCH(DMI_PRODUCT_VERSION, "ThinkPad T500"),
 		},
 	},
+
+	/*
+	 * Asus EeePC 1005P/PE, T101MT use the Pinetrail CPU. When the
+	 * Intel Pineview video driver is enabled without KMS, backlight
+	 * control is lost.  Also, hotkeys do not work as expected.
+	 *
+	 * The BIOS requires _OSI(Linux) to allow for backlight and hotkey
+	 * control.
+	 *
+	 * Other non-Asus Pinetrail CPUs may also be affected.
+	 *
+	 */
+
+	{
+	.callback = dmi_enable_osi_linux,
+	.ident = "Asus EeePC 1005P",
+	.matches = {
+		     DMI_MATCH(DMI_SYS_VENDOR, "ASUSTeK Computer INC."),
+		     DMI_MATCH(DMI_PRODUCT_NAME, "1005P"),
+		},
+	},
+	{
+	.callback = dmi_enable_osi_linux,
+	.ident = "Asus EeePC 1005PE",
+	.matches = {
+		     DMI_MATCH(DMI_SYS_VENDOR, "ASUSTeK Computer INC."),
+		     DMI_MATCH(DMI_PRODUCT_NAME, "1005PE"),
+		},
+	},
+	{
+	.callback = dmi_enable_osi_linux,
+	.ident = "Asus EeePC T101MT",
+	.matches = {
+		     DMI_MATCH(DMI_SYS_VENDOR, "ASUSTeK Computer INC."),
+		     DMI_MATCH(DMI_PRODUCT_NAME, "T101MT"),
+		},
+	},
+
 	{}
 };
 

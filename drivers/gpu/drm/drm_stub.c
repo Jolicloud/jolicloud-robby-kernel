@@ -345,7 +345,7 @@ static int drm_get_minor(struct drm_device *dev, struct drm_minor **minor, int t
 	new_minor->index = minor_id;
 	INIT_LIST_HEAD(&new_minor->master_list);
 
-	idr_replace(&drm_minors_idr, new_minor, minor_id);
+	idr_replace(&drm_minors_idr, ERR_PTR(-EAGAIN), minor_id);
 
 	if (type == DRM_MINOR_LEGACY) {
 		ret = drm_proc_init(new_minor, minor_id, drm_proc_root);
@@ -444,6 +444,10 @@ int drm_get_dev(struct pci_dev *pdev, const struct pci_device_id *ent,
 	}
 
 	list_add_tail(&dev->driver_item, &driver->device_list);
+
+	if (drm_core_check_feature(dev, DRIVER_MODESET))
+		idr_replace(&drm_minors_idr, dev->control, dev->control->index);
+	idr_replace(&drm_minors_idr, dev->primary, dev->primary->index);
 
 	DRM_INFO("Initialized %s %d.%d.%d %s for %s on minor %d\n",
 		 driver->name, driver->major, driver->minor, driver->patchlevel,

@@ -74,16 +74,25 @@ int intel_ddc_get_modes(struct drm_connector *connector,
 			struct i2c_adapter *adapter)
 {
 	struct edid *edid;
+	struct drm_encoder *encoder = intel_attached_encoder(connector);
+	struct intel_encoder *intel_encoder = enc_to_intel_encoder(encoder);
 	int ret = 0;
 
 	intel_i2c_quirk_set(connector->dev, true);
+	if (intel_encoder->edid && intel_encoder->type == INTEL_OUTPUT_LVDS) {
+		printk(KERN_INFO "Skipping EDID probe due to cached edid\n");
+		return ret;
+	}
 	edid = drm_get_edid(connector, adapter);
 	intel_i2c_quirk_set(connector->dev, false);
 	if (edid) {
 		drm_mode_connector_update_edid_property(connector, edid);
 		ret = drm_add_edid_modes(connector, edid);
 		connector->display_info.raw_edid = NULL;
-		kfree(edid);
+		if (intel_encoder->type == INTEL_OUTPUT_LVDS)
+			intel_encoder->edid = edid;
+		else
+			kfree(edid);
 	}
 
 	return ret;

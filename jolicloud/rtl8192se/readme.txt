@@ -1,0 +1,271 @@
+Release Date: 2010-1011, ver 0018 
+RTL8192SE Linux driver
+   --This driver supports RealTek rtl8192SE PCI Wireless LAN NIC
+     for
+     2.6 kernel:
+     Fedora Core 2/3/4/5, RedFlag7, Debian 3.1, Mandrake 10.2/Mandriva 2006, 
+     SUSE/SLED 9.3/10.1/10.2/11, Gentoo 3.1, Ubuntu 7.10/8.04/8.10/9.04/9.10/10.04, 
+     moblin(V2), android-x86_090916, etc.
+     2.4 kernel:
+     Redhat 9.0/9.1
+
+========================================================================================
+				I. Component 
+========================================================================================
+The driver is composed of several parts:
+	1. Firmare to make nic work
+           1.1 firmare/RTL8192SE
+
+	2. Module source code
+	   2.1 rtllib 
+	   2.2 HAL/rtl8192
+	   2.3 wpa_supplicant-0.6.9.tar.gz (User can download the latest version 
+	       from internet also, but it is suggested to use default package 
+               contained in the distribution because there should less compilation
+	       issue.)
+	
+	3. Script to build the modules
+	   3.1 Makefile 
+
+	4. Example of supplicant configuration file:
+	   4.1 wpa1.conf
+
+	5. Script to run wpa_supplicant
+	   5.1 runwpa
+
+========================================================================================
+				II. Compile & Installation & uninstall
+========================================================================================
+You can enter top-level directory of driver and execute follwing command to
+Compile, Installation, or uninstall the driver:
+        0. Change to Super User
+	   sudo su
+
+	1. Compile driver from the source code 
+	   make
+
+	2. Install the driver to the kernel
+           make install
+           reboot
+
+	3. uninstall driver
+	   make uninstall
+
+========================================================================================
+				III. Start Up Wireless
+========================================================================================
+You can use two methord to start up wireless:
+
+	1. Install driver like II. and reboot OS
+	2. Wireless will brought up by GUI, such as NetworkManager
+	3. If Wireless is not brought up by GUI, you can use: 
+	   ifconfig wlan0 up 
+	   Note: some times when you have two wireless NICs on your computer,
+		 interface "wlan0" may be changed to "wlan1" or "wlan2", etc. 
+		 So before "ifconfig wlan0 up", you can use "iwconfig" to check
+		 which interface our NIC is.
+
+========================================================================================
+				IV. Set wireless lan MIBs 
+========================================================================================
+This driver uses Wireless Extension as an interface allowing you to set
+Wireless LAN specific parameters.
+
+Current driver supports "iwlist" to show the device status of nic
+        iwlist wlan0 [parameters]
+where
+        parameter explaination      	[parameters]    
+        -----------------------     	-------------   
+        Show available chan and freq	freq / channel  
+        Show and Scan BSS and IBSS 	scan[ning]          
+        Show supported bit-rate         rate / bit[rate]        
+
+For example:
+	iwlist wlan0 channel
+	iwlist wlan0 scan
+	iwlist wlan0 rate
+
+Driver also supports "iwconfig", manipulate driver private ioctls, to set MIBs.
+
+	iwconfig wlan0 [parameters] [val]
+where
+	parameter explaination      [parameters]        [val] constraints
+        -----------------------     -------------        ------------------
+        Connect to AP by address    ap              	[mac_addr]
+        Set the essid, join (I)BSS  essid             	[essid]
+        Set operation mode          mode                {Managed|Ad-hoc}
+        Set keys and security mode  key/enc[ryption]    {N|open|restricted|off}
+
+For example:
+	iwconfig wlan0 ap XX:XX:XX:XX:XX:XX
+	iwconfig wlan0 essid "ap_name"
+	iwconfig wlan0 mode Ad-hoc
+	iwconfig wlan0 essid "name" mode Ad-hoc
+	iwconfig wlan0 key 0123456789 [2] open
+	iwconfig wlan0 key off
+	iwconfig wlan0 key restricted [3] 0123456789
+        iwconfig wlan0 key s:12345
+
+	Note: There are two types of key, "hex" code or "ascii" code. "hex" code
+	      only contains hexadecimal characters, "ascii" code is consist of 
+              "ascii" characters. Assume the "hex" code key is "0123456789", you 
+              are suggested to use command like this "iwconfig wlan0 key 0123456789". 
+              Assume the "ascii" code key is "12345", you should enter command 
+              like this "iwconfig wlan0 key s:12345".
+
+        Note: Better to set these MIBS without GUI such as NetworkManager and be 
+	      sure that our nic has been brought up before these settings. WEP key
+	      index 2-4 is not supportted by NetworkManager.
+
+========================================================================================
+				V. Getting IP address
+========================================================================================
+After start up the nic, the network needs to obtain an IP address before
+transmit/receive data.
+
+This can be done by setting the static IP via "ifconfig wlan0 IP_ADDRESS"
+command, or using DHCP.
+
+If using DHCP, setting steps is as below:
+
+	1. connect to an AP via "iwconfig" settings
+	   iwconfig wlan0 essid [name]	or
+	   iwconfig wlan0 ap XX:XX:XX:XX:XX:XX
+
+	2. run the script which run the dhclient
+	   dhclient wlan0
+		
+
+========================================================================================
+				VI. WPAPSK/WPA2PSK 
+========================================================================================
+Wpa_supplicant helps to secure wireless connection with the protection of 
+WPAPSK/WPA2PSK mechanism. 
+
+If the version of Wireless Extension in your system is equal or larger than 18, 
+WEXT driver interface is recommended. Otherwise, IPW driver interface is advised.  
+Note: Wireless Extension is defined use "#define WIRELESS_EXT" in Kernel
+Note: To check the version of wireless extension, please type "iwconfig -v"
+
+
+If IPW driver interface is used, it is suggested to follow the steps from 1 to 6. 
+If wpa_supplicant has been installed in your system, only steps 5 and 6 are 
+required to be executed for WEXT driver interface.
+
+To see detailed description for driver interface and wpa_supplicant, please type
+"man wpa_supplicant".  
+	
+	1. load latetest source code for wpa supplicant or use wpa_supplicant-0.6.9 
+	   attached in this package.
+	   Note: It is suggested to use default package contained in the 
+		 distribution because there should less compilation issue.
+
+	   Unpack source code of WPA supplicant:
+	   tar -zxvf wpa_supplicant-0.6.9.tar.gz (e.g.) 
+	   cd wpa_supplicant-0.6.9
+	
+	2. Create .config file:
+	   cp defconfig .config
+	
+	3. Edit .config file, uncomment the following line if ipw driver interface 
+	   will be applied:
+	   #CONFIG_DRIVER_IPW=y.
+		
+	4. Build and install WPA supplicant:
+	   make
+	   cp wpa_cli wpa_supplicant /usr/local/bin	
+	   NOTE:
+	   	1) If make error for lack of <include/md5.h>, install the openssl
+		   lib(two ways):
+
+	       	   1> Install the openssl lib from corresponding installation disc:
+	              Fedora Core 2/3/4/5(openssl-0.9.71x-xx), 
+	              Mandrake10.2/Mandriva10.2(openssl-0.9.7x-xmdk),
+	              Debian 3.1(libssl-dev), Suse 9.3/10.0/10.1(openssl_devl), 
+	              Gentoo(dev-libs/openssl), etc.
+	       	   2> Download the openssl open source package from www.openssl.org, 
+		      build and install it.
+	   	2) If make errors happen in RedHat(and also Fedora Core) for kssl.h, 
+		   please add lines below into Makefile
+
+	           CPPFLAGS+=-I/usr/kerboros/include
+	 
+	5. Edit wpa_supplicant.conf to set up SSID and its passphrase.
+	   For example, the following setting in "wpa1.conf" means SSID 
+           to join is "BufAG54_Ch6" and its passphrase is "87654321".
+
+	   Example 1: Configuration for WPA-PWK
+	   network={
+			ssid="BufAG54_Ch6"
+			#scan_ssid=1 //see note 3
+			proto=WPA
+			key_mgmt=WPA-PSK
+			pairwise=CCMP TKIP
+			group=CCMP TKIP WEP104 WEP40
+			psk="87654321"
+			priority=2
+		  }
+	
+	    Example 2: Configuration for LEAP
+	    network={
+			ssid="BufAG54_Ch6"
+			key_mgmt=IEEE8021X
+			group=WEP40 WEP104
+			eap=LEAP
+			identity="user1"
+			password="1111"
+		  }
+
+	    Example 3: Linking to hidden ssid given AP's security policy exactly.
+	    (see note 3 below)
+            ap_scan=2
+	    network={
+		ssid="Hidden_ssid"
+		proto=WPA
+		key_mgmt=WPA-PSK
+		pairwise=CCMP
+		group=CCMP
+		psk="12345678"
+	  	}
+		
+	    Example 4: Linking to ad-hoc (see note 4 below)
+	    ap_scan=2
+	    network={
+		ssid="Ad-hoc"
+                mode=1
+		proto=WPA
+		key_mgmt=WPA-NONE
+		pairwise=NONE
+		group=TKIP
+		psk="12345678"
+		}
+
+	    Note: 
+		1) proto=WPA for WPA, proto=RSN for WPA2. 
+	      	2) If user needs to connect an AP with WPA or WPA2 mixed mode, 
+		   it is suggested to set the cipher of pairwise and group to 
+		   both CCMP and TKIP unless you know exactly which cipher type 
+		   AP is configured.
+	      	3) When connecting to hidden ssid, explicit security policy 
+		   should be given with ap_scan=2 being setted.
+	      	4) It is suggested setting ap_scan to 2 and mode to 1 when 
+		   linking to or creating an ad-hoc. Group and pairwise
+		   cipher type should also be set explicitly, always with group 
+		   setting to TKIP or CCMP and pairwise setting to NONE. 
+		   Lower version wpa_supplicant may not allow setting group to 
+		   CCMP with pairwise setting to NONE. So if any problem, you may 
+		   try to set both group and pairwise to CCMP, leaving other
+		   setting unchanged, when connecting to an CCMP-encrypted ad-hoc.
+	      	5) As for more config setting option, please refer to wpa_supplicant.conf 
+		   in wpa_supplicant.tar.gz that we provide.
+
+	6. Execute WPA supplicant (Assume module of rtl8192se has been loaded):
+           ./runwpa
+
+           Note: 
+		 The script runwpa will check Wireless Extension version automatically.
+                 If the version of Wireless Extension is equal or greater than 18, the
+                 option of "-D wext" will be selected, otherwise, the option of "-D ipw" 
+                 selected.
+
+

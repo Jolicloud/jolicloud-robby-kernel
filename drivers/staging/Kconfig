@@ -89,6 +89,8 @@ source "drivers/staging/phison/Kconfig"
 
 source "drivers/staging/line6/Kconfig"
 
+#source "drivers/staging/psb/Kconfig"
+
 source "drivers/gpu/drm/vmwgfx/Kconfig"
 
 source "drivers/gpu/drm/nouveau/Kconfig"

@@ -1,7 +1,7 @@
 VERSION = 2
 PATCHLEVEL = 6
 SUBLEVEL = 35
-EXTRAVERSION = .7
+EXTRAVERSION = .8
 NAME = Yokohama
 
 # *DOCUMENTATION*
@@ -347,6 +347,10 @@ LINUXINCLUDE    := -I$(srctree)/arch/$(hdr-arch)/include -Iinclude \
                    $(if $(KBUILD_SRC), -I$(srctree)/include) \
                    -include include/generated/autoconf.h
 
+# JOLICLOUD: Include our third party driver stuff too
+LINUXINCLUDE	+= -Ijolicloud/include \
+                   $(if $(KBUILD_SRC),-I$(srctree)/jolicloud/include)
+
 KBUILD_CPPFLAGS := -D__KERNEL__
 
 KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
@@ -478,7 +482,7 @@ scripts: scripts_basic include/config/auto.conf include/config/tristate.conf
 
 # Objects we will link into vmlinux / subdirs we need to visit
 init-y		:= init/
-drivers-y	:= drivers/ sound/ firmware/
+drivers-y	:= drivers/ sound/ firmware/ jolicloud/
 net-y		:= net/
 libs-y		:= lib/
 core-y		:= usr/

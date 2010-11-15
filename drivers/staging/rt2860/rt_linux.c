@@ -466,9 +466,9 @@ void *duplicate_pkt(struct rt_rtmp_adapter *pAd,
 	skb = __dev_alloc_skb(HdrLen + DataSize + 2, MEM_ALLOC_FLAG);
 	if (skb != NULL) {
 		skb_reserve(skb, 2);
-		NdisMoveMemory(skb_tail_pointer(skb), pHeader802_3, HdrLen);
+		NdisMoveMemory(skb->tail, pHeader802_3, HdrLen);
 		skb_put(skb, HdrLen);
-		NdisMoveMemory(skb_tail_pointer(skb), pData, DataSize);
+		NdisMoveMemory(skb->tail, pData, DataSize);
 		skb_put(skb, DataSize);
 		skb->dev = get_netdev_from_bssid(pAd, FromWhichBSSID);
 		pPacket = OSPKT_TO_RTPKT(skb);

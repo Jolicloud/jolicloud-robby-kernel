@@ -1,0 +1,34 @@
+04 Feb 2008 // Version 0.3
+
+    - modules init and exit code restyling
+    - added writable parameter safer per default
+
+03 Feb 2008 // Version 0.2.2
+
+    - everything in module dir has been moved in its parent
+    - module name and version as been uniformed everywhere 
+    - dependence from i2c_i801 module print warning
+    - modules reinitialize if needed 
+
+29 Jan 2008 // Version 0.2.1
+
+    - eee.c renamed asus_eee.c like asus_acpi.ko, version updated to 0.2.1
+    - asus_eee.ko to be install in acpi/ depending asus_acpi.ko
+    - Makefile restyled and added patch, reverse_patch and install targets
+    - 2.6.21.4-eeepc no i2c_smbus_read_block_data patch application
+
+15 Jan 2008 // Version 0.2
+    - Uses the kernel's built-in i2c functions, so it can coexist with the
+      i2c_i801 module.
+    - Communicates with the embedded controller using its indexed IO port,
+      which is much faster than using ACPI.
+    - Correctly identified the "mystery" embedded controller parameter as
+      controlling the CPU voltage.
+    - Reading the /proc/eee/fsb file now shows the current voltage.
+    - Added support for monitoring fan speed and CPU temperature.
+    - Added support for controlling the fan speed.
+
+29 Nov 2007 // Version 0.1
+    - Initial release!
+    - Uses ACPI to communicate with the PLL chip and the embedded controller.
+
