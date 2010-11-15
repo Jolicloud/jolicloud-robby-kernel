@@ -62,7 +62,7 @@ linux (2.6.35-23.36) maverick-proposed; urgency=low
   * SAUCE: ARM: OMAP3: Adding vdd_sdi regulator supply to IGEPv2 board
     - LP: #607250
   * SAUCE: ARM: OMAP3: beagle: use GPIO2 on the xM A3 to turn DVI on
-    - LP: #663642
+    - See: #663642
 
   [ Upstream Kernel Changes ]
 
@@ -90,7 +90,7 @@ linux (2.6.35-23.36) maverick-proposed; urgency=low
     - LP: #613381
   * (upstream) ALSA: hda - Apply ALC269 VAIO fix-up to all Sony laptops
     with ALC269
-    - LP: #546769, #598938, #637291, #642892, #648871, #655386
+    - See: #546769, #598938, #637291, #642892, #648871, #655386
   * hwmon: (ads7871) Fix ads7871_probe error paths
   * hwmon: (k8temp) Differentiate between AM2 and ASB1
   * xen: handle events as edge-triggered
@@ -317,7 +317,7 @@ linux (2.6.35-23.36) maverick-proposed; urgency=low
     - LP: #651425
   * ALSA: HDA: Correctly apply position_fix quirks for ATI and VIA
     controllers
-    - LP: #465942, #580749, #587546
+    - See: #465942, #580749, #587546
   * ALSA: hda - add ideapad model for Conexant 5051 codec
   * intel_ips: potential null dereference
   * drm/i915: Silence sparse over duplicate members in static initializer
