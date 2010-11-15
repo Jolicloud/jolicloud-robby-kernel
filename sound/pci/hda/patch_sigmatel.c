@@ -203,7 +203,6 @@ struct sigmatel_spec {
 	unsigned int spdif_mute: 1;
 	unsigned int check_volume_offset:1;
 	unsigned int auto_mic:1;
-	unsigned int linear_tone_beep:1;
 
 	/* gpio lines */
 	unsigned int eapd_mask;
@@ -3815,7 +3814,7 @@ static int stac92xx_parse_auto_config(struct hda_codec *codec, hda_nid_t dig_out
 			return err;
 		if (codec->beep) {
 			/* IDT/STAC codecs have linear beep tone parameter */
-			codec->beep->linear_tone = spec->linear_tone_beep;
+			codec->beep->linear_tone = 1;
 			/* if no beep switch is available, make its own one */
 			caps = query_amp_caps(codec, nid, HDA_OUTPUT);
 			if (!(caps & AC_AMPCAP_MUTE)) {
@@ -5018,7 +5017,6 @@ static int patch_stac9200(struct hda_codec *codec)
 
 	codec->no_trigger_sense = 1;
 	codec->spec = spec;
-	spec->linear_tone_beep = 1;
 	spec->num_pins = ARRAY_SIZE(stac9200_pin_nids);
 	spec->pin_nids = stac9200_pin_nids;
 	spec->board_config = snd_hda_check_board_config(codec, STAC_9200_MODELS,
@@ -5082,7 +5080,6 @@ static int patch_stac925x(struct hda_codec *codec)
 
 	codec->no_trigger_sense = 1;
 	codec->spec = spec;
-	spec->linear_tone_beep = 1;
 	spec->num_pins = ARRAY_SIZE(stac925x_pin_nids);
 	spec->pin_nids = stac925x_pin_nids;
 
@@ -5168,7 +5165,6 @@ static int patch_stac92hd73xx(struct hda_codec *codec)
 
 	codec->no_trigger_sense = 1;
 	codec->spec = spec;
-	spec->linear_tone_beep = 0;
 	codec->slave_dig_outs = stac92hd73xx_slave_dig_outs;
 	spec->num_pins = ARRAY_SIZE(stac92hd73xx_pin_nids);
 	spec->pin_nids = stac92hd73xx_pin_nids;
@@ -5316,7 +5312,6 @@ static int patch_stac92hd83xxx(struct hda_codec *codec)
 
 	codec->no_trigger_sense = 1;
 	codec->spec = spec;
-	spec->linear_tone_beep = 1;
 	codec->slave_dig_outs = stac92hd83xxx_slave_dig_outs;
 	spec->digbeep_nid = 0x21;
 	spec->mux_nids = stac92hd83xxx_mux_nids;
@@ -5539,7 +5534,6 @@ static int patch_stac92hd71bxx(struct hda_codec *codec)
 
 	codec->no_trigger_sense = 1;
 	codec->spec = spec;
-	spec->linear_tone_beep = 0;
 	codec->patch_ops = stac92xx_patch_ops;
 	spec->num_pins = STAC92HD71BXX_NUM_PINS;
 	switch (codec->vendor_id) {
@@ -5797,7 +5791,6 @@ static int patch_stac922x(struct hda_codec *codec)
 
 	codec->no_trigger_sense = 1;
 	codec->spec = spec;
-	spec->linear_tone_beep = 1;
 	spec->num_pins = ARRAY_SIZE(stac922x_pin_nids);
 	spec->pin_nids = stac922x_pin_nids;
 	spec->board_config = snd_hda_check_board_config(codec, STAC_922X_MODELS,
@@ -5902,7 +5895,6 @@ static int patch_stac927x(struct hda_codec *codec)
 
 	codec->no_trigger_sense = 1;
 	codec->spec = spec;
-	spec->linear_tone_beep = 1;
 	codec->slave_dig_outs = stac927x_slave_dig_outs;
 	spec->num_pins = ARRAY_SIZE(stac927x_pin_nids);
 	spec->pin_nids = stac927x_pin_nids;
@@ -6038,7 +6030,6 @@ static int patch_stac9205(struct hda_codec *codec)
 
 	codec->no_trigger_sense = 1;
 	codec->spec = spec;
-	spec->linear_tone_beep = 1;
 	spec->num_pins = ARRAY_SIZE(stac9205_pin_nids);
 	spec->pin_nids = stac9205_pin_nids;
 	spec->board_config = snd_hda_check_board_config(codec, STAC_9205_MODELS,
@@ -6195,7 +6186,6 @@ static int patch_stac9872(struct hda_codec *codec)
 		return -ENOMEM;
 	codec->no_trigger_sense = 1;
 	codec->spec = spec;
-	spec->linear_tone_beep = 1;
 	spec->num_pins = ARRAY_SIZE(stac9872_pin_nids);
 	spec->pin_nids = stac9872_pin_nids;
 

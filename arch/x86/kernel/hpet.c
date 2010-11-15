@@ -36,6 +36,7 @@
 unsigned long				hpet_address;
 u8					hpet_blockid; /* OS timer block num */
 u8					hpet_msi_disable;
+u8					hpet_readback_cmp;
 
 #ifdef CONFIG_PCI_MSI
 static unsigned long			hpet_num_timers;
@@ -395,27 +396,23 @@ static int hpet_next_event(unsigned long delta,
 	 * at that point and we would wait for the next hpet interrupt
 	 * forever. We found out that reading the CMP register back
 	 * forces the transfer so we can rely on the comparison with
-	 * the counter register below. If the read back from the
-	 * compare register does not match the value we programmed
-	 * then we might have a real hardware problem. We can not do
-	 * much about it here, but at least alert the user/admin with
-	 * a prominent warning.
+	 * the counter register below.
 	 *
-	 * An erratum on some chipsets (ICH9,..), results in
-	 * comparator read immediately following a write returning old
-	 * value. Workaround for this is to read this value second
-	 * time, when first read returns old value.
+	 * That works fine on those ATI chipsets, but on newer Intel
+	 * chipsets (ICH9...) this triggers due to an erratum: Reading
+	 * the comparator immediately following a write is returning
+	 * the old value.
 	 *
-	 * In fact the write to the comparator register is delayed up
-	 * to two HPET cycles so the workaround we tried to restrict
-	 * the readback to those known to be borked ATI chipsets
-	 * failed miserably. So we give up on optimizations forever
-	 * and penalize all HPET incarnations unconditionally.
+	 * We restrict the read back to the affected ATI chipsets (set
+	 * by quirks) and also run it with hpet=verbose for debugging
+	 * purposes.
 	 */
-	if (unlikely((u32)hpet_readl(HPET_Tn_CMP(timer)) != cnt)) {
-		if (hpet_readl(HPET_Tn_CMP(timer)) != cnt)
+	if (hpet_readback_cmp || hpet_verbose) {
+		u32 cmp = hpet_readl(HPET_Tn_CMP(timer));
+
+		if (cmp != cnt)
 			printk_once(KERN_WARNING
-				"hpet: compare register read back failed.\n");
+			    "hpet: compare register read back failed.\n");
 	}
 
 	return (s32)(hpet_readl(HPET_COUNTER) - cnt) >= 0 ? -ETIME : 0;
@@ -507,7 +504,7 @@ static int hpet_assign_irq(struct hpet_dev *dev)
 {
 	unsigned int irq;
 
-	irq = create_irq_nr(0, -1);
+	irq = create_irq();
 	if (!irq)
 		return -EINVAL;
 

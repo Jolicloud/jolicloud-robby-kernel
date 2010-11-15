@@ -26,37 +26,35 @@
 .endm
 
 #define BEGIN(op) \
-.macro endp; \
+.macro END; \
 	CFI_ENDPROC; \
 ENDPROC(atomic64_##op##_386); \
-.purgem endp; \
+.purgem END; \
 .endm; \
 ENTRY(atomic64_##op##_386); \
 	CFI_STARTPROC; \
 	LOCK v;
 
-#define ENDP endp
-
 #define RET \
 	UNLOCK v; \
 	ret
 
-#define RET_ENDP \
+#define RET_END \
 	RET; \
-	ENDP
+	END
 
 #define v %ecx
 BEGIN(read)
 	movl  (v), %eax
 	movl 4(v), %edx
-RET_ENDP
+RET_END
 #undef v
 
 #define v %esi
 BEGIN(set)
 	movl %ebx,  (v)
 	movl %ecx, 4(v)
-RET_ENDP
+RET_END
 #undef v
 
 #define v  %esi
@@ -65,14 +63,14 @@ BEGIN(xchg)
 	movl 4(v), %edx
 	movl %ebx,  (v)
 	movl %ecx, 4(v)
-RET_ENDP
+RET_END
 #undef v
 
 #define v %ecx
 BEGIN(add)
 	addl %eax,  (v)
 	adcl %edx, 4(v)
-RET_ENDP
+RET_END
 #undef v
 
 #define v %ecx
@@ -81,14 +79,14 @@ BEGIN(add_return)
 	adcl 4(v), %edx
 	movl %eax,  (v)
 	movl %edx, 4(v)
-RET_ENDP
+RET_END
 #undef v
 
 #define v %ecx
 BEGIN(sub)
 	subl %eax,  (v)
 	sbbl %edx, 4(v)
-RET_ENDP
+RET_END
 #undef v
 
 #define v %ecx
@@ -100,14 +98,14 @@ BEGIN(sub_return)
 	adcl 4(v), %edx
 	movl %eax,  (v)
 	movl %edx, 4(v)
-RET_ENDP
+RET_END
 #undef v
 
 #define v %esi
 BEGIN(inc)
 	addl $1,  (v)
 	adcl $0, 4(v)
-RET_ENDP
+RET_END
 #undef v
 
 #define v %esi
@@ -118,14 +116,14 @@ BEGIN(inc_return)
 	adcl $0, %edx
 	movl %eax,  (v)
 	movl %edx, 4(v)
-RET_ENDP
+RET_END
 #undef v
 
 #define v %esi
 BEGIN(dec)
 	subl $1,  (v)
 	sbbl $0, 4(v)
-RET_ENDP
+RET_END
 #undef v
 
 #define v %esi
@@ -136,7 +134,7 @@ BEGIN(dec_return)
 	sbbl $0, %edx
 	movl %eax,  (v)
 	movl %edx, 4(v)
-RET_ENDP
+RET_END
 #undef v
 
 #define v %ecx
@@ -158,7 +156,7 @@ BEGIN(add_unless)
 	jne 1b
 	xorl %eax, %eax
 	jmp 2b
-ENDP
+END
 #undef v
 
 #define v %esi
@@ -179,7 +177,7 @@ BEGIN(inc_not_zero)
 	testl %edx, %edx
 	jne 1b
 	jmp 2b
-ENDP
+END
 #undef v
 
 #define v %esi
@@ -192,5 +190,5 @@ BEGIN(dec_if_positive)
 	movl %eax,  (v)
 	movl %edx, 4(v)
 1:
-RET_ENDP
+RET_END
 #undef v

@@ -203,13 +203,9 @@ static int init_render_ring(struct drm_device *dev,
 {
 	drm_i915_private_t *dev_priv = dev->dev_private;
 	int ret = init_ring_common(dev, ring);
-	int mode;
-
 	if (IS_I9XX(dev) && !IS_GEN3(dev)) {
-		mode = VS_TIMER_DISPATCH << 16 | VS_TIMER_DISPATCH;
-		if (IS_GEN6(dev))
-			mode |= MI_FLUSH_ENABLE << 16 | MI_FLUSH_ENABLE;
-		I915_WRITE(MI_MODE, mode);
+		I915_WRITE(MI_MODE,
+				(VS_TIMER_DISPATCH) << 16 | VS_TIMER_DISPATCH);
 	}
 	return ret;
 }

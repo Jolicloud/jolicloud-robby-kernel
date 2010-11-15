@@ -148,14 +148,12 @@ void ima_counts_get(struct file *file)
 	struct ima_iint_cache *iint;
 	int rc;
 
-	if (!iint_initialized || !S_ISREG(inode->i_mode))
+	if (!ima_initialized || !S_ISREG(inode->i_mode))
 		return;
 	iint = ima_iint_find_get(inode);
 	if (!iint)
 		return;
 	mutex_lock(&iint->mutex);
-	if (!ima_initialized)
-		goto out;
 	rc = ima_must_measure(iint, inode, MAY_READ, FILE_CHECK);
 	if (rc < 0)
 		goto out;
@@ -215,7 +213,7 @@ void ima_file_free(struct file *file)
 	struct inode *inode = file->f_dentry->d_inode;
 	struct ima_iint_cache *iint;
 
-	if (!iint_initialized || !S_ISREG(inode->i_mode))
+	if (!ima_initialized || !S_ISREG(inode->i_mode))
 		return;
 	iint = ima_iint_find_get(inode);
 	if (!iint)
@@ -232,7 +230,7 @@ static int process_measurement(struct file *file, const unsigned char *filename,
 {
 	struct inode *inode = file->f_dentry->d_inode;
 	struct ima_iint_cache *iint;
-	int rc = 0;
+	int rc;
 
 	if (!ima_initialized || !S_ISREG(inode->i_mode))
 		return 0;

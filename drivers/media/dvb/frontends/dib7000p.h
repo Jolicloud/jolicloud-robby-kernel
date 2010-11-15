@@ -33,9 +33,6 @@ struct dib7000p_config {
 	int (*agc_control) (struct dvb_frontend *, u8 before);
 
 	u8 output_mode;
-
-	u8 enable_current_mirror : 1;
-
 };
 
 #define DEFAULT_DIB7000P_I2C_ADDRESS 18

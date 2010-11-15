@@ -34,7 +34,6 @@
 #include <linux/slab.h>
 #include <linux/swap.h>
 #include <linux/pci.h>
-#include <linux/intel-gtt.h>
 
 static void i915_gem_object_flush_gpu_write_domain(struct drm_gem_object *obj);
 static void i915_gem_object_flush_gtt_write_domain(struct drm_gem_object *obj);
@@ -466,15 +465,8 @@ i915_gem_pread_ioctl(struct drm_device *dev, void *data,
 	 */
 	if (args->offset > obj->size || args->size > obj->size ||
 	    args->offset + args->size > obj->size) {
-		ret = -EINVAL;
-		goto err;
-	}
-
-	if (!access_ok(VERIFY_WRITE,
-		       (char __user *)(uintptr_t)args->data_ptr,
-		       args->size)) {
-		ret = -EFAULT;
-		goto err;
+		drm_gem_object_unreference_unlocked(obj);
+		return -EINVAL;
 	}
 
 	if (i915_gem_object_needs_bit17_swizzle(obj)) {
@@ -486,8 +478,8 @@ i915_gem_pread_ioctl(struct drm_device *dev, void *data,
 							file_priv);
 	}
 
-err:
 	drm_gem_object_unreference_unlocked(obj);
+
 	return ret;
 }
 
@@ -576,6 +568,8 @@ i915_gem_gtt_pwrite_fast(struct drm_device *dev, struct drm_gem_object *obj,
 
 	user_data = (char __user *) (uintptr_t) args->data_ptr;
 	remain = args->size;
+	if (!access_ok(VERIFY_READ, user_data, remain))
+		return -EFAULT;
 
 
 	mutex_lock(&dev->struct_mutex);
@@ -934,15 +928,8 @@ i915_gem_pwrite_ioctl(struct drm_device *dev, void *data,
 	 */
 	if (args->offset > obj->size || args->size > obj->size ||
 	    args->offset + args->size > obj->size) {
-		ret = -EINVAL;
-		goto err;
-	}
-
-	if (!access_ok(VERIFY_READ,
-		       (char __user *)(uintptr_t)args->data_ptr,
-		       args->size)) {
-		ret = -EFAULT;
-		goto err;
+		drm_gem_object_unreference_unlocked(obj);
+		return -EINVAL;
 	}
 
 	/* We can only do the GTT pwrite on untiled buffers, as otherwise
@@ -976,8 +963,8 @@ i915_gem_pwrite_ioctl(struct drm_device *dev, void *data,
 		DRM_INFO("pwrite failed %d\n", ret);
 #endif
 
-err:
 	drm_gem_object_unreference_unlocked(obj);
+
 	return ret;
 }
 
@@ -3380,8 +3367,6 @@ i915_gem_object_pin_and_relocate(struct drm_gem_object *obj,
 				  (int) reloc->offset,
 				  reloc->read_domains,
 				  reloc->write_domain);
-			drm_gem_object_unreference(target_obj);
-			i915_gem_object_unpin(obj);
 			return -EINVAL;
 		}
 		if (reloc->write_domain & I915_GEM_DOMAIN_CPU ||
@@ -3724,7 +3709,6 @@ i915_gem_do_execbuffer(struct drm_device *dev, void *data,
 		if (ret != 0) {
 			DRM_ERROR("copy %d cliprects failed: %d\n",
 				  args->num_cliprects, ret);
-			ret = -EFAULT;
 			goto pre_mutex_err;
 		}
 	}

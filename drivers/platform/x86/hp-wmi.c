@@ -58,12 +58,6 @@ enum hp_wmi_radio {
 	HPWMI_WWAN = 2,
 };
 
-enum hp_wmi_event_ids {
-	HPWMI_DOCK_EVENT = 1,
-	HPWMI_BEZEL_BUTTON = 4,
-	HPWMI_WIRELESS = 5,
-};
-
 static int __devinit hp_wmi_bios_setup(struct platform_device *device);
 static int __exit hp_wmi_bios_remove(struct platform_device *device);
 static int hp_wmi_resume_handler(struct device *device);
@@ -344,7 +338,7 @@ static void hp_wmi_notify(u32 value, void *context)
 	struct acpi_buffer response = { ACPI_ALLOCATE_BUFFER, NULL };
 	static struct key_entry *key;
 	union acpi_object *obj;
-	int eventcode, key_code;
+	int eventcode;
 	acpi_status status;
 
 	status = wmi_get_event_data(value, &response);
@@ -363,32 +357,28 @@ static void hp_wmi_notify(u32 value, void *context)
 
 	eventcode = *((u8 *) obj->buffer.pointer);
 	kfree(obj);
-	switch (eventcode) {
-	case HPWMI_DOCK_EVENT:
+	if (eventcode == 0x4)
+		eventcode = hp_wmi_perform_query(HPWMI_HOTKEY_QUERY, 0,
+						0);
+	key = hp_wmi_get_entry_by_scancode(eventcode);
+	if (key) {
+		switch (key->type) {
+		case KE_KEY:
+			input_report_key(hp_wmi_input_dev,
+					 key->keycode, 1);
+			input_sync(hp_wmi_input_dev);
+			input_report_key(hp_wmi_input_dev,
+					 key->keycode, 0);
+			input_sync(hp_wmi_input_dev);
+			break;
+		}
+	} else if (eventcode == 0x1) {
 		input_report_switch(hp_wmi_input_dev, SW_DOCK,
 				    hp_wmi_dock_state());
 		input_report_switch(hp_wmi_input_dev, SW_TABLET_MODE,
 				    hp_wmi_tablet_state());
 		input_sync(hp_wmi_input_dev);
-		break;
-	case HPWMI_BEZEL_BUTTON:
-		key_code = hp_wmi_perform_query(HPWMI_HOTKEY_QUERY, 0,
-						 0);
-		key = hp_wmi_get_entry_by_scancode(key_code);
-		if (key) {
-			switch (key->type) {
-			case KE_KEY:
-				input_report_key(hp_wmi_input_dev,
-						 key->keycode, 1);
-				input_sync(hp_wmi_input_dev);
-				input_report_key(hp_wmi_input_dev,
-						 key->keycode, 0);
-				input_sync(hp_wmi_input_dev);
-				break;
-			}
-		}
-		break;
-	case HPWMI_WIRELESS:
+	} else if (eventcode == 0x5) {
 		if (wifi_rfkill)
 			rfkill_set_states(wifi_rfkill,
 					  hp_wmi_get_sw_state(HPWMI_WIFI),
@@ -401,12 +391,9 @@ static void hp_wmi_notify(u32 value, void *context)
 			rfkill_set_states(wwan_rfkill,
 					  hp_wmi_get_sw_state(HPWMI_WWAN),
 					  hp_wmi_get_hw_state(HPWMI_WWAN));
-		break;
-	default:
+	} else
 		printk(KERN_INFO "HP WMI: Unknown key pressed - %x\n",
 			eventcode);
-		break;
-	}
 }
 
 static int __init hp_wmi_input_setup(void)
