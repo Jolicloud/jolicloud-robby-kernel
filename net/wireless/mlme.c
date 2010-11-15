@@ -842,18 +842,12 @@ int cfg80211_mlme_action(struct cfg80211_registered_device *rdev,
 		return -EINVAL;
 	if (mgmt->u.action.category != WLAN_CATEGORY_PUBLIC) {
 		/* Verify that we are associated with the destination AP */
-		wdev_lock(wdev);
-
 		if (!wdev->current_bss ||
 		    memcmp(wdev->current_bss->pub.bssid, mgmt->bssid,
 			   ETH_ALEN) != 0 ||
 		    memcmp(wdev->current_bss->pub.bssid, mgmt->da,
-			    ETH_ALEN) != 0) {
-			wdev_unlock(wdev);
+			   ETH_ALEN) != 0)
 			return -ENOTCONN;
-		}
-		wdev_unlock(wdev);
-
 	}
 
 	if (memcmp(mgmt->sa, dev->dev_addr, ETH_ALEN) != 0)

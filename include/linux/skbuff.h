@@ -169,7 +169,6 @@ struct skb_shared_hwtstamps {
  * @software:		generate software time stamp
  * @in_progress:	device driver is going to provide
  *			hardware time stamp
- * @prevent_sk_orphan:	make sk reference available on driver level
  * @flags:		all shared_tx flags
  *
  * These flags are attached to packets as part of the
@@ -179,8 +178,7 @@ union skb_shared_tx {
 	struct {
 		__u8	hardware:1,
 			software:1,
-			in_progress:1,
-			prevent_sk_orphan:1;
+			in_progress:1;
 	};
 	__u8 flags;
 };
