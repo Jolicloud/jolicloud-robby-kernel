@@ -24,7 +24,15 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  **************************************************************************/
-#include <drmP.h>
+/*
+ * Authors: Thomas Hellstrom <thellstrom-at-vmware-dot-com>
+ */
+
+#include <linux/mutex.h>
+#include <linux/slab.h>
+#include <linux/module.h>
+#include "drm_global.h"
+
 struct drm_global_item {
 	struct mutex mutex;
 	void *object;
@@ -63,7 +71,7 @@ int drm_global_item_ref(struct drm_global_reference *ref)
 
 	mutex_lock(&item->mutex);
 	if (item->refcount == 0) {
-		item->object = kmalloc(ref->size, GFP_KERNEL);
+		item->object = kzalloc(ref->size, GFP_KERNEL);
 		if (unlikely(item->object == NULL)) {
 			ret = -ENOMEM;
 			goto out_err;
@@ -74,14 +82,13 @@ int drm_global_item_ref(struct drm_global_reference *ref)
 		if (unlikely(ret != 0))
 			goto out_err;
 
-		++item->refcount;
 	}
+	++item->refcount;
 	ref->object = item->object;
 	object = item->object;
 	mutex_unlock(&item->mutex);
 	return 0;
 out_err:
-	kfree(item->object);
 	mutex_unlock(&item->mutex);
 	item->object = NULL;
 	return ret;
@@ -97,9 +104,8 @@ void drm_global_item_unref(struct drm_global_reference *ref)
 	BUG_ON(ref->object != item->object);
 	if (--item->refcount == 0) {
 		ref->release(ref);
-		kfree(item->object);
 		item->object = NULL;
 	}
 	mutex_unlock(&item->mutex);
 }
-EXPORT_SYMBOL(drm_global_item_unref);
+

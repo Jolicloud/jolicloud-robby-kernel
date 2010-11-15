@@ -70,15 +70,6 @@ MODULE_PARM_DESC(report_undeciphered, "Report undeciphered multi-touch state fie
 
 #define SCROLL_ACCEL_DEFAULT 7
 
-/* Single touch emulation should only begin when no touches are currently down.
- * This is true when single_touch_id is equal to NO_TOUCHES. If multiple touches
- * are down and the touch providing for single touch emulation is lifted,
- * single_touch_id is equal to SINGLE_TOUCH_UP. While single touch emulation is
- * occuring, single_touch_id corresponds with the tracking id of the touch used.
- */
-#define NO_TOUCHES -1
-#define SINGLE_TOUCH_UP -2
-
 /**
  * struct magicmouse_sc - Tracks Magic Mouse-specific data.
  * @input: Input device through which we report events.
@@ -103,6 +94,7 @@ struct magicmouse_sc {
 		short scroll_x;
 		short scroll_y;
 		u8 size;
+		u8 down;
 	} touches[16];
 	int tracking_ids[16];
 	int single_touch_id;
@@ -171,29 +163,12 @@ static void magicmouse_emit_buttons(struct magicmouse_sc *msc, int state)
 static void magicmouse_emit_touch(struct magicmouse_sc *msc, int raw_id, u8 *tdata)
 {
 	struct input_dev *input = msc->input;
-	int id, x, y, size, orientation, touch_major, touch_minor, state, down;
-
-	if (input->id.product == USB_DEVICE_ID_APPLE_MAGICMOUSE) {
-		id = (tdata[6] << 2 | tdata[5] >> 6) & 0xf;
-		x = (tdata[1] << 28 | tdata[0] << 20) >> 20;
-		y = -((tdata[2] << 24 | tdata[1] << 16) >> 20);
-		size = tdata[5] & 0x3f;
-		orientation = (tdata[6] >> 2) - 32;
-		touch_major = tdata[3];
-		touch_minor = tdata[4];
-		state = tdata[7] & TOUCH_STATE_MASK;
-		down = state != TOUCH_STATE_NONE;
-	} else { /* USB_DEVICE_ID_APPLE_MAGICTRACKPAD */
-		id = (tdata[7] << 2 | tdata[6] >> 6) & 0xf;
-		x = (tdata[1] << 27 | tdata[0] << 19) >> 19;
-		y = -((tdata[3] << 30 | tdata[2] << 22 | tdata[1] << 14) >> 19);
-		size = tdata[6] & 0x3f;
-		orientation = (tdata[7] >> 2) - 32;
-		touch_major = tdata[4];
-		touch_minor = tdata[5];
-		state = tdata[8] & TOUCH_STATE_MASK;
-		down = state != TOUCH_STATE_NONE;
-	}
+	__s32 x_y = tdata[0] << 8 | tdata[1] << 16 | tdata[2] << 24;
+	int misc = tdata[5] | tdata[6] << 8;
+	int id = (misc >> 6) & 15;
+	int x = x_y << 12 >> 20;
+	int y = -(x_y >> 20);
+	int down = (tdata[7] & TOUCH_STATE_MASK) != TOUCH_STATE_NONE;
 
 	/* Store tracking ID and other fields. */
 	msc->tracking_ids[raw_id] = id;
@@ -244,15 +219,12 @@ static void magicmouse_emit_touch(struct magicmouse_sc *msc, int raw_id, u8 *tda
 		}
 	}
 
-	if (down) {
-		msc->ntouches++;
-		if (msc->single_touch_id == NO_TOUCHES)
-			msc->single_touch_id = id;
-	} else if (msc->single_touch_id == id)
-		msc->single_touch_id = SINGLE_TOUCH_UP;
-
 	/* Generate the input events for this touch. */
 	if (report_touches && down) {
+		int orientation = (misc >> 10) - 32;
+
+		msc->touches[id].down = 1;
+
 		input_report_abs(input, ABS_MT_TRACKING_ID, id);
 		input_report_abs(input, ABS_MT_TOUCH_MAJOR, touch_major << 2);
 		input_report_abs(input, ABS_MT_TOUCH_MINOR, touch_minor << 2);
@@ -276,7 +248,7 @@ static int magicmouse_raw_event(struct hid_device *hdev,
 {
 	struct magicmouse_sc *msc = hid_get_drvdata(hdev);
 	struct input_dev *input = msc->input;
-	int x = 0, y = 0, ii, clicks = 0, npoints;
+	int x, y, ts, ii, clicks, last_up;
 
 	switch (data[0]) {
 	case 0x10:
@@ -318,15 +290,25 @@ static int magicmouse_raw_event(struct hid_device *hdev,
 		for (ii = 0; ii < npoints; ii++)
 			magicmouse_emit_touch(msc, ii, data + ii * 8 + 6);
 
-		if (report_touches && msc->ntouches == 0)
-			input_mt_sync(input);
+		if (report_touches) {
+			last_up = 1;
+			for (ii = 0; ii < ARRAY_SIZE(msc->touches); ii++) {
+				if (msc->touches[ii].down) {
+					last_up = 0;
+					msc->touches[ii].down = 0;
+				}
+			}
+			if (last_up) {
+				input_mt_sync(input);
+			}
+		}
 
 		/* When emulating three-button mode, it is important
 		 * to have the current touch information before
 		 * generating a click event.
 		 */
-		x = (signed char)data[1];
-		y = (signed char)data[2];
+		x = (int)(((data[3] & 0x0c) << 28) | (data[1] << 22)) >> 22;
+		y = (int)(((data[3] & 0x30) << 26) | (data[2] << 22)) >> 22;
 		clicks = data[3];
 
 		/* The following bits provide a device specific timestamp. They
@@ -408,27 +390,18 @@ static void magicmouse_setup_input(struct input_dev *input, struct hid_device *h
 	input->dev.parent = hdev->dev.parent;
 
 	__set_bit(EV_KEY, input->evbit);
+	__set_bit(BTN_LEFT, input->keybit);
+	__set_bit(BTN_RIGHT, input->keybit);
+	if (emulate_3button)
+		__set_bit(BTN_MIDDLE, input->keybit);
+	__set_bit(BTN_TOOL_FINGER, input->keybit);
 
-	if (input->id.product == USB_DEVICE_ID_APPLE_MAGICMOUSE) {
-		__set_bit(BTN_LEFT, input->keybit);
-		__set_bit(BTN_RIGHT, input->keybit);
-		if (emulate_3button)
-			__set_bit(BTN_MIDDLE, input->keybit);
-
-		__set_bit(EV_REL, input->evbit);
-		__set_bit(REL_X, input->relbit);
-		__set_bit(REL_Y, input->relbit);
-		if (emulate_scroll_wheel) {
-			__set_bit(REL_WHEEL, input->relbit);
-			__set_bit(REL_HWHEEL, input->relbit);
-		}
-	} else { /* USB_DEVICE_ID_APPLE_MAGICTRACKPAD */
-		__set_bit(BTN_MOUSE, input->keybit);
-		__set_bit(BTN_TOOL_FINGER, input->keybit);
-		__set_bit(BTN_TOOL_DOUBLETAP, input->keybit);
-		__set_bit(BTN_TOOL_TRIPLETAP, input->keybit);
-		__set_bit(BTN_TOOL_QUADTAP, input->keybit);
-		__set_bit(BTN_TOUCH, input->keybit);
+	__set_bit(EV_REL, input->evbit);
+	__set_bit(REL_X, input->relbit);
+	__set_bit(REL_Y, input->relbit);
+	if (emulate_scroll_wheel) {
+		__set_bit(REL_WHEEL, input->relbit);
+		__set_bit(REL_HWHEEL, input->relbit);
 	}
 
 	if (report_touches) {
