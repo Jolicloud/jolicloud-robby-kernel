@@ -5,11 +5,11 @@
 # Maverick master. When complete you should have a copy of
 # the master changelog with the correct release names.
 #
-MAV=maverick
+SOURCE_REL=maverick
 DMAS=debian.master
-DMAV=debian.${MAV}
-DEF_REPO=git://kernel.ubuntu.com/ubuntu/ubuntu-${MAV}.git
-MAVERICK_REPO="${DEF_REPO}"
+DEB_DIR=debian.${SOURCE_REL}
+DEF_REPO=git://kernel.ubuntu.com/ubuntu/ubuntu-${SOURCE_REL}.git
+SOURCE_REPO="${DEF_REPO}"
 DEF_ARCHES="i386 amd64"
 FOREIGN_ARCHES="armel ia64 powerpc sparc config.common.ports"
 
@@ -21,23 +21,23 @@ POCKET="-proposed"
 IGNORE_ABI=""
 IGNORE_MODULES=""
 
-usage="$0 [-r MAVERICK_REPO] [-p]"
+usage="$0 [-r SOURCE_REPO] [-p]"
 
 #
 # command line options:
-# [-r MAVERICK_REPO] - override default ${MAV} git repository.
+# [-r SOURCE_REPO] - override default ${SOURCE_REL} git repository.
 # [-p] - Assume the upload target is a PPA
 
 while getopts ":r:pim" opt; do
 	case $opt in
-	r ) MAVERICK_REPO="$OPTARG" ;;
+	r ) SOURCE_REPO="$OPTARG" ;;
 	p ) POCKET="" ;;
 	\? ) echo usage: ${usage}; exit ;;
 	esac
 done
 shift $(($OPTIND - 1))
 
-if [ ! -d ${DMAV} ]
+if [ ! -d ${DEB_DIR} ]
 then
 	echo You must run this sript from the top directory of this repository.
 	exit 1
@@ -46,19 +46,48 @@ fi
 #
 # Pull in any Maverick master branch updates.
 #
-git remote rm ${MAV}
-git remote add ${MAV} ${MAVERICK_REPO}
-if ! git fetch ${MAV} || ! git fetch ${MAV} master
+git remote rm ${SOURCE_REL}
+git remote add ${SOURCE_REL} ${SOURCE_REPO}
+if ! git fetch ${SOURCE_REL} || ! git fetch ${SOURCE_REL} master
 then
 	exit 1
 fi
 
 #
-# Find the most recent tag on ${MAV} master, then rebase against it. This avoids
+# Find the most recent tag on ${SOURCE_REL} master, then rebase against it. This avoids
 # the case where there have been some commits since the last official tag.
 #
-MASTER_TAG="`git describe --long refs/remotes/${MAV}/master | sed 's/-[0-9]*-.*$//'`"
-if ! git rebase ${MASTER_TAG}
+MASTER_TAG=`git log --pretty=one refs/remotes/${SOURCE_REL}/master | \
+    awk '
+	/Ubuntu-2\.6\./ {
+		if (match($0, /UBUNTU: (Ubuntu-2\.6\.[0-9][0-9]*-([0-9][0-9]*)[^ ]*)/, a)) {
+				print $1
+				exit
+                        }
+                }
+        '
+`
+#
+# Find the current merge point where ${SOURCE_REL} was based. It is normally the previous
+# commit from 'UBUNTU: [Config] Created LTS backport branch'
+#
+BASE_COMMIT=`git log --pretty=one | \
+    awk '
+	/Ubuntu-2\.6\./ {
+		if (match($0, /UBUNTU: (Ubuntu-2\.6\.[0-9][0-9]*-([0-9][0-9]*)[^ ]*)/, a)) {
+				print $1
+				exit
+                        }
+                }
+        '
+`
+if [ "${MASTER_TAG}" = "${BASE_COMMIT}" ]
+then
+	echo Already up to date.
+	exit 1
+fi
+
+if ! git rebase --onto ${MASTER_TAG} ${BASE_COMMIT}
 then
 	exit 1
 fi
@@ -66,13 +95,13 @@ fi
 #
 # Update configs from master
 #
-rsync -av --delete ${DMAS}/config/ ${DMAV}/config
+rsync -av --delete ${DMAS}/config/ ${DEB_DIR}/config
 
 #
 # Update changelog from master. Change the package name and release pocket.
 #
-cp ${DMAS}/changelog ${DMAV}/changelog
-sed -i -e '1s/'${MAV}'.*;/lucid'${POCKET}';/' -e '1s/^linux /linux-lts-backport-'${MAV}' /' -e '1s/)/~lucid1)/' ${DMAV}/changelog
+cp ${DMAS}/changelog ${DEB_DIR}/changelog
+sed -i -e '1s/'${SOURCE_REL}'.*;/lucid'${POCKET}';/' -e '1s/^linux /linux-lts-backport-'${SOURCE_REL}' /' -e '1s/)/~lucid1)/' ${DEB_DIR}/changelog
 
 #
 # Finally, rerun updateconfigs.
@@ -85,9 +114,9 @@ fakeroot debian/rules clean updateconfigs
 # We can ignore ABI changes with the assurance that Maverick upstream
 # will change ABI when required.
 #
-rsync -av --delete ${DMAS}/abi/ ${DMAV}/abi
+rsync -av --delete ${DMAS}/abi/ ${DEB_DIR}/abi
 for i in ${FOREIGN_ARCHES}
 do
-	rm -rf ${DMAV}/abi/2*/${i}
+	rm -rf ${DEB_DIR}/abi/2*/${i}
 done
-git add ${DMAV}/abi/2*
+git add ${DEB_DIR}/abi/2*
