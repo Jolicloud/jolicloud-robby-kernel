@@ -1,3 +1,11 @@
+linux (2.6.35-23.40) maverick-proposed; urgency=low
+
+  [ Brad Figg ]
+  
+  * No change rebuild.
+
+ -- Brad Figg <brad.figg@canonical.com>  Wed, 17 Nov 2010 12:01:53 -0800
+
 linux (2.6.35-23.39) maverick-proposed; urgency=low
 
   [ Brad Figg ]
