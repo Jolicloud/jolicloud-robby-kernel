@@ -1,3 +1,11 @@
+linux (2.6.35.8-1.50) robby-lucid; urgency=low
+
+  [ Adam McDaniel ]
+
+  * JAMBON: HID: Add quirk to blacklist for Dwav Egalax Touchcontroller
+
+ -- Adam McDaniel <adam@jolicloud.org>  Wed, 17 Nov 2010 08:42:52 -0700
+
 linux (2.6.35.8-1.49) robby-lucid; urgency=low
 
   [ Jérémy Bethmont ]
