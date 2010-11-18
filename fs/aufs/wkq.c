@@ -126,6 +126,12 @@ static void au_wkq_run(struct au_wkinfo *wkinfo, unsigned int flags)
 		schedule_work(&wkinfo->wk);
 }
 
+/*
+ * Be careful. It is easy to make deadlock happen.
+ * processA: lock, wkq and wait
+ * processB: wkq and wait, lock in wkq
+ * --> deadlock
+ */
 int au_wkq_do_wait(unsigned int flags, au_wkq_func_t func, void *args)
 {
 	int err;
