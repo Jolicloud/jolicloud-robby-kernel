@@ -346,7 +346,7 @@ int aufs_unlink(struct inode *dir, struct dentry *dentry)
 	}
 
 	if (!err) {
-		drop_nlink(inode);
+		vfsub_drop_nlink(inode);
 		epilog(dir, dentry, bindex);
 
 		/* update target timestamps */
