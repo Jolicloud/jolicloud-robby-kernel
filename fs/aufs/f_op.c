@@ -44,8 +44,12 @@ int au_do_open_nondir(struct file *file, int flags)
 	memset(&finfo->fi_htop, 0, sizeof(finfo->fi_htop));
 	finfo->fi_hvmop = NULL;
 	bindex = au_dbstart(dentry);
-	/* O_TRUNC is processed already */
-	BUG_ON(au_test_ro(dentry->d_sb, bindex, dentry->d_inode)
+	/*
+	 * O_TRUNC is processed already.
+	 * But it is legal the target file has its size, since someone else may
+	 * give it while we are opening.
+	 */
+	BUG_ON(0 && au_test_ro(dentry->d_sb, bindex, dentry->d_inode)
 	       && (flags & O_TRUNC));
 
 	h_file = au_h_open(dentry, bindex, flags, file);
