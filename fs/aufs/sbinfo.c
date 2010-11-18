@@ -175,6 +175,7 @@ aufs_bindex_t au_new_br_id(struct super_block *sb)
 	sbinfo = au_sbi(sb);
 	for (i = 0; i <= AUFS_BRANCH_MAX; i++) {
 		br_id = ++sbinfo->si_last_br_id;
+		AuDebugOn(br_id < 0);
 		if (br_id && au_br_index(sb, br_id) < 0)
 			return br_id;
 	}

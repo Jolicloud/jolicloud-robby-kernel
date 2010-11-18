@@ -86,7 +86,10 @@ struct au_sbinfo {
 	unsigned char		au_si_status;
 
 	aufs_bindex_t		si_bend;
-	aufs_bindex_t		si_last_br_id;
+
+	/* dirty trick to keep br_id plus */
+	unsigned int		si_last_br_id :
+				sizeof(aufs_bindex_t) * BITS_PER_BYTE - 1;
 	struct au_branch	**si_branch;
 
 	/* policy to select a writable branch */
