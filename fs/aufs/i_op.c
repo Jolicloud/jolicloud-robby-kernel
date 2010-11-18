@@ -189,8 +189,10 @@ static struct dentry *aufs_lookup(struct inode *dir, struct dentry *dentry,
 		goto out_unlock;
 
 	ret = d_splice_alias(inode, dentry);
-	if (unlikely(IS_ERR(ret) && inode))
+	if (unlikely(IS_ERR(ret) && inode)) {
 		ii_write_unlock(inode);
+		iput(inode);
+	}
 
 out_unlock:
 	di_write_unlock(dentry);
