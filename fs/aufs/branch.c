@@ -966,7 +966,7 @@ out:
 }
 
 int au_br_mod(struct super_block *sb, struct au_opt_mod *mod, int remount,
-	      int *do_update)
+	      int *do_refresh)
 {
 	int err, rerr;
 	aufs_bindex_t bindex;
@@ -1041,10 +1041,11 @@ int au_br_mod(struct super_block *sb, struct au_opt_mod *mod, int remount,
 	}
 
 	if (!err) {
-		*do_update |= need_sigen_inc(br->br_perm, mod->perm);
+		*do_refresh |= need_sigen_inc(br->br_perm, mod->perm);
 		br->br_perm = mod->perm;
 	}
 
 out:
+	AuTraceErr(err);
 	return err;
 }
