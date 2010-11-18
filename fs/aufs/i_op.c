@@ -538,7 +538,7 @@ static int au_pin_and_icpup(struct dentry *dentry, struct iattr *ia,
 
 	h_file = NULL;
 	hi_wh = NULL;
-	if (au_ftest_icpup(a->flags, DID_CPUP) && d_unhashed(dentry)) {
+	if (au_ftest_icpup(a->flags, DID_CPUP) && au_d_removed(dentry)) {
 		hi_wh = au_hi_wh(inode, a->btgt);
 		if (!hi_wh) {
 			err = au_sio_cpup_wh(dentry, a->btgt, sz, /*file*/NULL);
@@ -629,6 +629,7 @@ static int aufs_setattr(struct dentry *dentry, struct iattr *ia)
 	} else {
 		/* fchmod() doesn't pass ia_file */
 		a->udba = au_opt_udba(sb);
+		/* no au_d_removed(), to set UDBA_NONE for root */
 		if (d_unhashed(dentry))
 			a->udba = AuOpt_UDBA_NONE;
 		di_write_lock_child(dentry);
@@ -731,7 +732,7 @@ static int aufs_getattr(struct vfsmount *mnt __maybe_unused,
 	udba_none = !!au_opt_test(mnt_flags, UDBA_NONE);
 
 	/* support fstat(2) */
-	if (!d_unhashed(dentry) && !udba_none) {
+	if (!au_d_removed(dentry) && !udba_none) {
 		unsigned int sigen = au_sigen(sb);
 		if (au_digen(dentry) == sigen && au_iigen(inode) == sigen)
 			di_read_lock_child(dentry, AuLock_IR);
