@@ -612,7 +612,7 @@ ino_t au_xino_new_ino(struct super_block *sb)
 
 out:
 	set_bit(free_bit, p);
-	sbinfo->si_xib_next_bit++;
+	sbinfo->si_xib_next_bit = free_bit + 1;
 	pindex = sbinfo->si_xib_last_pindex;
 	mutex_unlock(&sbinfo->si_xib_mtx);
 	ino = xib_calc_ino(pindex, free_bit);
