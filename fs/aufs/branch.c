@@ -584,15 +584,23 @@ static int test_inode_busy(struct super_block *sb, aufs_bindex_t bindex,
 			   unsigned int sigen, const unsigned int verbose)
 {
 	int err;
-	struct inode *i;
+	unsigned long long max, ull;
+	struct inode *i, **array;
 	aufs_bindex_t bstart, bend;
 
+	array = au_iarray_alloc(sb, &max);
+	err = PTR_ERR(array);
+	if (IS_ERR(array))
+		goto out;
+
 	err = 0;
-	list_for_each_entry(i, &sb->s_inodes, i_sb_list) {
-		AuDebugOn(!atomic_read(&i->i_count));
-		if (!list_empty(&i->i_dentry))
+	AuDbg("b%d\n", bindex);
+	for (ull = 0; !err && ull < max; ull++) {
+		i = array[ull];
+		if (i->i_ino == AUFS_ROOT_INO)
 			continue;
 
+		/* AuDbgInode(i); */
 		if (au_iigen(i) == sigen)
 			ii_read_lock_child(i);
 		else {
@@ -614,12 +622,13 @@ static int test_inode_busy(struct super_block *sb, aufs_bindex_t bindex,
 		    && (!S_ISDIR(i->i_mode) || bstart == bend)) {
 			err = -EBUSY;
 			AuVerbose(verbose, "busy i%lu\n", i->i_ino);
-			ii_read_unlock(i);
-			break;
+			AuDbgInode(i);
 		}
 		ii_read_unlock(i);
 	}
+	au_iarray_free(array, max);
 
+out:
 	return err;
 }
 
