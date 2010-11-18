@@ -281,8 +281,10 @@ static int hn_gen_by_name(struct dentry *dentry, const unsigned int isdir)
 #define AuHnJob_TRYXINO0	(1 << 4)
 #define AuHnJob_MNTPNT		(1 << 5)
 #define au_ftest_hnjob(flags, name)	((flags) & AuHnJob_##name)
-#define au_fset_hnjob(flags, name)	{ (flags) |= AuHnJob_##name; }
-#define au_fclr_hnjob(flags, name)	{ (flags) &= ~AuHnJob_##name; }
+#define au_fset_hnjob(flags, name) \
+	do { (flags) |= AuHnJob_##name; } while (0)
+#define au_fclr_hnjob(flags, name) \
+	do { (flags) &= ~AuHnJob_##name; } while (0)
 
 enum {
 	AuHn_CHILD,

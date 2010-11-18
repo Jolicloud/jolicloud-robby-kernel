@@ -481,8 +481,10 @@ static int au_reval_for_attr(struct dentry *dentry, unsigned int sigen)
 
 #define AuIcpup_DID_CPUP	1
 #define au_ftest_icpup(flags, name)	((flags) & AuIcpup_##name)
-#define au_fset_icpup(flags, name)	{ (flags) |= AuIcpup_##name; }
-#define au_fclr_icpup(flags, name)	{ (flags) &= ~AuIcpup_##name; }
+#define au_fset_icpup(flags, name) \
+	do { (flags) |= AuIcpup_##name; } while (0)
+#define au_fclr_icpup(flags, name) \
+	do { (flags) &= ~AuIcpup_##name; } while (0)
 
 struct au_icpup_args {
 	unsigned char flags;

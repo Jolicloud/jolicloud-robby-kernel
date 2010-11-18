@@ -55,8 +55,10 @@ int au_cpdown_attr(struct path *h_path, struct dentry *h_src)
 #define AuCpdown_MADE_DIR	(1 << 2)
 #define AuCpdown_DIROPQ		(1 << 3)
 #define au_ftest_cpdown(flags, name)	((flags) & AuCpdown_##name)
-#define au_fset_cpdown(flags, name)	{ (flags) |= AuCpdown_##name; }
-#define au_fclr_cpdown(flags, name)	{ (flags) &= ~AuCpdown_##name; }
+#define au_fset_cpdown(flags, name) \
+	do { (flags) |= AuCpdown_##name; } while (0)
+#define au_fclr_cpdown(flags, name) \
+	do { (flags) &= ~AuCpdown_##name; } while (0)
 
 struct au_cpdown_dir_args {
 	struct dentry *parent;

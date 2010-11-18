@@ -213,8 +213,10 @@ static inline unsigned char au_do_ftest_si(struct au_sbinfo *sbi,
 #define AuLock_NOPLM		(1 << 5)	/* return err in plm mode */
 #define AuLock_NOPLMW		(1 << 6)	/* wait for plm mode ends */
 #define au_ftest_lock(flags, name)	((flags) & AuLock_##name)
-#define au_fset_lock(flags, name)	{ (flags) |= AuLock_##name; }
-#define au_fclr_lock(flags, name)	{ (flags) &= ~AuLock_##name; }
+#define au_fset_lock(flags, name) \
+	do { (flags) |= AuLock_##name; } while (0)
+#define au_fclr_lock(flags, name) \
+	do { (flags) &= ~AuLock_##name; } while (0)
 
 /* ---------------------------------------------------------------------- */
 
