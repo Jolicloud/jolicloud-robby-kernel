@@ -367,7 +367,8 @@ static int au_file_refresh_by_inode(struct file *file, int *need_reopen)
 
 	di_read_lock_parent(parent, AuLock_IR);
 	hi_wh = au_hi_wh(inode, bstart);
-	if (au_opt_test(au_mntflags(sb), PLINK)
+	if (!S_ISDIR(inode->i_mode)
+	    && au_opt_test(au_mntflags(sb), PLINK)
 	    && au_plink_test(inode)
 	    && !d_unhashed(dentry)) {
 		err = au_test_and_cpup_dirs(dentry, bstart);

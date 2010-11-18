@@ -158,14 +158,18 @@ static struct dentry *aufs_lookup(struct inode *dir, struct dentry *dentry,
 	IMustLock(dir);
 
 	sb = dir->i_sb;
-	si_read_lock(sb, AuLock_FLUSH);
-	ret = ERR_PTR(-ENAMETOOLONG);
-	if (unlikely(dentry->d_name.len > AUFS_MAX_NAMELEN))
-		goto out;
-	err = au_di_init(dentry);
+	err = si_read_lock(sb, AuLock_FLUSH | AuLock_NOPLM);
 	ret = ERR_PTR(err);
 	if (unlikely(err))
 		goto out;
+
+	ret = ERR_PTR(-ENAMETOOLONG);
+	if (unlikely(dentry->d_name.len > AUFS_MAX_NAMELEN))
+		goto out_si;
+	err = au_di_init(dentry);
+	ret = ERR_PTR(err);
+	if (unlikely(err))
+		goto out_si;
 
 	parent = dentry->d_parent; /* dir inode is locked */
 	di_read_lock_parent(parent, AuLock_IR);
@@ -190,8 +194,9 @@ static struct dentry *aufs_lookup(struct inode *dir, struct dentry *dentry,
 
 out_unlock:
 	di_write_unlock(dentry);
-out:
+out_si:
 	si_read_unlock(sb);
+out:
 	return ret;
 }
 
@@ -724,10 +729,11 @@ static int aufs_getattr(struct vfsmount *mnt __maybe_unused,
 	struct vfsmount *h_mnt;
 	struct dentry *h_dentry;
 
-	err = 0;
 	sb = dentry->d_sb;
 	inode = dentry->d_inode;
-	si_read_lock(sb, AuLock_FLUSH | AuLock_NOPLMW);
+	err = si_read_lock(sb, AuLock_FLUSH | AuLock_NOPLM);
+	if (unlikely(err))
+		goto out;
 	mnt_flags = au_mntflags(sb);
 	udba_none = !!au_opt_test(mnt_flags, UDBA_NONE);
 
@@ -742,7 +748,7 @@ static int aufs_getattr(struct vfsmount *mnt __maybe_unused,
 			err = au_reval_for_attr(dentry, sigen);
 			di_downgrade_lock(dentry, AuLock_IR);
 			if (unlikely(err))
-				goto out;
+				goto out_unlock;
 		}
 	} else
 		di_read_lock_child(dentry, AuLock_IR);
@@ -774,13 +780,16 @@ static int aufs_getattr(struct vfsmount *mnt __maybe_unused,
 			au_refresh_iattr(inode, st, h_dentry->d_inode->i_nlink);
 		goto out_fill; /* success */
 	}
-	goto out;
+	AuTraceErr(err);
+	goto out_unlock;
 
 out_fill:
 	generic_fillattr(inode, st);
-out:
+out_unlock:
 	di_read_unlock(dentry, AuLock_IR);
 	si_read_unlock(sb);
+out:
+	AuTraceErr(err);
 	return err;
 }
 
