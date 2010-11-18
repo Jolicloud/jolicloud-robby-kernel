@@ -88,6 +88,8 @@ int au_si_alloc(struct super_block *sb)
 
 	atomic_long_set(&sbinfo->si_ninodes, 0);
 
+	atomic_long_set(&sbinfo->si_nfiles, 0);
+
 	sbinfo->si_bend = -1;
 
 	sbinfo->si_wbr_copyup = AuWbrCopyup_Def;
