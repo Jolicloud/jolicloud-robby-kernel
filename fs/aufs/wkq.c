@@ -44,7 +44,7 @@ static struct {
 
 struct au_wkinfo {
 	struct work_struct wk;
-	struct super_block *sb;
+	struct kobject *kobj;
 
 	unsigned int flags; /* see wkq.h */
 
@@ -64,7 +64,7 @@ static void wkq_func(struct work_struct *wk)
 	if (au_ftest_wkq(wkinfo->flags, WAIT))
 		complete(wkinfo->comp);
 	else {
-		kobject_put(&au_sbi(wkinfo->sb)->si_kobj);
+		kobject_put(wkinfo->kobj);
 		module_put(THIS_MODULE);
 		kfree(wkinfo);
 	}
@@ -128,6 +128,12 @@ static void au_wkq_run(struct au_wkinfo *wkinfo, unsigned int flags)
 	}
 }
 
+/*
+ * Be careful. It is easy to make deadlock happen.
+ * processA: lock, wkq and wait
+ * processB: wkq and wait, lock in wkq
+ * --> deadlock
+ */
 int au_wkq_do_wait(unsigned int flags, au_wkq_func_t func, void *args)
 {
 	int err;
@@ -165,12 +171,12 @@ int au_wkq_nowait(au_wkq_func_t func, void *args, struct super_block *sb)
 	err = 0;
 	wkinfo = kmalloc(sizeof(*wkinfo), GFP_NOFS);
 	if (wkinfo) {
-		wkinfo->sb = sb;
+		wkinfo->kobj = &au_sbi(sb)->si_kobj;
 		wkinfo->flags = !AuWkq_WAIT;
 		wkinfo->func = func;
 		wkinfo->args = args;
 		wkinfo->comp = NULL;
-		kobject_get(&au_sbi(sb)->si_kobj);
+		kobject_get(wkinfo->kobj);
 		__module_get(THIS_MODULE);
 
 		au_wkq_run(wkinfo, !AuWkq_WAIT);
