@@ -27,6 +27,7 @@
 
 #include <linux/fs.h>
 #include <linux/fs_stack.h>
+#include "debug.h"
 
 /* ---------------------------------------------------------------------- */
 
@@ -55,6 +56,12 @@ static inline void vfsub_copy_inode_size(struct inode *inode,
 	spin_lock(&inode->i_lock);
 	fsstack_copy_inode_size(inode, h_inode);
 	spin_unlock(&inode->i_lock);
+}
+
+static inline void vfsub_drop_nlink(struct inode *inode)
+{
+	AuDebugOn(!inode->i_nlink);
+	drop_nlink(inode);
 }
 
 int vfsub_update_h_iattr(struct path *h_path, int *did);
