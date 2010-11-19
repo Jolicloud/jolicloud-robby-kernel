@@ -4,8 +4,8 @@ include ${srctree}/${src}/magic.mk
 # cf. include/linux/kernel.h
 # enable pr_debug
 ccflags-y += -DDEBUG
-ccflags-y += -D'pr_fmt(fmt)="aufs %s:%d:%s[%d]: " fmt, \
-	__func__, __LINE__, current->comm, current->pid'
+# sparse doesn't allow spaces
+ccflags-y += -D'pr_fmt(fmt)=AUFS_NAME"\040%s:%d:%s[%d]:\040"fmt,__func__,__LINE__,current->comm,current->pid'
 
 obj-$(CONFIG_AUFS_FS) += aufs.o
 aufs-y := module.o sbinfo.o super.o branch.o xino.o sysaufs.o opts.o \

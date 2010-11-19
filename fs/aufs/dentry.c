@@ -82,8 +82,10 @@ static void au_call_lkup_one(void *args)
 
 #define AuLkup_ALLOW_NEG	1
 #define au_ftest_lkup(flags, name)	((flags) & AuLkup_##name)
-#define au_fset_lkup(flags, name)	{ (flags) |= AuLkup_##name; }
-#define au_fclr_lkup(flags, name)	{ (flags) &= ~AuLkup_##name; }
+#define au_fset_lkup(flags, name) \
+	do { (flags) |= AuLkup_##name; } while (0)
+#define au_fclr_lkup(flags, name) \
+	do { (flags) &= ~AuLkup_##name; } while (0)
 
 struct au_do_lookup_args {
 	unsigned int		flags;

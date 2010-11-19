@@ -75,8 +75,10 @@ struct au_icntnr {
 #define AuPin_DI_LOCKED		1
 #define AuPin_MNT_WRITE		(1 << 1)
 #define au_ftest_pin(flags, name)	((flags) & AuPin_##name)
-#define au_fset_pin(flags, name)	{ (flags) |= AuPin_##name; }
-#define au_fclr_pin(flags, name)	{ (flags) &= ~AuPin_##name; }
+#define au_fset_pin(flags, name) \
+	do { (flags) |= AuPin_##name; } while (0)
+#define au_fclr_pin(flags, name) \
+	do { (flags) &= ~AuPin_##name; } while (0)
 
 struct au_pin {
 	/* input */
@@ -134,8 +136,10 @@ extern struct inode_operations aufs_iop, aufs_symlink_iop, aufs_dir_iop;
 #define AuWrDir_ADD_ENTRY	1
 #define AuWrDir_ISDIR		(1 << 1)
 #define au_ftest_wrdir(flags, name)	((flags) & AuWrDir_##name)
-#define au_fset_wrdir(flags, name)	{ (flags) |= AuWrDir_##name; }
-#define au_fclr_wrdir(flags, name)	{ (flags) &= ~AuWrDir_##name; }
+#define au_fset_wrdir(flags, name) \
+	do { (flags) |= AuWrDir_##name; } while (0)
+#define au_fclr_wrdir(flags, name) \
+	do { (flags) &= ~AuWrDir_##name; } while (0)
 
 struct au_wr_dir_args {
 	aufs_bindex_t force_btgt;
@@ -187,8 +191,10 @@ unsigned int au_hi_flags(struct inode *inode, int isdir);
 #define AuHi_XINO	1
 #define AuHi_HNOTIFY	(1 << 1)
 #define au_ftest_hi(flags, name)	((flags) & AuHi_##name)
-#define au_fset_hi(flags, name)		{ (flags) |= AuHi_##name; }
-#define au_fclr_hi(flags, name)		{ (flags) &= ~AuHi_##name; }
+#define au_fset_hi(flags, name) \
+	do { (flags) |= AuHi_##name; } while (0)
+#define au_fclr_hi(flags, name) \
+	do { (flags) &= ~AuHi_##name; } while (0)
 
 #ifndef CONFIG_AUFS_HNOTIFY
 #undef AuHi_HNOTIFY
@@ -413,12 +419,10 @@ static inline void au_pin_set_parent_lflag(struct au_pin *pin,
 					   unsigned char lflag)
 {
 	if (pin) {
-		/* dirty macros require brackets */
-		if (lflag) {
+		if (lflag)
 			au_fset_pin(pin->flags, DI_LOCKED);
-		} else {
+		else
 			au_fclr_pin(pin->flags, DI_LOCKED);
-		}
 	}
 }
 
