@@ -29,10 +29,8 @@
 #include <linux/lglock.h>
 #include "debug.h"
 
-/* fs/internal.h */
-extern spinlock_t vfsmount_lock;
-
 /* copied from linux/fs/internal.h */
+DECLARE_BRLOCK(vfsmount_lock);
 extern void file_sb_list_del(struct file *f);
 
 /* copied from linux/fs/file_table.c */
