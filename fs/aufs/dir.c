@@ -428,8 +428,10 @@ out:
 #define AuTestEmpty_CALLED	(1 << 1)
 #define AuTestEmpty_SHWH	(1 << 2)
 #define au_ftest_testempty(flags, name)	((flags) & AuTestEmpty_##name)
-#define au_fset_testempty(flags, name)	{ (flags) |= AuTestEmpty_##name; }
-#define au_fclr_testempty(flags, name)	{ (flags) &= ~AuTestEmpty_##name; }
+#define au_fset_testempty(flags, name) \
+	do { (flags) |= AuTestEmpty_##name; } while (0)
+#define au_fclr_testempty(flags, name) \
+	do { (flags) &= ~AuTestEmpty_##name; } while (0)
 
 #ifndef CONFIG_AUFS_SHWH
 #undef AuTestEmpty_SHWH

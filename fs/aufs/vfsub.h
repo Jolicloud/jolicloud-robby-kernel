@@ -26,6 +26,7 @@
 #ifdef __KERNEL__
 
 #include <linux/fs.h>
+#include "debug.h"
 
 /* fs/internal.h */
 extern spinlock_t vfsmount_lock;
@@ -50,6 +51,13 @@ enum {
 #define IMustLock(i)		MtxMustLock(&(i)->i_mutex)
 
 /* ---------------------------------------------------------------------- */
+
+
+static inline void vfsub_drop_nlink(struct inode *inode)
+{
+	AuDebugOn(!inode->i_nlink);
+	drop_nlink(inode);
+}
 
 int vfsub_update_h_iattr(struct path *h_path, int *did);
 struct file *vfsub_dentry_open(struct path *path, int flags);
