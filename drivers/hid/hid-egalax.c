@@ -245,7 +245,7 @@ static void egalax_remove(struct hid_device *hdev)
 
 static const struct hid_device_id egalax_devices[] = {
 	{ HID_USB_DEVICE(USB_VENDOR_ID_DWAV,
-			USB_DEVICE_ID_DWAV_EGALAX_MULTITOUCH) },
+			USB_DEVICE_ID_DWAV_EGALAX_480D) },
 	{ }
 };
 MODULE_DEVICE_TABLE(hid, egalax_devices);
