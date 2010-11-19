@@ -34,7 +34,6 @@
 /* #include <linux/kernel.h> */
 #include <linux/delay.h>
 /* #include <linux/kd.h> */
-#include <linux/vt_kern.h>
 #include <linux/sysrq.h>
 #include <linux/aufs_type.h>
 
@@ -225,7 +224,7 @@ void au_sysrq_fin(void);
 #ifdef CONFIG_HW_CONSOLE
 #define au_dbg_blocked() do { \
 	WARN_ON(1); \
-	handle_sysrq('w', vc_cons[fg_console].d->port.tty); \
+	handle_sysrq('w'); \
 } while (0)
 #else
 AuStubVoid(au_dbg_blocked, void)
