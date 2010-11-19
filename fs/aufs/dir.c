@@ -213,7 +213,7 @@ static int aufs_release_dir(struct inode *inode __maybe_unused,
 	fidir = finfo->fi_hdir;
 	if (fidir) {
 		/* remove me from sb->s_files */
-		file_kill(file);
+		file_sb_list_del(file);
 
 		vdir_cache = fidir->fd_vdir_cache; /* lock-free */
 		if (vdir_cache)

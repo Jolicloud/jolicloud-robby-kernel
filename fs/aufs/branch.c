@@ -851,13 +851,12 @@ static unsigned long long au_farray_cb(void *a,
 {
 	unsigned long long n;
 	struct file **p, *f;
-	struct list_head *head;
+	struct super_block *sb = arg;
 
 	n = 0;
 	p = a;
-	head = arg;
-	file_list_lock();
-	list_for_each_entry(f, head, f_u.fu_list)
+	lg_global_lock(files_lglock);
+	do_file_list_for_each_entry(sb, f) {
 		if (au_fi(f)
 		    && !special_file(f->f_dentry->d_inode->i_mode)) {
 			get_file(f);
@@ -865,7 +864,8 @@ static unsigned long long au_farray_cb(void *a,
 			n++;
 			AuDebugOn(n > max);
 		}
-	file_list_unlock();
+	} while_file_list_for_each_entry;
+	lg_global_unlock(files_lglock);
 
 	return n;
 }
@@ -874,7 +874,7 @@ static struct file **au_farray_alloc(struct super_block *sb,
 				     unsigned long long *max)
 {
 	*max = atomic_long_read(&au_sbi(sb)->si_nfiles);
-	return au_array_alloc(max, au_farray_cb, &sb->s_files);
+	return au_array_alloc(max, au_farray_cb, sb);
 }
 
 static void au_farray_free(struct file **a, unsigned long long max)
