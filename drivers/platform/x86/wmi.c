@@ -68,6 +68,7 @@ struct wmi_block {
 	wmi_notify_handler handler;
 	void *handler_data;
 	struct device *dev;
+	bool first_instance;
 };
 
 static struct wmi_block wmi_blocks;
@@ -241,13 +242,16 @@ static bool find_guid(const char *guid_string, struct wmi_block **out)
 	char tmp[16], guid_input[16];
 	struct wmi_block *wblock;
 	struct guid_block *block;
-	struct list_head *p;
 
 	wmi_parse_guid(guid_string, tmp);
 	wmi_swap_bytes(tmp, guid_input);
 
-	list_for_each(p, &wmi_blocks.list) {
-		wblock = list_entry(p, struct wmi_block, list);
+	if ((out == NULL) || (*out == NULL))
+		wblock = list_entry(&wmi_blocks.list, struct wmi_block, list);
+	else
+		wblock = *out;
+
+	list_for_each_entry_continue(wblock, &wmi_blocks.list, list) {
 		block = &wblock->gblock;
 
 		if (memcmp(block->guid, guid_input, 16) == 0) {
@@ -555,22 +559,26 @@ static void wmi_notify_debug(u32 value, void *context)
 acpi_status wmi_install_notify_handler(const char *guid,
 wmi_notify_handler handler, void *data)
 {
-	struct wmi_block *block;
-	acpi_status status;
+	struct wmi_block *block = NULL;
+	acpi_status status = AE_NOT_EXIST;
 
 	if (!guid || !handler)
 		return AE_BAD_PARAMETER;
 
-	if (!find_guid(guid, &block))
-		return AE_NOT_EXIST;
+	while (find_guid(guid, &block)) {
+		acpi_status wmi_status;
 
-	if (block->handler && block->handler != wmi_notify_debug)
-		return AE_ALREADY_ACQUIRED;
+		if (block->handler && block->handler != wmi_notify_debug)
+			return AE_ALREADY_ACQUIRED;
 
-	block->handler = handler;
-	block->handler_data = data;
+		block->handler = handler;
+		block->handler_data = data;
 
-	status = wmi_method_enable(block, 1);
+		wmi_status = wmi_method_enable(block, 1);
+		if ((wmi_status != AE_OK) ||
+		    ((wmi_status == AE_OK) && (status == AE_NOT_EXIST)))
+			status = wmi_status;
+	}
 
 	return status;
 }
@@ -583,24 +591,29 @@ EXPORT_SYMBOL_GPL(wmi_install_notify_handler);
  */
 acpi_status wmi_remove_notify_handler(const char *guid)
 {
-	struct wmi_block *block;
-	acpi_status status = AE_OK;
+	struct wmi_block *block = NULL;
+	acpi_status status = AE_NOT_EXIST;
 
 	if (!guid)
 		return AE_BAD_PARAMETER;
 
-	if (!find_guid(guid, &block))
-		return AE_NOT_EXIST;
+	while (find_guid(guid, &block)) {
+		acpi_status wmi_status;
 
-	if (!block->handler || block->handler == wmi_notify_debug)
-		return AE_NULL_ENTRY;
+		if (!block->handler || block->handler == wmi_notify_debug)
+			return AE_NULL_ENTRY;
 
-	if (debug_event) {
-		block->handler = wmi_notify_debug;
-	} else {
-		status = wmi_method_enable(block, 0);
-		block->handler = NULL;
-		block->handler_data = NULL;
+		if (debug_event) {
+			block->handler = wmi_notify_debug;
+			status = AE_OK;
+		} else {
+			wmi_status = wmi_method_enable(block, 0);
+			block->handler = NULL;
+			block->handler_data = NULL;
+			if ((wmi_status != AE_OK) ||
+			    ((wmi_status == AE_OK) && (status == AE_NOT_EXIST)))
+				status = wmi_status;
+		}
 	}
 	return status;
 }
@@ -717,28 +730,35 @@ static int wmi_create_devs(void)
 	/* Create devices for all the GUIDs */
 	list_for_each(p, &wmi_blocks.list) {
 		wblock = list_entry(p, struct wmi_block, list);
+		/*
+		 * Only create device on first instance, as subsequent
+		 * instances share the same GUID and we need to avoid
+		 * creating multiple devices with the same GUID
+		 */
+		if (wblock->first_instance) {
+			guid_dev = kzalloc(sizeof(struct device), GFP_KERNEL);
+			if (!guid_dev)
+				return -ENOMEM;
 
-		guid_dev = kzalloc(sizeof(struct device), GFP_KERNEL);
-		if (!guid_dev)
-			return -ENOMEM;
+			wblock->dev = guid_dev;
 
-		wblock->dev = guid_dev;
+			guid_dev->class = &wmi_class;
+			dev_set_drvdata(guid_dev, wblock);
 
-		guid_dev->class = &wmi_class;
-		dev_set_drvdata(guid_dev, wblock);
+			gblock = &wblock->gblock;
 
-		gblock = &wblock->gblock;
+			wmi_gtoa(gblock->guid, guid_string);
+			dev_set_name(guid_dev, guid_string);
 
-		wmi_gtoa(gblock->guid, guid_string);
-		dev_set_name(guid_dev, guid_string);
+			result = device_register(guid_dev);
+			if (result)
+				return result;
 
-		result = device_register(guid_dev);
-		if (result)
-			return result;
-
-		result = device_create_file(guid_dev, &dev_attr_modalias);
-		if (result)
-			return result;
+			result = device_create_file(guid_dev,
+						    &dev_attr_modalias);
+			if (result)
+				return result;
+		}
 	}
 
 	return 0;
@@ -755,12 +775,14 @@ static void wmi_remove_devs(void)
 	list_for_each(p, &wmi_blocks.list) {
 		wblock = list_entry(p, struct wmi_block, list);
 
-		guid_dev = wblock->dev;
-		gblock = &wblock->gblock;
+		if (wblock->first_instance) {
+			guid_dev = wblock->dev;
+			gblock = &wblock->gblock;
 
-		device_remove_file(guid_dev, &dev_attr_modalias);
+			device_remove_file(guid_dev, &dev_attr_modalias);
 
-		device_unregister(guid_dev);
+			device_unregister(guid_dev);
+		}
 	}
 }
 
@@ -810,7 +832,6 @@ static __init acpi_status parse_wdg(acpi_handle handle)
 	union acpi_object *obj;
 	struct guid_block *gblock;
 	struct wmi_block *wblock;
-	char guid_string[37];
 	acpi_status status;
 	u32 i, total;
 
@@ -831,19 +852,6 @@ static __init acpi_status parse_wdg(acpi_handle handle)
 		return AE_NO_MEMORY;
 
 	for (i = 0; i < total; i++) {
-		/*
-		  Some WMI devices, like those for nVidia hooks, have a
-		  duplicate GUID. It's not clear what we should do in this
-		  case yet, so for now, we'll just ignore the duplicate.
-		  Anyone who wants to add support for that device can come
-		  up with a better workaround for the mess then.
-		*/
-		if (guid_already_parsed(gblock[i].guid) == true) {
-			wmi_gtoa(gblock[i].guid, guid_string);
-			printk(KERN_INFO PREFIX "Skipping duplicate GUID %s\n",
-				guid_string);
-			continue;
-		}
 		if (debug_dump_wdg)
 			wmi_dump_wdg(&gblock[i]);
 
@@ -851,6 +859,7 @@ static __init acpi_status parse_wdg(acpi_handle handle)
 		if (!wblock)
 			return AE_NO_MEMORY;
 
+		wblock->first_instance = !guid_already_parsed(gblock[i].guid);
 		wblock->gblock = gblock[i];
 		wblock->handle = handle;
 		if (debug_event) {
