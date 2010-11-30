@@ -1,0 +1,16 @@
+INTEL_IPS DRIVER
+L:	kernel-team@lists.ubuntu.com
+T:	git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-2.6.36.y.git
+F:	drivers/platform/x86/intel_ips.c
+
+	Support some power management feature present in latest Intel hardware.
+	Risk was low due to it being an independent driver.
+
+HID INPUT DRIVERS
+L:	kernel-team@lists.ubuntu.com
+T:	git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-2.6.36.y.git
+F:	drivers/hid/*
+
+	Ongoing effort to be bleeding edge of multi-touch. Only exception is
+	"UBUNTU: SAUCE: hid: 3m: Simplify touchsreen emulation logic"
+	which is not a long term solution nor appropriate for upstream.
