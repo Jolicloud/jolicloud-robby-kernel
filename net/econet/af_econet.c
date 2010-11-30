@@ -42,7 +42,6 @@
 #include <linux/rcupdate.h>
 #include <linux/bitops.h>
 #include <linux/mutex.h>
-#include <linux/vmalloc.h>
 
 #include <asm/uaccess.h>
 #include <asm/system.h>
@@ -277,14 +276,12 @@ static int econet_sendmsg(struct kiocb *iocb, struct socket *sock,
 #endif
 #ifdef CONFIG_ECONET_AUNUDP
 	struct msghdr udpmsg;
-	struct iovec iov[2];
+	struct iovec iov[msg->msg_iovlen+1];
 	struct aunhdr ah;
 	struct sockaddr_in udpdest;
 	__kernel_size_t size;
 	int i;
 	mm_segment_t oldfs;
-	size_t userlen = 0;
-	char *userbuf, *userptr;
 #endif
 
 	/*
@@ -449,43 +446,27 @@ static int econet_sendmsg(struct kiocb *iocb, struct socket *sock,
 
 	/* tack our header on the front of the iovec */
 	size = sizeof(struct aunhdr);
+	/*
+	 * XXX: that is b0rken.  We can't mix userland and kernel pointers
+	 * in iovec, since on a lot of platforms copy_from_user() will
+	 * *not* work with the kernel and userland ones at the same time,
+	 * regardless of what we do with set_fs().  And we are talking about
+	 * econet-over-ethernet here, so "it's only ARM anyway" doesn't
+	 * apply.  Any suggestions on fixing that code?		-- AV
+	 */
 	iov[0].iov_base = (void *)&ah;
 	iov[0].iov_len = size;
 	for (i = 0; i < msg->msg_iovlen; i++) {
 		void __user *base = msg->msg_iov[i].iov_base;
-		size_t len = msg->msg_iov[i].iov_len;
-
-		if (!access_ok(VERIFY_READ, base, len)) {
-			err = -EFAULT;
-			goto error;
-		}
-
-		userlen += len;
-	}
-
-	if (userlen > 32768) {
-		err = -E2BIG;
-		goto error;
-	}
-
-	userbuf = vmalloc(userlen);
-	if (userbuf == NULL) {
-		err = -ENOMEM;
-		goto error;
-	}
-
-	iov[1].iov_base = userbuf;
-	iov[1].iov_len = userlen;
-	userptr = userbuf;
-
-	for (i = 0; i < msg->msg_iovlen; i++) {
-		void __user *base = msg->msg_iov[i].iov_base;
-		size_t len = msg->msg_iov[i].iov_len;
-
-		if (copy_from_user(userptr, base, len))
+		size_t iov_len = msg->msg_iov[i].iov_len;
+		/* Check it now since we switch to KERNEL_DS later. */
+		if (!access_ok(VERIFY_READ, base, iov_len)) {
+			mutex_unlock(&econet_mutex);
 			return -EFAULT;
-
-		userptr += len;
+		}
+		iov[i+1].iov_base = base;
+		iov[i+1].iov_len = iov_len;
+		size += iov_len;
 	}
 
 	/* Get a skbuff (no data, just holds our cb information) */
@@ -493,7 +474,6 @@ static int econet_sendmsg(struct kiocb *iocb, struct socket *sock,
 				       msg->msg_flags & MSG_DONTWAIT,
 				       &err)) == NULL) {
 		mutex_unlock(&econet_mutex);
-		vfree(userbuf);
 		return err;
 	}
 
@@ -519,12 +499,9 @@ static int econet_sendmsg(struct kiocb *iocb, struct socket *sock,
 	oldfs = get_fs(); set_fs(KERNEL_DS);	/* More privs :-) */
 	err = sock_sendmsg(udpsock, &udpmsg, size);
 	set_fs(oldfs);
-
-	vfree(userbuf);
 #else
 	err = -EPROTOTYPE;
 #endif
-	error:
 	mutex_unlock(&econet_mutex);
 
 	return err;
