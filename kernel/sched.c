@@ -3349,9 +3349,9 @@ void task_times(struct task_struct *p, cputime_t *ut, cputime_t *st)
 	rtime = nsecs_to_cputime(p->se.sum_exec_runtime);
 
 	if (total) {
-		u64 temp = rtime;
+		u64 temp;
 
-		temp *= utime;
+		temp = (u64)(rtime * utime);
 		do_div(temp, total);
 		utime = (cputime_t)temp;
 	} else
@@ -3382,9 +3382,9 @@ void thread_group_times(struct task_struct *p, cputime_t *ut, cputime_t *st)
 	rtime = nsecs_to_cputime(cputime.sum_exec_runtime);
 
 	if (total) {
-		u64 temp = rtime;
+		u64 temp;
 
-		temp *= cputime.utime;
+		temp = (u64)(rtime * cputime.utime);
 		do_div(temp, total);
 		utime = (cputime_t)temp;
 	} else

@@ -1927,11 +1927,6 @@ xfs_iunlink_remove(
 	return 0;
 }
 
-/*
- * A big issue when freeing the inode cluster is is that we _cannot_ skip any
- * inodes that are in memory - they all must be marked stale and attached to
- * the cluster buffer.
- */
 STATIC void
 xfs_ifree_cluster(
 	xfs_inode_t	*free_ip,
@@ -1963,6 +1958,8 @@ xfs_ifree_cluster(
 	}
 
 	for (j = 0; j < nbufs; j++, inum += ninodes) {
+		int	found = 0;
+
 		blkno = XFS_AGB_TO_DADDR(mp, XFS_INO_TO_AGNO(mp, inum),
 					 XFS_INO_TO_AGBNO(mp, inum));
 
@@ -1981,9 +1978,7 @@ xfs_ifree_cluster(
 		/*
 		 * Walk the inodes already attached to the buffer and mark them
 		 * stale. These will all have the flush locks held, so an
-		 * in-memory inode walk can't lock them. By marking them all
-		 * stale first, we will not attempt to lock them in the loop
-		 * below as the XFS_ISTALE flag will be set.
+		 * in-memory inode walk can't lock them.
 		 */
 		lip = XFS_BUF_FSPRIVATE(bp, xfs_log_item_t *);
 		while (lip) {
@@ -1995,10 +1990,10 @@ xfs_ifree_cluster(
 							&iip->ili_flush_lsn,
 							&iip->ili_item.li_lsn);
 				xfs_iflags_set(iip->ili_inode, XFS_ISTALE);
+				found++;
 			}
 			lip = lip->li_bio_list;
 		}
-
 
 		/*
 		 * For each inode in memory attempt to add it to the inode
@@ -2011,7 +2006,6 @@ xfs_ifree_cluster(
 		 * even trying to lock them.
 		 */
 		for (i = 0; i < ninodes; i++) {
-retry:
 			read_lock(&pag->pag_ici_lock);
 			ip = radix_tree_lookup(&pag->pag_ici_root,
 					XFS_INO_TO_AGINO(mp, (inum + i)));
@@ -2022,36 +2016,38 @@ retry:
 				continue;
 			}
 
-			/*
-			 * Don't try to lock/unlock the current inode, but we
-			 * _cannot_ skip the other inodes that we did not find
-			 * in the list attached to the buffer and are not
-			 * already marked stale. If we can't lock it, back off
-			 * and retry.
-			 */
+			/* don't try to lock/unlock the current inode */
 			if (ip != free_ip &&
 			    !xfs_ilock_nowait(ip, XFS_ILOCK_EXCL)) {
 				read_unlock(&pag->pag_ici_lock);
-				delay(1);
-				goto retry;
+				continue;
 			}
 			read_unlock(&pag->pag_ici_lock);
 
-			xfs_iflock(ip);
-			xfs_iflags_set(ip, XFS_ISTALE);
+			if (!xfs_iflock_nowait(ip)) {
+				if (ip != free_ip)
+					xfs_iunlock(ip, XFS_ILOCK_EXCL);
+				continue;
+			}
 
-			/*
-			 * we don't need to attach clean inodes or those only
-			 * with unlogged changes (which we throw away, anyway).
-			 */
+			xfs_iflags_set(ip, XFS_ISTALE);
+			if (xfs_inode_clean(ip)) {
+				ASSERT(ip != free_ip);
+				xfs_ifunlock(ip);
+				xfs_iunlock(ip, XFS_ILOCK_EXCL);
+				continue;
+			}
+
 			iip = ip->i_itemp;
-			if (!iip || xfs_inode_clean(ip)) {
+			if (!iip) {
+				/* inode with unlogged changes only */
 				ASSERT(ip != free_ip);
 				ip->i_update_core = 0;
 				xfs_ifunlock(ip);
 				xfs_iunlock(ip, XFS_ILOCK_EXCL);
 				continue;
 			}
+			found++;
 
 			iip->ili_last_fields = iip->ili_format.ilf_fields;
 			iip->ili_format.ilf_fields = 0;
@@ -2067,7 +2063,8 @@ retry:
 				xfs_iunlock(ip, XFS_ILOCK_EXCL);
 		}
 
-		xfs_trans_stale_inode_buf(tp, bp);
+		if (found)
+			xfs_trans_stale_inode_buf(tp, bp);
 		xfs_trans_binval(tp, bp);
 	}
 

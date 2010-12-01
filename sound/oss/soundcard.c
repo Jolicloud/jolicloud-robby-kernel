@@ -389,11 +389,11 @@ static long sound_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case SND_DEV_DSP:
 	case SND_DEV_DSP16:
 	case SND_DEV_AUDIO:
-		ret = audio_ioctl(dev, file, cmd, p);
+		return audio_ioctl(dev, file, cmd, p);
 		break;
 
 	case SND_DEV_MIDIN:
-		ret = MIDIbuf_ioctl(dev, file, cmd, p);
+		return MIDIbuf_ioctl(dev, file, cmd, p);
 		break;
 
 	}

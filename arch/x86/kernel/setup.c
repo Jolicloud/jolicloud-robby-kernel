@@ -1008,8 +1008,6 @@ void __init setup_arch(char **cmdline_p)
 	paging_init();
 	x86_init.paging.pagetable_setup_done(swapper_pg_dir);
 
-	setup_trampoline_page_table();
-
 	tboot_probe();
 
 #ifdef CONFIG_X86_64

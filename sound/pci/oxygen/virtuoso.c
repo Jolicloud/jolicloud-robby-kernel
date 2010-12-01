@@ -95,7 +95,6 @@ static struct pci_driver xonar_driver = {
 	.suspend = oxygen_pci_suspend,
 	.resume = oxygen_pci_resume,
 #endif
-	.shutdown = oxygen_pci_shutdown,
 };
 
 static int __init alsa_card_xonar_init(void)

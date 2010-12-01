@@ -80,15 +80,23 @@ static int set_copy_dsdt(const struct dmi_system_id *id)
 
 static struct dmi_system_id dsdt_dmi_table[] __initdata = {
 	/*
-	 * Invoke DSDT corruption work-around on all Toshiba Satellite.
+	 * Insyde BIOS on some TOSHIBA machines corrupt the DSDT.
 	 * https://bugzilla.kernel.org/show_bug.cgi?id=14679
 	 */
 	{
 	 .callback = set_copy_dsdt,
-	 .ident = "TOSHIBA Satellite",
+	 .ident = "TOSHIBA Satellite A505",
 	 .matches = {
 		DMI_MATCH(DMI_SYS_VENDOR, "TOSHIBA"),
-		DMI_MATCH(DMI_PRODUCT_NAME, "Satellite"),
+		DMI_MATCH(DMI_PRODUCT_NAME, "Satellite A505"),
+		},
+	},
+	{
+	 .callback = set_copy_dsdt,
+	 .ident = "TOSHIBA Satellite L505D",
+	 .matches = {
+		DMI_MATCH(DMI_SYS_VENDOR, "TOSHIBA"),
+		DMI_MATCH(DMI_PRODUCT_NAME, "Satellite L505D"),
 		},
 	},
 	{}
