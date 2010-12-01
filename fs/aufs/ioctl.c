@@ -82,11 +82,6 @@ long aufs_ioctl_dir(struct file *file, unsigned int cmd, unsigned long arg)
 	long err;
 
 	switch (cmd) {
-	case AUFS_CTL_PLINK_MAINT:
-	case AUFS_CTL_PLINK_CLEAN:
-		err = au_plink_ioctl(file, cmd);
-		break;
-
 	case AUFS_CTL_RDU:
 	case AUFS_CTL_RDU_INO:
 		err = au_rdu_ioctl(file, cmd, arg);

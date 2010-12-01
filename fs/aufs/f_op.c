@@ -80,8 +80,11 @@ int aufs_release_nondir(struct inode *inode __maybe_unused, struct file *file)
 
 	finfo = au_fi(file);
 	bindex = finfo->fi_btop;
-	if (bindex >= 0)
+	if (bindex >= 0) {
+		/* remove me from sb->s_files */
+		file_sb_list_del(file);
 		au_set_h_fptr(file, bindex, NULL);
+	}
 
 	au_finfo_fin(file);
 	return 0;
@@ -118,7 +121,7 @@ static ssize_t aufs_read(struct file *file, char __user *buf, size_t count,
 
 	dentry = file->f_dentry;
 	sb = dentry->d_sb;
-	si_read_lock(sb, AuLock_FLUSH);
+	si_read_lock(sb, AuLock_FLUSH | AuLock_NOPLMW);
 	err = au_reval_and_lock_fdi(file, au_reopen_nondir, /*wlock*/0);
 	if (unlikely(err))
 		goto out;
@@ -136,6 +139,28 @@ out:
 	return err;
 }
 
+/*
+ * todo: very ugly
+ * it locks both of i_mutex and si_rwsem for read in safe.
+ * if the plink maintenance mode continues forever (that is the problem),
+ * may loop forever.
+ */
+static void au_mtx_and_read_lock(struct inode *inode)
+{
+	int err;
+	struct super_block *sb = inode->i_sb;
+
+	while (1) {
+		mutex_lock(&inode->i_mutex);
+		err = si_read_lock(sb, AuLock_FLUSH | AuLock_NOPLM);
+		if (!err)
+			break;
+		mutex_unlock(&inode->i_mutex);
+		si_read_lock(sb, AuLock_NOPLMW);
+		si_read_unlock(sb);
+	}
+}
+
 static ssize_t aufs_write(struct file *file, const char __user *ubuf,
 			  size_t count, loff_t *ppos)
 {
@@ -143,15 +168,12 @@ static ssize_t aufs_write(struct file *file, const char __user *ubuf,
 	struct au_pin pin;
 	struct dentry *dentry;
 	struct inode *inode;
-	struct super_block *sb;
 	struct file *h_file;
 	char __user *buf = (char __user *)ubuf;
 
 	dentry = file->f_dentry;
-	sb = dentry->d_sb;
 	inode = dentry->d_inode;
-	mutex_lock(&inode->i_mutex);
-	si_read_lock(sb, AuLock_FLUSH);
+	au_mtx_and_read_lock(inode);
 
 	err = au_reval_and_lock_fdi(file, au_reopen_nondir, /*wlock*/1);
 	if (unlikely(err))
@@ -172,7 +194,7 @@ out_unlock:
 	di_read_unlock(dentry, AuLock_IR);
 	fi_write_unlock(file);
 out:
-	si_read_unlock(sb);
+	si_read_unlock(inode->i_sb);
 	mutex_unlock(&inode->i_mutex);
 	return err;
 }
@@ -219,7 +241,7 @@ static ssize_t aufs_aio_read(struct kiocb *kio, const struct iovec *iov,
 	file = kio->ki_filp;
 	dentry = file->f_dentry;
 	sb = dentry->d_sb;
-	si_read_lock(sb, AuLock_FLUSH);
+	si_read_lock(sb, AuLock_FLUSH | AuLock_NOPLMW);
 	err = au_reval_and_lock_fdi(file, au_reopen_nondir, /*wlock*/0);
 	if (unlikely(err))
 		goto out;
@@ -244,15 +266,13 @@ static ssize_t aufs_aio_write(struct kiocb *kio, const struct iovec *iov,
 	struct au_pin pin;
 	struct dentry *dentry;
 	struct inode *inode;
-	struct super_block *sb;
 	struct file *file, *h_file;
 
 	file = kio->ki_filp;
 	dentry = file->f_dentry;
-	sb = dentry->d_sb;
 	inode = dentry->d_inode;
-	mutex_lock(&inode->i_mutex);
-	si_read_lock(sb, AuLock_FLUSH);
+	au_mtx_and_read_lock(inode);
+
 	err = au_reval_and_lock_fdi(file, au_reopen_nondir, /*wlock*/1);
 	if (unlikely(err))
 		goto out;
@@ -272,7 +292,7 @@ out_unlock:
 	di_read_unlock(dentry, AuLock_IR);
 	fi_write_unlock(file);
 out:
-	si_read_unlock(sb);
+	si_read_unlock(inode->i_sb);
 	mutex_unlock(&inode->i_mutex);
 	return err;
 }
@@ -288,7 +308,7 @@ static ssize_t aufs_splice_read(struct file *file, loff_t *ppos,
 
 	dentry = file->f_dentry;
 	sb = dentry->d_sb;
-	si_read_lock(sb, AuLock_FLUSH);
+	si_read_lock(sb, AuLock_FLUSH | AuLock_NOPLMW);
 	err = au_reval_and_lock_fdi(file, au_reopen_nondir, /*wlock*/0);
 	if (unlikely(err))
 		goto out;
@@ -320,15 +340,11 @@ aufs_splice_write(struct pipe_inode_info *pipe, struct file *file, loff_t *ppos,
 	struct au_pin pin;
 	struct dentry *dentry;
 	struct inode *inode;
-	struct super_block *sb;
 	struct file *h_file;
 
 	dentry = file->f_dentry;
 	inode = dentry->d_inode;
-	mutex_lock(&inode->i_mutex);
-	sb = dentry->d_sb;
-	si_read_lock(sb, AuLock_FLUSH);
-
+	au_mtx_and_read_lock(inode);
 	err = au_reval_and_lock_fdi(file, au_reopen_nondir, /*wlock*/1);
 	if (unlikely(err))
 		goto out;
@@ -348,7 +364,7 @@ out_unlock:
 	di_read_unlock(dentry, AuLock_IR);
 	fi_write_unlock(file);
 out:
-	si_read_unlock(sb);
+	si_read_unlock(inode->i_sb);
 	mutex_unlock(&inode->i_mutex);
 	return err;
 }
@@ -576,7 +592,7 @@ static int au_mmap_pre(struct file *file, struct vm_area_struct *vma,
 
 	dentry = file->f_dentry;
 	sb = dentry->d_sb;
-	si_read_lock(sb, !AuLock_FLUSH);
+	si_read_lock(sb, AuLock_NOPLMW);
 	err = au_reval_and_lock_fdi(file, au_reopen_nondir, /*wlock*/1);
 	if (unlikely(err))
 		goto out;
@@ -705,14 +721,16 @@ static int aufs_fsync_nondir(struct file *file, int datasync)
 	IMustLock(inode);
 
 	sb = dentry->d_sb;
-	si_read_lock(sb, AuLock_FLUSH);
+	err = si_read_lock(sb, AuLock_FLUSH | AuLock_NOPLM);
+	if (unlikely(err))
+		goto out;
 
 	err = 0; /* -EBADF; */ /* posix? */
 	if (unlikely(!(file->f_mode & FMODE_WRITE)))
-		goto out;
+		goto out_si;
 	err = au_reval_and_lock_fdi(file, au_reopen_nondir, /*wlock*/1);
 	if (unlikely(err))
-		goto out;
+		goto out_si;
 
 	err = au_ready_to_write(file, -1, &pin);
 	di_downgrade_lock(dentry, AuLock_IR);
@@ -742,8 +760,9 @@ static int aufs_fsync_nondir(struct file *file, int datasync)
 out_unlock:
 	di_read_unlock(dentry, AuLock_IR);
 	fi_write_unlock(file);
-out:
+out_si:
 	si_read_unlock(sb);
+out:
 	if (inode != file->f_mapping->host) {
 		mutex_unlock(&inode->i_mutex);
 		mutex_lock(&file->f_mapping->host->i_mutex);
@@ -760,15 +779,11 @@ static int aufs_aio_fsync_nondir(struct kiocb *kio, int datasync)
 	struct dentry *dentry;
 	struct inode *inode;
 	struct file *file, *h_file;
-	struct super_block *sb;
 
 	file = kio->ki_filp;
 	dentry = file->f_dentry;
 	inode = dentry->d_inode;
-	mutex_lock(&inode->i_mutex);
-
-	sb = dentry->d_sb;
-	si_read_lock(sb, AuLock_FLUSH);
+	au_mtx_and_read_lock(inode);
 
 	err = 0; /* -EBADF; */ /* posix? */
 	if (unlikely(!(file->f_mode & FMODE_WRITE)))
@@ -809,7 +824,7 @@ out_unlock:
 	di_read_unlock(dentry, AuLock_IR);
 	fi_write_unlock(file);
 out:
-	si_read_unlock(sb);
+	si_read_unlock(inode->sb);
 	mutex_unlock(&inode->i_mutex);
 	return err;
 }
@@ -824,7 +839,7 @@ static int aufs_fasync(int fd, struct file *file, int flag)
 
 	dentry = file->f_dentry;
 	sb = dentry->d_sb;
-	si_read_lock(sb, AuLock_FLUSH);
+	si_read_lock(sb, AuLock_FLUSH | AuLock_NOPLMW);
 	err = au_reval_and_lock_fdi(file, au_reopen_nondir, /*wlock*/0);
 	if (unlikely(err))
 		goto out;

@@ -1,5 +1,5 @@
 
-Aufs2 -- advanced multi layered unification filesystem version 2
+Aufs2.1 -- advanced multi layered unification filesystem version 2.1
 http://aufs.sf.net
 Junjiro R. Okajima
 
@@ -15,16 +15,13 @@ approaches to aufs1's.
 Unionfs is being developed by Professor Erez Zadok at Stony Brook
 University and his team.
 
-This version of AUFS, aufs2 has several purposes.
-- to be reviewed easily and widely.
-- to make the source files simpler and smaller by dropping several
-  original features.
-
-Through this work, I found some bad things in aufs1 source code and
-fixed them. Some of the dropped features will be reverted in the future,
-but not all I'm afraid.
-Aufs2 supports linux-2.6.27 and later. If you want older kernel version
-support, try aufs1 from CVS on SourceForge.
+Aufs2.1 supports linux-2.6.31 and later. If you want older kernel version
+support, try aufs2 from aufs2-27..aufs2-30 GIT branches or aufs1 from
+CVS on SourceForge.
+By the way, generally "aufs2" means version 2.0 but sometimes it means
+whole version 2 series. For instance, the name of GIT tree "aufs2-2.6"
+means whole version 2 series and the name of branch in the GIT tree
+"aufs2-27" means version 2.0.
 
 Note: it becomes clear that "Aufs was rejected. Let's give it up."
 According to Christoph Hellwig, linux rejects all union-type filesystems
@@ -74,10 +71,9 @@ Also there are many enhancements in aufs1, such as:
 - userspace wrapper for pathconf(3)/fpathconf(3) with _PC_LINK_MAX.
 - and more...
 
-Currently these features are dropped temporary from this version, aufs2.
+Currently these features are dropped temporary from aufs2.
 See design/08plan.txt in detail.
 - test only the highest one for the directory permission (dirperm1)
-- show whiteout mode (shwh)
 - copyup on open (coo=)
 - nested mount, i.e. aufs as readonly no-whiteout branch of another aufs
   (robr)
@@ -94,7 +90,6 @@ Features or just an idea in the future (see also design/*.txt),
 - an option for refreshing the opened files after add/del branches
 - 'move' policy for copy-up between two writable branches, after
   checking free space.
-- O_DIRECT
 - light version, without branch manipulation. (unnecessary?)
 - copyup in userspace
 - inotify in userspace
@@ -118,9 +113,9 @@ git://git.kernel.org/.../torvalds/linux-2.6.git.
 And you cannot select CONFIG_AUFS_FS=m for this version, eg. you cannot
 build aufs2 as an externel kernel module.
 If you already have linux-2.6 GIT tree, you may want to pull and merge
-the "aufs2" branch from this tree.
+the "aufs2.1" branch from this tree.
 
-On the other hand, the aufs2-standalone tree has only aufs2 source files
+On the other hand, the aufs2-standalone tree has only aufs source files
 and a necessary patch, and you can select CONFIG_AUFS_FS=m. In other
 words, the aufs2-standalone tree is generated from aufs2-2.6 tree by,
 - extract new files and modifications.
@@ -129,9 +124,9 @@ words, the aufs2-standalone tree is generated from aufs2-2.6 tree by,
 - commit the files newly and no log messages. this is not git-pull.
 
 Both of aufs2-2.6 and aufs2-standalone trees have branches whose name is
-in form of "aufs2" or "aufs2-xx" where "xx" represents the linux kernel
-version, "linux-2.6.xx". For instance, "aufs2" (no -xx) for the latest
--rc version, and "aufs2-27" for linux-2.6.27,
+in form of "aufs2.1" or "aufs2.1-xx" where "xx" represents the linux kernel
+version, "linux-2.6.xx". For instance, "aufs2.1" (no -xx) for the latest
+-rc version, and "aufs2.1-31" for linux-2.6.31,
 
 o aufs2-2.6 tree
 $ git clone --reference /your/linux-2.6/git/tree \
@@ -139,19 +134,19 @@ $ git clone --reference /your/linux-2.6/git/tree \
 	aufs2-2.6.git
 - if you don't have linux-2.6 GIT tree, then remove "--reference ..."
 $ cd aufs2-2.6.git
-$ git checkout origin/aufs2-27
+$ git checkout origin/aufs2.1-31
 
 o aufs2-standalone tree
 $ git clone http://git.c3sl.ufpr.br/pub/scm/aufs/aufs2-standalone.git \
 	aufs2-standalone.git
 $ cd aufs2-standalone.git
-$ git checkout origin/aufs2-27
+$ git checkout origin/aufs2.1-31
 
 o aufs2-util tree
 $ git clone http://git.c3sl.ufpr.br/pub/scm/aufs/aufs2-util.git \
 	aufs2-util.git
 $ cd aufs2-util.git
-- no particular tag/branch currently.
+$ git checkout origin/aufs2.1
 
 o for advanced users
 $ git clone git://git.kernel.org/.../torvalds/linux-2.6.git linux-2.6.git
@@ -159,20 +154,20 @@ $ git clone git://git.kernel.org/.../torvalds/linux-2.6.git linux-2.6.git
 
 $ cd linux-2.6.git
 $ git remote add aufs2 http://git.c3sl.ufpr.br/pub/scm/aufs/aufs2-2.6.git
-$ git checkout -b aufs2-27 v2.6.27
-$ git pull aufs2 aufs2-27
+$ git checkout -b aufs2.1-31 v2.6.31
+$ git pull aufs2 aufs2.1-31
   It may take long time again.
-  Once pulling completes, you've got linux-2.6.27 and aufs2 for it in a
-  branch named aufs2-27, and you can configure and build it.
+  Once pulling completes, you've got linux-2.6.31 and aufs2.1 for it in a
+  branch named aufs2.1-31, and you can configure and build it.
 
 Or
 
-$ git checkout -t -b aufs2 master
-$ git pull aufs2 aufs2
-  then you've got the latest linux kernel and the latest aufs2 in a
-  branch named aufs2, and you can configure and build it.
+$ git checkout -t -b aufs2.1 master
+$ git pull aufs2 aufs2.1
+  then you've got the latest linux kernel and the latest aufs2.1 in a
+  branch named aufs2.1, and you can configure and build it.
   But aufs is released once a week, so you may meet a compilation error
-  due to mismatching between the mainline and aufs2.
+  due to mismatching between the mainline and aufs2.1.
 
 Or you may want build linux-2.6.xx.yy instead of linux-2.6.xx, then here
 is an approach using linux-2.6-stable GIT tree.
@@ -184,20 +179,20 @@ $ git clone -q --reference ./linux-2.6.git git://git.kernel.org/.../linux-2.6-st
 
 $ cd linux-2.6-stable.git
 $ git remote add aufs2 http://git.c3sl.ufpr.br/pub/scm/aufs/aufs2-2.6.git
-$ git checkout -b aufs2-27.1 v2.6.27.1
-$ git pull aufs2 aufs2-27
-  then you've got linux-2.6.27.1 and aufs2 for 2.6.27 in a branch named
-  aufs2-27.1, and you can configure and build it.
-  But the changes made by v2.6.xx.yy may conflict with aufs2-xx, since
-  aufs2-xx is for v2.6.xx only. In this case, you may find some patchces
-  for v2.6.xx.yy in aufs2-standalone.git#aufs2-xx branch if someone else
+$ git checkout -b aufs2.1-31.1 v2.6.31.1
+$ git pull aufs2 aufs2.1-31
+  then you've got linux-2.6.31.1 and aufs2.1 for 2.6.31 in a branch named
+  aufs2.1-31.1, and you can configure and build it.
+  But the changes made by v2.6.xx.yy may conflict with aufs2.1-xx, since
+  aufs2.1-xx is for v2.6.xx only. In this case, you may find some patchces
+  for v2.6.xx.yy in aufs2-standalone.git#aufs2.1-xx branch if someone else
   have ever requested me to support v2.6.xx.yy and I did it.
 
 You can also check what was changed by pulling aufs2.
-$ git diff v2.6.27.1..aufs2-27.1
+$ git diff v2.6.31.1..aufs2.1-31.1
 
 If you want to check the changed files other than fs/aufs, then try this.
-$ git diff v2.6.27.1..aufs2-27.1 |
+$ git diff v2.6.31.1..aufs2.1-31.1 |
 > awk '
 > /^diff / {new=1}
 > /^diff.*aufs/ {new=0}
@@ -231,7 +226,9 @@ If you don't like aufs2-standalone.patch, then try aufs2-2.6 tree.
 - enable CONFIG_EXPERIMENTAL and CONFIG_AUFS_FS, you can select either
   =m or =y.
 - and build your kernel as usual.
-- install it and reboot your system.
+- install the built kernel.
+- install the header files too by "make headers_install".
+- and reboot your system.
 
 2.
 - module only (CONFIG_AUFS_FS=m).
@@ -244,10 +241,19 @@ If you don't like aufs2-standalone.patch, then try aufs2-2.6 tree.
 - build the module by simple "make".
 - you can specify ${KDIR} make variable which points to your kernel
   source tree.
-- copy the build ./aufs.ko to /lib/modules/..., and run depmod -a (or
+- copy the built ./usr/include/linux/aufs_type.h to
+  /usr/include/linux or wherever you like.
+- copy the built ./aufs.ko to /lib/modules/..., and run depmod -a (or
   reboot simply).
 - no need to apply aufs2-kbuild.patch, nor copying source files to your
   kernel source tree.
+
+Note: The haeder file aufs_type.h is necessary to build aufs2-util
+      as well as "make headers_install" in the kernel source tree.
+      headers_install is buject to be forgotten, but it is essentially
+      necessary, not only for building aufs2-util.
+      You may not meet problems without headers_install in some older
+      version though.
 
 And then,
 - read README in aufs2-util, build and install it
@@ -316,16 +322,15 @@ aufs-users ML.
 ----------------------------------------
 Thanks to everyone who have tried and are using aufs, whoever
 have reported a bug or any feedback.
-Since Apr 2010, Tomas M (the author of Slax and Linux Live scripts) is
-making "doubling" donations.
-Unfortunately I cannot list all of the donators, but I really appriciate. See
-<http://sourceforge.net/mailarchive/message.php?msg_name=4BC70596.4000507%40slax.org>
-and
-<http://www.slax.org/aufs.php>
-in detail.
 
 Especially donators:
 Tomas Matejicek(slax.org) made a donation (much more than once).
+	Since Apr 2010, Tomas M (the author of Slax and Linux Live
+	scripts) is making "doubling" donations.
+	Unfortunately I cannot list all of the donators, but I really
+	appriciate.
+	It ends Aug 2010, but the ordinary donation URL is still available.
+	<http://sourceforge.net/donate/index.php?group_id=167503>
 Dai Itasaka made a donation (2007/8).
 Chuck Smith made a donation (2008/4, 10 and 12).
 Henk Schoneveld made a donation (2008/9).

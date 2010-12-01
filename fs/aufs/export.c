@@ -278,11 +278,13 @@ static struct vfsmount *au_mnt_get(struct super_block *sb)
 	};
 	struct mnt_namespace *ns;
 
+	br_read_lock(vfsmount_lock);
 	/* no get/put ?? */
 	AuDebugOn(!current->nsproxy);
 	ns = current->nsproxy->mnt_ns;
 	AuDebugOn(!ns);
 	err = iterate_mounts(au_compare_mnt, &args, ns->root);
+	br_read_unlock(vfsmount_lock);
 	AuDebugOn(!err);
 	AuDebugOn(!args.mnt);
 	return args.mnt;
@@ -741,7 +743,7 @@ static int aufs_commit_metadata(struct inode *inode)
 	int (*f)(struct inode *inode);
 
 	sb = inode->i_sb;
-	si_read_lock(sb, AuLock_FLUSH);
+	si_read_lock(sb, AuLock_FLUSH | AuLock_NOPLMW);
 	ii_write_lock_child(inode);
 	bindex = au_ibstart(inode);
 	AuDebugOn(bindex < 0);

@@ -189,7 +189,7 @@ static int aufs_open_dir(struct inode *inode __maybe_unused,
 	err = -ENOMEM;
 	sb = file->f_dentry->d_sb;
 	si_read_lock(sb, AuLock_FLUSH);
-	fidir = au_fidir_alloc(inode->i_sb);
+	fidir = au_fidir_alloc(sb);
 	if (fidir) {
 		err = au_do_open(file, do_open_dir, fidir);
 		if (unlikely(err))
@@ -208,11 +208,13 @@ static int aufs_release_dir(struct inode *inode __maybe_unused,
 	struct au_fidir *fidir;
 	aufs_bindex_t bindex, bend;
 
-	au_plink_maint_leave(file);
 	sb = file->f_dentry->d_sb;
 	finfo = au_fi(file);
 	fidir = finfo->fi_hdir;
 	if (fidir) {
+		/* remove me from sb->s_files */
+		file_sb_list_del(file);
+
 		vdir_cache = fidir->fd_vdir_cache; /* lock-free */
 		if (vdir_cache)
 			au_vdir_free(vdir_cache);
@@ -426,8 +428,10 @@ out:
 #define AuTestEmpty_CALLED	(1 << 1)
 #define AuTestEmpty_SHWH	(1 << 2)
 #define au_ftest_testempty(flags, name)	((flags) & AuTestEmpty_##name)
-#define au_fset_testempty(flags, name)	{ (flags) |= AuTestEmpty_##name; }
-#define au_fclr_testempty(flags, name)	{ (flags) &= ~AuTestEmpty_##name; }
+#define au_fset_testempty(flags, name) \
+	do { (flags) |= AuTestEmpty_##name; } while (0)
+#define au_fclr_testempty(flags, name) \
+	do { (flags) &= ~AuTestEmpty_##name; } while (0)
 
 #ifndef CONFIG_AUFS_SHWH
 #undef AuTestEmpty_SHWH

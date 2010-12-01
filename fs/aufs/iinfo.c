@@ -160,8 +160,10 @@ void au_icntnr_init_once(void *_c)
 {
 	struct au_icntnr *c = _c;
 	struct au_iinfo *iinfo = &c->iinfo;
+	static struct lock_class_key aufs_ii;
 
 	au_rw_init(&iinfo->ii_rwsem);
+	au_rw_class(&iinfo->ii_rwsem, &aufs_ii);
 	inode_init_once(&c->vfs_inode);
 }
 
@@ -178,6 +180,7 @@ int au_iinfo_init(struct inode *inode)
 		nbr = 1;
 	iinfo->ii_hinode = kcalloc(nbr, sizeof(*iinfo->ii_hinode), GFP_NOFS);
 	if (iinfo->ii_hinode) {
+		au_ninodes_inc(sb);
 		for (i = 0; i < nbr; i++)
 			iinfo->ii_hinode[i].hi_id = -1;
 
@@ -225,6 +228,7 @@ void au_iinfo_fin(struct inode *inode)
 		return;
 
 	sb = inode->i_sb;
+	au_ninodes_dec(sb);
 	if (si_pid_test(sb))
 		au_xino_delete_inode(inode, unlinked);
 	else {

@@ -41,7 +41,7 @@ struct sysaufs_si_attr {
 
 /* sysaufs.c */
 extern unsigned long sysaufs_si_mask;
-extern struct kset *sysaufs_ket;
+extern struct kset *sysaufs_kset;
 extern struct attribute *sysaufs_si_attrs[];
 int sysaufs_si_init(struct au_sbinfo *sbinfo);
 int __init sysaufs_init(void);

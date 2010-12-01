@@ -144,7 +144,7 @@ struct au_opt_del;
 int au_br_del(struct super_block *sb, struct au_opt_del *del, int remount);
 struct au_opt_mod;
 int au_br_mod(struct super_block *sb, struct au_opt_mod *mod, int remount,
-	      int *do_update);
+	      int *do_refresh);
 
 /* xino.c */
 static const loff_t au_loff_max = LLONG_MAX;
@@ -195,7 +195,7 @@ struct super_block *au_sbr_sb(struct super_block *sb, aufs_bindex_t bindex)
 
 static inline void au_sbr_put(struct super_block *sb, aufs_bindex_t bindex)
 {
-	atomic_dec_return(&au_sbr(sb, bindex)->br_count);
+	atomic_dec(&au_sbr(sb, bindex)->br_count);
 }
 
 static inline int au_sbr_perm(struct super_block *sb, aufs_bindex_t bindex)

@@ -30,7 +30,7 @@ void au_hfput(struct au_hfile *hf, struct file *file)
 		allow_write_access(hf->hf_file);
 	fput(hf->hf_file);
 	hf->hf_file = NULL;
-	atomic_dec_return(&hf->hf_br->br_count);
+	atomic_dec(&hf->hf_br->br_count);
 	hf->hf_br = NULL;
 }
 
@@ -126,19 +126,25 @@ void au_finfo_fin(struct file *file)
 {
 	struct au_finfo *finfo;
 
+	au_nfiles_dec(file->f_dentry->d_sb);
+
 	finfo = au_fi(file);
 	AuDebugOn(finfo->fi_hdir);
 	AuRwDestroy(&finfo->fi_rwsem);
 	au_cache_free_finfo(finfo);
 }
 
-void au_fi_init_once(void *_fi)
+void au_fi_init_once(void *_finfo)
 {
-	struct au_finfo *fi = _fi;
+	struct au_finfo *finfo = _finfo;
+	static struct lock_class_key aufs_fi, aufs_fi_vm, aufs_fi_mmap;
 
-	au_rw_init(&fi->fi_rwsem);
-	mutex_init(&fi->fi_vm_mtx);
-	mutex_init(&fi->fi_mmap);
+	au_rw_init(&finfo->fi_rwsem);
+	au_rw_class(&finfo->fi_rwsem, &aufs_fi);
+	mutex_init(&finfo->fi_vm_mtx);
+	lockdep_set_class(&finfo->fi_vm_mtx, &aufs_fi_vm);
+	mutex_init(&finfo->fi_mmap);
+	lockdep_set_class(&finfo->fi_mmap, &aufs_fi_mmap);
 }
 
 int au_finfo_init(struct file *file, struct au_fidir *fidir)
@@ -154,6 +160,7 @@ int au_finfo_init(struct file *file, struct au_fidir *fidir)
 		goto out;
 
 	err = 0;
+	au_nfiles_inc(dentry->d_sb);
 	au_rw_write_lock(&finfo->fi_rwsem);
 	finfo->fi_btop = -1;
 	finfo->fi_hdir = fidir;

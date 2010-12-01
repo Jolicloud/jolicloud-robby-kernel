@@ -157,14 +157,18 @@ static struct dentry *aufs_lookup(struct inode *dir, struct dentry *dentry,
 	IMustLock(dir);
 
 	sb = dir->i_sb;
-	si_read_lock(sb, AuLock_FLUSH);
-	ret = ERR_PTR(-ENAMETOOLONG);
-	if (unlikely(dentry->d_name.len > AUFS_MAX_NAMELEN))
-		goto out;
-	err = au_di_init(dentry);
+	err = si_read_lock(sb, AuLock_FLUSH | AuLock_NOPLM);
 	ret = ERR_PTR(err);
 	if (unlikely(err))
 		goto out;
+
+	ret = ERR_PTR(-ENAMETOOLONG);
+	if (unlikely(dentry->d_name.len > AUFS_MAX_NAMELEN))
+		goto out_si;
+	err = au_di_init(dentry);
+	ret = ERR_PTR(err);
+	if (unlikely(err))
+		goto out_si;
 
 	parent = dentry->d_parent; /* dir inode is locked */
 	di_read_lock_parent(parent, AuLock_IR);
@@ -184,13 +188,16 @@ static struct dentry *aufs_lookup(struct inode *dir, struct dentry *dentry,
 		goto out_unlock;
 
 	ret = d_splice_alias(inode, dentry);
-	if (unlikely(IS_ERR(ret) && inode))
+	if (unlikely(IS_ERR(ret) && inode)) {
 		ii_write_unlock(inode);
+		iput(inode);
+	}
 
 out_unlock:
 	di_write_unlock(dentry);
-out:
+out_si:
 	si_read_unlock(sb);
+out:
 	return ret;
 }
 
@@ -315,7 +322,7 @@ struct dentry *au_pinned_h_parent(struct au_pin *pin)
 
 void au_unpin(struct au_pin *p)
 {
-	if (au_ftest_pin(p->flags, MNT_WRITE))
+	if (p->h_mnt && au_ftest_pin(p->flags, MNT_WRITE))
 		mnt_drop_write(p->h_mnt);
 	if (!p->hdir)
 		return;
@@ -373,6 +380,7 @@ int au_do_pin(struct au_pin *p)
 	 * and h_parent can be NULL.
 	 */
 	if (unlikely(!p->hdir || !h_dir || !h_parent)) {
+		err = -EBUSY;
 		if (!au_ftest_pin(p->flags, DI_LOCKED))
 			di_read_unlock(p->parent, AuLock_IR);
 		dput(p->parent);
@@ -472,8 +480,10 @@ static int au_reval_for_attr(struct dentry *dentry, unsigned int sigen)
 
 #define AuIcpup_DID_CPUP	1
 #define au_ftest_icpup(flags, name)	((flags) & AuIcpup_##name)
-#define au_fset_icpup(flags, name)	{ (flags) |= AuIcpup_##name; }
-#define au_fclr_icpup(flags, name)	{ (flags) &= ~AuIcpup_##name; }
+#define au_fset_icpup(flags, name) \
+	do { (flags) |= AuIcpup_##name; } while (0)
+#define au_fclr_icpup(flags, name) \
+	do { (flags) &= ~AuIcpup_##name; } while (0)
 
 struct au_icpup_args {
 	unsigned char flags;
@@ -490,7 +500,7 @@ static int au_pin_and_icpup(struct dentry *dentry, struct iattr *ia,
 {
 	int err;
 	loff_t sz;
-	aufs_bindex_t bstart;
+	aufs_bindex_t bstart, ibstart;
 	struct dentry *hi_wh, *parent;
 	struct inode *inode;
 	struct file *h_file;
@@ -504,8 +514,9 @@ static int au_pin_and_icpup(struct dentry *dentry, struct iattr *ia,
 	if (S_ISDIR(inode->i_mode))
 		au_fset_wrdir(wr_dir_args.flags, ISDIR);
 	/* plink or hi_wh() case */
-	if (bstart != au_ibstart(inode))
-		wr_dir_args.force_btgt = au_ibstart(inode);
+	ibstart = au_ibstart(inode);
+	if (bstart != ibstart)
+		wr_dir_args.force_btgt = ibstart;
 	err = au_wr_dir(dentry, /*src_dentry*/NULL, &wr_dir_args);
 	if (unlikely(err < 0))
 		goto out;
@@ -535,7 +546,7 @@ static int au_pin_and_icpup(struct dentry *dentry, struct iattr *ia,
 
 	h_file = NULL;
 	hi_wh = NULL;
-	if (au_ftest_icpup(a->flags, DID_CPUP) && d_unhashed(dentry)) {
+	if (au_ftest_icpup(a->flags, DID_CPUP) && au_d_removed(dentry)) {
 		hi_wh = au_hi_wh(inode, a->btgt);
 		if (!hi_wh) {
 			err = au_sio_cpup_wh(dentry, a->btgt, sz, /*file*/NULL);
@@ -610,7 +621,10 @@ static int aufs_setattr(struct dentry *dentry, struct iattr *ia)
 
 	file = NULL;
 	sb = dentry->d_sb;
-	si_read_lock(sb, AuLock_FLUSH);
+	err = si_read_lock(sb, AuLock_FLUSH | AuLock_NOPLM);
+	if (unlikely(err))
+		goto out_kfree;
+
 	if (ia->ia_valid & ATTR_FILE) {
 		/* currently ftruncate(2) only */
 		AuDebugOn(!S_ISREG(inode->i_mode));
@@ -623,6 +637,7 @@ static int aufs_setattr(struct dentry *dentry, struct iattr *ia)
 	} else {
 		/* fchmod() doesn't pass ia_file */
 		a->udba = au_opt_udba(sb);
+		/* no au_d_removed(), to set UDBA_NONE for root */
 		if (d_unhashed(dentry))
 			a->udba = AuOpt_UDBA_NONE;
 		di_write_lock_child(dentry);
@@ -686,6 +701,7 @@ out_dentry:
 	}
 out_si:
 	si_read_unlock(sb);
+out_kfree:
 	kfree(a);
 out:
 	AuTraceErr(err);
@@ -726,15 +742,16 @@ static int aufs_getattr(struct vfsmount *mnt __maybe_unused,
 	struct vfsmount *h_mnt;
 	struct dentry *h_dentry;
 
-	err = 0;
 	sb = dentry->d_sb;
 	inode = dentry->d_inode;
-	si_read_lock(sb, AuLock_FLUSH);
+	err = si_read_lock(sb, AuLock_FLUSH | AuLock_NOPLM);
+	if (unlikely(err))
+		goto out;
 	mnt_flags = au_mntflags(sb);
 	udba_none = !!au_opt_test(mnt_flags, UDBA_NONE);
 
 	/* support fstat(2) */
-	if (!d_unhashed(dentry) && !udba_none) {
+	if (!au_d_removed(dentry) && !udba_none) {
 		unsigned int sigen = au_sigen(sb);
 		if (au_digen(dentry) == sigen && au_iigen(inode) == sigen)
 			di_read_lock_child(dentry, AuLock_IR);
@@ -744,7 +761,7 @@ static int aufs_getattr(struct vfsmount *mnt __maybe_unused,
 			err = au_reval_for_attr(dentry, sigen);
 			di_downgrade_lock(dentry, AuLock_IR);
 			if (unlikely(err))
-				goto out;
+				goto out_unlock;
 		}
 	} else
 		di_read_lock_child(dentry, AuLock_IR);
@@ -776,13 +793,16 @@ static int aufs_getattr(struct vfsmount *mnt __maybe_unused,
 			au_refresh_iattr(inode, st, h_dentry->d_inode->i_nlink);
 		goto out_fill; /* success */
 	}
-	goto out;
+	AuTraceErr(err);
+	goto out_unlock;
 
 out_fill:
 	generic_fillattr(inode, st);
-out:
+out_unlock:
 	di_read_unlock(dentry, AuLock_IR);
 	si_read_unlock(sb);
+out:
+	AuTraceErr(err);
 	return err;
 }
 

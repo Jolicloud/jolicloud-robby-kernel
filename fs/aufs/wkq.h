@@ -50,8 +50,10 @@ typedef void (*au_wkq_func_t)(void *args);
 #define AuWkq_WAIT	1
 #define AuWkq_PRE	(1 << 1)
 #define au_ftest_wkq(flags, name)	((flags) & AuWkq_##name)
-#define au_fset_wkq(flags, name)	{ (flags) |= AuWkq_##name; }
-#define au_fclr_wkq(flags, name)	{ (flags) &= ~AuWkq_##name; }
+#define au_fset_wkq(flags, name) \
+	do { (flags) |= AuWkq_##name; } while (0)
+#define au_fclr_wkq(flags, name) \
+	do { (flags) &= ~AuWkq_##name; } while (0)
 
 /* wkq.c */
 int au_wkq_do_wait(unsigned int flags, au_wkq_func_t func, void *args);
@@ -74,7 +76,7 @@ static inline int au_wkq_wait(au_wkq_func_t func, void *args)
 
 static inline void au_nwt_done(struct au_nowait_tasks *nwt)
 {
-	if (!atomic_dec_return(&nwt->nw_len))
+	if (atomic_dec_and_test(&nwt->nw_len))
 		wake_up_all(&nwt->nw_wq);
 }
 

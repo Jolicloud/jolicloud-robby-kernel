@@ -35,8 +35,10 @@ enum { AuPARENT, AuCHILD, AuParentChild };
 #define AuRen_DIROPQ	(1 << 6)
 #define AuRen_CPUP	(1 << 7)
 #define au_ftest_ren(flags, name)	((flags) & AuRen_##name)
-#define au_fset_ren(flags, name)	{ (flags) |= AuRen_##name; }
-#define au_fclr_ren(flags, name)	{ (flags) &= ~AuRen_##name; }
+#define au_fset_ren(flags, name) \
+	do { (flags) |= AuRen_##name; } while (0)
+#define au_fclr_ren(flags, name) \
+	do { (flags) &= ~AuRen_##name; } while (0)
 
 struct au_ren_args {
 	struct {
@@ -836,7 +838,7 @@ static void au_ren_rev_dt(int err, struct au_ren_args *a)
 int aufs_rename(struct inode *_src_dir, struct dentry *_src_dentry,
 		struct inode *_dst_dir, struct dentry *_dst_dentry)
 {
-	int err;
+	int err, flags;
 	/* reduce stack space */
 	struct au_ren_args *a;
 
@@ -864,15 +866,18 @@ int aufs_rename(struct inode *_src_dir, struct dentry *_src_dentry,
 	}
 
 	err = -ENOTDIR;
+	flags = AuLock_FLUSH | AuLock_NOPLM;
 	if (S_ISDIR(a->src_inode->i_mode)) {
 		au_fset_ren(a->flags, ISDIR);
 		if (unlikely(a->dst_inode && !S_ISDIR(a->dst_inode->i_mode)))
 			goto out_free;
-		aufs_read_and_write_lock2(a->dst_dentry, a->src_dentry,
-					  AuLock_DIR | AuLock_FLUSH);
+		err = aufs_read_and_write_lock2(a->dst_dentry, a->src_dentry,
+						AuLock_DIR | flags);
 	} else
-		aufs_read_and_write_lock2(a->dst_dentry, a->src_dentry,
-					  AuLock_FLUSH);
+		err = aufs_read_and_write_lock2(a->dst_dentry, a->src_dentry,
+						flags);
+	if (unlikely(err))
+		goto out_free;
 
 	au_fset_ren(a->flags, ISSAMEDIR); /* temporary */
 	di_write_lock_parent(a->dst_parent);

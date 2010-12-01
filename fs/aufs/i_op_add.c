@@ -466,7 +466,10 @@ int aufs_link(struct dentry *src_dentry, struct inode *dir,
 		goto out;
 
 	a->parent = dentry->d_parent; /* dir inode is locked */
-	aufs_read_and_write_lock2(dentry, src_dentry, /*AuLock_FLUSH*/0);
+	err = aufs_read_and_write_lock2(dentry, src_dentry, AuLock_NOPLM);
+	if (unlikely(err))
+		goto out_kfree;
+
 	a->src_parent = dget_parent(src_dentry);
 	wr_dir_args.force_btgt = au_dbstart(src_dentry);
 
@@ -565,6 +568,7 @@ out_unlock:
 	di_write_unlock(a->parent);
 	dput(a->src_parent);
 	aufs_read_and_write_unlock2(dentry, src_dentry);
+out_kfree:
 	kfree(a);
 out:
 	return err;

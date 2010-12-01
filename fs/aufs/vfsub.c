@@ -83,7 +83,9 @@ struct file *vfsub_dentry_open(struct path *path, int flags)
 	int err;
 
 	path_get(path);
-	file = dentry_open(path->dentry, path->mnt, flags, current_cred());
+	file = dentry_open(path->dentry, path->mnt,
+			   flags /* | vfsub_fmode_to_uint(FMODE_NONOTIFY) */,
+			   current_cred());
 	if (IS_ERR(file))
 		goto out;
 
@@ -100,7 +102,9 @@ struct file *vfsub_filp_open(const char *path, int oflags, int mode)
 {
 	struct file *file;
 
-	file = filp_open(path, oflags, mode);
+	file = filp_open(path,
+			 oflags /* | vfsub_fmode_to_uint(FMODE_NONOTIFY) */,
+			 mode);
 	if (IS_ERR(file))
 		goto out;
 	vfsub_update_h_iattr(&file->f_path, /*did*/NULL); /*ignore*/

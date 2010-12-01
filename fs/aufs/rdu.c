@@ -32,8 +32,10 @@
 #define	AuRdu_CONT	(1 << 1)
 #define	AuRdu_FULL	(1 << 2)
 #define au_ftest_rdu(flags, name)	((flags) & AuRdu_##name)
-#define au_fset_rdu(flags, name)	{ (flags) |= AuRdu_##name; }
-#define au_fclr_rdu(flags, name)	{ (flags) &= ~AuRdu_##name; }
+#define au_fset_rdu(flags, name) \
+	do { (flags) |= AuRdu_##name; } while (0)
+#define au_fclr_rdu(flags, name) \
+	do { (flags) &= ~AuRdu_##name; } while (0)
 
 struct au_rdu_arg {
 	struct aufs_rdu			*rdu;
@@ -165,7 +167,10 @@ static int au_rdu(struct file *file, struct aufs_rdu *rdu)
 		goto out_mtx;
 
 	arg.sb = inode->i_sb;
-	si_read_lock(arg.sb, AuLock_FLUSH);
+	err = si_read_lock(arg.sb, AuLock_FLUSH | AuLock_NOPLM);
+	if (unlikely(err))
+		goto out_mtx;
+	/* todo: reval? */
 	fi_read_lock(file);
 
 	err = -EAGAIN;
