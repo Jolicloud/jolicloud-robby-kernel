@@ -33,7 +33,6 @@
 #include <linux/uaccess.h>
 #include <linux/cper.h>
 #include <linux/nmi.h>
-#include <linux/hardirq.h>
 #include <acpi/apei.h>
 
 #include "apei-internal.h"

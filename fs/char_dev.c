@@ -20,7 +20,6 @@
 #include <linux/cdev.h>
 #include <linux/mutex.h>
 #include <linux/backing-dev.h>
-#include <linux/tty.h>
 
 #include "internal.h"
 
