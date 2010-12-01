@@ -60,6 +60,9 @@ static void wkq_func(struct work_struct *wk)
 {
 	struct au_wkinfo *wkinfo = container_of(wk, struct au_wkinfo, wk);
 
+	AuDebugOn(current_fsuid());
+	AuDebugOn(rlimit(RLIMIT_FSIZE) != RLIM_INFINITY);
+
 	wkinfo->func(wkinfo->args);
 	if (au_ftest_wkq(wkinfo->flags, WAIT))
 		complete(wkinfo->comp);
@@ -206,7 +209,9 @@ int __init au_wkq_init(void)
 
 	err = 0;
 	for (i = 0; !err && i < ARRAY_SIZE(au_wkq); i++) {
-		au_wkq[i].wkq = create_workqueue(au_wkq[i].name);
+		BUILD_BUG_ON(!WQ_RESCUER);
+		au_wkq[i].wkq = alloc_workqueue(au_wkq[i].name, !WQ_RESCUER,
+						WQ_DFL_ACTIVE);
 		if (IS_ERR(au_wkq[i].wkq))
 			err = PTR_ERR(au_wkq[i].wkq);
 		else if (!au_wkq[i].wkq)
@@ -214,9 +219,7 @@ int __init au_wkq_init(void)
 		if (unlikely(err))
 			au_wkq[i].wkq = NULL;
 	}
-	if (!err)
-		au_dbg_verify_wkq();
-	else
+	if (unlikely(err))
 		au_wkq_fin();
 
 	return err;

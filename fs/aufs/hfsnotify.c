@@ -26,52 +26,62 @@
 static const __u32 AuHfsnMask = (FS_MOVED_TO | FS_MOVED_FROM | FS_DELETE
 				 | FS_CREATE | FS_EVENT_ON_CHILD);
 static struct fsnotify_group *au_hfsn_group;
+static DECLARE_WAIT_QUEUE_HEAD(au_hfsn_wq);
 
-static void au_hfsn_free_mark(struct fsnotify_mark_entry *entry)
+static void au_hfsn_free_mark(struct fsnotify_mark *mark)
 {
-#if 0
-	struct au_hnotify *hn = container_of(entry, struct au_hnotify,
-					     hn_entry);
-	au_cache_free_hnotify(hn);
-#endif
+	struct au_hnotify *hn = container_of(mark, struct au_hnotify,
+					     hn_mark);
 	AuDbg("here\n");
+	hn->hn_mark_dead = 1;
+	smp_mb();
+	wake_up_all(&au_hfsn_wq);
 }
 
 static int au_hfsn_alloc(struct au_hnotify *hn, struct inode *h_inode)
 {
-	struct fsnotify_mark_entry *entry;
+	struct fsnotify_mark *mark;
 
-	entry = &hn->hn_entry;
-	fsnotify_init_mark(entry, au_hfsn_free_mark);
-	entry->mask = AuHfsnMask;
-	return fsnotify_add_mark(entry, au_hfsn_group, h_inode);
+	hn->hn_mark_dead = 0;
+	mark = &hn->hn_mark;
+	fsnotify_init_mark(mark, au_hfsn_free_mark);
+	mark->mask = AuHfsnMask;
+	/*
+	 * by udba rename or rmdir, aufs assign a new inode to the known
+	 * h_inode, so specify 1 to allow dups.
+	 */
+	return fsnotify_add_mark(mark, au_hfsn_group, h_inode, /*mnt*/NULL,
+				 /*allow_dups*/1);
 }
 
 static void au_hfsn_free(struct au_hnotify *hn)
 {
-	struct fsnotify_mark_entry *entry;
+	struct fsnotify_mark *mark;
 
-	entry = &hn->hn_entry;
-	fsnotify_destroy_mark_by_entry(entry);
-	fsnotify_put_mark(entry);
+	mark = &hn->hn_mark;
+	fsnotify_destroy_mark(mark);
+	fsnotify_put_mark(mark);
+
+	/* TODO: bad approach */
+	wait_event(au_hfsn_wq, hn->hn_mark_dead);
 }
 
 /* ---------------------------------------------------------------------- */
 
 static void au_hfsn_ctl(struct au_hinode *hinode, int do_set)
 {
-	struct fsnotify_mark_entry *entry;
+	struct fsnotify_mark *mark;
 
-	entry = &hinode->hi_notify->hn_entry;
-	spin_lock(&entry->lock);
+	mark = &hinode->hi_notify->hn_mark;
+	spin_lock(&mark->lock);
 	if (do_set) {
-		AuDebugOn(entry->mask & AuHfsnMask);
-		entry->mask |= AuHfsnMask;
+		AuDebugOn(mark->mask & AuHfsnMask);
+		mark->mask |= AuHfsnMask;
 	} else {
-		AuDebugOn(!(entry->mask & AuHfsnMask));
-		entry->mask &= ~AuHfsnMask;
+		AuDebugOn(!(mark->mask & AuHfsnMask));
+		mark->mask &= ~AuHfsnMask;
 	}
-	spin_unlock(&entry->lock);
+	spin_unlock(&mark->lock);
 	/* fsnotify_recalc_inode_mask(hinode->hi_inode); */
 }
 
@@ -113,13 +123,14 @@ static char *au_hfsn_name(u32 mask)
 /* ---------------------------------------------------------------------- */
 
 static int au_hfsn_handle_event(struct fsnotify_group *group,
+				struct fsnotify_mark *inode_mark,
+				struct fsnotify_mark *vfsmount_mark,
 				struct fsnotify_event *event)
 {
 	int err;
 	struct au_hnotify *hnotify;
 	struct inode *h_dir, *h_inode;
 	__u32 mask;
-	struct fsnotify_mark_entry *entry;
 	struct qstr h_child_qstr = {
 		.name	= event->file_name,
 		.len	= event->name_len
@@ -128,10 +139,10 @@ static int au_hfsn_handle_event(struct fsnotify_group *group,
 	AuDebugOn(event->data_type != FSNOTIFY_EVENT_INODE);
 
 	err = 0;
-	/* if IN_UNMOUNT happens, there must be another bug */
+	/* if FS_UNMOUNT happens, there must be another bug */
 	mask = event->mask;
 	AuDebugOn(mask & FS_UNMOUNT);
-	if (mask & (IN_IGNORED | IN_UNMOUNT))
+	if (mask & (FS_IN_IGNORED | FS_UNMOUNT))
 		goto out;
 
 	h_dir = event->to_tell;
@@ -148,14 +159,9 @@ static int au_hfsn_handle_event(struct fsnotify_group *group,
 	au_debug(0);
 #endif
 
-	spin_lock(&h_dir->i_lock);
-	entry = fsnotify_find_mark_entry(group, h_dir);
-	spin_unlock(&h_dir->i_lock);
-	if (entry) {
-		hnotify = container_of(entry, struct au_hnotify, hn_entry);
-		err = au_hnotify(h_dir, hnotify, mask, &h_child_qstr, h_inode);
-		fsnotify_put_mark(entry);
-	}
+	AuDebugOn(!inode_mark);
+	hnotify = container_of(inode_mark, struct au_hnotify, hn_mark);
+	err = au_hnotify(h_dir, hnotify, mask, &h_child_qstr, h_inode);
 
 out:
 	return err;
@@ -164,24 +170,13 @@ out:
 /* copied from linux/fs/notify/inotify/inotify_fsnotiry.c */
 /* it should be exported to modules */
 static bool au_hfsn_should_send_event(struct fsnotify_group *group,
-				      struct inode *h_inode, __u32 mask)
+				      struct inode *h_inode,
+				      struct fsnotify_mark *inode_mark,
+				      struct fsnotify_mark *vfsmount_mark,
+				      __u32 mask, void *data, int data_type)
 {
-	struct fsnotify_mark_entry *entry;
-	bool send;
-
-	spin_lock(&h_inode->i_lock);
-	entry = fsnotify_find_mark_entry(group, h_inode);
-	spin_unlock(&h_inode->i_lock);
-	if (!entry)
-		return false;
-
 	mask = (mask & ~FS_EVENT_ON_CHILD);
-	send = (entry->mask & mask);
-
-	/* find took a reference */
-	fsnotify_put_mark(entry);
-
-	return send;
+	return inode_mark->mask & mask;
 }
 
 static struct fsnotify_ops au_hfsn_ops = {
@@ -194,21 +189,12 @@ static struct fsnotify_ops au_hfsn_ops = {
 static int __init au_hfsn_init(void)
 {
 	int err;
-	unsigned int gn;
-	const unsigned int gn_max = 10;
-
-	gn = 0;
-	for (gn = 0; gn < gn_max; gn++) {
-		au_hfsn_group = fsnotify_obtain_group(gn, AuHfsnMask,
-						      &au_hfsn_ops);
-		if (au_hfsn_group != ERR_PTR(-EEXIST))
-			break;
-	}
 
 	err = 0;
+	au_hfsn_group = fsnotify_alloc_group(&au_hfsn_ops);
 	if (IS_ERR(au_hfsn_group)) {
-		pr_err("fsnotify_obtain_group() failed %u times\n", gn_max);
 		err = PTR_ERR(au_hfsn_group);
+		pr_err("fsnotify_alloc_group() failed, %d\n", err);
 	}
 
 	AuTraceErr(err);

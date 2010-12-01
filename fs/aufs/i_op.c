@@ -62,10 +62,8 @@ static int h_permission(struct inode *h_inode, int mask,
 
 	if (!err)
 		err = devcgroup_inode_permission(h_inode, mask);
-	if (!err) {
-		mask &= (MAY_READ | MAY_WRITE | MAY_EXEC | MAY_APPEND);
+	if (!err)
 		err = security_inode_permission(h_inode, mask);
-	}
 
 #if 0
 	if (!err) {
@@ -661,12 +659,9 @@ static int aufs_setattr(struct dentry *dentry, struct iattr *ia)
 	if (ia->ia_valid & ATTR_SIZE) {
 		struct file *f;
 
-		if (ia->ia_size < i_size_read(inode)) {
+		if (ia->ia_size < i_size_read(inode))
 			/* unmap only */
-			err = simple_setsize(inode, ia->ia_size);
-			if (unlikely(err))
-				goto out_unlock;
-		}
+			truncate_setsize(inode, ia->ia_size);
 
 		f = NULL;
 		if (ia->ia_valid & ATTR_FILE)

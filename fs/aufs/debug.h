@@ -34,7 +34,7 @@
 /* #include <linux/kernel.h> */
 #include <linux/delay.h>
 /* #include <linux/kd.h> */
-/* #include <linux/vt_kern.h> */
+#include <linux/vt_kern.h>
 #include <linux/sysrq.h>
 #include <linux/aufs_type.h>
 
@@ -135,7 +135,6 @@ void au_dbg_verify_dir_parent(struct dentry *dentry, unsigned int sigen);
 void au_dbg_verify_nondir_parent(struct dentry *dentry, unsigned int sigen);
 void au_dbg_verify_gen(struct dentry *parent, unsigned int sigen);
 void au_dbg_verify_kthread(void);
-void au_dbg_verify_wkq(void);
 
 int __init au_debug_init(void);
 void au_debug_sbinfo_init(struct au_sbinfo *sbinfo);
@@ -201,7 +200,6 @@ AuStubVoid(au_dbg_verify_nondir_parent, struct dentry *dentry,
 	   unsigned int sigen)
 AuStubVoid(au_dbg_verify_gen, struct dentry *parent, unsigned int sigen)
 AuStubVoid(au_dbg_verify_kthread, void)
-AuStubVoid(au_dbg_verify_wkq, void)
 AuStubInt0(__init au_debug_init, void)
 AuStubVoid(au_debug_sbinfo_init, struct au_sbinfo *sbinfo)
 
@@ -227,7 +225,7 @@ void au_sysrq_fin(void);
 #ifdef CONFIG_HW_CONSOLE
 #define au_dbg_blocked() do { \
 	WARN_ON(1); \
-	handle_sysrq('w', vc_cons[fg_console].d->vc_tty); \
+	handle_sysrq('w', vc_cons[fg_console].d->port.tty); \
 } while (0)
 #else
 AuStubVoid(au_dbg_blocked, void)
