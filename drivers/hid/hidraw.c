@@ -46,7 +46,6 @@ static ssize_t hidraw_read(struct file *file, char __user *buffer, size_t count,
 {
 	struct hidraw_list *list = file->private_data;
 	int ret = 0, len;
-	char *report;
 	DECLARE_WAITQUEUE(wait, current);
 
 	mutex_lock(&list->read_mutex);
@@ -84,7 +83,6 @@ static ssize_t hidraw_read(struct file *file, char __user *buffer, size_t count,
 		if (ret)
 			goto out;
 
-		report = list->buffer[list->tail].value;
 		len = list->buffer[list->tail].len > count ?
 			count : list->buffer[list->tail].len;
 
@@ -111,6 +109,12 @@ static ssize_t hidraw_write(struct file *file, const char __user *buffer, size_t
 	int ret = 0;
 
 	mutex_lock(&minors_lock);
+
+	if (!hidraw_table[minor]) {
+		ret = -ENODEV;
+		goto out;
+	}
+
 	dev = hidraw_table[minor]->hid;
 
 	if (!dev->hid_output_raw_report) {
@@ -246,6 +250,10 @@ static long hidraw_ioctl(struct file *file, unsigned int cmd,
 
 	mutex_lock(&minors_lock);
 	dev = hidraw_table[minor];
+	if (!dev) {
+		ret = -ENODEV;
+		goto out;
+	}
 
 	switch (cmd) {
 		case HIDIOCGRDESCSIZE:
@@ -319,6 +327,7 @@ static long hidraw_ioctl(struct file *file, unsigned int cmd,
 
 		ret = -ENOTTY;
 	}
+out:
 	mutex_unlock(&minors_lock);
 	return ret;
 }
