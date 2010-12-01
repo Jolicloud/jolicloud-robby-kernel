@@ -925,9 +925,7 @@ void rv515_bandwidth_avivo_update(struct radeon_device *rdev)
 	struct drm_display_mode *mode1 = NULL;
 	struct rv515_watermark wm0;
 	struct rv515_watermark wm1;
-	u32 tmp;
-	u32 d1mode_priority_a_cnt = MODE_PRIORITY_OFF;
-	u32 d2mode_priority_a_cnt = MODE_PRIORITY_OFF;
+	u32 tmp, d1mode_priority_a_cnt, d2mode_priority_a_cnt;
 	fixed20_12 priority_mark02, priority_mark12, fill_rate;
 	fixed20_12 a, b;
 
@@ -1001,6 +999,10 @@ void rv515_bandwidth_avivo_update(struct radeon_device *rdev)
 			d1mode_priority_a_cnt |= MODE_PRIORITY_ALWAYS_ON;
 			d2mode_priority_a_cnt |= MODE_PRIORITY_ALWAYS_ON;
 		}
+		WREG32(D1MODE_PRIORITY_A_CNT, d1mode_priority_a_cnt);
+		WREG32(D1MODE_PRIORITY_B_CNT, d1mode_priority_a_cnt);
+		WREG32(D2MODE_PRIORITY_A_CNT, d2mode_priority_a_cnt);
+		WREG32(D2MODE_PRIORITY_B_CNT, d2mode_priority_a_cnt);
 	} else if (mode0) {
 		if (dfixed_trunc(wm0.dbpp) > 64)
 			a.full = dfixed_div(wm0.dbpp, wm0.num_line_pair);
@@ -1030,7 +1032,11 @@ void rv515_bandwidth_avivo_update(struct radeon_device *rdev)
 		d1mode_priority_a_cnt = dfixed_trunc(priority_mark02);
 		if (rdev->disp_priority == 2)
 			d1mode_priority_a_cnt |= MODE_PRIORITY_ALWAYS_ON;
-	} else if (mode1) {
+		WREG32(D1MODE_PRIORITY_A_CNT, d1mode_priority_a_cnt);
+		WREG32(D1MODE_PRIORITY_B_CNT, d1mode_priority_a_cnt);
+		WREG32(D2MODE_PRIORITY_A_CNT, MODE_PRIORITY_OFF);
+		WREG32(D2MODE_PRIORITY_B_CNT, MODE_PRIORITY_OFF);
+	} else {
 		if (dfixed_trunc(wm1.dbpp) > 64)
 			a.full = dfixed_div(wm1.dbpp, wm1.num_line_pair);
 		else
@@ -1059,12 +1065,11 @@ void rv515_bandwidth_avivo_update(struct radeon_device *rdev)
 		d2mode_priority_a_cnt = dfixed_trunc(priority_mark12);
 		if (rdev->disp_priority == 2)
 			d2mode_priority_a_cnt |= MODE_PRIORITY_ALWAYS_ON;
+		WREG32(D1MODE_PRIORITY_A_CNT, MODE_PRIORITY_OFF);
+		WREG32(D1MODE_PRIORITY_B_CNT, MODE_PRIORITY_OFF);
+		WREG32(D2MODE_PRIORITY_A_CNT, d2mode_priority_a_cnt);
+		WREG32(D2MODE_PRIORITY_B_CNT, d2mode_priority_a_cnt);
 	}
-
-	WREG32(D1MODE_PRIORITY_A_CNT, d1mode_priority_a_cnt);
-	WREG32(D1MODE_PRIORITY_B_CNT, d1mode_priority_a_cnt);
-	WREG32(D2MODE_PRIORITY_A_CNT, d2mode_priority_a_cnt);
-	WREG32(D2MODE_PRIORITY_B_CNT, d2mode_priority_a_cnt);
 }
 
 void rv515_bandwidth_update(struct radeon_device *rdev)

@@ -206,7 +206,6 @@ err:
 	return NOTIFY_OK;
 }
 
-#ifdef CONFIG_CRYPTO_MANAGER_TESTS
 static int cryptomgr_test(void *data)
 {
 	struct crypto_test_param *param = data;
@@ -267,7 +266,6 @@ err_put_module:
 err:
 	return NOTIFY_OK;
 }
-#endif /* CONFIG_CRYPTO_MANAGER_TESTS */
 
 static int cryptomgr_notify(struct notifier_block *this, unsigned long msg,
 			    void *data)
@@ -275,10 +273,8 @@ static int cryptomgr_notify(struct notifier_block *this, unsigned long msg,
 	switch (msg) {
 	case CRYPTO_MSG_ALG_REQUEST:
 		return cryptomgr_schedule_probe(data);
-#ifdef CONFIG_CRYPTO_MANAGER_TESTS
 	case CRYPTO_MSG_ALG_REGISTER:
 		return cryptomgr_schedule_test(data);
-#endif
 	}
 
 	return NOTIFY_DONE;

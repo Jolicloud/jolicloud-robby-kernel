@@ -532,17 +532,13 @@ static void mddev_unlock(mddev_t * mddev)
 		 * an access to the files will try to take reconfig_mutex
 		 * while holding the file unremovable, which leads to
 		 * a deadlock.
-		 * So hold set sysfs_active while the remove in happeing,
-		 * and anything else which might set ->to_remove or my
-		 * otherwise change the sysfs namespace will fail with
-		 * -EBUSY if sysfs_active is still set.
-		 * We set sysfs_active under reconfig_mutex and elsewhere
-		 * test it under the same mutex to ensure its correct value
-		 * is seen.
+		 * So hold open_mutex instead - we are allowed to take
+		 * it while holding reconfig_mutex, and md_run can
+		 * use it to wait for the remove to complete.
 		 */
 		struct attribute_group *to_remove = mddev->to_remove;
 		mddev->to_remove = NULL;
-		mddev->sysfs_active = 1;
+		mutex_lock(&mddev->open_mutex);
 		mutex_unlock(&mddev->reconfig_mutex);
 
 		if (to_remove != &md_redundancy_group)
@@ -554,7 +550,7 @@ static void mddev_unlock(mddev_t * mddev)
 				sysfs_put(mddev->sysfs_action);
 			mddev->sysfs_action = NULL;
 		}
-		mddev->sysfs_active = 0;
+		mutex_unlock(&mddev->open_mutex);
 	} else
 		mutex_unlock(&mddev->reconfig_mutex);
 
@@ -2964,9 +2960,7 @@ level_store(mddev_t *mddev, const char *buf, size_t len)
 	 *  - new personality will access other array.
 	 */
 
-	if (mddev->sync_thread ||
-	    mddev->reshape_position != MaxSector ||
-	    mddev->sysfs_active)
+	if (mddev->sync_thread || mddev->reshape_position != MaxSector)
 		return -EBUSY;
 
 	if (!mddev->pers->quiesce) {
@@ -4350,9 +4344,13 @@ static int md_run(mddev_t *mddev)
 
 	if (mddev->pers)
 		return -EBUSY;
-	/* Cannot run until previous stop completes properly */
-	if (mddev->sysfs_active)
-		return -EBUSY;
+
+	/* These two calls synchronise us with the
+	 * sysfs_remove_group calls in mddev_unlock,
+	 * so they must have completed.
+	 */
+	mutex_lock(&mddev->open_mutex);
+	mutex_unlock(&mddev->open_mutex);
 
 	/*
 	 * Analyze all RAID superblock(s)
@@ -4713,13 +4711,12 @@ out:
  */
 static int do_md_stop(mddev_t * mddev, int mode, int is_open)
 {
-	int err = 0, revalidate = 0;
+	int err = 0;
 	struct gendisk *disk = mddev->gendisk;
 	mdk_rdev_t *rdev;
 
 	mutex_lock(&mddev->open_mutex);
-	if (atomic_read(&mddev->openers) > is_open ||
-	    mddev->sysfs_active) {
+	if (atomic_read(&mddev->openers) > is_open) {
 		printk("md: %s still in use.\n",mdname(mddev));
 		err = -EBUSY;
 	} else if (mddev->pers) {
@@ -4743,7 +4740,7 @@ static int do_md_stop(mddev_t * mddev, int mode, int is_open)
 			}
 
 		set_capacity(disk, 0);
-		revalidate = 1;
+		revalidate_disk(disk);
 
 		if (mddev->ro)
 			mddev->ro = 0;
@@ -4751,8 +4748,6 @@ static int do_md_stop(mddev_t * mddev, int mode, int is_open)
 		err = 0;
 	}
 	mutex_unlock(&mddev->open_mutex);
-	if (revalidate)
-		revalidate_disk(disk);
 	if (err)
 		return err;
 	/*

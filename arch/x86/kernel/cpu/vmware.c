@@ -23,7 +23,6 @@
 
 #include <linux/dmi.h>
 #include <linux/module.h>
-#include <linux/jiffies.h>
 #include <asm/div64.h>
 #include <asm/x86_init.h>
 #include <asm/hypervisor.h>
@@ -52,7 +51,7 @@ static inline int __vmware_platform(void)
 
 static unsigned long vmware_get_tsc_khz(void)
 {
-	uint64_t tsc_hz, lpj;
+	uint64_t tsc_hz;
 	uint32_t eax, ebx, ecx, edx;
 
 	VMWARE_PORT(GETHZ, eax, ebx, ecx, edx);
@@ -63,13 +62,6 @@ static unsigned long vmware_get_tsc_khz(void)
 	printk(KERN_INFO "TSC freq read from hypervisor : %lu.%03lu MHz\n",
 			 (unsigned long) tsc_hz / 1000,
 			 (unsigned long) tsc_hz % 1000);
-
-	if (!preset_lpj) {
-		lpj = ((u64)tsc_hz * 1000);
-		do_div(lpj, HZ);
-		preset_lpj = lpj;
-	}
-
 	return tsc_hz;
 }
 
