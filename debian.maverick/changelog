@@ -1,4 +1,22 @@
-linux-lts-backport-maverick (2.6.35-23.40~lucid1) lucid-proposed; urgency=low
+linux-lts-backport-maverick (2.6.35-23.41~lucid1) lucid-proposed; urgency=low
+
+  [ Tim Gardner ]
+
+  * SRU tracking bug
+    - LP: #684448
+
+  [ Leann Ogasawara ]
+
+  * SAUCE: AF_ECONET prevent kernel stack overflow
+    - CVE-2010-3848
+  * SAUCE: AF_ECONET SIOCSIFADDR ioctl does not check privileges
+    - CVE-2010-3850
+  * SAUCE: AF_ECONET saddr->cookie prevent NULL pointer dereference
+    - CVE-2010-3849
+
+ -- Leann Ogasawara <leann.ogasawara@canonical.com>  Fri, 19 Nov 2010 15:23:52 -0800
+
+linux (2.6.35-23.40) maverick-proposed; urgency=low
 
   [ Brad Figg ]
   
