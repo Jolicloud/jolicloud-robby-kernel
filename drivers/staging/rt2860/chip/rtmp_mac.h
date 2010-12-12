@@ -359,7 +359,6 @@ typedef union _USB_DMA_CFG_STRUC {
 #define PBF_DBG			 0x043c
 #define PBF_CAP_CTRL     0x0440
 
-#ifdef RT30xx
 #ifdef RTMP_EFUSE_SUPPORT
 /* eFuse registers */
 #define EFUSE_CTRL				0x0580
@@ -368,7 +367,6 @@ typedef union _USB_DMA_CFG_STRUC {
 #define EFUSE_DATA2				0x0598
 #define EFUSE_DATA3				0x059c
 #endif /* RTMP_EFUSE_SUPPORT // */
-#endif /* RT30xx // */
 
 #define OSC_CTRL		0x5a4
 #define PCIE_PHY_TX_ATTENUATION_CTRL	0x05C8

@@ -2130,12 +2130,10 @@ struct rt_rtmp_adapter {
 	u8 FlgCtsEnabled;
 	u8 PM_FlgSuspend;
 
-#ifdef RT30xx
 #ifdef RTMP_EFUSE_SUPPORT
 	BOOLEAN bUseEfuse;
 	u8 EEPROMImage[1024];
 #endif				/* RTMP_EFUSE_SUPPORT // */
-#endif				/* RT30xx // */
 };
 
 #define DELAYINTMASK		0x0003fffb
