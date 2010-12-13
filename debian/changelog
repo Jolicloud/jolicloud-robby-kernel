@@ -1,3 +1,20 @@
+linux (2.6.35.8-1.54) robby; urgency=low
+
+  [ Adam McDaniel ]
+
+  * Inhibit splitconfig to ease comparision of kernel configs
+  * CONFIG: De-splitted config profiles
+  * CONFIG: Synchronzied networking support between kernel flavours; added
+    missing P54 driver
+  * CONFIG: Enabled iPhone USB tethering
+
+  [ Brad Figg ]
+
+  * SAUCE: Increase the default prealloc buffer for HDA audio devices
+    (non-modem)
+
+ -- Adam McDaniel <adam@jolicloud.org>  Mon, 13 Dec 2010 13:30:54 -0700
+
 linux (2.6.35.8-1.53) robby-lucid; urgency=low
 
   [ Adam McDaniel ]
