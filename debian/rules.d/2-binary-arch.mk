@@ -6,7 +6,7 @@
 prepare-%: $(stampdir)/stamp-prepare-%
 	@# Empty for make to be happy
 $(stampdir)/stamp-prepare-%: target_flavour = $*
-$(stampdir)/stamp-prepare-%: $(confdir)/config $(confdir)/config.%
+$(stampdir)/stamp-prepare-%: $(confdir)/config.%
 	@echo "Preparing $*..."
 	install -d $(builddir)/build-$*
 	touch $(builddir)/build-$*/ubuntu-build

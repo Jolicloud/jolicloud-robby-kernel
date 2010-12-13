@@ -4,6 +4,7 @@
 %common = ();
 
 print "Reading config's ...\n";
+exit;
 
 opendir(DIR, ".");
 
