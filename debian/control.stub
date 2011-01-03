@@ -74,7 +74,7 @@ Architecture: i386
 Section: restricted/base
 Priority: optional
 Pre-Depends: dpkg (>= 1.10.24)
-Provides: linux-image, linux-image-2.6, fuse-module, kvm-api-4, redhat-cluster-modules, ivtv-modules, ndiswrapper-modules-1.9, psb-modules, nvidia-modules, ipheth-modules
+Provides: linux-image, linux-image-2.6, fuse-module, kvm-api-4, redhat-cluster-modules, ivtv-modules, ndiswrapper-modules-1.9, psb-modules, ipheth-modules
 Depends: initramfs-tools (>= 0.36ubuntu6), coreutils | fileutils (>= 4.0), module-init-tools (>= 3.3-pre11-4ubuntu3), wireless-crda
 Conflicts: hotplug (<< 0.0.20040105-1)
 Recommends: grub-pc | grub | lilo (>= 19.1), v86d
@@ -128,7 +128,7 @@ Architecture: i386
 Section: restricted/base
 Priority: optional
 Pre-Depends: dpkg (>= 1.10.24)
-Provides: linux-image, linux-image-2.6, fuse-module, kvm-api-4, redhat-cluster-modules, ivtv-modules, ndiswrapper-modules-1.9, psb-modules, nvidia-modules, ipheth-modules
+Provides: linux-image, linux-image-2.6, fuse-module, kvm-api-4, redhat-cluster-modules, ivtv-modules, ndiswrapper-modules-1.9, psb-modules, ipheth-modules
 Depends: initramfs-tools (>= 0.36ubuntu6), coreutils | fileutils (>= 4.0), module-init-tools (>= 3.3-pre11-4ubuntu3), wireless-crda
 Conflicts: hotplug (<< 0.0.20040105-1)
 Recommends: grub-pc | grub | lilo (>= 19.1), v86d
