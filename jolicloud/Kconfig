@@ -2,6 +2,7 @@ menu "Jolicloud Supplied Third-Party Device Drivers"
 
 source "jolicloud/asus_eee/Kconfig"
 source "jolicloud/broadcom/Kconfig"
+source "jolicloud/keucr/Kconfig"
 source "jolicloud/psb/Kconfig"
 source "jolicloud/via_chrome9/Kconfig"
 source "jolicloud/rtl8192ce/Kconfig"
