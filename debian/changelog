@@ -1,3 +1,484 @@
+linux (2.6.35.9-1.56) robby-1.1.1; urgency=low
+
+  [ Adam McDaniel ]
+
+  * CONFIG: Remove mem=2000MB as default cmdline option due to nasty KMS
+    regressions
+  * keucr: Imported keucr module to support the ENE card reader
+  * rtl8192cu: Imported upstream rtl8192cu USB wifi driver
+  * Enabled Kbuild/config for RTL8192CU
+  * CONFIG: Enabled apparmor
+
+  [ Upstream Kernel Changes ]
+
+  * AppArmor security module
+  * AppArmor: Correct mapping of file permissions.
+  * AppArmor: Turn auditing of ptrace on
+  * AppArmor: fix operator precidence issue in as_path_link
+  * AppArmor: Explicitly include header files to allow apparmor to build on
+    powerpc
+  * AppArmor: ensure apparmor enabled parmater is off if AppArmor fails to
+    initialize.
+  * AppArmor: fix auditing of domain transitions to include target profile
+    information
+  * AppArmor: fix C99 violation
+  * AppArmor: fix build failure on ia64
+  * AppArmor: revert reporting of create to write permission.
+  * AppArmor: Fix NULL pointer dereference oops in profile attachment.
+  * AppArmor: fix argument size missmatch on 64 bit builds
+  * AppArmor: Fix change_profile failing lpn401931
+  * AppArmor: Fix determination of forced AUDIT messages.
+  * AppArmor: Fix oops in auditing of the policy interface offset
+  * AppArmor: Fix profile attachment for regexp based profile names
+    - LP: #419308
+  * AppArmor: Return the correct error codes on profile addition/removal
+    - LP: #408473
+  * AppArmor: Fix OOPS in profile listing, and display full list
+    - LP: #408454
+  * AppArmor: Fix mapping of pux to new internal permission format
+    - LP: #419222
+  * AppArmor: Fix change_profile failure
+    - LP: #401931
+  * AppArmor: Tell git to ignore generated include files
+    - LP: #419505
+  * AppArmor: move from ubuntu/apparmor to security/apparmor/
+  * AppArmor: rename ptrace_may_access to ptrace_access_check to match LSM
+    change
+  * AppArmor: Fix profile namespace removal.
+  * AppArmor: Fix oops when auditing the addition of profile namespace
+  * AppArmor: enable profiles to control mmap_min_addr
+  * AppArmor: Move attach functions from profile to domain.
+  * AppArmor: Cleanup some dead cruft and comments from domain
+  * AppArmor: Committing creds no longer returns a value.
+  * AppArmor: Remove code that isn't currently used from domain
+  * AppArmor: Profile multiplexing is not needed untill user profiles are
+    allowed.
+  * AppArmor: Add Config option for AppArmor 2.4 compatability.
+  * AppArmor: Update code to reflect that is 2.4 compat functions
+  * AppArmor: if revalidate_sk is called from interrupt context don't dump
+    stack
+  * AppArmor: Cleanup cruft in file.c
+  * AppArmor: Use d_unlinked instead of d_unhashed for unlink checks
+  * AppArmor: Return disconnected paths
+  * AppArmor: Cleanup comments and dead code in lsm.c
+  * AppArmor: Cleanup comments and dead code in audit
+  * AppArmor: Cleanup comments in match
+  * AppArmor: Cleanup comments/dead code in policy
+  * AppArmor: replace const char/strlen() usage with sizeof()
+  * AppArmor: replace memset() with empty structure initializers
+  * AppArmor: Fix mediation of created paths that look like "deleted" paths
+  * AppArmor: Fix file auditing when quiet is used
+  * AppArmor: Policy load and replacement can fail to alloc mem
+    - LP: #458299
+  * AppArmor: fix failure to audit change_hat correctly
+    - LP: #462824
+  * AppArmor: ensure lib fn's use aa_ namespace prefix
+  * AppArmor: Apply lindent
+  * AppArmor: Move policy_interface to policy_unpack to better reflect what
+    it does
+  * AppArmor: Make deleted and disconnected path mediation flag based.
+  * AppArmor: Changes suggested by checkpatch
+  * AppArmor: Update AppArmor for feedback from Tetsuo Handa
+  * AppArmor: Update upack_XXX to not reset the read head on failure.
+  * AppArmor: Fix Oops when in apparmor_bprm_set_creds, when nameresolution
+    fails
+    - LP: #446164
+  * AppArmor: fix opps when child profiles are replaced
+    - LP: #475619
+  * AppArmor: Cleanup namespace code some more
+  * AppArmor: Rework filtered and newest profile
+  * AppArmor: Have unpack string use const
+  * AppArmor: Move profile load/replace/remove routines to policy.c
+  * AppArmor: Finish moving of profile load/replace/remove to policy.c
+  * AppArmor: Update comments for functions, locking, refcounting and mem
+    allocs
+  * AppArmor: Fix an oops introduced by the filter profile cleanup
+  * AppArmor: Audit when change_profile fails to allocate a learning
+    profile
+  * AppArmor: Simple cleanup of apparmor_cred_free
+  * AppArmor: Add policy lock to prevent profile changes by loading new
+    profiles
+  * AppArmor: Fix refcounting bugs in that were turned up documenting
+    refcounting
+  * AppArmor: Update interface auditing.
+  * AppArmor: Cleanup uses of audit_log_format
+  * AppArmor: Move verify_dfa in preparation for the next patch
+  * AppArmor: Make verify_dfa as part of the dfa unpack and make it static
+  * AppArmor: Have aa_unpack_dfa allocate the needed memory for its dfa
+  * AppArmor: Rename exported dfa fn to use aa_dfa_X
+  * AppArmor: Make the dfa able to accept multiple accept table sizes.
+  * AppArmor: Move accept state verification out of the dfa.
+  * AppArmor: Change table id mappings in the kernel, to stop using -1
+    everywhere
+  * AppArmor: Reduce the number of td_id assignments and fix double free
+    bug
+  * AppArmor: Add a module parameter that controls in depth dfa
+    verification
+  * AppArmor: Add the option for the dfa to use the recursive default entry
+  * AppArmor: Move verification of xindex to load time.
+  * AppArmor: Add comment to namespace not found case in prepare namespace
+  * AppArmor: Remove unused functions from sid.c
+  * AppArmor: Cleanup casting to pass parameters to audit
+  * AppArmor: Make static functions reported by make namespacecheck
+  * AppArmor: Cleanup breakage caused by previous make namespace patch
+  * AppArmor: Remove unused fn aa_audit_syscallreject
+  * AppArmor: move aa_dfa_null_transition out match, as it really isn't a
+    dfa fn
+  * AppArmor: fix failure when the profile name for removal is incorrectly
+    specified
+  * AppArmor: Use bool for fns that return true (1), false (0)
+  * AppArmor: Fix name copy error in dynstring
+  * AppArmor: Rename unpack_string and unpack_dynstring
+  * AppArmor: Verify that transition strings have the correct format.
+  * AppArmor: Cleanup up path_link error path, and add comment about NULL
+    dfa case
+  * AppArmor: Fix leak in apparmor_init if setting init context fails
+  * AppArmor: Fix profile x transitions when transition on variable
+  * AppArmor: Fix an oops on failure to create null profile
+  * AppArmor: Revert to cap_file_mmap behavior for now
+  * AppArmor: Use CAP_MAC_ADMIN to control whether policy can be
+    manipulated
+  * AppArmor: Have the load interface try to allocate its buffer via
+    kmalloc first
+  * AppArmor: Remove namespace check from fqname_subname
+  * AppArmor: Remove strchrnul
+  * AppArmor: Use container of in auditing functions instead of passing a
+    void *
+  * AppArmor: Reintroduce basic chmod path mediation.
+  * AppArmor: Reintroduce basic chown support
+  * AppArmor: Mark aa_alloc_default_namespace as init
+  * AppArmor: Fix and document aa_split_name_from_ns
+  * AppArmor: Rework what falls under AppArmor 2.4 compat
+  * AppArmor: Add comments about when a task is killed in change_hat
+  * AppArmor: Make __aa_find_profile more generic by allowing it start from
+    any base
+  * AppArmor: Move fqname_subname
+  * AppArmor: Give namespaces an fqname
+  * AppArmor: Split the use of fqname into hname and fqname
+  * AppArmor: Rename aa_split_name_from_ns to better reflect what it is
+  * AppArmor: Document and rename hname_subname
+  * AppArmor: Move xtable equivalent of aa_seperate_fqname into its own fn
+  * AppArmor: Move next name closer to its use
+  * AppArmor: Use hname instead of sa.name where appropriate
+  * AppArmor: Rename aa_alloc_null_profile to aa_new_null_profile
+  * AppArmor: Make aa_free_profile static and rearrange so as to remove it
+    decl
+  * AppArmor: Rename alloc_aa_X and free_aa_Y to aa_alloc_X and aa_free_Y
+  * AppArmor: Make sure all auditing of profile names use the hname
+  * AppArmor: Rework x_to_profile so that it doesn't return error pointers
+  * AppArmor: Static functions unpack functions don't need the aa_prefix
+  * AppArmor: Enable renaming replacement of profiles.
+  * AppArmor: call cap_ptrace_access_check to ensure full dac ptrace
+  * AppArmor: add linux/err.h for ERR_PTR
+  * AppArmor: replace kfree with kzfree where appropriate
+  * AppArmor: use the generic routine to free domain entries
+  * AppArmor: Remove namespace parameter from procattr routines
+  * AppArmor: Remove no profile unconfined case from getprocattr
+  * AppArmor: Rename some of the policy fns to better reflect what they are
+  * AppArmor: Rename *_wupd and the base fn's they depend on
+  * AppArmor: Quick skim of comments, fixing typos, spacing, etc.
+  * AppArmor: Return the new cred if aa_current_policy updates the cred
+  * AppArmor: aa_put_task_policy no longer exists, remove its .h define
+  * AppArmor: reduce calls to aa_get_task_context to fns that require the
+    refcount
+  * AppArmor: use aa_get_task_cred where ref count is needed
+  * AppArmor: aa_current_policy is no longer used so remove it
+  * AppArmor: Add small macro to encapsulate the test of if a profile is
+    confining
+  * AppArmor: Cleanup __aa_task_is_confined
+  * AppArmor: remove aa_task_cxt as it is no longer used
+  * AppArmor: Document aa_current_profile routines
+  * AppArmor: Remove unnecessary test from replace group
+  * AppArmor: remove cruft from aa_getprocattr
+  * AppArmor: move aa_cred_policy into the header
+  * AppArmor: Fix error code for when change_hat is done and there are no
+    hats
+  * AppArmor: Use the lname and tname to aid readability
+  * AppArmor: support hardy era dfa null transitions
+  * AppArmor: Update copyright for 2010
+  * AppArmor: Rework AppArmor file delegation
+  * AppArmor: Reorder the file permissions and add the AA_MAY_DELETE perm
+  * AppArmor: Add caps mask, used to determine if extended mediation is
+    present
+  * AppArmor: Remove filter profile
+  * AppArmor: replace aa_confined with unconfined
+  * AppArmor: fix reading of procattr to return the newest profile
+  * AppArmor: rename aa_newest_profile and aa_confining_profile
+  * AppArmor: Fix the error codes associated with not finding a hat
+  * AppArmor: fix/cleanup a couple comments in policy
+  * AppArmor: Recursive default table compression isn't used so remove it
+  * AppArmor: Document onexec profile reference transfer.
+  * AppArmor: remove passing ns into x_to_profile
+  * AppArmor: Remove aa_get_task_cred
+  * AppArmor: Add back in the full changehat command
+  * AppArmor: define AA_ONEXEC to make code more readable
+  * AppArmor: switch change_hat and change_profile test parameter to bool
+  * AppArmor: rename aa_policy_common to aa_policy
+  * AppArmor: rename aa_cred_policy to aa_cred_profile
+  * AppArmor: When getting or setting profiles, use the newest version
+  * AppArmor: remove aa_task_cxt_group
+  * AppArmor: rename aa_task_context to aa_task_cxt
+  * AppArmor: cleanup namespace before making changes
+  * AppArmor: rename default namespace to root namespace
+  * AppArmor: Add refcounting to the dfa as a first step in sharing it
+  * AppArmor: allow setting a profiles start state at load time
+  * AppArmor: Remove the ability to set capability
+  * AppArmor: Fix oops when AppArmor fails to unpack the dfa
+    - LP: #496110
+  * AppArmor: move parent field from profile into policy
+  * AppArmor: rename policy_free to policy_destroy
+  * AppArmor: Add comments to the policy routines
+  * AppArmor: move root_ns fn's to after the fns they use
+  * AppArmor: convert locking and necessary routines over to using
+    hierachical ns
+  * AppArmor: rename aa_sys_find_attach to aa_find_attach
+  * AppArmor: aa_find_attach takes the wrong lock when searching for a
+    child
+  * AppArmor: Move the lock out of policy into namespace
+  * AppArmor: convert from passing policy to passing list_head where
+    appropriate
+  * AppArmor: fix null profile reference bug
+  * AppArmor: Allow userspace to pass in profile flags that control path
+    resolution
+  * AppArmor: rename PROFILE_AUDIT_MODE to AUDIT_MODE
+  * AppArmor: rename PROFILE_KILL to DO_KILL
+  * AppArmor: Rename PROFILE_COMPLAIN to COMPLAIN_MODE
+  * AppArmor: Add debug output when asking for secure exec.
+  * AppArmor: Don't redefine ACC_MODE
+  * AppArmor: Don't force cross namespace ptrace restrictions
+  * AppArmor: Include linux/kref.h to get struct kref for non-x86
+    architectures.
+  * AppArmor: Fix allocation of cred_blank
+  * AppArmor: remove option to conditionally enable networking rules
+  * AppArmor: fix leak of file transition table if it fails to verify
+  * AppArmor: rearrange prepare_namespace to improve readability
+  * AppArmor: enable auditing of failed renaming replacement name
+  * AppArmor: cleanup hname_tail to remove references to namespace :
+  * AppArmor: strstrip has been replaced by strim in 2.6.33 fix AAs uses
+  * AppArmor: return NULL from kvmalloc if size is NULL
+  * AppArmor: Fix the validation done on fqnames during policy load
+  * AppArmor: update separate_fqname comments
+  * AppArmor: replace single goto in x_to_name with a return
+  * AppArmor: Add comment to change_hat explaining auditing of first hat
+  * AppArmor: Update comments for current_profile to reflect NULL is not
+    valid
+  * AppArmor: Add BUG_ON checks to for contexts attached to tasks
+  * AppArmor: Update commenting in apparmorfs
+  * AppArmor: Update comments is audit.c
+  * AppArmor: Update comments in capability
+  * AppArmor: Update comments in context
+  * AppArmor: free_file_cxt will oops if the file_cxt is NULL
+  * AppArmor: cleanup sid to only what is currently used
+  * AppArmor: fix double allocation of sid when allocating null profile
+  * AppArmor: Remove references to sys
+  * AppArmor: update comments in domain
+  * AppArmor: update comments in file
+  * AppArmor: update commenting in ipc
+  * AppArmor: updating and add more comments in LSM.c
+  * AppArmor: the runtime disable option is unused so remove it
+  * AppArmor: Update commenting for net
+  * AppArmor: update comments for path
+  * AppArmor: update comments in policy
+  * AppArmor: update commenting in match
+  * AppArmor: Fix oops if free_table is passed NULL value
+  * AppArmor: update and expand comments in policy_unpack
+  * AppArmor: update and expand comments in procattr
+  * AppArmor: update comments in resource
+  * AppArmor: Use current->nsproxy->root to find namespace root
+  * AppArmor: fix matches uses of doing pointer arthimetic on void *
+  * AppArmor: Fix leak of table entry if unpack fails
+  * AppArmor: The caps cache is caching based off of task which is
+    incorrect
+  * AppArmor: Fix apparmor's reference of real_parent->pid in auditing
+  * AppArmor: Log create and delete perms
+  * AppArmor: Remove null_profile's use of PFLAG_NO_LIST_REF
+    - LP: #539437
+  * AppArmor: Stop page allocation warnings that can occur on policy load
+    - LP: #458299
+  * AppArmor: The LSM is expecting the string len rather than the
+    allocation size
+  * AppArmor: Fix oop in profile verification if profile unpack fails.
+  * AppArmor: Fix put of unassigned ns if aa_unpack fails
+  * AppArmor: Fix refcount bug when exec fails
+  * AppArmor: Take refcount on cxt->profile to ensure it remains a valid
+    reference
+  * AppArmor: fix typo in scrubbing environment variable warning
+  * AppArmor: fix refcount order bug that can trigger during replacement
+  * AppArmor: Make sure to unmap aliases for vmalloced dfas before they are
+    live
+  * AppArmor: address performance regression of replaced profile
+  * AppArmor: make the global sid the correct type
+  * AppArmor: use the kernel shared workqueue to free vmalloc'ed dfas
+  * AppArmor: Minor comment cleanups
+  * AppArmor: rename __aa_add/remove_profile to __list_add/remove_profile
+  * AppArmor: Stop unconfined from inheriting replaced/removed children
+  * AppArmor: split __aa_replace_profile into separate remove and replace
+    fns
+  * AppArmor: cleanup lsm common_perm routines
+  * AppArmor: Split out meta permission, to allow finer control from user
+    space
+  * AppArmor: reorder the AppArmor permission mask
+  * AppArmor: cleanup the permission mapping fn
+  * AppArmor: map existing operations to use meta perm requests
+  * AppArmor: rename common_perm_dentry to common_perm_dir_dentry
+  * AppArmor: add common_perm_mnt_dentry
+  * AppArmor: add mediation of attr read
+  * AppArmor: split x_table_lookup from x_to_profile and move into its own
+    fn
+  * AppArmor: Fix onexec for unconfined processes
+  * AppArmor: Add more comments to bprm_set_creds
+  * AppArmor: clear temporary cred state when transitioning to same profile
+  * AppArmor: Add defines for the load only constants
+  * AppArmor: more updates to policy.c comments
+  * AppArmor: move __aa_remove_namespace earlier in the file to remove
+    forward decl
+  * AppArmor: Remove unnecessary test and break from x_table_lookup
+  * AppArmor: another pass through policy.c updating comments
+  * AppArmor: move error condition test next to find_namespace that can
+    cause it
+  * AppArmor: fold replace_group into replace_current_profile and updat
+    comments
+  * AppArmor: rename complex profile and namespace find routines to lookup
+  * AppArmor: Remove unnecessary test for replacedby before put_profile
+  * AppArmor: when doing ix update cred to the newest versions of the
+    profile.
+  * AppArmor: change how on exec is computed to remove potential ambiguity
+  * AppArmor: Rework aa_str_perms so it returns that state stopped in
+  * AppArmor: refactor aa_file_common_perm and aa_path_perm for common code
+  * AppArmor: Don't overlap rename and replacedby fields
+  * AppArmor: don't inherit rename profile sid if there is also an original
+    profile
+  * AppArmor: complain should only override AppArmor permission denials
+  * AppArmor: change permission auditing away from user::other to just perm
+  * AppArmor: cleanup the aa_get_name break error condition
+  * AppArmor: virtualize the get_procattr for namespaces.
+  * AppArmor: overlap link_subset permission
+  * AppArmor: Be consistent with op and operation
+  * AppArmor: refer to operation as a constant instead of passing the raw
+    string
+  * AppArmor: Be consistent and pass the operation as the first fn
+    parameter
+  * AppArmor: consolidate apparmor_file_permission and common_file_perm
+  * AppArmor: remove 24 compat for common_file_perm
+  * AppArmor: rename sa.perms.allowed to allow
+  * AppArmor: static apparmor functions don't need the aa_ namespace prefix
+  * AppArmor: rename aa_interface_XXX fns to aa_XXX
+  * AppArmor: fix regression by setting default to mediate deleted files
+  * AppArmor: Fix the forced auditing and quieting of link permissions
+  * AppArmor: Fix test for errors during dfa unpack
+  * AppArmor: use the cred referenced by the file's security field
+  * AppArmor: If exec succeeds set the files cached permissions as xmr
+  * AppArmor: Fix allocation of the ns hname
+  * AppArmor: make fn's used to virtualize procattr generic
+  * AppArmor: Use the generic fn to compute the visible ns name in
+    apparmorfs
+  * AppArmor: log namespaces with the profile instead of having a separate
+    ns field
+  * AppArmor: make the name returned by aa_get_name const char
+  * AppArmor: use a more descriptive name for the audit name fields
+  * AppArmor: instead of embedding the namespace name return it as its own
+    value
+  * AppArmor: rename simple_write_to_buffer
+  * AppArmor: refactor auditing so that there is a common audit data
+    structure
+  * AppArmor: Remove unnecessary fields from the file audit entries
+  * AppArmor: Split interface auditing into two parts.
+  * AppArmor: remove gfp_mask from AppArmor audit struct
+  * AppArmor: Add profile and type logging information to the common audit
+    struct
+  * AppArmor: convert logging to lsm_audit compatible pre and post
+    callbacks
+  * AppArmor: change network auditing over to use same structs as lsm_audit
+  * AppArmor: extend the data audited by mediation of setting rlimits
+  * AppArmor: map loaded resource number to internal architecture format
+  * AppArmor: Use lsm_audit on the backend of AppArmor auditing
+  * AppArmor: push down the use of common_audit_data in capability
+  * AppArmor: push down use of common_audit_data to ptrace_audit fn
+  * AppArmor: Audit profile domain not pids for ptrace
+  * AppArmor: push down the use of common_audit_data to audit function for
+    policy
+  * AppArmor: push down the use of common_audit_data to audit fn for
+    resource
+  * AppArmor: Refactor permission to load policy decision
+  * AppArmor: use audit_policy fn in aa_may_manage_policy
+  * AppArmor: push down use of common_audit_data to audit fn for network
+  * AppArmor: push down the use of common_audit_data to audit fn for
+    file&domain
+  * AppArmor: Remove AppArmor audit types from audit.h
+  * AppArmor: move profiles file into apparmorfs-24 as it is a
+    compatibility fn
+  * AppArmor: use the aad.name filed in auditing files instead of
+    aad.fs.path
+  * AppArmor: AppArmor: drop redundant newline in   initialization
+  * AppArmor: Fix put of error pointer that is returned when profile unpack
+    fails
+  * AppArmor: fix the upper bound check for the next/check table
+  * AppArmor: move to 32 bit file permissions, allowing for future
+    expansion
+  * AppArmor: Remap file perms to take advantage of 32 bit perms
+  * AppArmor: Remove unused // null transition
+  * AppArmor: Add AppArmor entry to maintainers file
+  * AppArmor: Document AppArmor kernel parameters
+  * AppArmor: cleanup little style inconscitencies that have crept in
+  * AppArmor: skip kmalloc for large profiles
+  * AppArmor: Drop old network mediation
+  * AppArmor: Drop CONFIG_SECURITY_APPARMOR_COMPAT_24
+  * AppArmor: Remove comment "convert to LSM audit"
+  * AppArmor: Replace COMMON_AUDIT_DATA_INIT_NONE with
+    COMMON_AUDIT_DATA_INIT
+  * AppArmor: convert auditing to use namespace field
+  * AppArmor: Remove unused mmap_min_addr bits
+  * AppArmor: Add call to cap_ptrace_traceme
+  * AppArmor: Mask permitted caps returned by capget
+  * AppArmor: Make apparmor_capable easier to read by cleaning up if cond
+  * AppArmor: remove !buffer tests when freeing memory
+  * AppArmor: fix allocations to ensure they are at least size of
+    work_struct
+  * AppArmor: Cleanup simple write to buffer returns
+  * AppArmor: Remove aa_fs_null and aa_fs_mnt
+  * AppArmor: Remove useless setting of info to "hat not found"
+  * AppArmor: don't increment terminator pos match when generating
+    permission string
+  * AppArmor: rework aa_strneq into a simplier and improved form
+  * AppArmor: Replace comma in info message with a ;
+  * AppArmor: Fix apparmor_setprocattr to allow PAGE_SIZE writes
+  * AppArmor: Move kfree inside of if (dfa) in fn dfa_free
+  * AppArmor: Add __init to aa_free_root_ns
+  * AppArmor: Add comment about change_hat_v hat tokenize
+  * AppArmor: use the empty string in aa_dfa_null_transition instead of
+    "\0"
+  * AppArmor: remove declaration of deleted aaparmor_disable fn
+  * AppArmor: Turn on apparmor audit header by default
+  * AppArmor: Update comments to make sure they are up to date.
+  * AppArmor: Update Resource code to make profile required.
+  * AppArmor: convert onexec parameter of change_profile to bool
+  * AppArmor: update aa_may_ptrace as NULL profile is not allowed anymore
+  * AppArmor: Don't do COMMON_AUDIT_DATA_INIT if not emitting audit message
+  * AppArmor: Change audit_header from type= to apparmor=
+  * Signed-off-by: John Johansen <john.johansen@canonical.com>
+  * AppArmor: Rework AUDIT_MODE to remove conditional profile test
+  * AppArmor: remove conditional profile test from mode tests
+  * AppArmor: fix AA_MAY_META_READ for v5 dfa permissions packing
+  * AppArmor: remove pid from audit_pre fn
+  * AppArmor: Fix dentry_open mediation of sysctls
+  * AppArmor: Remove redundant mediation of sysctls via security_sysctl
+  * AppArmor: Remove delegate information from permission struct
+  * AppArmor: Add missing include for vmalloc.h that caused ARM builds to
+    fail
+  * AppArmor: Add __init and __initdata to fns and variables
+  * AppArmor: remove unneeded profile != null checks from aa_audit
+  * AppArmor: Remove unused symbol AA_NEW_SID
+  * AppArmor: remove unneeded if (profile) test from aa_newest version and
+    rework
+  * AppArmor: Spell check comments and do general comment update
+  * AppArmor: Add comment to vmalloc as to why minimum size is work_struct
+  * AppArmor: make printk in aa_info_message not dependent on audit being
+    enabled
+  * AppArmor: Update comments regarding embedded \0 string verification
+  * AppArmor: Add simple documentation for AppArmor
+
+ -- Adam McDaniel <adam@jolicloud.org>  Tue, 11 Jan 2011 11:05:39 -0700
+
 linux (2.6.35.9-1.55) robby-1.1.1; urgency=low
 
   [ Adam McDaniel ]
