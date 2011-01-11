@@ -8,6 +8,7 @@ obj-$(CONFIG_USB_ENESTORAGE)	+= keucr/
 obj-$(CONFIG_DRM_PSB)		+= psb/
 obj-$(CONFIG_DRM_VIA_CHROME9)	+= via_chrome9/
 obj-$(CONFIG_RTL8192CE)		+= rtl8192ce/
+obj-$(CONFIG_RTL8192CU)		+= rtl8192cu/
 obj-$(CONFIG_RTL8192SE)		+= rtl8192se/
 
 # This is a stupid trick to get kbuild to create jolicloud/built-in.o
