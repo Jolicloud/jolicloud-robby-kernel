@@ -182,7 +182,9 @@ static struct pci_device_id rtl8192_pci_id_tbl[] __devinitdata = {
 	{RTL_PCI_DEVICE(0x07aa, 0x0047, rtl819xp_ops)},
 #elif defined(RTL8192SE)	/*8192SE*/
 	/* take care of auto load fail case */
-	{RTL_PCI_DEVICE(0x10ec, 0x8192, rtl8192se_ops)},
+	// 0x8192 is better supported by rtl8192e staging driver and as
+	// such is disabled here:
+	// {RTL_PCI_DEVICE(0x10ec, 0x8192, rtl8192se_ops)},
 	{RTL_PCI_DEVICE(0x10ec, 0x8171, rtl8192se_ops)},
 	{RTL_PCI_DEVICE(0x10ec, 0x8172, rtl8192se_ops)},
 	{RTL_PCI_DEVICE(0x10ec, 0x8173, rtl8192se_ops)},
