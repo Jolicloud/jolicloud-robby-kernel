@@ -9,7 +9,7 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: wl_iw.c,v 1.109.2.2.8.8 2010/01/28 03:10:40 Exp $
+ * $Id: wl_iw.c,v 1.133.2.1.28.7 2010/12/15 00:00:32 Exp $
  */
 
 #define LINUX_PORT
@@ -25,8 +25,6 @@
 #include <linux/if_arp.h>
 #include <asm/uaccess.h>
 
-typedef void wlc_info_t;
-typedef void wl_info_t;
 typedef const struct si_pub	si_t;
 #include <wlioctl.h>
 
@@ -45,8 +43,11 @@ extern bool wl_iw_conn_status_str(uint32 event_type, uint32 status,
 #define htodchanspec(i) i
 #define dtohchanspec(i) i
 
-#ifdef CONFIG_WIRELESS_EXT
-
+#undef USE_IW
+#if defined(CONFIG_WIRELESS_EXT)
+#define USE_IW
+#endif
+#ifdef USE_IW
 extern struct iw_statistics *wl_get_wireless_stats(struct net_device *dev);
 #endif 
 
@@ -143,15 +144,22 @@ dev_wlc_bufvar_set(
 	char *name,
 	char *buf, int len)
 {
-	char ioctlbuf[WLC_IOCTL_SMLEN];
+	char *ioctlbuf;
 	uint buflen;
+	int error;
 
-	buflen = bcm_mkiovar(name, buf, len, ioctlbuf, sizeof(ioctlbuf));
+	ioctlbuf = kmalloc(MAX_WLIW_IOCTL_LEN, GFP_KERNEL);
+	if (!ioctlbuf)
+		return -ENOMEM;
+
+	buflen = bcm_mkiovar(name, buf, len, ioctlbuf, MAX_WLIW_IOCTL_LEN);
 	ASSERT(buflen);
+	error = dev_wlc_ioctl(dev, WLC_SET_VAR, ioctlbuf, buflen);
 
-	return (dev_wlc_ioctl(dev, WLC_SET_VAR, ioctlbuf, buflen));
+	kfree(ioctlbuf);
+	return error;
 }
-#endif
+#endif 
 
 static int
 dev_wlc_bufvar_get(
@@ -470,8 +478,17 @@ wl_iw_get_range(
 	static int channels[MAXCHANNEL+1];
 	wl_uint32_list_t *list = (wl_uint32_list_t *) channels;
 	wl_rateset_t rateset;
-	int error, i;
+	int error, i, k;
 	uint sf, ch;
+
+	int phytype;
+	int bw_cap = 0, sgi_tx = 0, nmode = 0;
+	channel_info_t ci;
+	uint8 nrate_list2copy = 0;
+	uint16 nrate_list[4][8] = { {13, 26, 39, 52, 78, 104, 117, 130},
+		{14, 29, 43, 58, 87, 116, 130, 144},
+		{27, 54, 81, 108, 162, 216, 243, 270},
+		{30, 60, 90, 120, 180, 240, 270, 300}};
 
 	WL_TRACE(("%s: SIOCGIWRANGE\n", dev->name));
 
@@ -523,6 +540,35 @@ wl_iw_get_range(
 	range->num_bitrates = rateset.count;
 	for (i = 0; i < rateset.count && i < IW_MAX_BITRATES; i++)
 		range->bitrate[i] = (rateset.rates[i] & 0x7f) * 500000; 
+	dev_wlc_intvar_get(dev, "nmode", &nmode);
+	dev_wlc_ioctl(dev, WLC_GET_PHYTYPE, &phytype, sizeof(phytype));
+
+	if (nmode == 1 && ((phytype == WLC_PHY_TYPE_SSN) || (phytype == WLC_PHY_TYPE_LCN))) {
+		dev_wlc_intvar_get(dev, "mimo_bw_cap", &bw_cap);
+		dev_wlc_intvar_get(dev, "sgi_tx", &sgi_tx);
+		dev_wlc_ioctl(dev, WLC_GET_CHANNEL, &ci, sizeof(channel_info_t));
+		ci.hw_channel = dtoh32(ci.hw_channel);
+
+		if (bw_cap == 0 ||
+			(bw_cap == 2 && ci.hw_channel <= 14)) {
+			if (sgi_tx == 0)
+				nrate_list2copy = 0;
+			else
+				nrate_list2copy = 1;
+		}
+		if (bw_cap == 1 ||
+			(bw_cap == 2 && ci.hw_channel >= 36)) {
+			if (sgi_tx == 0)
+				nrate_list2copy = 2;
+			else
+				nrate_list2copy = 3;
+		}
+		range->num_bitrates += 8;
+		for (k = 0; i < range->num_bitrates; k++, i++) {
+
+			range->bitrate[i] = (nrate_list[nrate_list2copy][k]) * 500000;
+		}
+	}
 
 	if ((error = dev_wlc_ioctl(dev, WLC_GET_PHYTYPE, &i, sizeof(i))))
 		return error;
@@ -580,6 +626,15 @@ wl_iw_get_range(
 	range->enc_capa |= IW_ENC_CAPA_CIPHER_TKIP;
 	range->enc_capa |= IW_ENC_CAPA_CIPHER_CCMP;
 	range->enc_capa |= IW_ENC_CAPA_WPA2;
+
+	IW_EVENT_CAPA_SET_KERNEL(range->event_capa);
+
+	IW_EVENT_CAPA_SET(range->event_capa, SIOCGIWAP);
+	IW_EVENT_CAPA_SET(range->event_capa, SIOCGIWSCAN);
+	IW_EVENT_CAPA_SET(range->event_capa, IWEVTXDROP);
+	IW_EVENT_CAPA_SET(range->event_capa, IWEVMICHAELMICFAILURE);
+	IW_EVENT_CAPA_SET(range->event_capa, IWEVPMKIDCAND);
+
 #if WIRELESS_EXT >= 22 && defined(IW_SCAN_CAPA_ESSID)
 
 	range->scan_capa = IW_SCAN_CAPA_ESSID;
@@ -899,6 +954,55 @@ ie_is_wps_ie(uint8 **wpsie, uint8 **tlvs, int *tlvs_len)
 #endif 
 
 static int
+wl_iw_handle_scanresults_ies(char **event_p, char *end,
+	struct iw_request_info *info, wl_bss_info_t *bi)
+{
+#if WIRELESS_EXT > 17
+	struct iw_event	iwe;
+	char *event;
+
+	event = *event_p;
+	if (bi->ie_length) {
+
+		bcm_tlv_t *ie;
+		uint8 *ptr = ((uint8 *)bi) + sizeof(wl_bss_info_t);
+		int ptr_len = bi->ie_length;
+
+		if ((ie = bcm_parse_tlvs(ptr, ptr_len, DOT11_MNG_RSN_ID))) {
+			iwe.cmd = IWEVGENIE;
+			iwe.u.data.length = ie->len + 2;
+			event = IWE_STREAM_ADD_POINT(info, event, end, &iwe, (char *)ie);
+		}
+		ptr = ((uint8 *)bi) + sizeof(wl_bss_info_t);
+
+		while ((ie = bcm_parse_tlvs(ptr, ptr_len, DOT11_MNG_WPA_ID))) {
+
+			if (ie_is_wps_ie(((uint8 **)&ie), &ptr, &ptr_len)) {
+				iwe.cmd = IWEVGENIE;
+				iwe.u.data.length = ie->len + 2;
+				event = IWE_STREAM_ADD_POINT(info, event, end, &iwe, (char *)ie);
+				break;
+			}
+		}
+
+		ptr = ((uint8 *)bi) + sizeof(wl_bss_info_t);
+		ptr_len = bi->ie_length;
+		while ((ie = bcm_parse_tlvs(ptr, ptr_len, DOT11_MNG_WPA_ID))) {
+			if (ie_is_wpa_ie(((uint8 **)&ie), &ptr, &ptr_len)) {
+				iwe.cmd = IWEVGENIE;
+				iwe.u.data.length = ie->len + 2;
+				event = IWE_STREAM_ADD_POINT(info, event, end, &iwe, (char *)ie);
+				break;
+			}
+		}
+
+	*event_p = event;
+	}
+
+#endif 
+	return 0;
+}
+static int
 wl_iw_get_scan(
 	struct net_device *dev,
 	struct iw_request_info *info,
@@ -977,43 +1081,7 @@ wl_iw_get_scan(
 		iwe.u.qual.noise = 0x100 + bi->phy_noise;
 		event = IWE_STREAM_ADD_EVENT(info, event, end, &iwe, IW_EV_QUAL_LEN);
 
-#if WIRELESS_EXT > 17
-
-		if (bi->ie_length) {
-
-			bcm_tlv_t *ie;
-			uint8 *ptr = ((uint8 *)bi) + sizeof(wl_bss_info_t);
-			int ptr_len = bi->ie_length;
-			if ((ie = bcm_parse_tlvs(ptr, ptr_len, DOT11_MNG_RSN_ID))) {
-				iwe.cmd = IWEVGENIE;
-				iwe.u.data.length = ie->len + 2;
-				event = IWE_STREAM_ADD_POINT(info, event, end, &iwe, (char *)ie);
-			}
-			ptr = ((uint8 *)bi) + sizeof(wl_bss_info_t);
-			while ((ie = bcm_parse_tlvs(ptr, ptr_len, DOT11_MNG_WPA_ID))) {
-
-			    if (ie_is_wps_ie(((uint8 **)&ie), &ptr, &ptr_len)) {
-				iwe.cmd = IWEVGENIE;
-				iwe.u.data.length = ie->len + 2;
-				event = IWE_STREAM_ADD_POINT(info, event, end, &iwe, (char *)ie);
-				break;
-			    }
-			}
-
-			ptr = ((uint8 *)bi) + sizeof(wl_bss_info_t);
-			ptr_len = bi->ie_length;
-			while ((ie = bcm_parse_tlvs(ptr, ptr_len, DOT11_MNG_WPA_ID))) {
-				if (ie_is_wpa_ie(((uint8 **)&ie), &ptr, &ptr_len)) {
-					iwe.cmd = IWEVGENIE;
-					iwe.u.data.length = ie->len + 2;
-					event = IWE_STREAM_ADD_POINT(info, event,
-						end, &iwe, (char *)ie);
-					goto done;
-				}
-			}
-		}
-done:
-#endif 
+		 wl_iw_handle_scanresults_ies(&event, end, info, bi);
 
 		iwe.cmd = SIOCGIWENCODE;
 		if (dtoh16(bi->capability) & DOT11_CAP_PRIVACY)
@@ -1069,11 +1137,17 @@ wl_iw_set_essid(
 #endif
 		memcpy(ssid.SSID, extra, ssid.SSID_len);
 		ssid.SSID_len = htod32(ssid.SSID_len);
+
+		if ((error = dev_wlc_ioctl(dev, WLC_SET_SSID, &ssid, sizeof(ssid))))
+			return error;
 	}
 
-	if ((error = dev_wlc_ioctl(dev, WLC_SET_SSID, &ssid, sizeof(ssid))))
-		return error;
-
+	else {
+		scb_val_t scbval;
+		bzero(&scbval, sizeof(scb_val_t));
+		if ((error = dev_wlc_ioctl(dev, WLC_DISASSOC, &scbval, sizeof(scb_val_t))))
+			return error;
+	}
 	return 0;
 }
 
@@ -1222,7 +1296,7 @@ static int wl_iw_get_rate(
 	if ((error = dev_wlc_ioctl(dev, WLC_GET_RATE, &rate, sizeof(rate))))
 		return error;
 	rate = dtoh32(rate);
-	vwrq->value = (rate & 0x7f) * 500000;
+	vwrq->value = rate * 500000;
 
 	return 0;
 }
@@ -1401,13 +1475,25 @@ wl_iw_set_retry(
 
 	if (vwrq->flags & IW_RETRY_LIMIT) {
 
+#if WIRELESS_EXT > 20
+		if ((vwrq->flags & IW_RETRY_LONG) ||(vwrq->flags & IW_RETRY_MAX) ||
+			!((vwrq->flags & IW_RETRY_SHORT) || (vwrq->flags & IW_RETRY_MIN))) {
+#else
 		if ((vwrq->flags & IW_RETRY_MAX) || !(vwrq->flags & IW_RETRY_MIN)) {
+#endif 
+
 			lrl = htod32(vwrq->value);
 			if ((error = dev_wlc_ioctl(dev, WLC_SET_LRL, &lrl, sizeof(lrl))))
 				return error;
 		}
 
+#if WIRELESS_EXT > 20
+		if ((vwrq->flags & IW_RETRY_SHORT) ||(vwrq->flags & IW_RETRY_MIN) ||
+			!((vwrq->flags & IW_RETRY_LONG) || (vwrq->flags & IW_RETRY_MAX))) {
+#else
 		if ((vwrq->flags & IW_RETRY_MIN) || !(vwrq->flags & IW_RETRY_MAX)) {
+#endif 
+
 			srl = htod32(vwrq->value);
 			if ((error = dev_wlc_ioctl(dev, WLC_SET_SRL, &srl, sizeof(srl))))
 				return error;
@@ -1650,8 +1736,8 @@ wl_iw_set_wpaie(
 	char *extra
 )
 {
-	WL_TRACE(("%s: SIOCSIWGENIE\n", dev->name));
-	dev_wlc_bufvar_set(dev, "wpaie", extra, iwp->length);
+		dev_wlc_bufvar_set(dev, "wpaie", extra, iwp->length);
+
 	return 0;
 }
 
@@ -1763,12 +1849,98 @@ wl_iw_set_encodeext(
 				break;
 		}
 		swap_key_from_BE(&key);
+
 		error = dev_wlc_ioctl(dev, WLC_SET_KEY, &key, sizeof(key));
 		if (error)
 			return error;
 	}
 	return 0;
 }
+#if WIRELESS_EXT > 17
+struct {
+	pmkid_list_t pmkids;
+	pmkid_t foo[MAXPMKID-1];
+} pmkid_list;
+static int
+wl_iw_set_pmksa(
+	struct net_device *dev,
+	struct iw_request_info *info,
+	struct iw_param *vwrq,
+	char *extra
+)
+{
+	struct iw_pmksa *iwpmksa;
+	uint i;
+	char eabuf[ETHER_ADDR_STR_LEN];
+	WL_TRACE(("%s: SIOCSIWPMKSA\n", dev->name));
+	iwpmksa = (struct iw_pmksa *)extra;
+	bzero((char *)eabuf, ETHER_ADDR_STR_LEN);
+	if (iwpmksa->cmd == IW_PMKSA_FLUSH) {
+		WL_TRACE(("wl_iw_set_pmksa - IW_PMKSA_FLUSH\n"));
+		bzero((char *)&pmkid_list, sizeof(pmkid_list));
+	}
+	if (iwpmksa->cmd == IW_PMKSA_REMOVE) {
+		pmkid_list_t pmkid, *pmkidptr;
+		pmkidptr = &pmkid;
+		bcopy(&iwpmksa->bssid.sa_data[0], &pmkidptr->pmkid[0].BSSID, ETHER_ADDR_LEN);
+		bcopy(&iwpmksa->pmkid[0], &pmkidptr->pmkid[0].PMKID, WPA2_PMKID_LEN);
+		{
+			uint j;
+			WL_TRACE(("wl_iw_set_pmksa,IW_PMKSA_REMOVE - PMKID: %s = ",
+				bcm_ether_ntoa(&pmkidptr->pmkid[0].BSSID,
+				eabuf)));
+			for (j = 0; j < WPA2_PMKID_LEN; j++)
+				WL_TRACE(("%02x ", pmkidptr->pmkid[0].PMKID[j]));
+			WL_TRACE(("\n"));
+		}
+		for (i = 0; i < pmkid_list.pmkids.npmkid; i++)
+			if (!bcmp(&iwpmksa->bssid.sa_data[0], &pmkid_list.pmkids.pmkid[i].BSSID,
+				ETHER_ADDR_LEN))
+				break;
+		for (; i < pmkid_list.pmkids.npmkid; i++) {
+			bcopy(&pmkid_list.pmkids.pmkid[i+1].BSSID,
+				&pmkid_list.pmkids.pmkid[i].BSSID,
+				ETHER_ADDR_LEN);
+			bcopy(&pmkid_list.pmkids.pmkid[i+1].PMKID,
+				&pmkid_list.pmkids.pmkid[i].PMKID,
+				WPA2_PMKID_LEN);
+		}
+		pmkid_list.pmkids.npmkid--;
+	}
+	if (iwpmksa->cmd == IW_PMKSA_ADD) {
+		bcopy(&iwpmksa->bssid.sa_data[0],
+			&pmkid_list.pmkids.pmkid[pmkid_list.pmkids.npmkid].BSSID,
+			ETHER_ADDR_LEN);
+		bcopy(&iwpmksa->pmkid[0], &pmkid_list.pmkids.pmkid[pmkid_list.pmkids.npmkid].PMKID,
+			WPA2_PMKID_LEN);
+		{
+			uint j;
+			uint k;
+			k = pmkid_list.pmkids.npmkid;
+			WL_TRACE(("wl_iw_set_pmksa,IW_PMKSA_ADD - PMKID: %s = ",
+				bcm_ether_ntoa(&pmkid_list.pmkids.pmkid[k].BSSID,
+				eabuf)));
+			for (j = 0; j < WPA2_PMKID_LEN; j++)
+				WL_TRACE(("%02x ", pmkid_list.pmkids.pmkid[k].PMKID[j]));
+			WL_TRACE(("\n"));
+		}
+		pmkid_list.pmkids.npmkid++;
+	}
+	WL_TRACE(("PRINTING pmkid LIST - No of elements %d\n", pmkid_list.pmkids.npmkid));
+	for (i = 0; i < pmkid_list.pmkids.npmkid; i++) {
+		uint j;
+		WL_TRACE(("PMKID[%d]: %s = ", i,
+			bcm_ether_ntoa(&pmkid_list.pmkids.pmkid[i].BSSID,
+			eabuf)));
+		for (j = 0; j < WPA2_PMKID_LEN; j++)
+			WL_TRACE(("%02x ", pmkid_list.pmkids.pmkid[i].PMKID[j]));
+		printf("\n");
+	}
+	WL_TRACE(("\n"));
+	dev_wlc_bufvar_set(dev, "pmkid_info", (char *)&pmkid_list, sizeof(pmkid_list));
+	return 0;
+}
+#endif 
 
 static int
 wl_iw_get_encodeext(
@@ -1793,6 +1965,7 @@ wl_iw_set_wpaauth(
 	int error = 0;
 	int paramid;
 	int paramval;
+	uint32 cipher_combined;
 	int val = 0;
 	wl_iw_t *iw = IW_DEV_IF(dev);
 
@@ -1801,14 +1974,12 @@ wl_iw_set_wpaauth(
 	paramid = vwrq->flags & IW_AUTH_INDEX;
 	paramval = vwrq->value;
 
+	WL_TRACE(("%s: SIOCSIWAUTH, paramid = 0x%0x, paramval = 0x%0x\n",
+		dev->name, paramid, paramval));
+
 	switch (paramid) {
+
 	case IW_AUTH_WPA_VERSION:
-		if ((error = dev_wlc_intvar_get(dev, "wsec", &val)))
-			return error;
-		if (val & (TKIP_ENABLED | AES_ENABLED)) {
-			val &= ~(TKIP_ENABLED | AES_ENABLED);
-			dev_wlc_intvar_set(dev, "wsec", val);
-		}
 
 		if (paramval & IW_AUTH_WPA_VERSION_DISABLED)
 			val = WPA_AUTH_DISABLED;
@@ -1816,30 +1987,35 @@ wl_iw_set_wpaauth(
 			val = WPA_AUTH_PSK | WPA_AUTH_UNSPECIFIED;
 		else if (paramval & IW_AUTH_WPA_VERSION_WPA2)
 			val = WPA2_AUTH_PSK | WPA2_AUTH_UNSPECIFIED;
-		WL_ERROR(("%s: %d: setting wpa_auth to %d\n", __FUNCTION__, __LINE__, val));
+		WL_TRACE(("%s: %d: setting wpa_auth to 0x%0x\n", __FUNCTION__, __LINE__, val));
 		if ((error = dev_wlc_intvar_set(dev, "wpa_auth", val)))
 			return error;
 		break;
+
 	case IW_AUTH_CIPHER_PAIRWISE:
 	case IW_AUTH_CIPHER_GROUP:
+
+		if (paramid == IW_AUTH_CIPHER_PAIRWISE) {
+			iw->pwsec = paramval;
+		}
+		else {
+			iw->gwsec = paramval;
+		}
+
 		if ((error = dev_wlc_intvar_get(dev, "wsec", &val)))
 			return error;
 
-		if (paramval & (IW_AUTH_CIPHER_WEP40 | IW_AUTH_CIPHER_WEP104))
-			val |= 	WEP_ENABLED;
-		if (paramval & IW_AUTH_CIPHER_TKIP)
+		cipher_combined = iw->gwsec | iw->pwsec;
+		val &= ~(WEP_ENABLED | TKIP_ENABLED | AES_ENABLED);
+		if (cipher_combined & (IW_AUTH_CIPHER_WEP40 | IW_AUTH_CIPHER_WEP104))
+			val |= WEP_ENABLED;
+		if (cipher_combined & IW_AUTH_CIPHER_TKIP)
 			val |= TKIP_ENABLED;
-		if (paramval & IW_AUTH_CIPHER_CCMP)
+		if (cipher_combined & IW_AUTH_CIPHER_CCMP)
 			val |= AES_ENABLED;
-
-		if (paramid == IW_AUTH_CIPHER_PAIRWISE)
-			val |= iw->pwsec;
-		else
-			val |= iw->gwsec;
 
 		if ((error = dev_wlc_intvar_set(dev, "wsec", val)))
 			return error;
-
 		break;
 
 	case IW_AUTH_KEY_MGMT:
@@ -1858,10 +2034,11 @@ wl_iw_set_wpaauth(
 			else
 				val = WPA2_AUTH_UNSPECIFIED;
 		}
-		WL_ERROR(("%s: %d: setting wpa_auth to %d\n", __FUNCTION__, __LINE__, val));
+		WL_TRACE(("%s: %d: setting wpa_auth to %d\n", __FUNCTION__, __LINE__, val));
 		if ((error = dev_wlc_intvar_set(dev, "wpa_auth", val)))
 			return error;
 		break;
+
 	case IW_AUTH_TKIP_COUNTERMEASURES:
 		dev_wlc_bufvar_set(dev, "tkip_countermeasures", (char *)&paramval, 1);
 		break;
@@ -1881,18 +2058,14 @@ wl_iw_set_wpaauth(
 
 	case IW_AUTH_WPA_ENABLED:
 		if (paramval == 0) {
-			if ((error = dev_wlc_intvar_get(dev, "wsec", &val)))
-				return error;
-			if (val & (TKIP_ENABLED | AES_ENABLED)) {
-				val &= ~(TKIP_ENABLED | AES_ENABLED);
-				dev_wlc_intvar_set(dev, "wsec", val);
-			}
 			val = 0;
-			WL_ERROR(("%s: %d: setting wpa_auth to %d\n", __FUNCTION__, __LINE__, val));
-			dev_wlc_intvar_set(dev, "wpa_auth", val);
+			WL_TRACE(("%s: %d: setting wpa_auth to %d\n", __FUNCTION__, __LINE__, val));
+			error = dev_wlc_intvar_set(dev, "wpa_auth", val);
 			return error;
 		}
+		else {
 
+		}
 		break;
 
 	case IW_AUTH_DROP_UNENCRYPTED:
@@ -1904,14 +2077,17 @@ wl_iw_set_wpaauth(
 		break;
 
 #if WIRELESS_EXT > 17
+
 	case IW_AUTH_ROAMING_CONTROL:
-		WL_ERROR(("%s: IW_AUTH_ROAMING_CONTROL\n", __FUNCTION__));
+		WL_TRACE(("%s: IW_AUTH_ROAMING_CONTROL\n", __FUNCTION__));
 
 		break;
+
 	case IW_AUTH_PRIVACY_INVOKED:
-		WL_ERROR(("%s: IW_AUTH_PRIVACY_INVOKED\n", __FUNCTION__));
+		WL_TRACE(("%s: IW_AUTH_PRIVACY_INVOKED\n", __FUNCTION__));
 		break;
 #endif 
+
 	default:
 		break;
 	}
@@ -1949,25 +2125,15 @@ wl_iw_get_wpaauth(
 		else if (val & (WPA2_AUTH_PSK | WPA2_AUTH_UNSPECIFIED))
 			paramval = IW_AUTH_WPA_VERSION_WPA2;
 		break;
-	case IW_AUTH_CIPHER_PAIRWISE:
-	case IW_AUTH_CIPHER_GROUP:
-		if (paramid == IW_AUTH_CIPHER_PAIRWISE)
-			val = iw->pwsec;
-		else
-			val = iw->gwsec;
 
-		paramval = 0;
-		if (val) {
-			if (val & WEP_ENABLED)
-				paramval |= (IW_AUTH_CIPHER_WEP40 | IW_AUTH_CIPHER_WEP104);
-			if (val & TKIP_ENABLED)
-				paramval |= (IW_AUTH_CIPHER_TKIP);
-			if (val & AES_ENABLED)
-				paramval |= (IW_AUTH_CIPHER_CCMP);
-		}
-		else
-			paramval = IW_AUTH_CIPHER_NONE;
+	case IW_AUTH_CIPHER_PAIRWISE:
+		paramval = iw->pwsec;
 		break;
+
+	case IW_AUTH_CIPHER_GROUP:
+		paramval = iw->gwsec;
+		break;
+
 	case IW_AUTH_KEY_MGMT:
 
 		if ((error = dev_wlc_intvar_get(dev, "wpa_auth", &val)))
@@ -2090,7 +2256,7 @@ static const iw_handler wl_iw_handler[] =
 	(iw_handler) wl_iw_get_wpaauth,		
 	(iw_handler) wl_iw_set_encodeext,	
 	(iw_handler) wl_iw_get_encodeext,	
-	(iw_handler) NULL,			
+	(iw_handler) wl_iw_set_pmksa,		
 #endif 
 };
 
@@ -2407,39 +2573,50 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 		break;
 	}
 	case WLC_E_PMKID_CACHE: {
-		if (data)
-		{
-			struct iw_pmkid_cand *iwpmkidcand = (struct iw_pmkid_cand *)&extra;
-			pmkid_cand_list_t *pmkcandlist;
-			pmkid_cand_t	*pmkidcand;
-			int count;
+		struct iw_pmkid_cand *iwpmkidcand = (struct iw_pmkid_cand *)&extra;
+		pmkid_cand_list_t *pmkcandlist;
+		pmkid_cand_t	*pmkidcand;
+		int count;
 
-			cmd = IWEVPMKIDCAND;
-			pmkcandlist = data;
-			count = ntoh32(pmkcandlist->npmkid_cand);
-			wrqu.data.length = sizeof(struct iw_pmkid_cand);
-			pmkidcand = pmkcandlist->pmkid_cand;
-			while (count) {
-				bzero(iwpmkidcand, sizeof(struct iw_pmkid_cand));
-				if (pmkidcand->preauth)
-					iwpmkidcand->flags |= IW_PMKID_CAND_PREAUTH;
-				bcopy(&pmkidcand->BSSID, &iwpmkidcand->bssid.sa_data,
-					ETHER_ADDR_LEN);
-				wireless_send_event(dev, cmd, &wrqu, extra);
-				pmkidcand++;
-				count--;
-			}
+		if (data == NULL)
+			break;
+
+		cmd = IWEVPMKIDCAND;
+		pmkcandlist = data;
+		count = ntoh32_ua((uint8 *)&pmkcandlist->npmkid_cand);
+		wrqu.data.length = sizeof(struct iw_pmkid_cand);
+		pmkidcand = pmkcandlist->pmkid_cand;
+		while (count) {
+			bzero(iwpmkidcand, sizeof(struct iw_pmkid_cand));
+			if (pmkidcand->preauth)
+				iwpmkidcand->flags |= IW_PMKID_CAND_PREAUTH;
+			bcopy(&pmkidcand->BSSID, &iwpmkidcand->bssid.sa_data,
+			      ETHER_ADDR_LEN);
+			wireless_send_event(dev, cmd, &wrqu, extra);
+			pmkidcand++;
+			count--;
 		}
-		return;
+		break;
 	}
 #endif 
+
+	case WLC_E_SCAN_COMPLETE:
+#if WIRELESS_EXT > 14
+		cmd = SIOCGIWSCAN;
+#endif
+	break;
 
 	default:
 
 		break;
 	}
-		if (cmd)
+
+	if (cmd) {
+		if (cmd == SIOCGIWSCAN)
+			wireless_send_event(dev, cmd, &wrqu, NULL);
+		else
 			wireless_send_event(dev, cmd, &wrqu, extra);
+	}
 
 #if WIRELESS_EXT > 14
 

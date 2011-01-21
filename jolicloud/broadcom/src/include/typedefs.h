@@ -6,7 +6,7 @@
  * KIND, EXPRESS OR IMPLIED, BY STATUTE, COMMUNICATION OR OTHERWISE. BROADCOM
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
- * $Id: typedefs.h,v 1.96.28.1.8.1 2009/11/30 22:27:30 Exp $
+ * $Id: typedefs.h,v 1.103.12.5 2010/08/17 18:10:20 Exp $
  */
 
 #ifndef _TYPEDEFS_H_
@@ -38,10 +38,16 @@ typedef unsigned long long int uintptr;
 #define TYPEDEF_FLOAT_T
 #endif   
 
+#if defined(__sparc__)
+#define TYPEDEF_ULONG
+#endif
+
 #if defined(LINUX_PORT)
 #define TYPEDEF_UINT
+#ifndef TARGETENV_android
 #define TYPEDEF_USHORT
 #define TYPEDEF_ULONG
+#endif 
 #ifdef __KERNEL__
 #include <linux/version.h>
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 19))

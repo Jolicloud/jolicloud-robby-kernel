@@ -10,7 +10,7 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: linuxver.h,v 13.50.22.2 2009/10/02 19:09:49 Exp $
+ * $Id: linuxver.h,v 13.53.12.3.2.1 2010/12/08 23:34:22 Exp $
  */
 
 #ifndef _linuxver_h_
@@ -20,10 +20,14 @@
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 0))
 #include <linux/config.h>
 #else
+
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 33))
 #include <linux/autoconf.h>
+#else
+#include <generated/autoconf.h>
 #endif
-#endif
+
+#endif 
 #include <linux/module.h>
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 3, 0))
@@ -77,7 +81,7 @@
 #endif
 #endif	
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 19)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 20)
 #define	MY_INIT_WORK(_work, _func)	INIT_WORK(_work, _func)
 #else
 #define	MY_INIT_WORK(_work, _func)	INIT_WORK(_work, _func, _work)
@@ -110,6 +114,10 @@ typedef irqreturn_t(*FN_ISR) (int irq, void *dev_id, struct pt_regs *ptregs);
 #define MOD_INC_USE_COUNT
 #define MOD_DEC_USE_COUNT
 #endif 
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 32)
+#include <linux/sched.h>
+#endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
 #include <net/lib80211.h>
@@ -190,10 +198,10 @@ extern void pci_unregister_driver(struct pci_driver *drv);
 #undef WL_USE_NETDEV_OPS
 #endif
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 31)) && defined(CONFIG_RFKILL_INPUT)
-#define WL_CONFIG_RFKILL_INPUT
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 31)) && defined(CONFIG_RFKILL)
+#define WL_CONFIG_RFKILL
 #else
-#undef WL_CONFIG_RFKILL_INPUT
+#undef WL_CONFIG_RFKILL
 #endif
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 3, 48))
@@ -486,5 +494,11 @@ do {									\
 #else
 #define WL_ISR(i, d, p)         wl_isr((i), (d), (p))
 #endif  
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
+#define NETDEV_PRIV(dev)          (netdev_priv(dev))
+#else
+#define NETDEV_PRIV(dev)          ((dev)->priv)
+#endif
 
 #endif 

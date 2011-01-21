@@ -10,11 +10,13 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: wlc_pub.h,v 1.392.2.6 2009/10/30 06:21:23 Exp $
+ * $Id: wlc_pub.h,v 1.434.2.30.2.1 2010/10/26 23:11:23 Exp $
  */
 
 #ifndef _wlc_pub_h_
 #define _wlc_pub_h_
+
+#include <wlc_types.h>
 
 #define	MAX_TIMERS	(29 + (2 * WLC_MAXDPT))		
 
@@ -30,6 +32,8 @@
 #define	PHY_TYPE_LP	5	
 #define	PHY_TYPE_SSN	6	
 #define	PHY_TYPE_LCN	8	
+#define	PHY_TYPE_LCNXN	9	
+#define	PHY_TYPE_HT	7	
 
 #define WLC_10_MHZ	10	
 #define WLC_20_MHZ	20	
@@ -47,25 +51,34 @@
 #define	WLC_RSSI_GOOD		-68	
 #define	WLC_RSSI_VERY_GOOD	-58	
 #define	WLC_RSSI_EXCELLENT	-57	
-#define	WLC_RSSI_INVALID	 0	
+
+#define	PREFSZ			160
+#define WLPREFHDRS(h, sz)	OSL_PREF_RANGE_ST((h), (sz))
+
+struct wlc_info;
+struct wlc_hw_info;
+struct wlc_bsscfg;
+struct wlc_if;
 
 typedef struct wlc_tunables {
 	int ntxd;			
 	int nrxd;			
-	int rxbufsz;		
-	int nrxbufpost;		
+	int rxbufsz;			
+	int nrxbufpost;			
 	int maxscb;			
-	int ampdunummpdu;	
-	int maxpktcb;		
+	int ampdunummpdu2streams;	
+	int ampdunummpdu3streams;	
+	int maxpktcb;			
 	int maxdpt;			
-	int maxucodebss;	
-	int maxucodebss4;	
+	int maxucodebss;		
+	int maxucodebss4;		
 	int maxbss;			
-	int datahiwat;		
-	int ampdudatahiwat;	
+	int datahiwat;			
+	int ampdudatahiwat;		
 	int rxbnd;			
 	int txsbnd;			
-	int memreserved;	
+	int dngl_mem_restrict_rxdma;	
+	int rpctxbufpost;
 } wlc_tunables_t;
 
 typedef struct wlc_rateset {
@@ -88,12 +101,11 @@ struct rsn_parms {
 typedef void *wlc_pkt_t;
 
 typedef struct wlc_event {
-	wl_event_msg_t event;		
+	wl_event_msg_t	event;		
 	struct ether_addr *addr;	
-	int bsscfgidx;			
-	struct wl_if	*wlif;		
-	void *data;                     
-	struct wlc_event *next;         
+	struct wlc_if	*wlcif;		
+	void		*data;		
+	struct wlc_event *next;		
 } wlc_event_t;
 
 typedef struct wlc_bss_info
@@ -123,16 +135,18 @@ typedef struct wlc_bss_info
 #ifdef BCMWAPI_WAI
 	struct rsn_parms wapi;
 #endif 
+#if defined(WLP2P)
+	uint32		rx_tsf_l;	
+#endif
 	uint16		qbss_load_aac;	
 
 	uint8		qbss_load_chan_free;	
 	uint8		mcipher;	
 	uint8		wpacfg;		
+	uint16		mdid;		
 } wlc_bss_info_t;
 
 #ifndef LINUX_WLUSER_POSTMOGRIFY_REMOVAL
-
-struct wlc_if;
 
 #define WLC_ENOIOCTL	1 
 #define WLC_EINVAL	2 
@@ -143,6 +157,9 @@ struct wlc_if;
 #define WLC_EUP		7 
 #define WLC_ENOMEM	8 
 #define WLC_EBUSY	9 
+
+#define IOVF_BSSCFG_STA_ONLY	(1<<0)	
+#define IOVF_BSSCFG_AP_ONLY	(1<<1)	
 
 #define IOVF_MFG	(1<<3)  
 #define IOVF_WHL	(1<<4)	
@@ -179,9 +196,11 @@ typedef struct wlc_pub {
 	char		*vars;			
 	bool		up;			
 	bool		hw_off;			
-	wlc_tunables_t *tunables;	
+	wlc_tunables_t *tunables;		
 	bool		hw_up;			
 	bool		_piomode;		 
+	uint		rxbnd;			
+	uint		processed;		
 	uint		_nbands;		
 	uint		now;			
 
@@ -192,35 +211,34 @@ typedef struct wlc_pub {
 	bool		_assoc_recreate;	
 	int		_wme;			
 	uint8		_mbss;			
-#ifdef WLBDD
-	bool		_bdd;			
-#endif
 #ifdef WLP2P
 	bool		_p2p;			
 #endif
-	bool		allmulti;		
+#ifdef WLMCHAN
+	bool		_mchan;			
+	bool		_mchan_active;		
+#endif
 	bool		associated;		
 
 	bool            phytest_on;             
 	bool		bf_preempt_4306;	
-	uint		txqstopped;		
 
 	bool		_ampdu;			
 	bool		_amsdu_tx;		
 	bool		_cac;			
-	int		_n_enab;		
-	int		_n_reqd;		
-	int8		_coex;			
+#ifdef WL11K
+	bool		_rrm;			
+#endif
+	uint8		_n_enab;		
+	bool		_n_reqd;		
 
-	bool		_priofc;	
+	int8		_coex;			
+	bool		_priofc;		
 
 	struct ether_addr	cur_etheraddr;	
 
-	struct ether_addr	*multicast; 
-	uint		nmulticast;		
-
 	uint32		wlfeatureflag;		
-	int		psq_pkts_total;		
+	int			psq_pkts_total;		
 
 	uint		_activity;		
 
@@ -231,6 +249,7 @@ typedef struct wlc_pub {
 	int 		bcmerror;		
 
 	mbool		radio_disabled;		
+	bool		radio_active;		
 	uint16		roam_time_thresh;	
 	bool		align_wd_tbtt;		
 
@@ -247,16 +266,29 @@ typedef struct wlc_pub {
 	bool		_pkt_filter;		
 
 	bool		_lmac;			
-
-	uint16		bt_period; 		
+	bool		_lmacproto;		
 	bool		phy_11ncapable;		
+	bool		_fbt;			
+	pktpool_t	*pktpool;		
+	uint8		_ampdumac;	
+#ifdef IBSS_PEER_GROUP_KEY
+	bool		_ibss_peer_group_key;
+#endif
+#ifdef IBSS_PEER_DISCOVERY_EVENT
+	bool		_ibss_peer_discovery_event;
+#endif
+#ifdef IBSS_PEER_MGMT
+	bool		_ibss_peer_mgmt;
+#endif
 } wlc_pub_t;
 
 typedef struct	wl_rxsts {
 	uint	pkterror;		
 	uint	phytype;		
-	uint	channel;		
-	uint	datarate;		
+	chanspec_t chanspec;		
+	uint16	datarate;		
+	uint8	mcs;			
+	uint8	htflags;		
 	uint	antenna;		
 	uint	pktlength;		
 	uint32	mactime;		
@@ -266,13 +298,42 @@ typedef struct	wl_rxsts {
 	uint	preamble;		
 	uint	encoding;		
 	uint	nfrmtype;		
-	struct wl_if *wlif;	
+	struct wl_if *wlif;		
 } wl_rxsts_t;
 
-struct wlc_info;
-struct wlc_hw_info;
-struct wlc_bsscfg;
-struct wlc_if;
+typedef struct	wl_txsts {
+	uint	pkterror;		
+	uint	phytype;		
+	chanspec_t chanspec;		
+	uint16	datarate;		
+	uint8	mcs;			
+	uint8	htflags;		
+	uint	antenna;		
+	uint	pktlength;		
+	uint32	mactime;		
+	uint	preamble;		
+	uint	encoding;		
+	uint	nfrmtype;		
+	uint	txflags;		
+	uint	retries;		
+	struct wl_if *wlif;		
+} wl_txsts_t;
+
+typedef struct wlc_if_stats {
+
+	uint32	txframe;		
+	uint32	txbyte;			
+	uint32	txerror;		
+	uint32  txnobuf;		
+	uint32  txrunt;			
+
+	uint32	rxframe;		
+	uint32	rxbyte;			
+	uint32	rxerror;		
+	uint32	rxnobuf;		
+	uint32  rxrunt;			
+	uint32  rxfragerr;		
+} wlc_if_stats_t;
 
 #define	AP_ENAB(pub)	(0)
 
@@ -318,7 +379,7 @@ struct wlc_if;
 
 #ifndef LINUX_WLUSER_POSTMOGRIFY_REMOVAL
 
-extern void * wlc_attach(void *wl, uint16 vendor, uint16 device, uint unit, bool piomode,
+extern void *wlc_attach(void *wl, uint16 vendor, uint16 device, uint unit, bool piomode,
 	osl_t *osh, void *regsva, uint bustype, void *btparam, uint *perr);
 extern uint wlc_detach(struct wlc_info *wlc);
 extern int  wlc_up(struct wlc_info *wlc);
@@ -339,7 +400,7 @@ extern bool wlc_intrsupd(struct wlc_info *wlc);
 extern bool wlc_isr(struct wlc_info *wlc, bool *wantdpc);
 extern bool wlc_dpc(struct wlc_info *wlc, bool bounded);
 extern bool wlc_sendpkt(struct wlc_info *wlc, void *sdu, struct wlc_if *wlcif);
-extern bool wlc_send80211_raw(struct wlc_info *wlc, void *p, uint ac);
+extern bool wlc_send80211_raw(struct wlc_info *wlc, wlc_if_t *wlcif, void *p, uint ac);
 extern int wlc_iovar_op(struct wlc_info *wlc, const char *name, void *params, int p_len, void *arg,
 	int len, bool set, struct wlc_if *wlcif);
 extern int wlc_ioctl(struct wlc_info *wlc, int cmd, void *arg, int len, struct wlc_if *wlcif);
@@ -361,4 +422,21 @@ extern int wlc_module_unregister(wlc_pub_t *pub, const char *name, void *hdl);
 #define WLC_RPCTX_PARAMS        32
 
 #endif 
+
+extern void wlc_wlcif_stats_get(wlc_info_t *wlc, wlc_if_t *wlcif,
+	wlc_if_stats_t *wlcif_stats);
+
+#if defined(BCMDBG)
+
+#define WLC_PERF_STATS_ISR			0x01
+#define WLC_PERF_STATS_DPC			0x02
+#define WLC_PERF_STATS_TMR_DPC		0x04
+#define WLC_PERF_STATS_GPTIMER		0x08
+#define WLC_PERF_STATS_BCN			0x10
+#define WLC_PERF_STATS_PRB_REQ		0x20
+
+void wlc_update_perf_stats(wlc_info_t *wlc, uint32 mask);
+void wlc_update_isr_stats(wlc_info_t *wlc, uint32 macintstatus);
+#endif 
+
 #endif 

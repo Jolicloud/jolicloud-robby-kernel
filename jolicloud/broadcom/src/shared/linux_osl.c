@@ -9,7 +9,7 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: linux_osl.c,v 1.152.18.5.4.1 2009/11/13 00:32:19 Exp $
+ * $Id: linux_osl.c,v 1.172.2.12 2010/08/31 00:29:21 Exp $
  */
 
 #define LINUX_PORT
@@ -35,6 +35,7 @@ typedef struct bcm_mem_link {
 	struct bcm_mem_link *next;
 	uint	size;
 	int	line;
+	void 	*osh;
 	char	file[BCM_MEM_FILENAME_LEN];
 } bcm_mem_link_t;
 
@@ -51,13 +52,15 @@ struct osl_info {
 	osl_pubinfo_t pub;
 	uint magic;
 	void *pdev;
-	uint malloced;
+	atomic_t malloced;
 	uint failed;
 	uint bustype;
 	bcm_mem_link_t *dbgmem_list;
+	spinlock_t dbgmem_lock;
+	spinlock_t pktalloc_lock;
 };
 
-uint32 g_assert_type = 0;
+uint32 g_assert_type = FALSE;
 
 static int16 linuxbcmerrormap[] =
 {	0, 			
@@ -101,11 +104,13 @@ static int16 linuxbcmerrormap[] =
 	-EIO,			
 	-EIO,			
 	-EINVAL,		
+	-EINVAL,		
+	-ENODATA,			
 
-#if BCME_LAST != -40
+#if BCME_LAST != -42
 #error "You need to add a OS error translation in the linuxbcmerrormap \
 	for new error code defined in bcmutils.h"
-#endif 
+#endif
 };
 
 int
@@ -132,9 +137,10 @@ osl_attach(void *pdev, uint bustype, bool pkttag)
 	ASSERT(ABS(BCME_LAST) == (ARRAYSIZE(linuxbcmerrormap) - 1));
 
 	osh->magic = OS_HANDLE_MAGIC;
-	osh->malloced = 0;
+	atomic_set(&osh->malloced, 0);
 	osh->failed = 0;
 	osh->dbgmem_list = NULL;
+	spin_lock_init(&(osh->dbgmem_lock));
 	osh->pdev = pdev;
 	osh->pub.pkttag = pkttag;
 	osh->bustype = bustype;
@@ -157,6 +163,7 @@ osl_attach(void *pdev, uint bustype, bool pkttag)
 			break;
 	}
 
+	spin_lock_init(&(osh->pktalloc_lock));
 #ifdef BCMDBG
 	if (pkttag) {
 		struct sk_buff *skb;
@@ -176,16 +183,53 @@ osl_detach(osl_t *osh)
 	kfree(osh);
 }
 
+struct sk_buff *
+osl_pkt_tonative(osl_t *osh, void *pkt)
+{
+	struct sk_buff *nskb;
+	unsigned long flags;
+
+	if (osh->pub.pkttag)
+		bzero((void*)((struct sk_buff *)pkt)->cb, OSL_PKTTAG_SZ);
+
+	for (nskb = (struct sk_buff *)pkt; nskb; nskb = nskb->next) {
+		spin_lock_irqsave(&osh->pktalloc_lock, flags);
+		osh->pub.pktalloced--;
+		spin_unlock_irqrestore(&osh->pktalloc_lock, flags);
+	}
+	return (struct sk_buff *)pkt;
+}
+
+void *
+osl_pkt_frmnative(osl_t *osh, void *pkt)
+{
+	struct sk_buff *nskb;
+	unsigned long flags;
+
+	if (osh->pub.pkttag)
+		bzero((void*)((struct sk_buff *)pkt)->cb, OSL_PKTTAG_SZ);
+
+	for (nskb = (struct sk_buff *)pkt; nskb; nskb = nskb->next) {
+		spin_lock_irqsave(&osh->pktalloc_lock, flags);
+		osh->pub.pktalloced++;
+		spin_unlock_irqrestore(&osh->pktalloc_lock, flags);
+	}
+	return (void *)pkt;
+}
+
 void * BCMFASTPATH
 osl_pktget(osl_t *osh, uint len)
 {
 	struct sk_buff *skb;
+	unsigned long flags;
 
 	if ((skb = dev_alloc_skb(len))) {
 		skb_put(skb, len);
 		skb->priority = 0;
 
+		spin_lock_irqsave(&osh->pktalloc_lock, flags);
 		osh->pub.pktalloced++;
+		spin_unlock_irqrestore(&osh->pktalloc_lock, flags);
 	}
 
 	return ((void*) skb);
@@ -195,17 +239,21 @@ void BCMFASTPATH
 osl_pktfree(osl_t *osh, void *p, bool send)
 {
 	struct sk_buff *skb, *nskb;
+	unsigned long flags;
 
 	skb = (struct sk_buff*) p;
 
 	if (send && osh->pub.tx_fn)
 		osh->pub.tx_fn(osh->pub.tx_ctx, p, 0);
 
+	PKTDBG_TRACE(osh, (void *) skb, PKTLIST_PKTFREE);
+
 	while (skb) {
 		nskb = skb->next;
 		skb->next = NULL;
 
 		{
+
 			if (skb->destructor)
 
 				dev_kfree_skb_any(skb);
@@ -213,9 +261,9 @@ osl_pktfree(osl_t *osh, void *p, bool send)
 
 				dev_kfree_skb(skb);
 		}
-
+	spin_lock_irqsave(&osh->pktalloc_lock, flags);
 		osh->pub.pktalloced--;
-
+	spin_unlock_irqrestore(&osh->pktalloc_lock, flags);
 		skb = nskb;
 	}
 }
@@ -302,7 +350,7 @@ osl_pcmcia_write_attr(osl_t *osh, uint offset, void *buf, int size)
 	osl_pcmcia_attr(osh, offset, (char *) buf, size, TRUE);
 }
 
-void * BCMFASTPATH
+void *
 osl_malloc(osl_t *osh, uint size)
 {
 	void *addr;
@@ -316,17 +364,17 @@ osl_malloc(osl_t *osh, uint size)
 		return (NULL);
 	}
 	if (osh)
-		osh->malloced += size;
+		atomic_add(size, &osh->malloced);
 
 	return (addr);
 }
 
-void BCMFASTPATH
+void
 osl_mfree(osl_t *osh, void *addr, uint size)
 {
 	if (osh) {
 		ASSERT(osh->magic == OS_HANDLE_MAGIC);
-		osh->malloced -= size;
+		atomic_sub(size, &osh->malloced);
 	}
 	kfree(addr);
 }
@@ -335,7 +383,7 @@ uint
 osl_malloced(osl_t *osh)
 {
 	ASSERT((osh && (osh->magic == OS_HANDLE_MAGIC)));
-	return (osh->malloced);
+	return (atomic_read(&osh->malloced));
 }
 
 uint
@@ -418,9 +466,19 @@ osl_assert(char *exp, char *file, int line)
 		set_current_state(TASK_INTERRUPTIBLE);
 		schedule_timeout(delay * HZ);
 	}
-	if (g_assert_type == 0)
-		panic("%s", tempbuf);
-#endif
+
+	switch (g_assert_type) {
+		case 0:
+			panic("%s", tempbuf);
+			break;
+		case 2:
+			printk("%s", tempbuf);
+			BUG();
+			break;
+		default:
+			break;
+	}
+#endif 
 
 }
 #endif 
@@ -441,6 +499,7 @@ void *
 osl_pktdup(osl_t *osh, void *skb)
 {
 	void * p;
+	unsigned long flags;
 
 	if ((p = skb_clone((struct sk_buff*)skb, GFP_ATOMIC)) == NULL)
 		return NULL;
@@ -448,7 +507,9 @@ osl_pktdup(osl_t *osh, void *skb)
 	if (osh->pub.pkttag)
 		bzero((void*)((struct sk_buff *)p)->cb, OSL_PKTTAG_SZ);
 
+	spin_lock_irqsave(&osh->pktalloc_lock, flags);
 	osh->pub.pktalloced++;
+	spin_unlock_irqrestore(&osh->pktalloc_lock, flags);
 	return (p);
 }
 
@@ -468,19 +529,19 @@ int
 osl_printf(const char *format, ...)
 {
 	va_list args;
-	static char buf[1024];
+	static char printbuf[1024];
 	int len;
 
 	va_start(args, format);
-	len = vsnprintf(buf, 1024, format, args);
+	len = vsnprintf(printbuf, 1024, format, args);
 	va_end(args);
 
-	if (len > sizeof(buf)) {
+	if (len > sizeof(printbuf)) {
 		printk("osl_printf: buffer overrun\n");
 		return (0);
 	}
 
-	return (printk("%s", buf));
+	return (printk("%s", printbuf));
 }
 
 int
@@ -753,34 +814,6 @@ void
 osl_pktsetprio(void *skb, uint x)
 {
 	((struct sk_buff*)skb)->priority = x;
-}
-
-struct sk_buff *
-osl_pkt_tonative(osl_t *osh, void *pkt)
-{
-	struct sk_buff *nskb;
-
-	if (osh->pub.pkttag)
-		bzero((void*)((struct sk_buff *)pkt)->cb, OSL_PKTTAG_SZ);
-
-	for (nskb = (struct sk_buff *)pkt; nskb; nskb = nskb->next) {
-		osh->pub.pktalloced--;
-	}
-	return (struct sk_buff *)pkt;
-}
-
-void *
-osl_pkt_frmnative(osl_t *osh, void *pkt)
-{
-	struct sk_buff *nskb;
-
-	if (osh->pub.pkttag)
-		bzero((void*)((struct sk_buff *)pkt)->cb, OSL_PKTTAG_SZ);
-
-	for (nskb = (struct sk_buff *)pkt; nskb; nskb = nskb->next) {
-		osh->pub.pktalloced++;
-	}
-	return (void *)pkt;
 }
 
 void *

@@ -9,7 +9,7 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: linux_osl.h,v 13.146.6.4 2009/10/21 18:57:23 Exp $
+ * $Id: linux_osl.h,v 13.160.2.6 2010/08/31 00:30:03 Exp $
  */
 
 #ifndef _linux_osl_h_
@@ -71,6 +71,7 @@ typedef struct {
 	bool mmbus;		
 	pktfree_cb_fn_t tx_fn;  
 	void *tx_ctx;		
+	void	*unused[3];
 } osl_pubinfo_t;
 
 #define PKTFREESETCB(osh, _tx_fn, _tx_ctx)		\
@@ -90,6 +91,11 @@ typedef struct {
 
 #define NATIVE_MALLOC(osh, size)		kmalloc(size, GFP_ATOMIC)
 #define NATIVE_MFREE(osh, addr, size)	kfree(addr)
+#ifdef USBAP
+#include <linux/vmalloc.h>
+#define VMALLOC(osh, size)	vmalloc(size)
+#define VFREE(osh, addr, size)	vfree(addr)
+#endif 
 
 #define	MALLOC_FAILED(osh)	osl_malloc_failed((osh))
 extern uint osl_malloc_failed(osl_t *osh);
@@ -240,6 +246,9 @@ extern void *osl_uncached(void *va);
 #define OSL_CACHED(va)		osl_cached((va))
 extern void *osl_cached(void *va);
 
+#define OSL_PREF_RANGE_LD(va, sz)
+#define OSL_PREF_RANGE_ST(va, sz)
+
 #define OSL_GETCYCLES(x)	((x) = osl_getcycles())
 extern uint osl_getcycles(void);
 
@@ -256,6 +265,10 @@ extern void osl_reg_unmap(void *va);
 #define	BZERO_SM(r, len)	bzero((r), (len))
 
 #define	PKTGET(osh, len, send)		osl_pktget((osh), (len))
+#define	PKTDUP(osh, skb)		osl_pktdup((osh), (skb))
+#define PKTFRMNATIVE(osh, skb)		osl_pkt_frmnative((osh), (skb))
+#define PKTLIST_DUMP(osh, buf)
+#define PKTDBG_TRACE(osh, pkt, bit)
 #define	PKTFREE(osh, skb, send)		osl_pktfree((osh), (skb), (send))
 #define	PKTDATA(osh, skb)		osl_pktdata((osh), (skb))
 #define	PKTLEN(osh, skb)		osl_pktlen((osh), (skb))
@@ -266,9 +279,7 @@ extern void osl_reg_unmap(void *va);
 #define	PKTSETLEN(osh, skb, len)	osl_pktsetlen((osh), (skb), (len))
 #define	PKTPUSH(osh, skb, bytes)	osl_pktpush((osh), (skb), (bytes))
 #define	PKTPULL(osh, skb, bytes)	osl_pktpull((osh), (skb), (bytes))
-#define	PKTDUP(osh, skb)		osl_pktdup((osh), (skb))
 #define PKTTAG(skb)			osl_pkttag((skb))
-#define PKTFRMNATIVE(osh, skb)		osl_pkt_frmnative((osh), (skb))
 #define PKTTONATIVE(osh, pkt)		osl_pkt_tonative((osh), (pkt))
 #define	PKTLINK(skb)			osl_pktlink((skb))
 #define	PKTSETLINK(skb, x)		osl_pktsetlink((skb), (x))
@@ -276,9 +287,12 @@ extern void osl_reg_unmap(void *va);
 #define	PKTSETPRIO(skb, x)		osl_pktsetprio((skb), (x))
 #define PKTSHARED(skb)                  osl_pktshared((skb))
 #define PKTALLOCED(osh)			osl_pktalloced((osh))
-#define PKTLIST_DUMP(osh, buf)
+#define PKTSETPOOL(osh, skb, x, y)	do {} while (0)
+#define PKTPOOL(osh, skb)		FALSE
 
 extern void *osl_pktget(osl_t *osh, uint len);
+extern void *osl_pktdup(osl_t *osh, void *skb);
+extern void *osl_pkt_frmnative(osl_t *osh, void *skb);
 extern void osl_pktfree(osl_t *osh, void *skb, bool send);
 extern uchar *osl_pktdata(osl_t *osh, void *skb);
 extern uint osl_pktlen(osl_t *osh, void *skb);
@@ -289,13 +303,11 @@ extern void osl_pktsetnext(void *skb, void *x);
 extern void osl_pktsetlen(osl_t *osh, void *skb, uint len);
 extern uchar *osl_pktpush(osl_t *osh, void *skb, int bytes);
 extern uchar *osl_pktpull(osl_t *osh, void *skb, int bytes);
-extern void *osl_pktdup(osl_t *osh, void *skb);
 extern void *osl_pkttag(void *skb);
 extern void *osl_pktlink(void *skb);
 extern void osl_pktsetlink(void *skb, void *x);
 extern uint osl_pktprio(void *skb);
 extern void osl_pktsetprio(void *skb, uint x);
-extern void *osl_pkt_frmnative(osl_t *osh, void *skb);
 extern struct sk_buff *osl_pkt_tonative(osl_t *osh, void *pkt);
 extern bool osl_pktshared(void *skb);
 extern uint osl_pktalloced(osl_t *osh);

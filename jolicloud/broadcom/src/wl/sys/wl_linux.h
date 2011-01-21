@@ -9,23 +9,26 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: wl_linux.h,v 1.27.2.4.4.1 2009/11/18 18:51:21 Exp $
+ * $Id: wl_linux.h,v 1.35.2.5.12.1 2010/12/08 23:33:16 Exp $
  */
 
 #ifndef _wl_linux_h_
 #define _wl_linux_h_
 
+#include <wlc_types.h>
+
 typedef struct wl_timer {
-	struct timer_list timer;
-	struct wl_info *wl;
-	void (*fn)(void *);
-	void* arg; 
-	uint ms;
-	bool periodic;
-	bool set;
-	struct wl_timer *next;
+	struct timer_list 	timer;
+	struct wl_info 		*wl;
+	void 				(*fn)(void *);
+	void				*arg; 
+	uint 				ms;
+	bool 				periodic;
+	bool 				set;
+	struct wl_timer 	*next;
 #ifdef BCMDBG
-	char* name; 
+	char* 				name; 
+	uint32				ticks;	
 #endif
 } wl_timer_t;
 
@@ -38,8 +41,8 @@ typedef struct wl_task {
 #define WL_IFTYPE_WDS	2 
 #define WL_IFTYPE_MON	3 
 
-typedef struct wl_if {
-#ifdef CONFIG_WIRELESS_EXT
+struct wl_if {
+#ifdef USE_IW
 	wl_iw_t		iw;		
 #endif 
 	struct wl_if *next;
@@ -48,7 +51,7 @@ typedef struct wl_if {
 	struct wlc_if *wlcif;		
 	uint subunit;			
 	bool dev_registed;		
-} wl_if_t;
+};
 
 struct rfkill_stuff {
 	struct rfkill *rfkill;
@@ -57,12 +60,16 @@ struct rfkill_stuff {
 };
 
 struct wl_info {
+	uint		unit;		
 	wlc_pub_t	*pub;		
 	void		*wlc;		
 	osl_t		*osh;		
 	struct net_device *dev;		
+
+	struct semaphore sem;		
 	spinlock_t	lock;		
 	spinlock_t	isr_lock;	
+
 	uint		bcm_bustype;	
 	bool		piomode;	
 	void *regsva;			
@@ -70,8 +77,16 @@ struct wl_info {
 	wl_if_t *if_list;		
 	atomic_t callbacks;		
 	struct wl_timer *timers;	
+#ifndef NAPI_POLL
 	struct tasklet_struct tasklet;	
-	struct net_device *monitor;	
+#endif 
+
+#if defined(NAPI_POLL) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 30))
+	struct napi_struct napi;
+#endif 
+
+	struct net_device *monitor_dev;	
+	uint		monitor_type;	
 	bool		resched;	
 	uint32		pci_psstate[16];	
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 14)
@@ -85,22 +100,62 @@ struct wl_info {
 	struct ieee80211_tkip_data  *tkip_bcast_data[NUM_GROUP_KEYS];
 #endif 
 
+#ifdef WL_ALL_PASSIVE
+	bool	   txq_dispatched;	
+	spinlock_t txq_lock;		
+	struct sk_buff *txq_head;	
+	struct sk_buff *txq_tail;	
+	wl_task_t	txq_task;	
+
+	wl_task_t	multicast_task;	
+
+	wl_task_t	wl_dpc_task;	
+	bool		all_dispatch_mode;
+#endif 
+
 	uint	stats_id;		
 
 	struct net_device_stats stats_watchdog[2];
-#ifdef CONFIG_WIRELESS_EXT
+#ifdef USE_IW
 	struct iw_statistics wstats_watchdog[2];
 	struct iw_statistics wstats;
 	int		phy_noise;
 #endif 
-#if defined(WL_CONFIG_RFKILL_INPUT)
+#ifdef WL_THREAD
+    struct task_struct      *thread;
+    wait_queue_head_t       thread_wqh;
+    struct sk_buff_head     tx_queue;
+    struct sk_buff_head     rpc_queue;
+#endif 
+#if defined(WL_CONFIG_RFKILL)
 	struct rfkill_stuff wl_rfkill;
 	mbool last_phyind;
 #endif 
 };
 
-#define WL_LOCK(wl)	spin_lock_bh(&(wl)->lock)
-#define WL_UNLOCK(wl)	spin_unlock_bh(&(wl)->lock)
+#if (defined(NAPI_POLL) && defined(WL_ALL_PASSIVE))
+#error "WL_ALL_PASSIVE cannot co-exists w/ NAPI_POLL"
+#endif 
+
+#ifdef WL_ALL_PASSIVE
+#define WL_ALL_PASSIVE_ENAB(wl)	(!(wl)->all_dispatch_mode)
+#else
+#define WL_ALL_PASSIVE_ENAB(wl)	0
+#endif 
+
+#define WL_LOCK(wl)	do { \
+				if (WL_ALL_PASSIVE_ENAB(wl)) \
+					down(&(wl)->sem); \
+				else \
+					spin_lock_bh(&(wl)->lock); \
+			} while (0)
+
+#define WL_UNLOCK(wl)	do { \
+				if (WL_ALL_PASSIVE_ENAB(wl)) \
+					up(&(wl)->sem); \
+				else \
+					spin_unlock_bh(&(wl)->lock); \
+			} while (0)
 
 #define WL_ISRLOCK(wl, flags) do {spin_lock(&(wl)->isr_lock); (void)(flags);} while (0)
 #define WL_ISRUNLOCK(wl, flags) do {spin_unlock(&(wl)->isr_lock); (void)(flags);} while (0)

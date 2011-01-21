@@ -9,7 +9,7 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: ethernet.h,v 9.50.4.3 2009/10/22 07:38:44 Exp $
+ * $Id: ethernet.h,v 9.56.18.1 2010/06/16 19:39:55 Exp $
  */
 
 #ifndef _NET_ETHERNET_H_	  
@@ -56,13 +56,14 @@
 #define	ETHER_IS_VALID_LEN(foo)	\
 	((foo) >= ETHER_MIN_LEN && (foo) <= ETHER_MAX_LEN)
 
-#define ETHER_FILL_MCAST_ADDR_FROM_IP(eaddr, mgrp_ip) \
-		eaddr[0] = 0x01;	\
-		eaddr[1] = 0x00;	\
-		eaddr[2] = 0x5e;	\
-		eaddr[5] = mgrp_ip & 0xff; mgrp_ip >>= 8; \
-		eaddr[4] = mgrp_ip & 0xff; mgrp_ip >>= 8; \
-		eaddr[3] = mgrp_ip & 0x7f
+#define ETHER_FILL_MCAST_ADDR_FROM_IP(ea, mgrp_ip) {		\
+		((uint8 *)ea)[0] = 0x01;			\
+		((uint8 *)ea)[1] = 0x00;			\
+		((uint8 *)ea)[2] = 0x5e;			\
+		((uint8 *)ea)[3] = ((mgrp_ip) >> 16) & 0x7f;	\
+		((uint8 *)ea)[4] = ((mgrp_ip) >>  8) & 0xff;	\
+		((uint8 *)ea)[5] = ((mgrp_ip) >>  0) & 0xff;	\
+}
 
 #ifndef __INCif_etherh   
 
@@ -86,31 +87,30 @@ BWL_PRE_PACKED_STRUCT struct	ether_addr {
 
 #define ETHER_ISMULTI(ea) (((const uint8 *)(ea))[0] & 1)
 
-#define	ether_cmp(a, b)	(!(((short*)a)[0] == ((short*)b)[0]) | \
-			 !(((short*)a)[1] == ((short*)b)[1]) | \
-			 !(((short*)a)[2] == ((short*)b)[2]))
+#define	ether_cmp(a, b)	(!(((short*)(a))[0] == ((short*)(b))[0]) | \
+			 !(((short*)(a))[1] == ((short*)(b))[1]) | \
+			 !(((short*)(a))[2] == ((short*)(b))[2]))
 
 #define	ether_copy(s, d) { \
-		((short*)d)[0] = ((short*)s)[0]; \
-		((short*)d)[1] = ((short*)s)[1]; \
-		((short*)d)[2] = ((short*)s)[2]; }
-
-#define ETHER_ISBCAST(ea) ((((uint8 *)(ea))[0] &		\
-			    ((uint8 *)(ea))[1] &		\
-			    ((uint8 *)(ea))[2] &		\
-			    ((uint8 *)(ea))[3] &		\
-			    ((uint8 *)(ea))[4] &		\
-			    ((uint8 *)(ea))[5]) == 0xff)
+		((short*)(d))[0] = ((short*)(s))[0]; \
+		((short*)(d))[1] = ((short*)(s))[1]; \
+		((short*)(d))[2] = ((short*)(s))[2]; }
 
 static const struct ether_addr ether_bcast = {{255, 255, 255, 255, 255, 255}};
 static const struct ether_addr ether_null = {{0, 0, 0, 0, 0, 0}};
 
-#define ETHER_ISNULLADDR(ea) ((((uint8 *)(ea))[0] |		\
-			    ((uint8 *)(ea))[1] |		\
-			    ((uint8 *)(ea))[2] |		\
-			    ((uint8 *)(ea))[3] |		\
-			    ((uint8 *)(ea))[4] |		\
-			    ((uint8 *)(ea))[5]) == 0)
+#define ETHER_ISBCAST(ea)	((((uint8 *)(ea))[0] &		\
+	                          ((uint8 *)(ea))[1] &		\
+				  ((uint8 *)(ea))[2] &		\
+				  ((uint8 *)(ea))[3] &		\
+				  ((uint8 *)(ea))[4] &		\
+				  ((uint8 *)(ea))[5]) == 0xff)
+#define ETHER_ISNULLADDR(ea)	((((uint8 *)(ea))[0] |		\
+				  ((uint8 *)(ea))[1] |		\
+				  ((uint8 *)(ea))[2] |		\
+				  ((uint8 *)(ea))[3] |		\
+				  ((uint8 *)(ea))[4] |		\
+				  ((uint8 *)(ea))[5]) == 0)
 
 #define ETHER_MOVE_HDR(d, s) \
 do { \

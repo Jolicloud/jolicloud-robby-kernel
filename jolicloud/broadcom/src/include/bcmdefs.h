@@ -9,20 +9,29 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: bcmdefs.h,v 13.61 2009/04/01 18:59:11 Exp $
+ * $Id: bcmdefs.h,v 13.69 2010/01/15 01:14:00 Exp $
  */
 
 #ifndef	_bcmdefs_h_
 #define	_bcmdefs_h_
 
+#define BCM_REFERENCE(data)	((void)data)
+
 #define bcmreclaimed 		0
 #define BCMATTACHDATA(_data)	_data
 #define BCMATTACHFN(_fn)	_fn
+#define BCMPREATTACHDATA(_data)	_data
+#define BCMPREATTACHFN(_fn)	_fn
 #define BCMINITDATA(_data)	_data
 #define BCMINITFN(_fn)		_fn
 #define BCMUNINITFN(_fn)	_fn
 #define	BCMNMIATTACHFN(_fn)	_fn
 #define	BCMNMIATTACHDATA(_data)	_data
+#define BCMOVERLAY0DATA(_sym)	_sym
+#define BCMOVERLAY0FN(_fn)	_fn
+#define BCMOVERLAY1DATA(_sym)	_sym
+#define BCMOVERLAY1FN(_fn)	_fn
+#define BCMOVERLAYERRFN(_fn)	_fn
 #define CONST	const
 #define BCMFASTPATH
 
@@ -60,6 +69,12 @@
 #define SPROMBUS	(PCI_BUS)
 
 #define CHIPID(chip)	(chip)
+
+#ifdef BCMCHIPREV
+#define CHIPREV(rev)	(BCMCHIPREV)
+#else
+#define CHIPREV(rev)	(rev)
+#endif
 
 #define DMADDR_MASK_32 0x0		
 #define DMADDR_MASK_30 0xc0000000	

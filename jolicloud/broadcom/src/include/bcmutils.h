@@ -9,7 +9,7 @@
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
- * $Id: bcmutils.h,v 13.217 2009/05/14 22:33:52 Exp $
+ * $Id: bcmutils.h,v 13.239.2.2 2010/08/02 17:57:32 Exp $
  */
 
 #ifndef	_bcmutils_h_
@@ -100,7 +100,99 @@ struct spktq {
 
 typedef bool (*ifpkt_cb_t)(void*, int);
 
+#define PKTPOOL_MIN_LEN     32  
+#ifndef PKTPOOL_LEN_MAX
+#define PKTPOOL_LEN_MAX		40
+#endif 
+#define PKTPOOL_CB_MAX		3
+
+struct pktpool;
+typedef void (*pktpool_cb_t)(struct pktpool *pool, void *arg);
+typedef struct {
+	pktpool_cb_t cb;
+	void *arg;
+} pktpool_cbinfo_t;
+
+#ifdef BCMDBG_POOL
+
+#define POOL_IDLE	0
+#define POOL_RXFILL	1
+#define POOL_RXDH	2
+#define POOL_RXD11	3
+#define POOL_TXDH	4
+#define POOL_TXD11	5
+#define POOL_AMPDU	6
+#define POOL_TXENQ	7
+
+typedef struct {
+	void *p;
+	uint32 cycles;
+	uint32 dur;
+} pktpool_dbg_t;
+
+typedef struct {
+	uint8 txdh;	
+	uint8 txd11;	
+	uint8 enq;	
+	uint8 rxdh;	
+	uint8 rxd11;	
+	uint8 rxfill;	
+	uint8 idle;	
+} pktpool_stats_t;
+#endif 
+
+typedef struct pktpool {
+	bool	inited;
+	uint16 r;
+	uint16 w;
+	uint16 len;
+	uint16 maxlen;
+	uint16 plen;
+	bool istx;
+	bool empty;
+	uint8 cbtoggle;
+	uint8 cbcnt;
+	uint8 ecbcnt;
+	pktpool_cbinfo_t cbs[PKTPOOL_CB_MAX];
+	pktpool_cbinfo_t ecbs[PKTPOOL_CB_MAX];
+	void *q[PKTPOOL_LEN_MAX + 1];
+
+#ifdef BCMDBG_POOL
+	uint8 dbg_cbcnt;
+	pktpool_cbinfo_t dbg_cbs[PKTPOOL_CB_MAX];
+	uint16 dbg_qlen;
+	pktpool_dbg_t dbg_q[PKTPOOL_LEN_MAX + 1];
+#endif
+} pktpool_t;
+
+extern int pktpool_init(osl_t *osh, pktpool_t *pktp, int *pktplen, int plen, bool istx);
+extern int pktpool_deinit(osl_t *osh, pktpool_t *pktp);
+extern int pktpool_fill(osl_t *osh, pktpool_t *pktp, bool minimal);
+extern void* pktpool_get(pktpool_t *pktp);
+extern void pktpool_free(pktpool_t *pktp, void *p);
+extern int pktpool_add(pktpool_t *pktp, void *p);
+extern uint16 pktpool_avail(pktpool_t *pktp);
+extern int pktpool_avail_register(pktpool_t *pktp, pktpool_cb_t cb, void *arg);
+extern int pktpool_empty_register(pktpool_t *pktp, pktpool_cb_t cb, void *arg);
+extern int pktpool_setmaxlen(pktpool_t *pktp, uint16 maxlen);
+
+#define POOLPTR(pp)			((pktpool_t *)(pp))
+#define pktpool_len(pp)			(POOLPTR(pp)->len - 1)
+#define pktpool_plen(pp)		(POOLPTR(pp)->plen)
+#define pktpool_maxlen(pp)		(POOLPTR(pp)->maxlen)
+
+#ifdef BCMDBG_POOL
+extern int pktpool_dbg_register(pktpool_t *pktp, pktpool_cb_t cb, void *arg);
+extern int pktpool_start_trigger(pktpool_t *pktp, void *p);
+extern int pktpool_dbg_dump(pktpool_t *pktp);
+extern int pktpool_dbg_notify(pktpool_t *pktp);
+extern int pktpool_stats_dump(pktpool_t *pktp, pktpool_stats_t *stats);
+#endif 
+
 struct ether_addr;
+
+extern int ether_isbcast(const void *ea);
+extern int ether_isnulladdr(const void *ea);
 
 #define pktq_psetmax(pq, prec, _max)    ((pq)->q[prec].max = (_max))
 #define pktq_plen(pq, prec)             ((pq)->q[prec].len)
@@ -176,6 +268,7 @@ extern void bcm_mdelay(uint ms);
 
 extern char *getvar(char *vars, const char *name);
 extern int getintvar(char *vars, const char *name);
+extern int getintvararray(char *vars, const char *name, uint8 index);
 extern uint getgpiopin(char *vars, char *pin_name, uint def_pin);
 #ifdef BCMDBG
 extern void prpkt(const char *msg, osl_t *osh, void *p0);
@@ -211,6 +304,9 @@ typedef struct bcm_iovar {
 
 extern const bcm_iovar_t *bcm_iovar_lookup(const bcm_iovar_t *table, const char *name);
 extern int bcm_iovar_lencheck(const bcm_iovar_t *table, void *arg, int len, bool set);
+#if defined(BCMDBG)
+extern int bcm_format_ssid(char* buf, const uchar ssid[], uint ssid_len);
+#endif 
 
 #define IOVT_VOID	0	
 #define IOVT_BOOL	1	
@@ -284,11 +380,13 @@ extern int bcm_iovar_lencheck(const bcm_iovar_t *table, void *arg, int len, bool
 #define BCME_NOT_WME_ASSOCIATION	-34	
 #define BCME_SDIO_ERROR			-35	
 #define BCME_DONGLE_DOWN		-36	
-#define BCME_VERSION			-37 
+#define BCME_VERSION			-37 	
 #define BCME_TXFAIL			-38 	
 #define BCME_RXFAIL			-39	
 #define BCME_NODEVICE			-40 	
-#define BCME_LAST			BCME_NODEVICE
+#define BCME_NMODE_DISABLED		-41 	
+#define BCME_NONRESIDENT		-42 
+#define BCME_LAST			BCME_NONRESIDENT
 
 #define BCMERRSTRINGTABLE {		\
 	"OK",				\
@@ -328,10 +426,12 @@ extern int bcm_iovar_lencheck(const bcm_iovar_t *table, void *arg, int len, bool
 	"Not WME Association",		\
 	"SDIO Bus Error",		\
 	"Dongle Not Accessible",	\
-	"Incorrect version",	\
-	"TX Failure",	\
-	"RX Failure",	\
-	"Device Not Present",	\
+	"Incorrect version",		\
+	"TX Failure",			\
+	"RX Failure",			\
+	"Device Not Present",		\
+	"NMODE Disabled",		\
+	"Nonresident overlay access", \
 }
 
 #ifndef ABS
@@ -414,34 +514,6 @@ typedef struct bcm_tlv {
 
 #define ETHER_ADDR_STR_LEN	18	
 
-static INLINE uint32
-load32_ua(uint8 *a)
-{
-	return ((a[3] << 24) | (a[2] << 16) | (a[1] << 8) | a[0]);
-}
-
-static INLINE void
-store32_ua(uint8 *a, uint32 v)
-{
-	a[3] = (v >> 24) & 0xff;
-	a[2] = (v >> 16) & 0xff;
-	a[1] = (v >> 8) & 0xff;
-	a[0] = v & 0xff;
-}
-
-static INLINE uint16
-load16_ua(uint8 *a)
-{
-	return ((a[1] << 8) | a[0]);
-}
-
-static INLINE void
-store16_ua(uint8 *a, uint16 v)
-{
-	a[1] = (v >> 8) & 0xff;
-	a[0] = v & 0xff;
-}
-
 static INLINE void
 xor_128bit_block(const uint8 *src1, const uint8 *src2, uint8 *dst)
 {
@@ -471,14 +543,15 @@ extern uint32 BCMROMFN(hndcrc32)(uint8 *p, uint nbytes, uint32 crc);
 	defined(BCMDBG_DUMP)
 extern int bcm_format_flags(const bcm_bit_desc_t *bd, uint32 flags, char* buf, int len);
 extern int bcm_format_hex(char *str, const void *bytes, int len);
-extern void prhex(const char *msg, uchar *buf, uint len);
 #endif
 #ifdef BCMDBG
 extern void deadbeef(void *p, uint len);
 #endif
+extern const char *bcm_crypto_algo_name(uint algo);
 extern char *bcm_chipname(uint chipid, char *buf, uint len);
 extern char *bcm_brev_str(uint32 brev, char *buf);
 extern void printbig(char *buf);
+extern void prhex(const char *msg, uchar *buf, uint len);
 
 extern bcm_tlv_t *BCMROMFN(bcm_next_tlv)(bcm_tlv_t *elt, int *buflen);
 extern bcm_tlv_t *BCMROMFN(bcm_parse_tlvs)(void *buf, int buflen, uint key);
