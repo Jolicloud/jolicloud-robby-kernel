@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.9
-# Fri Jan 14 12:42:20 2011
+# Wed Jan 26 17:20:04 2011
 #
 # CONFIG_64BIT is not set
 CONFIG_X86_32=y
@@ -3335,7 +3335,7 @@ CONFIG_AGP_VIA=m
 CONFIG_AGP_EFFICEON=m
 CONFIG_VGA_ARB=y
 CONFIG_VGA_ARB_MAX_GPUS=16
-# CONFIG_VGA_SWITCHEROO is not set
+CONFIG_VGA_SWITCHEROO=y
 CONFIG_DRM=m
 CONFIG_DRM_KMS_HELPER=m
 CONFIG_DRM_TTM=m
