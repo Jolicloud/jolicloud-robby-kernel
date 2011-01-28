@@ -74,7 +74,7 @@ Architecture: i386
 Section: restricted/base
 Priority: optional
 Pre-Depends: dpkg (>= 1.10.24)
-Provides: linux-image, linux-image-2.6, fuse-module, kvm-api-4, redhat-cluster-modules, ivtv-modules, ndiswrapper-modules-1.9, psb-modules, ipheth-modules
+Provides: linux-image, linux-image-2.6, fuse-module, kvm-api-4, redhat-cluster-modules, ivtv-modules, ndiswrapper-modules-1.9, ipheth-modules
 Depends: initramfs-tools (>= 0.36ubuntu6), coreutils | fileutils (>= 4.0), module-init-tools (>= 3.3-pre11-4ubuntu3), wireless-crda
 Conflicts: hotplug (<< 0.0.20040105-1)
 Recommends: grub-pc | grub | lilo (>= 19.1), v86d
@@ -100,7 +100,7 @@ Architecture: i386
 Section: restricted/devel
 Priority: optional
 Depends: coreutils | fileutils (>= 4.0), linux-headers-2.6.35.9-1, ${shlibs:Depends}
-Provides: linux-headers, linux-headers-2.6, psb-kernel-headers
+Provides: linux-headers, linux-headers-2.6, 
 Description: Linux kernel headers for version 2.6.35.9 on x86-based netbooks
  This package provides kernel header files for version 2.6.35.9 on
  x86-based netbooks.
@@ -128,7 +128,7 @@ Architecture: i386
 Section: restricted/base
 Priority: optional
 Pre-Depends: dpkg (>= 1.10.24)
-Provides: linux-image, linux-image-2.6, fuse-module, kvm-api-4, redhat-cluster-modules, ivtv-modules, ndiswrapper-modules-1.9, psb-modules, ipheth-modules
+Provides: linux-image, linux-image-2.6, fuse-module, kvm-api-4, redhat-cluster-modules, ivtv-modules, ndiswrapper-modules-1.9, ipheth-modules
 Depends: initramfs-tools (>= 0.36ubuntu6), coreutils | fileutils (>= 4.0), module-init-tools (>= 3.3-pre11-4ubuntu3), wireless-crda
 Conflicts: hotplug (<< 0.0.20040105-1)
 Recommends: grub-pc | grub | lilo (>= 19.1), v86d
@@ -154,7 +154,7 @@ Architecture: i386
 Section: restricted/devel
 Priority: optional
 Depends: coreutils | fileutils (>= 4.0), linux-headers-2.6.35.9-1, ${shlibs:Depends}
-Provides: linux-headers, linux-headers-2.6, psb-kernel-headers
+Provides: linux-headers, linux-headers-2.6, 
 Description: Linux kernel headers for version 2.6.35.9 on Intel Atom processors
  This package provides kernel header files for version 2.6.35.9 on
  Intel Atom processors.

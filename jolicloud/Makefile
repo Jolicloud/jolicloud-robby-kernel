@@ -5,7 +5,6 @@
 obj-$(CONFIG_ASUS_EEE)		+= asus_eee/
 obj-$(CONFIG_BROADCOM_4312)	+= broadcom/
 obj-$(CONFIG_USB_ENESTORAGE)	+= keucr/
-obj-$(CONFIG_DRM_PSB)		+= psb/
 obj-$(CONFIG_DRM_VIA_CHROME9)	+= via_chrome9/
 obj-$(CONFIG_RTL8192CE)		+= rtl8192ce/
 obj-$(CONFIG_RTL8192CU)		+= rtl8192cu/
