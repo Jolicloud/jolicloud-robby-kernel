@@ -93,7 +93,6 @@ enum {
 	STAC_92HD83XXX_REF,
 	STAC_92HD83XXX_PWR_REF,
 	STAC_DELL_S14,
-	STAC_DELL_E6410,
 	STAC_92HD83XXX_HP,
 	STAC_HP_DV7_4000,
 	STAC_DELL_M6500,
@@ -1619,8 +1618,6 @@ static struct snd_pci_quirk stac92hd73xx_cfg_tbl[] = {
 
 static struct snd_pci_quirk stac92hd73xx_codec_id_cfg_tbl[] = {
 	SND_PCI_QUIRK(PCI_VENDOR_ID_DELL, 0x02a1,
-		      "Alienware M17x", STAC_ALIENWARE_M17X),
-	SND_PCI_QUIRK(PCI_VENDOR_ID_DELL, 0x043a,
 		      "Alienware M17x", STAC_ALIENWARE_M17X),
 	{} /* terminator */
 };

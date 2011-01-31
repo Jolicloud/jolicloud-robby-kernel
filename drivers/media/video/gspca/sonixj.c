@@ -2474,7 +2474,8 @@ static int sd_start(struct gspca_dev *gspca_dev)
 		reg1 = 0x44;
 		reg17 = 0xa2;
 		break;
-	case SENSOR_SP80708:
+	default:
+/*	case SENSOR_SP80708: */
 		init = sp80708_sensor_param1;
 		if (mode) {
 /*??			reg1 = 0x04;	 * 320 clk 48Mhz */

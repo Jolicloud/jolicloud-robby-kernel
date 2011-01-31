@@ -119,7 +119,6 @@ struct ath_common {
 
 	u32 keymax;
 	DECLARE_BITMAP(keymap, ATH_KEYMAX);
-	DECLARE_BITMAP(tkip_keymap, ATH_KEYMAX);
 	u8 splitmic;
 
 	struct ath_regulatory regulatory;
