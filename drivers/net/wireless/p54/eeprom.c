@@ -260,10 +260,8 @@ static int p54_generate_channel_lists(struct ieee80211_hw *dev)
 	list->max_entries = max_channel_num;
 	list->channels = kzalloc(sizeof(struct p54_channel_entry) *
 				 max_channel_num, GFP_KERNEL);
-	if (!list->channels) {
-		ret = -ENOMEM;
+	if (!list->channels)
 		goto free;
-	}
 
 	for (i = 0; i < max_channel_num; i++) {
 		if (i < priv->iq_autocal_len) {

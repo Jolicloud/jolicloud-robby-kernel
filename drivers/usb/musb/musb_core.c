@@ -1921,6 +1921,10 @@ static void musb_free(struct musb *musb)
 		dma_controller_destroy(c);
 	}
 
+#ifdef CONFIG_USB_MUSB_OTG
+	put_device(musb->xceiv->dev);
+#endif
+
 #ifdef CONFIG_USB_MUSB_HDRC_HCD
 	usb_put_hcd(musb_to_hcd(musb));
 #else
