@@ -16,6 +16,7 @@ while (<LOGS>) {
 	}
 
 	m|\s*UBUNTU: (Ubuntu-2\.6\..*)| or next;
+	m|\s*JOLICLOUD: (Jolicloud-2\.6\..*)| or next;
 
 	$tag = $1;
 

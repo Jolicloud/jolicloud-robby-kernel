@@ -2138,6 +2138,8 @@ source "drivers/Kconfig"
 
 source "ubuntu/Kconfig"
 
+source "jolicloud/Kconfig"
+
 source "drivers/firmware/Kconfig"
 
 source "fs/Kconfig"

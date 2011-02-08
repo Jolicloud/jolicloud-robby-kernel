@@ -68,6 +68,7 @@ sub shortlog_entry($$$$$) {
 
 	$desc =~ s#^\s*##g;
 	$desc =~ s# *UBUNTU: ##g;
+	$desc =~ s# *JOLICLOUD: ##g;
 
 	$entry->{'desc'} = $desc;
 	if ($bug ne '') {
@@ -180,7 +181,7 @@ sub changelog_input {
 			chomp;
 			$desc = $1;
 
-			if ($desc =~ /^ *(Revert "|)UBUNTU:/) {
+			if ($desc =~ /^ *(Revert "|)(UBUNTU|JOLICLOUD):/) {
 				$do_ignore = 1;
 			} else {
 				$do_ignore = 0;
