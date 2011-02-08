@@ -95,6 +95,7 @@ endif
 # be an in development git tree. We want to force it here instead of
 # committing changes to the top level Makefile
 SUBLEVEL	:= $(shell echo $(release) | awk -F. '{print $$3}')
+EXTRASUBLEVEL	:= $(shell echo $(release) | perl -ne '@a=split("$(SUBLEVEL)");print $$a[1]')
 
 DEB_HOST_GNU_TYPE  = $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
 DEB_BUILD_GNU_TYPE = $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
@@ -217,7 +218,7 @@ conc_level		= -j$(CONCURRENCY_LEVEL)
 # target_flavour is filled in for each step
 kmake = make ARCH=$(build_arch) \
 	CROSS_COMPILE=$(CROSS_COMPILE) \
-	EXTRAVERSION=-$(abinum)-$(target_flavour) \
+	EXTRAVERSION=$(EXTRASUBLEVEL)-$(abinum)-$(target_flavour) \
 	CONFIG_DEBUG_SECTION_MISMATCH=y SUBLEVEL=$(SUBLEVEL) \
 	KBUILD_BUILD_VERSION="$(uploadnum)" \
 	LOCALVERSION= localver-extra=

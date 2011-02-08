@@ -220,7 +220,7 @@ headers_tmp := $(CURDIR)/debian/tmp-headers
 headers_dir := $(CURDIR)/debian/linux-libc-dev
 
 hmake := $(MAKE) -C $(CURDIR) O=$(headers_tmp) SUBLEVEL=$(SUBLEVEL) \
-	EXTRAVERSION=-$(abinum) INSTALL_HDR_PATH=$(headers_tmp)/install \
+	EXTRAVERSION=$(EXTRASUBLEVEL)-$(abinum) INSTALL_HDR_PATH=$(headers_tmp)/install \
 	SHELL="$(SHELL)" ARCH=$(header_arch)
 
 install-arch-headers:

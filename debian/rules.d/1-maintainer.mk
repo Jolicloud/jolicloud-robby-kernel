@@ -93,6 +93,9 @@ printenv:
 ifneq ($(SUBLEVEL),)
 	@echo "SUBLEVEL          = $(SUBLEVEL)"
 endif
+#ifneq ($(EXTRASUBLEVEL),)
+	@echo "EXTRASUBLEVEL     = $(EXTRASUBLEVEL)"
+#endif
 	@echo "CONCURRENCY_LEVEL = $(CONCURRENCY_LEVEL)"
 	@echo "bin package name  = $(bin_pkg_name)"
 	@echo "hdr package name  = $(hdrs_pkg_name)"
