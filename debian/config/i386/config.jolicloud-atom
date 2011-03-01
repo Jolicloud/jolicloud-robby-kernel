@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
-# Linux kernel version: 2.6.35.9
-# Fri Jan 28 10:51:45 2011
+# Linux kernel version: 2.6.35.10
+# Tue Mar  1 08:25:56 2011
 #
 # CONFIG_64BIT is not set
 CONFIG_X86_32=y
@@ -426,7 +426,9 @@ CONFIG_X86_NEED_RELOCS=y
 CONFIG_PHYSICAL_ALIGN=0x100000
 CONFIG_HOTPLUG_CPU=y
 # CONFIG_COMPAT_VDSO is not set
-# CONFIG_CMDLINE_BOOL is not set
+CONFIG_CMDLINE_BOOL=y
+CONFIG_CMDLINE=""
+# CONFIG_CMDLINE_OVERRIDE is not set
 CONFIG_ARCH_ENABLE_MEMORY_HOTPLUG=y
 
 #
