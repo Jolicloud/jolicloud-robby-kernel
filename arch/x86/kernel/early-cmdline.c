@@ -41,6 +41,10 @@ static struct device_cmdline early_cmd[] __initdata = {
 	  PCI_CLASS_DISPLAY_VGA, PCI_ANY_ID, QFLAG_APPLY_ONCE,
 	  "i915.modeset=0"			// Disable KMS
 	},
+	{ 0x8086, 0x27AE, 0x1734, 0x115D,	// Fujitsu Amilo Mini Ui 3520
+	  PCI_CLASS_DISPLAY_VGA, PCI_ANY_ID, QFLAG_APPLY_ONCE,
+	  "i915.modeset=0"			// Disable KMS
+	},
 	{ 0x8086, 0x27AE, 0x8086, 0x1999,	// ZaReason Terra A20
 	  PCI_CLASS_DISPLAY_VGA, PCI_ANY_ID, QFLAG_APPLY_ONCE,
 	  "i915.modeset=0"			// Disable KMS
