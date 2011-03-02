@@ -41,6 +41,10 @@ static struct device_cmdline early_cmd[] __initdata = {
 	  PCI_CLASS_DISPLAY_VGA, PCI_ANY_ID, QFLAG_APPLY_ONCE,
 	  "i915.modeset=0"			// Disable KMS
 	},
+	{ 0x8086, 0x8108, 0x104D, 0x905F,	// Sony Viao X
+	  PCI_CLASS_DISPLAY_VGA, PCI_ANY_ID, QFLAG_APPLY_ONCE,
+	  "mem=2000M memmap=0x7f800000"		// Poulsbo memory-map hack
+	},
 	{}
 };
 
