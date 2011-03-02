@@ -37,6 +37,10 @@ struct device_cmdline {
 };
 
 static struct device_cmdline early_cmd[] __initdata = {
+	{ 0x8086, 0x27AE, 0x1025, 0x022F,	// Acer Aspire One D250
+	  PCI_CLASS_DISPLAY_VGA, PCI_ANY_ID, QFLAG_APPLY_ONCE,
+	  "i915.modeset=0"			// Disable KMS
+	},
 	{ 0x8086, 0x27AE, 0x8086, 0x1999,	// ZaReason Terra A20
 	  PCI_CLASS_DISPLAY_VGA, PCI_ANY_ID, QFLAG_APPLY_ONCE,
 	  "i915.modeset=0"			// Disable KMS
