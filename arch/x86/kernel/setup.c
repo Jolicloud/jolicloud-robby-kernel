@@ -804,6 +804,7 @@ void __init setup_arch(char **cmdline_p)
 	bss_resource.end = virt_to_phys(&__bss_stop)-1;
 
 #ifdef CONFIG_CMDLINE_BOOL
+	early_cmdline( builtin_cmdline );
 #ifdef CONFIG_CMDLINE_OVERRIDE
 	strlcpy(boot_command_line, builtin_cmdline, COMMAND_LINE_SIZE);
 #else
