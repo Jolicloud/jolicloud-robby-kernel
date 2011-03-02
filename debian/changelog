@@ -1,3 +1,13 @@
+linux (2.6.35.10-1.62) robby-1.2; urgency=low
+
+  [ Adam McDaniel ]
+
+  * JAMBON: early-cmdline: Added Fujitsu Amilo Mini Ui 3520 rule to disable KMS
+  * JAMBON: early-cmdline: Corrected Sony Vaio X memmap hack; added general
+    mem hack to all Poulsbos
+
+ -- Adam McDaniel <adam@jolicloud.org>  Wed, 02 Mar 2011 10:21:23 -0700
+
 linux (2.6.35.10-1.61) robby-1.2; urgency=low
 
   [ Adam McDaniel ]
