@@ -51,7 +51,11 @@ static struct device_cmdline early_cmd[] __initdata = {
 	},
 	{ 0x8086, 0x8108, 0x104D, 0x905F,	// Sony Viao X
 	  PCI_CLASS_DISPLAY_VGA, PCI_ANY_ID, QFLAG_APPLY_ONCE,
-	  "mem=2000M memmap=0x7f800000"		// Poulsbo memory-map hack
+	  "memmap=1K#0x7f800000"	// Poulsbo memory-map hack
+	},
+	{ 0x8086, 0x8108, PCI_ANY_ID, PCI_ANY_ID, // All Poulsbo video cards
+	  PCI_CLASS_DISPLAY_VGA, PCI_ANY_ID, QFLAG_APPLY_ONCE,
+	  "mem=2000M"			// Poulsbo memory-map hack
 	},
 	{}
 };
