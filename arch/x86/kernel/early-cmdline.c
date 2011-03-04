@@ -31,24 +31,28 @@ struct device_cmdline {
 	u32 class;
 	u32 class_mask;
 	u32 flags;
-	void (*f)(char* newCmd);
+	void (*f)(char* newCmd, const char* cmdline);
 };
 
-static void disable_i915_modeset(char* newCmd)
+static void disable_i915_modeset(char* newCmd, const char* cmdline)
 {
 	char addCmd[] = "i915.modeset=0";
 
 	strcpy(newCmd, addCmd);
 }
 
-static void set_poulsbo_sony_vaiox_memmap(char* newCmd)
+static void set_poulsbo_sony_vaiox_memmap(char* newCmd, const char* cmdline)
 {
 	char addCmd[] = "memmap=1K#0x7f800000";
+	int isoboot;
 
-	strcpy(newCmd, addCmd);
+	isoboot = (strstr(cmdline, "boot=casper") != NULL);
+
+	if (isoboot)
+	    strcpy(newCmd, addCmd);
 }
 
-static void set_poulsbo_memory(char* newCmd)
+static void set_poulsbo_memory(char* newCmd, const char* cmdline)
 {
 	int i;
 	char addCmd[] = "mem=1920mb";
@@ -102,21 +106,27 @@ static struct device_cmdline early_cmd[] __initdata = {
  *
  * Print something to dmesg to claim responsibility.
  */
-static void __init insert_command(char* cmdLine, struct device_cmdline dev)
+static void __init insert_command(char* cmdline, struct device_cmdline dev)
 {
 	char newCmd[COMMAND_LINE_SIZE] = "";
 
 	// Run the function to get the new command
-	dev.f(newCmd);
+	dev.f(newCmd, cmdline);
 
 	printk(KERN_INFO "early-cmdline: Adding '%s' for PCI device "
 		"%04x:%04x %04x:%04x\n", newCmd, dev.vendor,
 		dev.device, dev.subvendor, dev.subdevice);
 
-	// Insert the new command at the start of the existing cmdLine
-	strlcat(newCmd, " ", COMMAND_LINE_SIZE);
-	strlcat(newCmd, cmdLine, COMMAND_LINE_SIZE);
-	strlcpy(cmdLine, newCmd, COMMAND_LINE_SIZE);
+	if (strlen(newCmd) > 0) {
+		// Insert the new command at the start of the existing cmdline
+		strlcat(newCmd, " ", COMMAND_LINE_SIZE);
+		strlcat(newCmd, cmdline, COMMAND_LINE_SIZE);
+		strlcpy(cmdline, newCmd, COMMAND_LINE_SIZE);
+	}
+
+	printk(KERN_INFO "early-cmdline: Current Cmdline: '%s'\n",
+		cmdline);
+
 }
 
 /**
