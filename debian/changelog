@@ -1,3 +1,14 @@
+linux (2.6.35.10-1.63) robby-1.2; urgency=low
+
+  [ Adam McDaniel ]
+
+  * JAMBON: early-cmdline: Use functions, not strings, to populate early
+    cmdline mods
+  * JAMBON: early-cmdline: Calculate the poulsbo memory value based upon
+    available RAM
+
+ -- Adam McDaniel <adam@jolicloud.org>  Thu, 03 Mar 2011 21:19:27 -0700
+
 linux (2.6.35.10-1.62) robby-1.2; urgency=low
 
   [ Adam McDaniel ]
