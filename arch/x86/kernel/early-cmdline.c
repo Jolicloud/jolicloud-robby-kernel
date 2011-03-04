@@ -50,7 +50,19 @@ static void set_poulsbo_sony_vaiox_memmap(char* newCmd)
 
 static void set_poulsbo_memory(char* newCmd)
 {
-	char addCmd[] = "mem=2000mb";
+	int i;
+	char addCmd[] = "mem=1920mb";
+	u64 ramSize = 0;
+
+	for (i = 0; i < e820.nr_map; i++) {
+		if (e820.map[i].type == E820_RAM) {
+			ramSize += e820.map[i].size;
+		}
+	}
+	if ( ramSize < 1200000000LL )
+	    strcpy(addCmd, "mem=896mb");
+
+	printk(KERN_INFO "early-cmdline: RAM: %Ld\n", ramSize);
 
 	strcpy(newCmd, addCmd);
 }
