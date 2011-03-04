@@ -1,3 +1,12 @@
+linux (2.6.35.10-1.64) robby-1.2; urgency=low
+
+  [ Adam McDaniel ]
+
+  * JAMBON: early-cmdline: Only apply the Sony Vaio X memmap hack on
+    isolinux boots, not on regular HDD boots
+
+ -- Adam McDaniel <adam@jolicloud.org>  Fri, 04 Mar 2011 03:52:32 -0700
+
 linux (2.6.35.10-1.63) robby-1.2; urgency=low
 
   [ Adam McDaniel ]
