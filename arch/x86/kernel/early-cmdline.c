@@ -12,11 +12,9 @@
 #include <linux/pci.h>
 #include <linux/acpi.h>
 #include <linux/pci_ids.h>
+#include <asm/e820.h>
 #include <asm/pci-direct.h>
 #include <asm/dma.h>
-#include <asm/io_apic.h>
-#include <asm/apic.h>
-#include <asm/iommu.h>
 #include <asm/gart.h>
 #include <asm/setup.h>
 
@@ -33,29 +31,50 @@ struct device_cmdline {
 	u32 class;
 	u32 class_mask;
 	u32 flags;
-	char* addCmd;
+	void (*f)(char* newCmd);
 };
+
+static void disable_i915_modeset(char* newCmd)
+{
+	char addCmd[] = "i915.modeset=0";
+
+	strcpy(newCmd, addCmd);
+}
+
+static void set_poulsbo_sony_vaiox_memmap(char* newCmd)
+{
+	char addCmd[] = "memmap=1K#0x7f800000";
+
+	strcpy(newCmd, addCmd);
+}
+
+static void set_poulsbo_memory(char* newCmd)
+{
+	char addCmd[] = "mem=2000mb";
+
+	strcpy(newCmd, addCmd);
+}
 
 static struct device_cmdline early_cmd[] __initdata = {
 	{ 0x8086, 0x27AE, 0x1025, 0x022F,	// Acer Aspire One D250
 	  PCI_CLASS_DISPLAY_VGA, PCI_ANY_ID, QFLAG_APPLY_ONCE,
-	  "i915.modeset=0"			// Disable KMS
+	  disable_i915_modeset
 	},
 	{ 0x8086, 0x27AE, 0x1734, 0x115D,	// Fujitsu Amilo Mini Ui 3520
 	  PCI_CLASS_DISPLAY_VGA, PCI_ANY_ID, QFLAG_APPLY_ONCE,
-	  "i915.modeset=0"			// Disable KMS
+	  disable_i915_modeset
 	},
 	{ 0x8086, 0x27AE, 0x8086, 0x1999,	// ZaReason Terra A20
 	  PCI_CLASS_DISPLAY_VGA, PCI_ANY_ID, QFLAG_APPLY_ONCE,
-	  "i915.modeset=0"			// Disable KMS
+	  disable_i915_modeset
 	},
 	{ 0x8086, 0x8108, 0x104D, 0x905F,	// Sony Viao X
 	  PCI_CLASS_DISPLAY_VGA, PCI_ANY_ID, QFLAG_APPLY_ONCE,
-	  "memmap=1K#0x7f800000"	// Poulsbo memory-map hack
+	  set_poulsbo_sony_vaiox_memmap
 	},
 	{ 0x8086, 0x8108, PCI_ANY_ID, PCI_ANY_ID, // All Poulsbo video cards
 	  PCI_CLASS_DISPLAY_VGA, PCI_ANY_ID, QFLAG_APPLY_ONCE,
-	  "mem=2000M"			// Poulsbo memory-map hack
+	  set_poulsbo_memory
 	},
 	{}
 };
@@ -65,24 +84,27 @@ static struct device_cmdline early_cmd[] __initdata = {
  * @cmdLine: pointer to main command-line
  * @dev: device_cmdline structure
  *
- * Copy the device-specific command-line into a new char array, append a
- * space, then insert it into the beginning of the global command-line char
- * pointer.
+ * Execute the device-specific function, which generates a new command-line
+ * option. That value is appended with a space, then inserted at the
+ * beginning of the global command-line char pointer.
  *
  * Print something to dmesg to claim responsibility.
  */
 static void __init insert_command(char* cmdLine, struct device_cmdline dev)
 {
-	char newCmd[COMMAND_LINE_SIZE];
+	char newCmd[COMMAND_LINE_SIZE] = "";
 
-	strlcpy(newCmd, dev.addCmd, COMMAND_LINE_SIZE);
+	// Run the function to get the new command
+	dev.f(newCmd);
+
+	printk(KERN_INFO "early-cmdline: Adding '%s' for PCI device "
+		"%04x:%04x %04x:%04x\n", newCmd, dev.vendor,
+		dev.device, dev.subvendor, dev.subdevice);
+
+	// Insert the new command at the start of the existing cmdLine
 	strlcat(newCmd, " ", COMMAND_LINE_SIZE);
 	strlcat(newCmd, cmdLine, COMMAND_LINE_SIZE);
 	strlcpy(cmdLine, newCmd, COMMAND_LINE_SIZE);
-
-	printk(KERN_INFO "early-cmdline: Adding '%s' for PCI device "
-		"%04x:%04x %04x:%04x\n", dev.addCmd, dev.vendor,
-		dev.device, dev.subvendor, dev.subdevice);
 }
 
 /**
@@ -113,7 +135,7 @@ static int __init check_dev_cmdline(int bus, int slot, int func, char* cmdline)
 	subvendor = read_pci_config_16(bus, slot, func, PCI_SUBSYSTEM_VENDOR_ID);
 	subdevice = read_pci_config_16(bus, slot, func, PCI_SUBSYSTEM_ID);
 
-	for (i = 0; early_cmd[i].addCmd != NULL; i++) {
+	for (i = 0; early_cmd[i].f != NULL; i++) {
 		if (((early_cmd[i].vendor == PCI_ANY_ID) ||
 			(early_cmd[i].vendor == vendor)) &&
 			((early_cmd[i].device == PCI_ANY_ID) ||
