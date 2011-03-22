@@ -332,8 +332,19 @@ static void report_frame(struct input_dev *input, struct ntrig_data *nd)
 static int ntrig_event (struct hid_device *hid, struct hid_field *field,
 			struct hid_usage *usage, __s32 value)
 {
-	struct input_dev *input = field->hidinput->input;
 	struct ntrig_data *nd = hid_get_drvdata(hid);
+	struct input_dev *input;
+
+	/* Skip processing if not a claimed input */
+	if (!(hid->claimed & HID_CLAIMED_INPUT))
+		goto not_claimed_input;
+
+	/* This function is being called before the structures are fully
+	 * initialized */
+	if(!(field->hidinput && field->hidinput->input))
+		return -EINVAL;
+
+	input = field->hidinput->input;
 
 	/* No special handling needed for the pen */
 	if (field->application == HID_DG_PEN)
@@ -376,6 +387,8 @@ static int ntrig_event (struct hid_device *hid, struct hid_field *field,
 			break;
 		}
 	}
+
+not_claimed_input:
 
 	/* we have handled the hidinput part, now remains hiddev */
 	if ((hid->claimed & HID_CLAIMED_HIDDEV) && hid->hiddev_hid_event)
