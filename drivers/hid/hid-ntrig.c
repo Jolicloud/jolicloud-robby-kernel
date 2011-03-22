@@ -515,6 +515,7 @@ static void ntrig_remove(struct hid_device *hdev)
 
 static const struct hid_device_id ntrig_devices[] = {
 	NTRIG_DEVICE(0x0001),
+	NTRIG_DEVICE(0x0006),
 	{ }
 };
 MODULE_DEVICE_TABLE(hid, ntrig_devices);
