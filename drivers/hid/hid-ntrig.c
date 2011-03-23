@@ -105,6 +105,27 @@ static inline void ntrig_set_mode(struct hid_device *hdev, const int mode)
 	usbhid_submit_report(hdev, report, USB_DIR_IN);
 }
 
+static void ntrig_set_report(struct hid_device *hdev)
+{
+	struct hid_report *report;
+
+	/* This is needed for devices with more recent firmware versions */
+	report = hdev->report_enum[HID_FEATURE_REPORT].report_id_hash[0x0a];
+	if (report) {
+		/* Let the device settle to ensure the wakeup message gets
+		 * through */
+		usbhid_wait_io(hdev);
+		usbhid_submit_report(hdev, report, USB_DIR_IN);
+
+		/*
+		 * Sanity check: if the current mode is invalid reset it to
+		 * something reasonable.
+		 */
+		if (ntrig_get_mode(hdev) >= 4)
+			ntrig_set_mode(hdev, 3);
+	}
+}
+
 static void ntrig_report_version(struct hid_device *hdev)
 {
 	int ret;
@@ -433,7 +454,6 @@ static int ntrig_probe(struct hid_device *hdev, const struct hid_device_id *id)
 	struct ntrig_data *nd;
 	struct hid_input *hidinput;
 	struct input_dev *input;
-	struct hid_report *report;
 
 	if (id->driver_data & NTRIG_DUPLICATE_USAGES)
 		hdev->quirks |= HID_QUIRK_MULTI_INPUT;
@@ -480,21 +500,7 @@ static int ntrig_probe(struct hid_device *hdev, const struct hid_device_id *id)
 		}
 	}
 
-	/* This is needed for devices with more recent firmware versions */
-	report = hdev->report_enum[HID_FEATURE_REPORT].report_id_hash[0x0a];
-	if (report) {
-		/* Let the device settle to ensure the wakeup message gets
-		 * through */
-		usbhid_wait_io(hdev);
-		usbhid_submit_report(hdev, report, USB_DIR_IN);
-
-		/*
-		 * Sanity check: if the current mode is invalid reset it to
-		 * something reasonable.
-		 */
-		if (ntrig_get_mode(hdev) >= 4)
-			ntrig_set_mode(hdev, 3);
-	}
+	ntrig_set_report(hdev);
 
 	ntrig_report_version(hdev);
 
@@ -503,6 +509,14 @@ err_free:
 	kfree(nd);
 	return ret;
 }
+
+#ifdef CONFIG_PM
+static int ntrig_reset_resume(struct hid_device *hdev)
+{
+	ntrig_set_report(hdev);
+	return 0;
+}
+#endif
 
 static void ntrig_remove(struct hid_device *hdev)
 {
@@ -534,6 +548,9 @@ static struct hid_driver ntrig_driver = {
 	.input_mapped = ntrig_input_mapped,
 	.usage_table = ntrig_grabbed_usages,
 	.event = ntrig_event,
+#ifdef CONFIG_PM
+	.reset_resume = ntrig_reset_resume,
+#endif
 };
 
 static int __init ntrig_init(void)
