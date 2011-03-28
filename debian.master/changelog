@@ -8,6 +8,8 @@ linux (2.6.38-8.40) UNRELEASED; urgency=low
 
   * rebase from v2.6.38 to v2.6.38.1
     - LP: #735640, #735450
+  * rebase from v2.6.38.1 to v2.6.38.2
+    - LP: #733780
 
  -- Leann Ogasawara <leann.ogasawara@canonical.com>  Mon, 28 Mar 2011 06:20:13 -0700
 
