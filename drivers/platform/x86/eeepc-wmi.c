@@ -104,6 +104,13 @@ MODULE_PARM_DESC(hotplug_wireless,
 		 "If your laptop needs that, please report to "
 		 "acpi4asus-user@lists.sourceforge.net.");
 
+/* Values for T101MT "Home" key */
+#define HOME_PRESS			0xe4
+#define HOME_HOLD			0xea
+#define HOME_RELEASE			0xe5
+
+#define EEEPC_WMI_KEY_IGNORE (-1)
+
 static const struct key_entry eeepc_wmi_keymap[] = {
 	/* Sleep already handled via generic ACPI code */
 	{ KE_IGNORE, NOTIFY_BRNDOWN_MIN, { KEY_BRIGHTNESSDOWN } },
@@ -118,6 +125,7 @@ static const struct key_entry eeepc_wmi_keymap[] = {
 	{ KE_KEY, 0xcc, { KEY_SWITCHVIDEOMODE } },
 	{ KE_KEY, 0xe0, { KEY_PROG1 } }, /* Task Manager */
 	{ KE_KEY, 0xe1, { KEY_F14 } }, /* Change Resolution */
+	{ KE_KEY, HOME_PRESS, { KEY_CONFIG } },
 	{ KE_KEY, 0xe9, { KEY_BRIGHTNESS_ZERO } },
 	{ KE_END, 0},
 };
@@ -178,6 +186,7 @@ static int eeepc_wmi_input_init(struct eeepc_wmi *eeepc)
 	eeepc->inputdev->phys = EEEPC_WMI_FILE "/input0";
 	eeepc->inputdev->id.bustype = BUS_HOST;
 	eeepc->inputdev->dev.parent = &eeepc->platform_device->dev;
+	__set_bit(EV_REP, eeepc->inputdev->evbit);
 
 	err = sparse_keymap_setup(eeepc->inputdev, eeepc_wmi_keymap, NULL);
 	if (err)
@@ -917,6 +926,25 @@ static void eeepc_wmi_backlight_exit(struct eeepc_wmi *eeepc)
 	eeepc->backlight_device = NULL;
 }
 
+static void eeepc_wmi_homekey_filter(struct eeepc_wmi *eeepc, int *code,
+				     unsigned int *value, bool *autorelease)
+{
+	switch (*code) {
+	case HOME_PRESS:
+		*value = 1;
+		*autorelease = 0;
+		break;
+	case HOME_HOLD:
+		*code = EEEPC_WMI_KEY_IGNORE;
+		break;
+	case HOME_RELEASE:
+		*code = HOME_PRESS;
+		*value = 0;
+		*autorelease = 0;
+		break;
+	}
+}
+
 static void eeepc_wmi_notify(u32 value, void *context)
 {
 	struct eeepc_wmi *eeepc = context;
@@ -925,6 +953,8 @@ static void eeepc_wmi_notify(u32 value, void *context)
 	acpi_status status;
 	int code;
 	int orig_code;
+	unsigned int key_value = 1;
+	bool autorelease = 1;
 
 	status = wmi_get_event_data(value, &response);
 	if (status != AE_OK) {
@@ -938,6 +968,11 @@ static void eeepc_wmi_notify(u32 value, void *context)
 		code = obj->integer.value;
 		orig_code = code;
 
+		eeepc_wmi_homekey_filter(eeepc, &code, &key_value,
+					 &autorelease);
+		if (code == EEEPC_WMI_KEY_IGNORE)
+			goto exit;
+
 		if (code >= NOTIFY_BRNUP_MIN && code <= NOTIFY_BRNUP_MAX)
 			code = NOTIFY_BRNUP_MIN;
 		else if (code >= NOTIFY_BRNDOWN_MIN &&
@@ -949,11 +984,12 @@ static void eeepc_wmi_notify(u32 value, void *context)
 				eeepc_wmi_backlight_notify(eeepc, orig_code);
 		}
 
-		if (!sparse_keymap_report_event(eeepc->inputdev,
-						code, 1, true))
+		if (!sparse_keymap_report_event(eeepc->inputdev, code,
+						key_value, autorelease))
 			pr_info("Unknown key %x pressed\n", code);
 	}
 
+exit:
 	kfree(obj);
 }
 
