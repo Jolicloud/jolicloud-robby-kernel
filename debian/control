@@ -5,7 +5,9 @@ Maintainer: Ubuntu Kernel Team <kernel-team@lists.ubuntu.com>
 Standards-Version: 3.6.1
 Build-Depends: debhelper (>= 3), module-init-tools, kernel-wedge (>= 2.24ubuntu1), makedumpfile [!armel]
 Build-Depends-Indep: xmlto, docbook-utils, gs, transfig, bzip2, sharutils
-Vcs-Git: http://kernel.ubuntu.com/git-repos/ubuntu/ubuntu-jaunty.git
+XS-Ubuntu-Vcs-Git: http://kernel.ubuntu.com/git-repos/ubuntu/ubuntu-jaunty.git
+Vcs-Git: git://github.com/jolicloud/jolicloud-robby-kernel.git
+Vcs-Browser: https://github.com/jolicloud/jolicloud-robby-kernel
 
 #Package: linux-source-2.6.35.10
 #Architecture: all
