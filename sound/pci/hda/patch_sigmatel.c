@@ -734,38 +734,43 @@ static int stac92xx_mux_enum_get(struct snd_kcontrol *kcontrol, struct snd_ctl_e
 
 static int stac92xx_mux_enum_put(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
 {
-    struct hda_codec *codec = snd_kcontrol_chip(kcontrol);
-    struct sigmatel_spec *spec = codec->spec;
-    unsigned int adc_idx = snd_ctl_get_ioffidx(kcontrol, &ucontrol->id);
-    const struct hda_input_mux *imux = spec->input_mux;
-    unsigned int idx, prev_idx;
+	struct hda_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct sigmatel_spec *spec = codec->spec;
+	unsigned int adc_idx = snd_ctl_get_ioffidx(kcontrol, &ucontrol->id);
+	const struct hda_input_mux *imux = spec->input_mux;
+	unsigned int idx, prev_idx, didx;
 
-    idx = ucontrol->value.enumerated.item[0];
-    if (idx >= imux->num_items)
-	idx = imux->num_items - 1;
-    prev_idx = spec->cur_mux[adc_idx];
-    if (prev_idx == idx)
-	return 0;
-    if (idx < spec->num_analog_muxes) {
-	snd_hda_codec_write_cache(codec, spec->mux_nids[adc_idx], 0,
-		AC_VERB_SET_CONNECT_SEL,
-		imux->items[idx].index);
-	if (prev_idx >= spec->num_analog_muxes) {
-	    imux = spec->dinput_mux;
-	    /* 0 = analog */
-	    snd_hda_codec_write_cache(codec,
-		    spec->dmux_nids[adc_idx], 0,
-		    AC_VERB_SET_CONNECT_SEL,
-		    imux->items[0].index);
+	idx = ucontrol->value.enumerated.item[0];
+	if (idx >= imux->num_items)
+		idx = imux->num_items - 1;
+	prev_idx = spec->cur_mux[adc_idx];
+	if (prev_idx == idx)
+		return 0;
+	if (idx < spec->num_analog_muxes) {
+		snd_hda_codec_write_cache(codec, spec->mux_nids[adc_idx], 0,
+					  AC_VERB_SET_CONNECT_SEL,
+					  imux->items[idx].index);
+		if (prev_idx >= spec->num_analog_muxes &&
+		    spec->mux_nids[adc_idx] != spec->dmux_nids[adc_idx]) {
+			imux = spec->dinput_mux;
+			/* 0 = analog */
+			snd_hda_codec_write_cache(codec,
+						  spec->dmux_nids[adc_idx], 0,
+						  AC_VERB_SET_CONNECT_SEL,
+						  imux->items[0].index);
+		}
+	} else {
+		imux = spec->dinput_mux;
+		/* first dimux item is hardcoded to select analog imux,
+		 * so lets skip it
+		 */
+		didx = idx - spec->num_analog_muxes + 1;
+		snd_hda_codec_write_cache(codec, spec->dmux_nids[adc_idx], 0,
+					  AC_VERB_SET_CONNECT_SEL,
+					  imux->items[didx].index);
 	}
-    } else {
-	imux = spec->dinput_mux;
-	snd_hda_codec_write_cache(codec, spec->dmux_nids[adc_idx], 0,
-		AC_VERB_SET_CONNECT_SEL,
-		imux->items[idx - 1].index);
-    }
-    spec->cur_mux[adc_idx] = idx;
-    return 1;
+	spec->cur_mux[adc_idx] = idx;
+	return 1;
 }
 
 static int stac92xx_mono_mux_enum_info(struct snd_kcontrol *kcontrol,
