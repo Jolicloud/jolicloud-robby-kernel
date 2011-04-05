@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
-# Linux kernel version: 2.6.35.10
-# Tue Mar  1 08:25:46 2011
+# Linux kernel version: 2.6.35.12
+# Tue Apr  5 14:19:40 2011
 #
 # CONFIG_64BIT is not set
 CONFIG_X86_32=y
@@ -350,6 +350,7 @@ CONFIG_DMI=y
 CONFIG_NR_CPUS=8
 CONFIG_SCHED_SMT=y
 CONFIG_SCHED_MC=y
+# CONFIG_IRQ_TIME_ACCOUNTING is not set
 # CONFIG_PREEMPT_NONE is not set
 CONFIG_PREEMPT_VOLUNTARY=y
 # CONFIG_PREEMPT is not set
