@@ -96,6 +96,7 @@ endif
 # committing changes to the top level Makefile
 SUBLEVEL	:= $(shell echo $(release) | awk -F. '{print $$3}')
 
+DEB_HOST_MULTIARCH = $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 DEB_HOST_GNU_TYPE  = $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
 DEB_BUILD_GNU_TYPE = $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 DEB_HOST_ARCH = $(shell dpkg-architecture -qDEB_HOST_ARCH)
