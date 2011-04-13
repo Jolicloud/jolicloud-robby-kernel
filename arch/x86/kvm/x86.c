@@ -4293,7 +4293,7 @@ static void init_emulate_ctxt(struct kvm_vcpu *vcpu)
 	memcpy(c->regs, vcpu->arch.regs, sizeof c->regs);
 }
 
-int kvm_inject_realmode_interrupt(struct kvm_vcpu *vcpu, int irq)
+int kvm_inject_realmode_interrupt(struct kvm_vcpu *vcpu, int irq, int inc_eip)
 {
 	struct decode_cache *c = &vcpu->arch.emulate_ctxt.decode;
 	int ret;
@@ -4302,7 +4302,8 @@ int kvm_inject_realmode_interrupt(struct kvm_vcpu *vcpu, int irq)
 
 	vcpu->arch.emulate_ctxt.decode.op_bytes = 2;
 	vcpu->arch.emulate_ctxt.decode.ad_bytes = 2;
-	vcpu->arch.emulate_ctxt.decode.eip = vcpu->arch.emulate_ctxt.eip;
+	vcpu->arch.emulate_ctxt.decode.eip = vcpu->arch.emulate_ctxt.eip +
+								 inc_eip;
 	ret = emulate_int_real(&vcpu->arch.emulate_ctxt, &emulate_ops, irq);
 
 	if (ret != X86EMUL_CONTINUE)
