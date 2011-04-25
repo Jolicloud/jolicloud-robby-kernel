@@ -83,6 +83,7 @@ drivers/watchdog/softdog.ko
 drivers/xen/*
 fs/binfmt_misc.ko
 fs/btrfs/*
+fs/cachefiles/cachefiles.ko
 fs/configfs/*
 fs/exportfs/*
 fs/fat/*
