@@ -1,9 +1,10 @@
 # arch	version		flavour		installedname			suffix	bdep
-amd64	PKGVER-ABINUM	generic		PKGVER-ABINUM-generic		-	
+amd64	PKGVER-ABINUM	jolicloud	PKGVER-ABINUM-jolicloud		-	
+amd64	PKGVER-ABINUM	jolicloud-atom	PKGVER-ABINUM-jolicloud-atom	-	
 amd64	PKGVER-ABINUM	virtual		PKGVER-ABINUM-virtual		-	
 
-i386	PKGVER-ABINUM	generic		PKGVER-ABINUM-generic		-	
-i386	PKGVER-ABINUM	generic-pae	PKGVER-ABINUM-generic-pae	-	
+i386	PKGVER-ABINUM	jolicloud	PKGVER-ABINUM-jolicloud		-	
+i386	PKGVER-ABINUM	jolicloud-atom	PKGVER-ABINUM-jolicloud-atom	-	
 i386	PKGVER-ABINUM	virtual		PKGVER-ABINUM-virtual		-	
 
 armel	PKGVER-ABINUM	versatile	PKGVER-ABINUM-versatile		-
