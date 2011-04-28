@@ -297,9 +297,6 @@ static void __init init_gbpages(void)
 static inline void init_gbpages(void)
 {
 }
-static void __init cleanup_highmap(void)
-{
-}
 #endif
 
 static void __init reserve_brk(void)
@@ -925,8 +922,6 @@ void __init setup_arch(char **cmdline_p)
 	 */
 	reserve_brk();
 
-	cleanup_highmap();
-
 	memblock.current_limit = get_max_mapped();
 	memblock_x86_fill();
 
@@ -1012,11 +1007,6 @@ void __init setup_arch(char **cmdline_p)
 	x86_init.paging.pagetable_setup_start(swapper_pg_dir);
 	paging_init();
 	x86_init.paging.pagetable_setup_done(swapper_pg_dir);
-
-	if (boot_cpu_data.cpuid_level >= 0) {
-		/* A CPU has %cr4 if and only if it has CPUID */
-		mmu_cr4_features = read_cr4();
-	}
 
 #ifdef CONFIG_X86_32
 	/* sync back kernel address range */
