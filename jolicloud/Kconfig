@@ -1,0 +1,6 @@
+menu "Jolicloud Supplied Third-Party Device Drivers"
+
+source "jolicloud/broadcom/Kconfig"
+source "jolicloud/rtl8192cu/Kconfig"
+
+endmenu

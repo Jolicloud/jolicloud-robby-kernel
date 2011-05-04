@@ -1,0 +1,25 @@
+Version:	5.10.91.9
+Source:		http://www.broadcom.com/support/802.11/linux_sta.php
+
+The broadcom directory has been modified to contain a patches subdirectory.
+Those will get applied at buildtime.
+
+---
+
+As the ^M problem seems to be gone now and the newer series use an unpacked
+base I converted Hardy to do the same. So the tarballs are now. The binary
+blob will get linked based on $(ARCH).
+
+Stefan Bader - Apr 16 2009
+
+---
+
+In order to get Broadcom updates to work well I had to repackage the
+original tarball from the website such that all of the Makefile's and *.[ch] files
+were stripped of their '^M' trailing characters. Can you say Windoze? I also
+inserted a directory into which the tarball unpacks, e.g., hybrid-portsrc-x86-32_5_10_27_11.
+
+http://www.broadcom.com/docs/linux_sta/hybrid-portsrc-x86-32_5_10_27_11.tar.gz
+http://www.broadcom.com/docs/linux_sta/hybrid-portsrc-x86-64_5_10_27_11.tar.gz
+
+Tim Gardner - Dec 16, 2008
